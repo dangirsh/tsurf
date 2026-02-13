@@ -1,0 +1,9 @@
+keys:
+  - &admin_dangirsh age1q4cgep7mh50td2wjr4htp9r6pw45euvncj3q3fl0waq9cj7wedfsj7ce8l
+  - &host_acfs      age1k55y5yphzwlzl6a0ndpz4jhg70xk9mpwlhltwdywjgwuvkzvrc8qa9yake
+creation_rules:
+  - path_regex: secrets/acfs\.yaml$
+    key_groups:
+      - age:
+        - *admin_dangirsh
+        - *host_acfs
