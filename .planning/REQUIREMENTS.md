@@ -118,49 +118,49 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BOOT-01 | — | Pending |
-| BOOT-02 | — | Pending |
-| BOOT-03 | — | Pending |
-| BOOT-04 | — | Pending |
-| BOOT-05 | — | Pending |
-| BOOT-06 | — | Pending |
-| NET-01 | — | Pending |
-| NET-02 | — | Pending |
-| NET-03 | — | Pending |
-| NET-04 | — | Pending |
-| NET-05 | — | Pending |
-| NET-06 | — | Pending |
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
-| SYS-01 | — | Pending |
-| SYS-02 | — | Pending |
-| DEV-01 | — | Pending |
-| DEV-02 | — | Pending |
-| DEV-03 | — | Pending |
-| DEV-04 | — | Pending |
-| DEV-05 | — | Pending |
-| HOME-01 | — | Pending |
-| HOME-02 | — | Pending |
-| HOME-03 | — | Pending |
-| HOME-04 | — | Pending |
-| HOME-05 | — | Pending |
-| DOCK-01 | — | Pending |
-| DOCK-02 | — | Pending |
-| DOCK-03 | — | Pending |
-| DOCK-04 | — | Pending |
-| SVC-01 | — | Pending |
-| SVC-02 | — | Pending |
-| SVC-03 | — | Pending |
-| AGENT-01 | — | Pending |
-| AGENT-02 | — | Pending |
-| BACK-01 | — | Pending |
+| BOOT-01 | Phase 2 | Pending |
+| BOOT-02 | Phase 1 | Pending |
+| BOOT-03 | Phase 2 | Pending |
+| BOOT-04 | Phase 1 | Pending |
+| BOOT-05 | Phase 2 | Pending |
+| BOOT-06 | Phase 2 | Pending |
+| NET-01 | Phase 2 | Pending |
+| NET-02 | Phase 2 | Pending |
+| NET-03 | Phase 3 | Pending |
+| NET-04 | Phase 2 | Pending |
+| NET-05 | Phase 3 | Pending |
+| NET-06 | Phase 3 | Pending |
+| SEC-01 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Pending |
+| SEC-03 | Phase 3 | Pending |
+| SYS-01 | Phase 2 | Pending |
+| SYS-02 | Phase 2 | Pending |
+| DEV-01 | Phase 5 | Pending |
+| DEV-02 | Phase 5 | Pending |
+| DEV-03 | Phase 5 | Pending |
+| DEV-04 | Phase 5 | Pending |
+| DEV-05 | Phase 5 | Pending |
+| HOME-01 | Phase 5 | Pending |
+| HOME-02 | Phase 5 | Pending |
+| HOME-03 | Phase 5 | Pending |
+| HOME-04 | Phase 5 | Pending |
+| HOME-05 | Phase 5 | Pending |
+| DOCK-01 | Phase 3 | Pending |
+| DOCK-02 | Phase 4 | Pending |
+| DOCK-03 | Phase 4 | Pending |
+| DOCK-04 | Phase 4 | Pending |
+| SVC-01 | Phase 4 | Pending |
+| SVC-02 | Phase 6 | Pending |
+| SVC-03 | Phase 6 | Pending |
+| AGENT-01 | Phase 6 | Pending |
+| AGENT-02 | Phase 6 | Pending |
+| BACK-01 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 37 total
-- Mapped to phases: 0
-- Unmapped: 37 (pending roadmap creation)
+- Mapped to phases: 37
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-13*
-*Last updated: 2026-02-13 after initial definition*
+*Last updated: 2026-02-13 after roadmap creation*

@@ -1,0 +1,138 @@
+# Roadmap: agent-neurosys
+
+## Overview
+
+This roadmap delivers a fully declarative NixOS server configuration that replaces a manually configured Ubuntu VPS. The critical path starts with pre-deployment scaffolding (flake structure, sops-nix bootstrap, disko config), then a minimal bootable system, then networking and Docker foundations, then services, then the user development environment, and finally backups. Each phase delivers a verifiable capability -- the server becomes progressively more functional and can be tested at each boundary.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 1: Flake Scaffolding + Pre-Deploy** - Flake skeleton, disko config, sops-nix bootstrap, age key derivation
+- [ ] **Phase 2: Bootable Base System** - NixOS boots on Contabo, SSH works, firewall active, user exists
+- [ ] **Phase 3: Networking + Secrets + Docker Foundation** - Tailscale connected, full secrets decryption, Docker engine running
+- [ ] **Phase 4: Docker Services + Ollama** - claw-swap stack, grok-mcp container, Ollama service running
+- [ ] **Phase 5: User Environment + Dev Tools** - home-manager shell, dev toolchain, full development experience
+- [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
+- [ ] **Phase 7: Backups** - Automated Restic backups to Backblaze B2
+
+## Phase Details
+
+### Phase 1: Flake Scaffolding + Pre-Deploy
+**Goal**: All configuration scaffolding exists so nixos-anywhere can deploy a working system on first try
+**Depends on**: Nothing (first phase)
+**Requirements**: BOOT-02, BOOT-04, SEC-01, SEC-02
+**Success Criteria** (what must be TRUE):
+  1. `nix flake check` passes on the flake with all inputs (nixpkgs, home-manager, sops-nix, disko) pinned in flake.lock
+  2. disko config defines EFI + root partition layout targeting the correct Contabo disk device
+  3. GRUB boot loader is configured for hybrid BIOS/UEFI compatibility in the NixOS config
+  4. Age public key derived from a pre-generated SSH host key is present in `.sops.yaml`, and at least one encrypted secrets file exists and can be decrypted locally
+**Plans**: TBD
+
+Plans:
+- [ ] 01-01: TBD
+
+### Phase 2: Bootable Base System
+**Goal**: NixOS boots on the Contabo VPS and is accessible via SSH with a secure firewall
+**Depends on**: Phase 1
+**Requirements**: BOOT-01, BOOT-03, BOOT-05, BOOT-06, NET-01, NET-02, NET-04, SYS-01, SYS-02
+**Success Criteria** (what must be TRUE):
+  1. `nixos-anywhere` deploys the configuration to the Contabo VPS in a single command, and the server boots into NixOS
+  2. User `dangirsh` can SSH into the server with key-only authentication (password auth rejected, root login rejected)
+  3. Firewall is active with default-deny policy; only ports 22, 80, 443, and 22000 are open on the public interface (verified by external port scan)
+  4. Hostname is `acfs`, timezone is `Europe/Berlin`, and Nix garbage collection is scheduled
+**Plans**: TBD
+
+Plans:
+- [ ] 02-01: TBD
+
+### Phase 3: Networking + Secrets + Docker Foundation
+**Goal**: Tailscale VPN, full secrets management, and Docker engine work together without firewall conflicts
+**Depends on**: Phase 2
+**Requirements**: NET-03, NET-05, NET-06, SEC-03, DOCK-01
+**Success Criteria** (what must be TRUE):
+  1. Tailscale is connected to the tailnet and the server is reachable via its Tailscale IP from another tailnet device
+  2. All sops-nix secrets (Tailscale authkey, B2 credentials, Docker env files, SSH keys) decrypt successfully to `/run/secrets/` at activation time
+  3. Docker engine is running with `--iptables=false` and containers can communicate on internal networks without bypassing the NixOS firewall (verified by external port scan showing no unexpected open ports)
+  4. fail2ban is active and banning IPs after failed SSH attempts
+  5. Tailscale routing works with reverse path filtering set to "loose" (no dropped packets on tailscale0 interface)
+**Plans**: TBD
+
+Plans:
+- [ ] 03-01: TBD
+
+### Phase 4: Docker Services + Ollama
+**Goal**: Production web services and AI inference are running and accessible
+**Depends on**: Phase 3
+**Requirements**: DOCK-02, DOCK-03, DOCK-04, SVC-01
+**Success Criteria** (what must be TRUE):
+  1. claw-swap.com resolves and serves HTTPS traffic through Caddy -> app -> PostgreSQL on the `claw-swap-net` Docker network
+  2. grok-mcp container is running and responding on port 9601
+  3. Ollama service is running and `ollama list` shows the server is responsive (models downloaded manually post-deploy)
+  4. Docker network `claw-swap-net` is created before dependent containers start (verified by `docker network ls`)
+**Plans**: TBD
+
+Plans:
+- [ ] 04-01: TBD
+
+### Phase 5: User Environment + Dev Tools
+**Goal**: The server provides a complete, comfortable development experience for daily use
+**Depends on**: Phase 2 (user account must exist)
+**Requirements**: HOME-01, HOME-02, HOME-03, HOME-04, HOME-05, DEV-01, DEV-02, DEV-03, DEV-04, DEV-05
+**Success Criteria** (what must be TRUE):
+  1. SSH into server drops user into Zsh with Starship prompt, syntax highlighting, autosuggestions, and completions working
+  2. Tmux sessions persist across SSH disconnects and Atuin shell history is available and syncing
+  3. `git`, `gh`, `bun`, `node`, `pnpm`, `go`, `python3`, `rustup`, `nvim`, `fd`, `rg`, `jq`, and `git-lfs` are all available on PATH and functional
+  4. `git config user.name` returns "Dan Girshovich" and `gh auth status` confirms GitHub CLI is authenticated
+  5. home-manager is integrated as a NixOS module and `home-manager generations` shows the active generation
+**Plans**: TBD
+
+Plans:
+- [ ] 05-01: TBD
+
+### Phase 6: User Services + Agent Tooling
+**Goal**: The AI agent development infrastructure is operational with file sync, code indexing, and config repos in place
+**Depends on**: Phase 3 (Tailscale for Syncthing), Phase 5 (home-manager for CASS user service)
+**Requirements**: SVC-02, SVC-03, AGENT-01, AGENT-02
+**Success Criteria** (what must be TRUE):
+  1. Syncthing web UI is accessible and configured with declarative devices and folders, syncing with at least one peer
+  2. CASS indexer is running as a user-level systemd service (`systemctl --user status cass-indexer` shows active)
+  3. `/data/projects/global-agent-conf` exists and `~/.claude` is a symlink pointing to it
+  4. `/data/projects/parts` and `/data/projects/claw-swap` repos are cloned and present
+**Plans**: TBD
+
+Plans:
+- [ ] 06-01: TBD
+
+### Phase 7: Backups
+**Goal**: Critical server data is automatically backed up off-site with a defined retention policy
+**Depends on**: Phase 3 (B2 credentials via sops-nix)
+**Requirements**: BACK-01
+**Success Criteria** (what must be TRUE):
+  1. Restic backup runs successfully to Backblaze B2 via S3 API (verified by `restic snapshots` showing at least one snapshot)
+  2. Automated daily backup timer is active (`systemctl status restic-backups-*.timer` shows enabled and scheduled)
+  3. Retention policy is configured (7 daily, 5 weekly, 12 monthly) and `restic forget --dry-run` confirms policy
+**Plans**: TBD
+
+Plans:
+- [ ] 07-01: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+(Phases 4, 5, 6, 7 can partially overlap since their dependencies are on Phase 2 or 3, not each other.)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|---------------|--------|-----------|
+| 1. Flake Scaffolding + Pre-Deploy | 0/TBD | Not started | - |
+| 2. Bootable Base System | 0/TBD | Not started | - |
+| 3. Networking + Secrets + Docker Foundation | 0/TBD | Not started | - |
+| 4. Docker Services + Ollama | 0/TBD | Not started | - |
+| 5. User Environment + Dev Tools | 0/TBD | Not started | - |
+| 6. User Services + Agent Tooling | 0/TBD | Not started | - |
+| 7. Backups | 0/TBD | Not started | - |
