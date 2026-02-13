@@ -31,10 +31,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. disko config defines EFI + root partition layout targeting the correct Contabo disk device
   3. GRUB boot loader is configured for hybrid BIOS/UEFI compatibility in the NixOS config
   4. Age public key derived from a pre-generated SSH host key is present in `.sops.yaml`, and at least one encrypted secrets file exists and can be decrypted locally
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md -- NixOS flake configuration skeleton (flake.nix, host configs, modules, disko, boot, nix flake check)
+- [ ] 01-02-PLAN.md -- sops-nix secrets bootstrap (SSH host key, age keys, .sops.yaml, encrypted secrets, local decryption)
 
 ### Phase 2: Bootable Base System
 **Goal**: NixOS boots on the Contabo VPS and is accessible via SSH with a secure firewall
@@ -129,7 +130,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 1. Flake Scaffolding + Pre-Deploy | 0/TBD | Not started | - |
+| 1. Flake Scaffolding + Pre-Deploy | 0/2 | Planned | - |
 | 2. Bootable Base System | 0/TBD | Not started | - |
 | 3. Networking + Secrets + Docker Foundation | 0/TBD | Not started | - |
 | 4. Docker Services + Ollama | 0/TBD | Not started | - |
