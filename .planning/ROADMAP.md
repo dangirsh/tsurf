@@ -78,10 +78,12 @@ Plans:
   3. Parts Docker images are built via Nix `dockerTools.buildImage` (no external registry, no Dockerfiles)
   4. All parts secrets (Telegram bot token, API keys, OAuth creds) use sops-nix (migrated from agenix) and decrypt at activation
   5. Parts repo has no `nixos-rebuild` in its CI; agent-neurosys handles all NixOS config deployment
-**Plans:** TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 03.1-01: TBD (run /gsd:plan-phase 3.1 to break down)
+- [ ] 03.1-01-PLAN.md -- Secrets migration (agenix to sops-nix) + parts flake.nix rewrite
+- [ ] 03.1-02-PLAN.md -- Docker image Nix expressions (parts-agent + parts-tools via dockerTools.buildLayeredImage)
+- [ ] 03.1-03-PLAN.md -- NixOS module (containers, networks, secrets wiring) + agent-neurosys flake integration
 
 ### Phase 4: Docker Services + Ollama
 **Goal**: Production web services and AI inference are running and accessible
@@ -150,7 +152,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Flake Scaffolding + Pre-Deploy | 0/2 | Planned | - |
 | 2. Bootable Base System | 0/TBD | Not started | - |
 | 3. Networking + Secrets + Docker Foundation | 0/TBD | Not started | - |
-| 3.1 Parts Migration (INSERTED) | 0/TBD | Not started | - |
+| 3.1 Parts Migration (INSERTED) | 0/3 | Planned | - |
 | 4. Docker Services + Ollama | 0/TBD | Not started | - |
 | 5. User Environment + Dev Tools | 0/TBD | Not started | - |
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
