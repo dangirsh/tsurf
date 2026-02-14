@@ -15,10 +15,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Flake Scaffolding + Pre-Deploy** - Flake skeleton, disko config, sops-nix bootstrap, age key derivation
 - [ ] **Phase 2: Bootable Base System** - NixOS boots on Contabo, SSH works, firewall active, user exists
 - [ ] **Phase 3: Networking + Secrets + Docker Foundation** - Tailscale connected, full secrets decryption, Docker engine running
+- [ ] **Phase 3.1: Parts Migration — Subsume NixOS Config + Docker Containers** - Migrate parts NixOS config into agent-neurosys, declare parts Docker containers, migrate secrets from agenix to sops-nix, move Syncthing to native service (INSERTED)
 - [ ] **Phase 4: Docker Services + Ollama** - claw-swap stack, grok-mcp container, Ollama service running
 - [ ] **Phase 5: User Environment + Dev Tools** - home-manager shell, dev toolchain, full development experience
 - [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
 - [ ] **Phase 7: Backups** - Automated Restic backups to Backblaze B2
+- [ ] **Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config** - Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub, identify server-relevant config/services worth porting
 
 ## Phase Details
 
@@ -65,6 +67,23 @@ Plans:
 
 Plans:
 - [ ] 03-01: TBD
+
+### Phase 3.1: Parts Migration — Subsume NixOS Config + Docker Containers (INSERTED)
+
+**Goal:** agent-neurosys fully owns the server's NixOS config; parts repo becomes Docker-image-only with no NixOS config of its own
+**Depends on:** Phase 3 (Docker engine, Tailscale, secrets infrastructure)
+**Success Criteria** (what must be TRUE):
+  1. Parts Docker containers (parts-agent, parts-tools) are declared in agent-neurosys NixOS modules and running after `nixos-rebuild switch`
+  2. Parts Docker networks (agent_net 172.20.0.0/24 internal, tools_net 172.21.0.0/24 external) are created by agent-neurosys
+  3. All parts secrets (Telegram bot token, API keys, OAuth creds) are migrated from agenix to sops-nix and decrypt at activation
+  4. Parts repo CI deploys only Docker images (no `nixos-rebuild` in parts repo); agent-neurosys handles all NixOS config deployment
+  5. Syncthing runs as a native NixOS/systemd service (not a Docker container), syncing with at least one peer
+  6. Parts canary/smoke-test system either migrated or documented for manual operation
+  7. `nix flake check` passes with all new modules
+**Plans:** TBD
+
+Plans:
+- [ ] 03.1-01: TBD (run /gsd:plan-phase 3.1 to break down)
 
 ### Phase 4: Docker Services + Ollama
 **Goal**: Production web services and AI inference are running and accessible
@@ -125,15 +144,30 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
-(Phases 4, 5, 6, 7 can partially overlap since their dependencies are on Phase 2 or 3, not each other.)
+Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -> 8
+(Phase 3.1 must complete before Phase 4 since parts containers are a prerequisite for service verification. Phases 4, 5, 6, 7 can partially overlap. Phase 8 is a research/audit phase that can run anytime — findings may feed back into earlier phases.)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 1. Flake Scaffolding + Pre-Deploy | 0/2 | Planned | - |
 | 2. Bootable Base System | 0/TBD | Not started | - |
 | 3. Networking + Secrets + Docker Foundation | 0/TBD | Not started | - |
+| 3.1 Parts Migration (INSERTED) | 0/TBD | Not started | - |
 | 4. Docker Services + Ollama | 0/TBD | Not started | - |
 | 5. User Environment + Dev Tools | 0/TBD | Not started | - |
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
 | 7. Backups | 0/TBD | Not started | - |
+| 8. Review Old Neurosys + Doom.d | 0/TBD | Not started | - |
+
+### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
+**Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
+**Depends on**: Nothing (research phase, can run anytime)
+**Requirements**: None (advisory — informs other phases)
+**Success Criteria** (what must be TRUE):
+  1. Both repos (dangirsh/neurosys, dangirsh/.doom.d) have been reviewed and a summary of server-relevant findings is presented
+  2. Each candidate config/service includes: what it does, where it lived in the old repo, and which agent-neurosys phase/module it would slot into
+  3. User has approved or rejected each candidate — approved items are captured as TODOs or folded into existing phase plans
+**Plans**: 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md -- Present candidates for user cherry-picking, capture decisions in ROADMAP.md and SUMMARY.md
