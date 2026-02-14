@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Flake Scaffolding + Pre-Deploy** - Flake skeleton, disko config, sops-nix bootstrap, age key derivation
 - [ ] **Phase 2: Bootable Base System** - NixOS boots on Contabo, SSH works, firewall active, user exists
 - [ ] **Phase 3: Networking + Secrets + Docker Foundation** - Tailscale connected, full secrets decryption, Docker engine running
-- [ ] **Phase 3.1: Parts Migration — Subsume NixOS Config + Docker Containers** - Migrate parts NixOS config into agent-neurosys, declare parts Docker containers, migrate secrets from agenix to sops-nix, move Syncthing to native service (INSERTED)
+- [ ] **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** - Parts exports NixOS module via flake, agent-neurosys imports it, containers via dockerTools, secrets migrated to sops-nix (INSERTED)
 - [ ] **Phase 4: Docker Services + Ollama** - claw-swap stack, grok-mcp container, Ollama service running
 - [ ] **Phase 5: User Environment + Dev Tools** - home-manager shell, dev toolchain, full development experience
 - [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
@@ -68,18 +68,16 @@ Plans:
 Plans:
 - [ ] 03-01: TBD
 
-### Phase 3.1: Parts Migration — Subsume NixOS Config + Docker Containers (INSERTED)
+### Phase 3.1: Parts Integration — Flake Module + Declarative Containers (INSERTED)
 
-**Goal:** agent-neurosys fully owns the server's NixOS config; parts repo becomes Docker-image-only with no NixOS config of its own
+**Goal:** Parts repo exports a NixOS module (via flake) declaring its containers, networks, and secrets; agent-neurosys imports it as a flake input
 **Depends on:** Phase 3 (Docker engine, Tailscale, secrets infrastructure)
 **Success Criteria** (what must be TRUE):
-  1. Parts Docker containers (parts-agent, parts-tools) are declared in agent-neurosys NixOS modules and running after `nixos-rebuild switch`
-  2. Parts Docker networks (agent_net 172.20.0.0/24 internal, tools_net 172.21.0.0/24 external) are created by agent-neurosys
-  3. All parts secrets (Telegram bot token, API keys, OAuth creds) are migrated from agenix to sops-nix and decrypt at activation
-  4. Parts repo CI deploys only Docker images (no `nixos-rebuild` in parts repo); agent-neurosys handles all NixOS config deployment
-  5. Syncthing runs as a native NixOS/systemd service (not a Docker container), syncing with at least one peer
-  6. Parts canary/smoke-test system either migrated or documented for manual operation
-  7. `nix flake check` passes with all new modules
+  1. Parts repo has a `flake.nix` with `nixosModules.default` that declares its Docker containers (parts-agent, parts-tools), networks (agent_net, tools_net), and sops-nix secrets
+  2. Agent-neurosys imports `inputs.parts.nixosModules.default` and `nix flake check` passes for both flakes
+  3. Parts Docker images are built via Nix `dockerTools.buildImage` (no external registry, no Dockerfiles)
+  4. All parts secrets (Telegram bot token, API keys, OAuth creds) use sops-nix (migrated from agenix) and decrypt at activation
+  5. Parts repo has no `nixos-rebuild` in its CI; agent-neurosys handles all NixOS config deployment
 **Plans:** TBD
 
 Plans:
