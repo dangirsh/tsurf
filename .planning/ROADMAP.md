@@ -82,10 +82,11 @@ Plans:
   3. Docker engine is running with `--iptables=false` and containers can communicate on internal networks without bypassing the NixOS firewall (verified by external port scan showing no unexpected open ports)
   4. fail2ban is active and banning IPs after failed SSH attempts
   5. Tailscale routing works with reverse path filtering set to "loose" (no dropped packets on tailscale0 interface)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- Tailscale VPN + sops-nix secrets + fail2ban + firewall hardening
+- [ ] 03-02-PLAN.md -- Docker engine (--iptables=false) + NixOS NAT + full stack validation
 
 ### Phase 3.1: Parts Integration — Flake Module + Declarative Containers (INSERTED)
 
