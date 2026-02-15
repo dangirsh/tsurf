@@ -1,6 +1,6 @@
 keys:
   - &admin      age1vma7w9nqlg9da8z60a99g8wv53ufakfmzxpkdnnzw39y34grug7qklz3xz
-  - &host_acfs  age1k55y5yphzwlzl6a0ndpz4jhg70xk9mpwlhltwdywjgwuvkzvrc8qa9yake
+  - &host_acfs  age1jgn7pqqf4hvalqdrzqysxtnsydd5urnuczrfm86umr7yfr8pu5gqqet2t3
 creation_rules:
   - path_regex: secrets/acfs\.yaml$
     key_groups:

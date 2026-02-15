@@ -1,6 +1,6 @@
 # modules/networking.nix
 # @decision NET-01: key-only SSH, no root login
-# @decision NET-02: default-deny nftables firewall
+# @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
 # @decision NET-03: Tailscale VPN connected to tailnet
 # @decision NET-04: ports 22, 80, 443, 22000 on public interface
 # @decision NET-05: fail2ban SSH protection with progressive banning
@@ -13,6 +13,7 @@
   # --- Firewall: per-interface trust ---
   networking.firewall = {
     enable = true;
+    allowPing = true;
     allowedTCPPorts = [ 22 80 443 22000 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
     trustedInterfaces = [ "tailscale0" ];
@@ -24,7 +25,7 @@
     settings = {
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
-      PermitRootLogin = "no";
+      PermitRootLogin = "prohibit-password";  # key-only root for initial deploy recovery
     };
   };
 

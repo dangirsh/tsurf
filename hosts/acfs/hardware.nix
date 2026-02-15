@@ -12,5 +12,5 @@
     "sd_mod"
   ];
 
-  boot.kernelModules = [ "kvm-amd" ];
+  boot.kernelModules = [ ];
 }
