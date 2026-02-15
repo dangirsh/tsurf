@@ -49,10 +49,11 @@ Plans:
   2. User `dangirsh` can SSH into the server with key-only authentication (password auth rejected, root login rejected)
   3. Firewall is active with default-deny policy; only ports 22, 80, 443, and 22000 are open on the public interface (verified by external port scan)
   4. Hostname is `acfs`, timezone is `Europe/Berlin`, and Nix garbage collection is scheduled
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- Module config hardening (nftables, SSH lockdown, docker group, nix flake check)
+- [ ] 02-02-PLAN.md -- nixos-anywhere deployment + post-deploy verification (human-interactive)
 
 ### Phase 2.1: Base System Fixups from Neurosys Review (INSERTED)
 **Goal**: Apply settings, packages, and SSH hardening improvements identified in Phase 8 neurosys review
@@ -170,8 +171,8 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 1. Flake Scaffolding + Pre-Deploy | 0/2 | Planned | - |
-| 2. Bootable Base System | 0/TBD | Not started | - |
+| 1. Flake Scaffolding + Pre-Deploy | 2/2 | ✓ Complete | 2026-02-13 |
+| 2. Bootable Base System | 0/2 | In Progress | - |
 | 2.1 Base System Fixups (INSERTED) | 0/TBD | Not started | - |
 | 3. Networking + Secrets + Docker Foundation | 0/TBD | Not started | - |
 | 3.1 Parts Integration (INSERTED) | 3/3 | ✓ Complete | 2026-02-15 |
