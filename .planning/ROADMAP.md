@@ -22,6 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
 - [ ] **Phase 7: Backups** - Automated Restic backups to Backblaze B2
 - [ ] **Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config** - Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub, identify server-relevant config/services worth porting
+- [ ] **Phase 9: Audit & Simplify** - Deep review of all modules and unexecuted plans, optimize for simplicity, minimalism, and security
 
 ## Phase Details
 
@@ -173,7 +174,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 1. Flake Scaffolding + Pre-Deploy | 2/2 | ✓ Complete | 2026-02-13 |
-| 2. Bootable Base System | 0/2 | In Progress | - |
+| 2. Bootable Base System | 1/2 | In Progress (Plan 02 = human deploy) | - |
 | 2.1 Base System Fixups (INSERTED) | 0/TBD | Not started | - |
 | 3. Networking + Secrets + Docker Foundation | 2/2 | ✓ Complete | 2026-02-15 |
 | 3.1 Parts Integration (INSERTED) | 3/3 | ✓ Complete | 2026-02-15 |
@@ -182,6 +183,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
 | 7. Backups | 0/TBD | Not started | - |
 | 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |
+| 9. Audit & Simplify | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -195,3 +197,18 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -
 
 Plans:
 - [x] 08-01-PLAN.md -- Present candidates for user cherry-picking, capture decisions in ROADMAP.md and SUMMARY.md
+
+### Phase 9: Audit & Simplify — Implementation Review + Plan Optimization
+
+**Goal:** Deep review of all committed NixOS modules (flake.nix, modules/, secrets, .sops.yaml) and all unexecuted phase plans (2, 2.1, 4, 5, 6, 7). Optimize the entire repo for simplicity, minimalism, and security — remove unnecessary complexity, tighten security defaults, simplify module structure, and streamline future plans.
+**Depends on:** Phase 3 (reviews all work through Phase 3 + 3.1)
+**Requirements**: None (quality gate — improves existing work and plans)
+**Success Criteria** (what must be TRUE):
+  1. Every committed module has been reviewed for unnecessary complexity, and simplifications are applied or documented
+  2. Security posture reviewed: no overly permissive defaults, secrets handling is minimal and correct, firewall rules are tight
+  3. Unexecuted phase plans (2, 2.1, 4, 5, 6, 7) are reviewed and revised for minimalism — scope creep removed, plans streamlined
+  4. `nix flake check` passes after any implementation changes
+**Plans:** TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 9 to break down)
