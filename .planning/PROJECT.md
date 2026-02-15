@@ -8,6 +8,19 @@ A NixOS flake-based configuration that declaratively defines the "acfs" developm
 
 One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned — no manual setup steps.
 
+## Design Philosophy
+
+This is a **generic infrastructure repo** for a beefy VPS that runs the user's life. It provides base system configuration + deployment — NOT project-specific details. Projects plug in via flake inputs (like parts) or are declared in later service phases.
+
+**Use cases the infrastructure must support without interference:**
+- Small projects and demos (e.g., claw-swap)
+- AI agents running via parts flake
+- Lots of personal data storage and sync
+- Tailscale connection to home WiFi for home automation
+- SSH as the primary management interface
+
+**Security posture:** Best defaults that don't interfere with these use cases. Default-deny firewall, Tailscale for private networking, sops-nix for secrets, fail2ban for SSH.
+
 ## Requirements
 
 ### Validated
