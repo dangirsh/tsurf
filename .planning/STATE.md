@@ -2,37 +2,38 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-13)
+See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 3.1 - Parts Integration (Flake Module + Declarative Containers)
+**Current focus:** Phase 3 COMPLETE — next up: Phase 2 deployment or Phase 2.1 fixups
 
 ## Current Position
 
-Phase: 3.1 of 9 (Parts Integration — Flake Module + Declarative Containers)
-Plan: 3 of 3 in current phase
-Status: Phase 3.1 COMPLETE
-Last activity: 2026-02-15 -- Phase 3.1 executed: secrets migration, Docker image Nix expressions, NixOS module + flake integration
+Phase: 3 of 9 (Networking + Secrets + Docker Foundation)
+Plan: 2 of 2 in current phase
+Status: Phase 3 COMPLETE
+Last activity: 2026-02-15 -- Phase 3 executed: Tailscale, fail2ban, secrets, Docker engine
 
-Progress: [████████..] 5/6 plans (83%)
+Progress: [████████..] 7/8 plans (88%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: ~19min
-- Total execution time: ~88 min
+- Total plans completed: 7
+- Average duration: ~17min
+- Total execution time: ~103 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2/2 | ~13min | ~6.5min |
+| 3 | 2/2 | ~15min | ~7.5min |
 | 3.1 | 3/3 | ~75min | ~25min |
 
 **Recent Trend:**
-- Last 3 plans: 03.1-01 (25min), 03.1-02 (35min), 03.1-03 (15min)
-- Trend: complex Nix builds take longer; integration plans faster
+- Last 2 plans: 03-01 (10min), 03-02 (5min)
+- Trend: well-defined config plans execute fast
 
 *Updated after each plan completion*
 
@@ -50,6 +51,11 @@ Recent decisions affecting current work:
 - [01-01]: Module-per-concern pattern (base, boot, users, networking, secrets)
 - [01-02]: Dual age keys — admin for local editing + host key for server decryption
 - [01-02]: Pre-generated SSH host key in tmp/host-key/ for nixos-anywhere --extra-files
+- [03-01]: fail2ban multipliers only (formula mutually exclusive in NixOS)
+- [03-01]: defaultSopsFile path fixed: ../secrets/acfs.yaml (not ../../)
+- [03-01]: .sops.yaml admin key replaced — orphaned key removed
+- [03-02]: Docker iptables=false + NixOS NAT for container outbound
+- [03-02]: externalInterface = "eth0" — must verify on Contabo (may be ens3)
 - [03.1-01]: Used local age key (age1vma7w9...) as admin — Phase 1 admin key orphaned (no private key)
 - [03.1-01]: Parts flake exports nixosModules.default + packages (no nixosConfigurations)
 - [03.1-02]: npm workspace lockfile-to-root pattern via postPatch for buildNpmPackage
@@ -74,6 +80,10 @@ Recent decisions affecting current work:
 - **Phase 1: Flake Scaffolding + Pre-Deploy** (2 plans, completed 2026-02-13)
   - 01-01: NixOS flake skeleton (flake.nix, 12 config files, nix flake check passes)
   - 01-02: sops-nix secrets bootstrap (.sops.yaml, encrypted secrets, host key)
+
+- **Phase 3: Networking + Secrets + Docker Foundation** (2 plans, completed 2026-02-15)
+  - 03-01: Tailscale VPN + sops-nix secrets (4 secrets) + fail2ban + firewall hardening
+  - 03-02: Docker engine (iptables=false) + NixOS NAT + bridge trust + full stack validation
 
 - **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** (3 plans, completed 2026-02-15)
   - 03.1-01: Secrets migration (agenix → sops-nix) + parts flake.nix rewrite
@@ -107,10 +117,11 @@ None yet.
 
 - [Research]: Contabo boot mode (BIOS vs UEFI) unverified -- use hybrid GRUB config as hedge
 - [Research]: CASS binary availability unclear -- may need custom derivation in Phase 6
-- [Research]: Docker `--iptables=false` full implications on inter-container networking need testing in Phase 3
+- [03-02]: Docker NAT externalInterface = "eth0" — must verify on Contabo (may be ens3)
+- [03-01]: Secret placeholders need real values before deployment (sops secrets/acfs.yaml)
 
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 3.1 complete — all 3 plans executed, summaries written, branches merged
+Stopped at: Phase 3 complete — both plans executed, summaries written
 Resume file: None
