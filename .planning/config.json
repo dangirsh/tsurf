@@ -4,6 +4,8 @@
   "parallelization": true,
   "commit_docs": true,
   "model_profile": "quality",
+  "executor_backend": "codex",
+  "codex_model": "gpt-5.3-codex",
   "workflow": {
     "research": true,
     "plan_check": true,
