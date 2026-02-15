@@ -14,6 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Flake Scaffolding + Pre-Deploy** - Flake skeleton, disko config, sops-nix bootstrap, age key derivation
 - [ ] **Phase 2: Bootable Base System** - NixOS boots on Contabo, SSH works, firewall active, user exists
+- [ ] **Phase 2.1: Base System Fixups from Neurosys Review** - Settings module, system packages, SSH hardening (INSERTED)
 - [ ] **Phase 3: Networking + Secrets + Docker Foundation** - Tailscale connected, full secrets decryption, Docker engine running
 - [ ] **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** - Parts exports NixOS module via flake, agent-neurosys imports it, containers via dockerTools, secrets migrated to sops-nix (INSERTED)
 - [ ] **Phase 4: Docker Services + Ollama** - claw-swap stack, grok-mcp container, Ollama service running
@@ -52,6 +53,23 @@ Plans:
 
 Plans:
 - [ ] 02-01: TBD
+
+### Phase 2.1: Base System Fixups from Neurosys Review (INSERTED)
+**Goal**: Apply settings, packages, and SSH hardening improvements identified in Phase 8 neurosys review
+**Depends on**: Phase 2 (base system must be deployed)
+**Requirements**: None (advisory improvements from Phase 8 audit)
+**Success Criteria** (what must be TRUE):
+  1. `modules/settings.nix` exists with `config.settings.{name,username,email}` options; all other modules reference `config.settings.*` instead of hardcoded strings
+  2. `environment.systemPackages` includes agent-focused baseline (curl, wget, ripgrep, fd, jq, yq-go, tmux, git, shellcheck, sd, and others)
+  3. `users.mutableUsers = false` is set, `security.sudo.wheelNeedsPassword = false`, `security.sudo.execWheelOnly = true`, and `programs.ssh.startAgent = true`
+  4. `nix flake check` passes with all new modules
+**Plans**: TBD
+
+Plans:
+- [ ] 02.1-01: TBD
+  - [ ] TODO(from-neurosys): Settings module — centralized `config.settings.*` for name/username/email → new `modules/settings.nix`
+  - [ ] TODO(from-neurosys): System packages baseline (agent-focused: curl, wget, zip/unzip, tree, rsync, ripgrep, fd, jq, yq-go, killall, lsof, tmux, git, file, shellcheck, sd) → `modules/base.nix`
+  - [ ] TODO(from-neurosys): SSH hardening — `users.mutableUsers = false`, `security.sudo.wheelNeedsPassword = false`, `security.sudo.execWheelOnly = true`, `programs.ssh.startAgent = true` → `modules/users.nix`
 
 ### Phase 3: Networking + Secrets + Docker Foundation
 **Goal**: Tailscale VPN, full secrets management, and Docker engine work together without firewall conflicts
@@ -113,6 +131,8 @@ Plans:
 
 Plans:
 - [ ] 05-01: TBD
+  - [ ] TODO(from-neurosys): SSH client config — controlMaster, controlPersist, serverAliveInterval, hashKnownHosts → new `home/ssh.nix`
+  - [ ] TODO(from-neurosys): Direnv with nix-direnv for cached evaluations (minimize cd latency) → `home/direnv.nix`
 
 ### Phase 6: User Services + Agent Tooling
 **Goal**: The AI agent development infrastructure is operational with file sync, code indexing, and config repos in place
@@ -127,6 +147,7 @@ Plans:
 
 Plans:
 - [ ] 06-01: TBD
+  - [ ] TODO(from-neurosys): Syncthing declarative config pattern — receive-only mode, versioning, rescan intervals, 4 device IDs declared in Nix (fresh params, not ported) → `modules/syncthing.nix`
 
 ### Phase 7: Backups
 **Goal**: Critical server data is automatically backed up off-site with a defined retention policy
@@ -144,20 +165,21 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -> 8
-(Phase 3.1 must complete before Phase 4 since parts containers are a prerequisite for service verification. Phases 4, 5, 6, 7 can partially overlap. Phase 8 is a research/audit phase that can run anytime — findings may feed back into earlier phases.)
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -> 8
+(Phase 2.1 applies fixups from Phase 8 review. Phase 3.1 must complete before Phase 4. Phases 4, 5, 6, 7 can partially overlap. Phase 8 is a research/audit phase — findings feed back into earlier phases via TODOs.)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 1. Flake Scaffolding + Pre-Deploy | 0/2 | Planned | - |
 | 2. Bootable Base System | 0/TBD | Not started | - |
+| 2.1 Base System Fixups (INSERTED) | 0/TBD | Not started | - |
 | 3. Networking + Secrets + Docker Foundation | 0/TBD | Not started | - |
-| 3.1 Parts Migration (INSERTED) | 0/3 | Planned | - |
+| 3.1 Parts Integration (INSERTED) | 0/3 | Planned | - |
 | 4. Docker Services + Ollama | 0/TBD | Not started | - |
 | 5. User Environment + Dev Tools | 0/TBD | Not started | - |
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
 | 7. Backups | 0/TBD | Not started | - |
-| 8. Review Old Neurosys + Doom.d | 0/TBD | Not started | - |
+| 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -170,4 +192,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -> 8
 **Plans**: 1 plan
 
 Plans:
-- [ ] 08-01-PLAN.md -- Present candidates for user cherry-picking, capture decisions in ROADMAP.md and SUMMARY.md
+- [x] 08-01-PLAN.md -- Present candidates for user cherry-picking, capture decisions in ROADMAP.md and SUMMARY.md

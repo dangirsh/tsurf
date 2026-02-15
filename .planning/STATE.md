@@ -52,16 +52,39 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 2.1 inserted after Phase 2: Base System Fixups from Neurosys Review
+  - Settings module (`modules/settings.nix`) for centralized user constants
+  - Agent-focused system packages baseline (16 packages)
+  - SSH hardening (mutableUsers=false, passwordless sudo, execWheelOnly, ssh agent)
 - Phase 3.1 inserted after Phase 3: Parts Migration — Flake Module + Declarative Containers (URGENT)
   - Parts exports NixOS module via flake, agent-neurosys imports it
   - Containers via dockerTools, secrets migrated to sops-nix
-- Phase 8 added: Review old neurosys + doom.d repos for reusable server config (research/audit, no dependencies)
+- Phase 8 completed: Neurosys/doom.d review — 5 candidates approved, 2 rejected, TODOs added to Phases 2.1, 5, 6
 
 ### Completed Phases
 
 - **Phase 1: Flake Scaffolding + Pre-Deploy** (2 plans, completed 2026-02-13)
   - 01-01: NixOS flake skeleton (flake.nix, 12 config files, nix flake check passes)
   - 01-02: sops-nix secrets bootstrap (.sops.yaml, encrypted secrets, host key)
+
+### Phase 8 Decisions (Neurosys Review)
+
+**Approved candidates:**
+- Candidate 1: Syncthing declarative config → Phase 6 (structural pattern only, fresh params)
+- Candidate 2: Settings module → Phase 2.1 (new `modules/settings.nix`)
+- Candidate 3: System packages baseline → Phase 2.1 (agent-focused: 16 packages)
+- Candidate 5: SSH hardening → Phase 2.1 (mutableUsers, sudo, ssh agent, execWheelOnly)
+- Candidate 6: SSH client config → Phase 5 (new `home/ssh.nix`)
+
+**Rejected candidates:**
+- Candidate 4: Nix settings (sandbox, max-jobs) — defaults sufficient
+- Candidate 7: Tarsnap backup pattern — will decide backup paths fresh in Phase 7
+
+**Open question answers:**
+- Q1: Syncthing uses single "Sync" folder now (paths deferred to Phase 6)
+- Q2: 4 current devices — MacBook-Pro.local, DC-1, Pixel 10 Pro, MacBook-Pro-von-Theda.local
+- Q3: Teleport not needed
+- Q4: Direnv yes, with nix-direnv for cached evaluations to minimize cd latency → Phase 5
 
 ### Pending Todos
 
@@ -76,5 +99,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: State consolidated, Phase 1 complete, Phase 3.1 ready to execute
+Stopped at: Phase 8 complete — neurosys review decisions captured, TODOs added to ROADMAP.md
 Resume file: None
