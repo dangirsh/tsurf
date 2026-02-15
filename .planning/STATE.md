@@ -10,28 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 3.1 of 9 (Parts Integration — Flake Module + Declarative Containers)
-Plan: 0 of 3 in current phase
-Status: Planned, ready to execute
-Last activity: 2026-02-15 -- Consolidated state, merged phase-01-02, Phase 1 complete
+Plan: 3 of 3 in current phase
+Status: Phase 3.1 COMPLETE
+Last activity: 2026-02-15 -- Phase 3.1 executed: secrets migration, Docker image Nix expressions, NixOS module + flake integration
 
-Progress: [██........] 2/6 plans (33%)
+Progress: [████████..] 5/6 plans (83%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: ~6.5min
-- Total execution time: ~13 min
+- Total plans completed: 5
+- Average duration: ~19min
+- Total execution time: ~88 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2/2 | ~13min | ~6.5min |
+| 3.1 | 3/3 | ~75min | ~25min |
 
 **Recent Trend:**
-- Last 2 plans: 01-01 (8min), 01-02 (5min)
-- Trend: steady
+- Last 3 plans: 03.1-01 (25min), 03.1-02 (35min), 03.1-03 (15min)
+- Trend: complex Nix builds take longer; integration plans faster
 
 *Updated after each plan completion*
 
@@ -49,6 +50,13 @@ Recent decisions affecting current work:
 - [01-01]: Module-per-concern pattern (base, boot, users, networking, secrets)
 - [01-02]: Dual age keys — admin for local editing + host key for server decryption
 - [01-02]: Pre-generated SSH host key in tmp/host-key/ for nixos-anywhere --extra-files
+- [03.1-01]: Used local age key (age1vma7w9...) as admin — Phase 1 admin key orphaned (no private key)
+- [03.1-01]: Parts flake exports nixosModules.default + packages (no nixosConfigurations)
+- [03.1-02]: npm workspace lockfile-to-root pattern via postPatch for buildNpmPackage
+- [03.1-02]: --ignore-scripts + manual npm rebuild for sandbox-hostile postinstall scripts
+- [03.1-03]: sops.templates render secrets into container env files via sops.placeholder
+- [03.1-03]: Parts module does NOT import sops-nix or set system-level config — agent-neurosys owns that
+- [03.1-03]: path: flake input for local dev — must change to github: for production
 
 ### Roadmap Evolution
 
@@ -66,6 +74,11 @@ Recent decisions affecting current work:
 - **Phase 1: Flake Scaffolding + Pre-Deploy** (2 plans, completed 2026-02-13)
   - 01-01: NixOS flake skeleton (flake.nix, 12 config files, nix flake check passes)
   - 01-02: sops-nix secrets bootstrap (.sops.yaml, encrypted secrets, host key)
+
+- **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** (3 plans, completed 2026-02-15)
+  - 03.1-01: Secrets migration (agenix → sops-nix) + parts flake.nix rewrite
+  - 03.1-02: Docker image Nix expressions (parts-agent + parts-tools via buildLayeredImage)
+  - 03.1-03: NixOS module (containers, networks, secrets) + agent-neurosys flake integration
 
 ### Phase 8 Decisions (Neurosys Review)
 
@@ -99,5 +112,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 8 complete — neurosys review decisions captured, TODOs added to ROADMAP.md
+Stopped at: Phase 3.1 complete — all 3 plans executed, summaries written, branches merged
 Resume file: None

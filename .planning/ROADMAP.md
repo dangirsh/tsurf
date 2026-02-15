@@ -99,9 +99,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03.1-01-PLAN.md -- Secrets migration (agenix to sops-nix) + parts flake.nix rewrite
-- [ ] 03.1-02-PLAN.md -- Docker image Nix expressions (parts-agent + parts-tools via dockerTools.buildLayeredImage)
-- [ ] 03.1-03-PLAN.md -- NixOS module (containers, networks, secrets wiring) + agent-neurosys flake integration
+- [x] 03.1-01-PLAN.md -- Secrets migration (agenix to sops-nix) + parts flake.nix rewrite
+- [x] 03.1-02-PLAN.md -- Docker image Nix expressions (parts-agent + parts-tools via dockerTools.buildLayeredImage)
+- [x] 03.1-03-PLAN.md -- NixOS module (containers, networks, secrets wiring) + agent-neurosys flake integration
 
 ### Phase 4: Docker Services + Ollama
 **Goal**: Production web services and AI inference are running and accessible
@@ -174,7 +174,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 3.1 -> 4 -> 5 -> 6 -> 7 -
 | 2. Bootable Base System | 0/TBD | Not started | - |
 | 2.1 Base System Fixups (INSERTED) | 0/TBD | Not started | - |
 | 3. Networking + Secrets + Docker Foundation | 0/TBD | Not started | - |
-| 3.1 Parts Integration (INSERTED) | 0/3 | Planned | - |
+| 3.1 Parts Integration (INSERTED) | 3/3 | ✓ Complete | 2026-02-15 |
 | 4. Docker Services + Ollama | 0/TBD | Not started | - |
 | 5. User Environment + Dev Tools | 0/TBD | Not started | - |
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
