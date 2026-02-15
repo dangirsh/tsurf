@@ -10,6 +10,9 @@
     ];
   };
 
+  # Passwordless sudo for wheel — no interactive password was set for dangirsh.
+  security.sudo.wheelNeedsPassword = false;
+
   # Root SSH access: keep during initial deployment for recovery.
   # Remove after confirming dangirsh SSH + sudo works (Plan 02).
   users.users.root.openssh.authorizedKeys.keys = [
