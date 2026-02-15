@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 2 Plan 01 COMPLETE — Plan 02 (deployment) is human-interactive, deferred to VPS deploy
+**Current focus:** Phase 9 IN PROGRESS — security hardening complete, roadmap revision in progress
 
 ## Current Position
 
-Phase: 2 of 9 (Bootable Base System)
-Plan: 1 of 2 in current phase (Plan 02 = human-interactive deployment)
-Status: Phase 2 Plan 01 complete, Plan 02 pending (requires Contabo VPS)
-Last activity: 2026-02-15 -- Phase 2 Plan 01 executed: nftables, SSH lockdown, docker group. Full system build validated.
+Phase: 9 of 9 (Audit & Simplify) — In Progress, Plan 2 of 2
+Plan: 2 of 2 in current phase
+Status: Plan 01 (security hardening) complete. Plan 02 (roadmap revision) executing.
+Last activity: 2026-02-15 -- Phase 9 Plan 01 complete: SSH hardened, mutableUsers/execWheelOnly added
 
 Progress: [████████..] 8/9 plans (89%)
 
@@ -64,6 +64,9 @@ Recent decisions affecting current work:
 - [03.1-03]: sops.templates render secrets into container env files via sops.placeholder
 - [03.1-03]: Parts module does NOT import sops-nix or set system-level config — agent-neurosys owns that
 - [03.1-03]: path: flake input for local dev — must change to github: for production
+- [09]: Phase 2.1 absorbed into Phase 9 — settings module unnecessary for single-host config
+- [09]: SSH moved to Tailscale-only — port 22 removed from public firewall
+- [09]: Docker container hardening deferred to Phase 4 (scope: agent-neurosys base only)
 
 ### Roadmap Evolution
 
@@ -76,6 +79,9 @@ Recent decisions affecting current work:
   - Containers via dockerTools, secrets migrated to sops-nix
 - Phase 8 completed: Neurosys/doom.d review — 5 candidates approved, 2 rejected, TODOs added to Phases 2.1, 5, 6
 - Phase 9 added: Audit & Simplify — deep review of all modules + unexecuted plans, optimize for simplicity/minimalism/security
+- **Phase 2.1 absorbed into Phase 9** — settings module dropped, mutableUsers+execWheelOnly applied in 9-01, dev tools moved to Phase 5
+- **Phase 4 updated:** container hardening added to success criteria
+- **Phase 5 updated:** absorbs dev tools, ssh-agent, SSH client config, direnv from Phase 2.1 and Phase 8
 
 ### Completed Phases
 
@@ -83,10 +89,12 @@ Recent decisions affecting current work:
   - 01-01: NixOS flake skeleton (flake.nix, 12 config files, nix flake check passes)
   - 01-02: sops-nix secrets bootstrap (.sops.yaml, encrypted secrets, host key)
 
-- **Phase 2: Bootable Base System** (1/2 plans, in progress)
-  - 02-01: Module config hardening — nftables, SSH lockdown, docker group (completed 2026-02-15)
-  - 02-02: nixos-anywhere deployment (PENDING — human-interactive, requires Contabo VPS)
-  - Full system build validated: `nix build .#nixosConfigurations.acfs.config.system.build.toplevel` passes
+- **Phase 2: Bootable Base System** (2/2 plans, completed 2026-02-15)
+  - 02-01: Module config hardening — nftables, SSH lockdown, docker group
+  - 02-02: nixos-anywhere deployment — static IP fix, sops key fix, Codex 5.3 audit, full verification
+  - Server live at 62.171.134.33: SSH, Docker, Tailscale, sops secrets, fail2ban all operational
+
+- **Phase 2.1: Base System Fixups** — Absorbed into Phase 9 (settings module dropped, mutableUsers+execWheelOnly in 9-01, dev tools to Phase 5)
 
 - **Phase 3: Networking + Secrets + Docker Foundation** (2 plans, completed 2026-02-15)
   - 03-01: Tailscale VPN + sops-nix secrets (4 secrets) + fail2ban + firewall hardening
@@ -96,6 +104,13 @@ Recent decisions affecting current work:
   - 03.1-01: Secrets migration (agenix → sops-nix) + parts flake.nix rewrite
   - 03.1-02: Docker image Nix expressions (parts-agent + parts-tools via buildLayeredImage)
   - 03.1-03: NixOS module (containers, networks, secrets) + agent-neurosys flake integration
+
+- **Phase 8: Review Old Neurosys + Doom.d** (1 plan, completed 2026-02-15)
+  - 08-01: Review candidates, user cherry-picking decisions captured
+
+- **Phase 9: Audit & Simplify** (2 plans, in progress)
+  - 09-01: Security hardening complete (SSH-to-Tailscale-only, mutableUsers, execWheelOnly)
+  - 09-02: Roadmap revision in progress
 
 ### Phase 8 Decisions (Neurosys Review)
 
@@ -122,13 +137,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Research]: Contabo boot mode (BIOS vs UEFI) unverified -- use hybrid GRUB config as hedge
 - [Research]: CASS binary availability unclear -- may need custom derivation in Phase 6
-- [03-02]: Docker NAT externalInterface = "eth0" — must verify on Contabo (may be ens3)
-- [03-01]: Secret placeholders need real values before deployment (sops secrets/acfs.yaml)
+- [RESOLVED]: Contabo uses BIOS boot (i386-pc GRUB installed successfully), eth0 confirmed
+- [RESOLVED]: Secrets deployed and decrypted — 15 secrets in /run/secrets/
+- [RESOLVED]: Phase 2.1 scope creep — absorbed into Phase 9 after re-evaluation
 
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 2 Plan 01 complete, Plan 02 deferred (human-interactive deployment). Full system build validated.
+Stopped at: Phase 9 Plan 02 (roadmap revision) executing.
 Resume file: None
