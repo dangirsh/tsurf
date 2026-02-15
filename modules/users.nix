@@ -1,6 +1,8 @@
 # modules/users.nix
-# @decision SYS-01: dangirsh with sudo (wheel) + docker group
+# @decision SYS-01: dangirsh with sudo (wheel) + docker group; mutableUsers=false, execWheelOnly=true
 { config, pkgs, ... }: {
+  users.mutableUsers = false;
+
   users.users.dangirsh = {
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" ];
@@ -12,4 +14,5 @@
 
   # Passwordless sudo for wheel — no interactive password was set for dangirsh.
   security.sudo.wheelNeedsPassword = false;
+  security.sudo.execWheelOnly = true;
 }
