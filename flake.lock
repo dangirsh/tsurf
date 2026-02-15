@@ -57,11 +57,32 @@
         "type": "github"
       }
     },
+    "parts": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "sops-nix": [
+          "sops-nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1771152139,
+        "narHash": "sha256-KkoOyi82YWSGLZMBlXJcoefEvAdQC1cBIH4LWmehyKc=",
+        "path": "/data/projects/parts",
+        "type": "path"
+      },
+      "original": {
+        "path": "/data/projects/parts",
+        "type": "path"
+      }
+    },
     "root": {
       "inputs": {
         "disko": "disko",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",
+        "parts": "parts",
         "sops-nix": "sops-nix"
       }
     },

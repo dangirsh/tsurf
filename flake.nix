@@ -13,9 +13,14 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    parts = {
+      url = "path:/data/projects/parts";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.sops-nix.follows = "sops-nix";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, ... } @ inputs: {
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, ... } @ inputs: {
     nixosConfigurations.acfs = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
@@ -23,6 +28,7 @@
         disko.nixosModules.disko
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
+        inputs.parts.nixosModules.default
         ./hosts/acfs
         {
           home-manager.useGlobalPkgs = true;
