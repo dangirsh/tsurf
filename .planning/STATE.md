@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 9 COMPLETE — security hardening + roadmap revision done. Next: Phase 4
+**Current focus:** Phase 4 Plan 01 COMPLETE — claw-swap flake foundation (module + secrets + Docker image). Next: Phase 4 Plan 02
 
 ## Current Position
 
-Phase: 9 of 9 (Audit & Simplify) — COMPLETE
-Plan: 2 of 2 in current phase — all complete
-Status: Phase 9 complete. Security hardening applied, roadmap revised. Next: Phase 4 (Docker Services + Ollama)
-Last activity: 2026-02-15 -- Phase 9 complete: 2 plans, security hardening + roadmap revision
+Phase: 4 (Docker Services) — IN PROGRESS
+Plan: 1 of 2 in current phase — COMPLETE (04-01)
+Status: 04-01 complete (claw-swap flake + sops secrets + Nix-built Docker image). Next: 04-02 (NixOS module + agent-neurosys integration)
+Last activity: 2026-02-16 -- Phase 4 Plan 01 complete: claw-swap foundation shipped
 
-Progress: [██████████] 10/10 plans (100%)
+Progress: Phase 4 started; 04-01 complete; 04-02 next
 
 ## Performance Metrics
 
@@ -64,6 +64,9 @@ Recent decisions affecting current work:
 - [03.1-03]: sops.templates render secrets into container env files via sops.placeholder
 - [03.1-03]: Parts module does NOT import sops-nix or set system-level config — agent-neurosys owns that
 - [03.1-03]: path: flake input for local dev — must change to github: for production
+- [04-01]: claw-swap matches parts pattern: flake exports nixosModules.default + packages.${system}.claw-swap-app
+- [04-01]: claw-swap secrets use sops-nix with dual recipients (admin + acfs host)
+- [04-01]: buildNpmPackage + dockerTools.buildLayeredImage with --ignore-scripts to avoid sharp postinstall fetching binaries
 - [09]: Phase 2.1 absorbed into Phase 9 — settings module unnecessary for single-host config
 - [09]: SSH moved to Tailscale-only — port 22 removed from public firewall
 - [09]: Docker container hardening deferred to Phase 4 (scope: agent-neurosys base only)
@@ -108,9 +111,13 @@ Recent decisions affecting current work:
 - **Phase 8: Review Old Neurosys + Doom.d** (1 plan, completed 2026-02-15)
   - 08-01: Review candidates, user cherry-picking decisions captured
 
-- **Phase 9: Audit & Simplify** (2 plans, in progress)
+- **Phase 9: Audit & Simplify** (2 plans, completed 2026-02-15)
   - 09-01: Security hardening complete (SSH-to-Tailscale-only, mutableUsers, execWheelOnly)
-  - 09-02: Roadmap revision in progress
+  - 09-02: Roadmap revision complete
+
+- **Phase 4: Docker Services** (2 plans, in progress)
+  - 04-01: claw-swap flake + secrets + Docker image foundation (in /data/projects/claw-swap)
+  - 04-02: claw-swap module + integration (next)
 
 ### Phase 8 Decisions (Neurosys Review)
 
