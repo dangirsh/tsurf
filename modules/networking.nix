@@ -7,6 +7,8 @@
 # @decision NET-06: Tailscale reverse path filtering set to loose
 { config, lib, pkgs, ... }: {
 
+  programs.mosh.enable = true;
+
   # --- nftables backend ---
   networking.nftables.enable = true;
 
