@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 5 COMPLETE — full agent-optimized compute environment. Next: Phase 6 (User Services + Agent Tooling).
+**Current focus:** Phase 6 COMPLETE — user services + agent tooling. Next: Phase 7 (Backups).
 
 ## Current Position
 
-Phase: 5 (User Environment + Dev Tools) — COMPLETE
-Plan: 2 of 2 — COMPLETE (05-02)
-Status: Full agent-optimized compute environment declared. API key secrets need real values before deployment.
-Last activity: 2026-02-16 -- Phase 5 Plan 02 complete: agent CLIs + compute infrastructure
+Phase: 6 (User Services + Agent Tooling) — COMPLETE
+Plan: 2 of 2 — COMPLETE (06-02)
+Status: Syncthing, CASS, repo cloning, agent config symlinks all declared. Device IDs are placeholders.
+Last activity: 2026-02-16 -- Phase 6 Plan 02 complete: CASS + repos + agent config
 
-Progress: Phase 5 complete (2/2 plans); next Phase 6 (User Services + Agent Tooling)
+Progress: Phase 6 complete (2/2 plans); next Phase 7 (Backups)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: ~17min
-- Total execution time: ~205 min
+- Total plans completed: 14
+- Average duration: ~18min
+- Total execution time: ~245 min
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: Phase 5 complete (2/2 plans); next Phase 6 (User Services + Agent Tool
 | 3.1 | 3/3 | ~75min | ~25min |
 | 4 | 2/2 | ~60min | ~30min |
 | 5 | 2/2 | ~37min | ~18.5min |
+| 6 | 2/2 | ~40min | ~20min |
 
 **Recent Trend:**
-- Last 2 plans: 05-01 (22min), 05-02 (15min)
-- Trend: NixOS-only plans consistently faster
+- Last 2 plans: 06-01 (25min), 06-02 (15min)
+- Trend: Codex backend hit nix flake check timeout; orchestrator takeover worked
 
 *Updated after each plan completion*
 
@@ -47,126 +48,38 @@ Progress: Phase 5 complete (2/2 plans); next Phase 6 (User Services + Agent Tool
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [Roadmap]: 7-phase structure derived from 37 requirements with natural delivery boundaries
-- [Roadmap]: Pre-deploy phase separated because sops-nix bootstrap and disko config must be correct before nixos-anywhere runs
-- [Roadmap]: Docker/Tailscale/firewall grouped in Phase 3 due to three-way interaction risk
-- [01-01]: GRUB hybrid BIOS+UEFI for Contabo VPS boot mode uncertainty
-- [01-01]: Module-per-concern pattern (base, boot, users, networking, secrets)
-- [01-02]: Dual age keys — admin for local editing + host key for server decryption
-- [01-02]: Pre-generated SSH host key in tmp/host-key/ for nixos-anywhere --extra-files
-- [03-01]: fail2ban multipliers only (formula mutually exclusive in NixOS)
-- [03-01]: defaultSopsFile path fixed: ../secrets/acfs.yaml (not ../../)
-- [03-01]: .sops.yaml admin key replaced — orphaned key removed
-- [03-02]: Docker iptables=false + NixOS NAT for container outbound
-- [03-02]: externalInterface = "eth0" — verified correct on Contabo VPS (altname enp0s18)
-- [03.1-01]: Used local age key (age1vma7w9...) as admin — Phase 1 admin key orphaned (no private key)
-- [03.1-01]: Parts flake exports nixosModules.default + packages (no nixosConfigurations)
-- [03.1-02]: npm workspace lockfile-to-root pattern via postPatch for buildNpmPackage
-- [03.1-02]: --ignore-scripts + manual npm rebuild for sandbox-hostile postinstall scripts
-- [03.1-03]: sops.templates render secrets into container env files via sops.placeholder
-- [03.1-03]: Parts module does NOT import sops-nix or set system-level config — agent-neurosys owns that
-- [03.1-03]: path: flake input for local dev — must change to github: for production
-- [04-01]: claw-swap matches parts pattern: flake exports nixosModules.default + packages.${system}.claw-swap-app
-- [04-01]: claw-swap secrets use sops-nix with dual recipients (admin + acfs host)
-- [04-01]: buildNpmPackage + dockerTools.buildLayeredImage with --ignore-scripts to avoid sharp postinstall fetching binaries
-- [04-02]: All containers hardened: --read-only, --cap-drop=ALL, --no-new-privileges, resource limits
-- [04-02]: dockerTools.pullImage with digest pinning for postgres:16-alpine and caddy:2-alpine
-- [04-02]: Caddyfile via pkgs.writeText, domain config coupled with app module
-- [04-02]: Docker network claw-swap-net (172.22.0.0/24) as systemd oneshot
-- [09]: Phase 2.1 absorbed into Phase 9 — settings module unnecessary for single-host config
-- [09]: SSH moved to Tailscale-only — port 22 removed from public firewall
-- [09]: Docker container hardening deferred to Phase 4 (scope: agent-neurosys base only)
-- [05-01]: Secret env vars via bash initExtra + cat /run/secrets/ (not sessionVariables)
-- [05-01]: gh CLI auth via GH_TOKEN env var (no gh settings — read-only symlink issue)
-- [05-01]: sops secrets with PLACEHOLDER values — user must replace before deploy
-- [05-02]: llm-agents overlay package names are `claude-code` and `codex` (not llm-agents-* prefix)
-- [05-02]: systemd-run --user --scope for agent-spawn (non-root, requires linger)
-- [05-02]: No nixpkgs.follows for llm-agents — pins own nixpkgs for compatibility
-
-### Roadmap Evolution
-
-- Phase 2.1 inserted after Phase 2: Base System Fixups from Neurosys Review
-  - Settings module (`modules/settings.nix`) for centralized user constants
-  - Agent-focused system packages baseline (16 packages)
-  - SSH hardening (mutableUsers=false, passwordless sudo, execWheelOnly, ssh agent)
-- Phase 3.1 inserted after Phase 3: Parts Migration — Flake Module + Declarative Containers (URGENT)
-  - Parts exports NixOS module via flake, agent-neurosys imports it
-  - Containers via dockerTools, secrets migrated to sops-nix
-- Phase 8 completed: Neurosys/doom.d review — 5 candidates approved, 2 rejected, TODOs added to Phases 2.1, 5, 6
-- Phase 9 added: Audit & Simplify — deep review of all modules + unexecuted plans, optimize for simplicity/minimalism/security
-- **Phase 2.1 absorbed into Phase 9** — settings module dropped, mutableUsers+execWheelOnly applied in 9-01, dev tools moved to Phase 5
-- **Phase 4 updated:** container hardening added to success criteria
-- **Phase 5 updated:** absorbs dev tools, ssh-agent, SSH client config, direnv from Phase 2.1 and Phase 8
+- [06-01]: Syncthing GUI binds 0.0.0.0:8384, restricted via trustedInterfaces (not IP binding)
+- [06-01]: allowUnfreePredicate for claude-code added to base.nix (pre-existing Phase 5 issue)
+- [06-02]: CASS v0.1.64 binary via fetchurl + autoPatchelfHook
+- [06-02]: Repo cloning is clone-only (never pull/update) to protect dirty working trees
+- [06-02]: mkOutOfStoreSymlink for whole-directory ~/.claude and ~/.codex symlinks
 
 ### Completed Phases
 
 - **Phase 1: Flake Scaffolding + Pre-Deploy** (2 plans, completed 2026-02-13)
-  - 01-01: NixOS flake skeleton (flake.nix, 12 config files, nix flake check passes)
-  - 01-02: sops-nix secrets bootstrap (.sops.yaml, encrypted secrets, host key)
-
 - **Phase 2: Bootable Base System** (2/2 plans, completed 2026-02-15)
-  - 02-01: Module config hardening — nftables, SSH lockdown, docker group
-  - 02-02: nixos-anywhere deployment — static IP fix, sops key fix, Codex 5.3 audit, full verification
-  - Server live at 62.171.134.33: SSH, Docker, Tailscale, sops secrets, fail2ban all operational
-
-- **Phase 2.1: Base System Fixups** — Absorbed into Phase 9 (settings module dropped, mutableUsers+execWheelOnly in 9-01, dev tools to Phase 5)
-
+- **Phase 2.1: Base System Fixups** — Absorbed into Phase 9
 - **Phase 3: Networking + Secrets + Docker Foundation** (2 plans, completed 2026-02-15)
-  - 03-01: Tailscale VPN + sops-nix secrets (4 secrets) + fail2ban + firewall hardening
-  - 03-02: Docker engine (iptables=false) + NixOS NAT + bridge trust + full stack validation
-
-- **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** (3 plans, completed 2026-02-15)
-  - 03.1-01: Secrets migration (agenix → sops-nix) + parts flake.nix rewrite
-  - 03.1-02: Docker image Nix expressions (parts-agent + parts-tools via buildLayeredImage)
-  - 03.1-03: NixOS module (containers, networks, secrets) + agent-neurosys flake integration
-
+- **Phase 3.1: Parts Integration** (3 plans, completed 2026-02-15)
 - **Phase 8: Review Old Neurosys + Doom.d** (1 plan, completed 2026-02-15)
-  - 08-01: Review candidates, user cherry-picking decisions captured
-
 - **Phase 9: Audit & Simplify** (2 plans, completed 2026-02-15)
-  - 09-01: Security hardening complete (SSH-to-Tailscale-only, mutableUsers, execWheelOnly)
-  - 09-02: Roadmap revision complete
-
 - **Phase 4: Docker Services** (2 plans, completed 2026-02-16)
-  - 04-01: claw-swap flake + sops secrets + Nix-built Docker image foundation
-  - 04-02: NixOS module (3 hardened containers, network, secrets) + agent-neurosys flake integration
-
 - **Phase 5: User Environment + Dev Tools** (2 plans, completed 2026-02-16)
-  - 05-01: Home environment + system packages + secrets (bash, tmux, git, ssh, direnv, mosh, sops)
-  - 05-02: Agent CLIs (claude-code, codex) via llm-agents.nix + agent-spawn + cgroup isolation
-
-### Phase 8 Decisions (Neurosys Review)
-
-**Approved candidates:**
-- Candidate 1: Syncthing declarative config → Phase 6 (structural pattern only, fresh params)
-- Candidate 2: Settings module → Phase 2.1 (new `modules/settings.nix`)
-- Candidate 3: System packages baseline → Phase 2.1 (agent-focused: 16 packages)
-- Candidate 5: SSH hardening → Phase 2.1 (mutableUsers, sudo, ssh agent, execWheelOnly)
-- Candidate 6: SSH client config → Phase 5 (new `home/ssh.nix`)
-
-**Rejected candidates:**
-- Candidate 4: Nix settings (sandbox, max-jobs) — defaults sufficient
-- Candidate 7: Tarsnap backup pattern — will decide backup paths fresh in Phase 7
-
-**Open question answers:**
-- Q1: Syncthing uses single "Sync" folder now (paths deferred to Phase 6)
-- Q2: 4 current devices — MacBook-Pro.local, DC-1, Pixel 10 Pro, MacBook-Pro-von-Theda.local
-- Q3: Teleport not needed
-- Q4: Direnv yes, with nix-direnv for cached evaluations to minimize cd latency → Phase 5
-
-### Pending Todos
-
-None yet.
+- **Phase 6: User Services + Agent Tooling** (2 plans, completed 2026-02-16)
+  - 06-01: Syncthing declarative module (4 devices, 1 folder, staggered versioning, Tailscale-only GUI)
+  - 06-02: CASS binary + timer, repo cloning activation, agent config symlinks
 
 ### Blockers/Concerns
 
-- [Research]: CASS binary availability unclear -- may need custom derivation in Phase 6
+- [RESOLVED]: CASS binary availability — v0.1.64 fetched and patched successfully
 - [RESOLVED]: Contabo uses BIOS boot (i386-pc GRUB installed successfully), eth0 confirmed
 - [RESOLVED]: Secrets deployed and decrypted — 15 secrets in /run/secrets/
 - [RESOLVED]: Phase 2.1 scope creep — absorbed into Phase 9 after re-evaluation
+- [NOTE]: Syncthing device IDs are placeholders — user must replace before deploy
+- [NOTE]: home-manager ssh/git options show deprecation warnings (renamed options) — cosmetic, not blocking
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 5 complete. Next: Phase 6 (User Services + Agent Tooling).
+Stopped at: Phase 6 complete. Next: Phase 7 (Backups).
 Resume file: None

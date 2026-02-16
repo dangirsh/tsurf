@@ -153,8 +153,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Syncthing declarative NixOS module (4 devices, 1 Sync folder, staggered versioning, Tailscale-only GUI)
-- [ ] 06-02-PLAN.md -- CASS binary + timer, repo cloning activation scripts, agent config symlinks (~/.claude, ~/.codex)
+- [x] 06-01-PLAN.md -- Syncthing declarative NixOS module (4 devices, 1 Sync folder, staggered versioning, Tailscale-only GUI)
+- [x] 06-02-PLAN.md -- CASS binary + timer, repo cloning activation scripts, agent config symlinks (~/.claude, ~/.codex)
 
 ### Phase 7: Backups
 **Goal**: Critical server data is automatically backed up off-site with a defined retention policy
@@ -184,7 +184,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 3.1 Parts Integration (INSERTED) | 3/3 | ✓ Complete | 2026-02-15 |
 | 4. Docker Services | 2/2 | ✓ Complete | 2026-02-16 |
 | 5. User Environment + Dev Tools | 2/2 | ✓ Complete | 2026-02-16 |
-| 6. User Services + Agent Tooling | 0/2 | Not started | - |
+| 6. User Services + Agent Tooling | 2/2 | ✓ Complete | 2026-02-16 |
 | 7. Backups | 0/TBD | Not started | - |
 | 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |
 | 9. Audit & Simplify | 2/2 | ✓ Complete | 2026-02-15 |
