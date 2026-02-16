@@ -53,6 +53,7 @@ Recent decisions affecting current work:
 - [06-02]: CASS v0.1.64 binary via fetchurl + autoPatchelfHook
 - [06-02]: Repo cloning is clone-only (never pull/update) to protect dirty working trees
 - [06-02]: mkOutOfStoreSymlink for whole-directory ~/.claude and ~/.codex symlinks
+- [Phase quick-001]: Use fetchurl of pre-built zmx static binary instead of flake input (zig2nix bwrap incompatible with apparmor)
 
 ### Completed Phases
 
@@ -81,5 +82,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 6 complete. Next: Phase 7 (Backups).
+Stopped at: Quick-001 (replace tmux with zmx) complete. Next: Phase 7 (Backups).
 Resume file: None
