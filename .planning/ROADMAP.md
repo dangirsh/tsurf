@@ -118,32 +118,28 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- claw-swap flake setup + sops secrets + Docker image Nix expression
-- [ ] 04-02-PLAN.md -- NixOS module (3 hardened containers, network, secrets) + agent-neurosys flake integration
+- [x] 04-01-PLAN.md -- claw-swap flake setup + sops secrets + Docker image Nix expression
+- [x] 04-02-PLAN.md -- NixOS module (3 hardened containers, network, secrets) + agent-neurosys flake integration
 
 ### Phase 5: User Environment + Dev Tools
-**Goal**: The server provides a complete, comfortable development experience for daily use
+**Goal**: The server provides an agent-optimized compute environment where AI coding agents can be launched and managed via tmux
 **Depends on**: Phase 2 (user account must exist)
-**Requirements**: HOME-01, HOME-02, HOME-03, HOME-04, HOME-05, DEV-01, DEV-02, DEV-03, DEV-04, DEV-05
-**Success Criteria** (what must be TRUE):
-  1. SSH into server drops user into Zsh with Starship prompt, syntax highlighting, autosuggestions, and completions working
-  2. Tmux sessions persist across SSH disconnects and Atuin shell history is available and syncing
-  3. `git`, `gh`, `bun`, `node`, `pnpm`, `go`, `python3`, `rustup`, `nvim`, `fd`, `rg`, `jq`, and `git-lfs` are all available on PATH and functional
-  4. `git config user.name` returns "Dan Girshovich" and `gh auth status` confirms GitHub CLI is authenticated
-  5. home-manager is integrated as a NixOS module and `home-manager generations` shows the active generation
-  6. `programs.ssh.startAgent = true` enables SSH agent forwarding for seamless git operations
+**Requirements**: HOME-01, HOME-03, DEV-01, DEV-05 (partial) -- superseded requirements: HOME-02 (zsh), HOME-04 (atuin), HOME-05 (starship), DEV-02 (bun/pnpm), DEV-03 (rustup), DEV-04 (go/python)
+**Success Criteria** (what must be TRUE -- reframed for agent-first design per CONTEXT.md):
+  1. SSH/mosh into server drops user into bash with direnv auto-loading project devShells
+  2. Tmux sessions persist across disconnects with mouse mode enabled
+  3. `git`, `gh`, `curl`, `wget`, `jq`, `yq`, `rg`, `fd`, `node`, `tmux`, `btop` are all on PATH
+  4. `git config user.name` returns "Dan Girshovich" and `GH_TOKEN` env var authenticates gh CLI
+  5. `claude` and `codex` CLI commands are available on PATH via llm-agents.nix
+  6. `agent-spawn <name> <dir> [claude|codex]` creates an isolated tmux session in a cgroup slice
+  7. ANTHROPIC_API_KEY and OPENAI_API_KEY are exported from sops-nix secrets
+  8. home-manager is integrated as a NixOS module with bash, tmux, git, ssh, direnv modules
 
-**Note:** Minimal system packages (git, curl, wget, rsync, jq, tmux) go into modules/base.nix during Phase 5 planning. Dev tool packages from Phase 2.1 (ripgrep, fd, shellcheck, etc.) become home-manager packages.
-
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-  - [ ] TODO(from-neurosys): SSH client config — controlMaster, controlPersist, serverAliveInterval, hashKnownHosts → new `home/ssh.nix`
-  - [ ] TODO(from-neurosys): Direnv with nix-direnv for cached evaluations (minimize cd latency) → `home/direnv.nix`
-  - [ ] TODO(from-phase-2.1): programs.ssh.startAgent = true for SSH agent forwarding
-  - [ ] TODO(from-phase-2.1): Dev tool packages (ripgrep, fd, yq-go, killall, lsof, shellcheck, sd, etc.) as home-manager packages
-  - [ ] TODO(from-phase-2.1): Minimal system packages (git, curl, wget, rsync, jq, tmux) → modules/base.nix
+- [ ] 05-01-PLAN.md -- Home environment + system packages + secrets (bash, tmux, git, ssh, direnv, mosh, system packages, sops secrets)
+- [ ] 05-02-PLAN.md -- Agent CLIs + compute infrastructure (llm-agents.nix, agent-spawn, cgroup slice, binary cache)
 
 ### Phase 6: User Services + Agent Tooling
 **Goal**: The AI agent development infrastructure is operational with file sync, code indexing, and config repos in place
@@ -186,8 +182,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 2.1 Base System Fixups (INSERTED) | N/A | Absorbed into Phase 9 | 2026-02-15 |
 | 3. Networking + Secrets + Docker Foundation | 2/2 | ✓ Complete | 2026-02-15 |
 | 3.1 Parts Integration (INSERTED) | 3/3 | ✓ Complete | 2026-02-15 |
-| 4. Docker Services | 0/2 | Planned | - |
-| 5. User Environment + Dev Tools | 0/TBD | Not started | - |
+| 4. Docker Services | 2/2 | ✓ Complete | 2026-02-16 |
+| 5. User Environment + Dev Tools | 0/2 | Planned | - |
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
 | 7. Backups | 0/TBD | Not started | - |
 | 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |

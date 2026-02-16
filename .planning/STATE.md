@@ -57,7 +57,7 @@ Recent decisions affecting current work:
 - [03-01]: defaultSopsFile path fixed: ../secrets/acfs.yaml (not ../../)
 - [03-01]: .sops.yaml admin key replaced — orphaned key removed
 - [03-02]: Docker iptables=false + NixOS NAT for container outbound
-- [03-02]: externalInterface = "eth0" — must verify on Contabo (may be ens3)
+- [03-02]: externalInterface = "eth0" — verified correct on Contabo VPS (altname enp0s18)
 - [03.1-01]: Used local age key (age1vma7w9...) as admin — Phase 1 admin key orphaned (no private key)
 - [03.1-01]: Parts flake exports nixosModules.default + packages (no nixosConfigurations)
 - [03.1-02]: npm workspace lockfile-to-root pattern via postPatch for buildNpmPackage
