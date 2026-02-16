@@ -2,12 +2,12 @@
 #   (not `llm-agents-claude-code` — the overlay adds packages directly to pkgs namespace)
 # @decision: Using `systemd-run --user --scope` for agent-spawn so dangirsh can run
 #   without root. Requires linger (set below) for persistent user systemd instance.
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 let
   agent-spawn = pkgs.writeShellApplication {
     name = "agent-spawn";
-    runtimeInputs = with pkgs; [ tmux systemd ];
+    runtimeInputs = [ inputs.zmx.packages.${pkgs.system}.default pkgs.systemd ];
     text = ''
       NAME="''${1:?Usage: agent-spawn <name> <project-dir> [claude|codex]}"
       PROJECT_DIR="''${2:?Usage: agent-spawn <name> <project-dir> [claude|codex]}"
@@ -26,10 +26,10 @@ let
 
       systemd-run --user --scope --slice=agent.slice \
         -p CPUWeight=100 \
-        -- tmux new-session -d -s "$NAME" -c "$PROJECT_DIR" "$CMD"
+        -- zmx run "$NAME" bash -c "cd '$PROJECT_DIR' && $CMD"
 
-      echo "Agent '$NAME' spawned in tmux session (agent.slice)"
-      echo "Attach: tmux attach -t $NAME"
+      echo "Agent '$NAME' spawned in zmx session (agent.slice)"
+      echo "Attach: zmx attach $NAME"
     '';
   };
 in
