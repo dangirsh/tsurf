@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 5 IN PROGRESS — home environment + agent compute. Plan 01 complete, Plan 02 next.
+**Current focus:** Phase 5 COMPLETE — full agent-optimized compute environment. Next: Phase 6 (User Services + Agent Tooling).
 
 ## Current Position
 
-Phase: 5 (User Environment + Dev Tools) — IN PROGRESS
-Plan: 1 of 2 — COMPLETE (05-01)
-Status: Home environment modules, system packages, and sops secrets declared. Next: agent CLIs + compute infrastructure.
-Last activity: 2026-02-16 -- Phase 5 Plan 01 complete: home environment + system packages + secrets
+Phase: 5 (User Environment + Dev Tools) — COMPLETE
+Plan: 2 of 2 — COMPLETE (05-02)
+Status: Full agent-optimized compute environment declared. API key secrets need real values before deployment.
+Last activity: 2026-02-16 -- Phase 5 Plan 02 complete: agent CLIs + compute infrastructure
 
-Progress: Phase 5 plan 1/2 complete; next Plan 05-02 (Agent CLIs + compute)
+Progress: Phase 5 complete (2/2 plans); next Phase 6 (User Services + Agent Tooling)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: ~17min
-- Total execution time: ~190 min
+- Total execution time: ~205 min
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: Phase 5 plan 1/2 complete; next Plan 05-02 (Agent CLIs + compute)
 | 3 | 2/2 | ~15min | ~7.5min |
 | 3.1 | 3/3 | ~75min | ~25min |
 | 4 | 2/2 | ~60min | ~30min |
-| 5 | 1/2 | ~22min | ~22min |
+| 5 | 2/2 | ~37min | ~18.5min |
 
 **Recent Trend:**
-- Last 2 plans: 04-02 (35min), 05-01 (22min)
-- Trend: NixOS-only plans faster than cross-repo Docker plans
+- Last 2 plans: 05-01 (22min), 05-02 (15min)
+- Trend: NixOS-only plans consistently faster
 
 *Updated after each plan completion*
 
@@ -79,6 +79,9 @@ Recent decisions affecting current work:
 - [05-01]: Secret env vars via bash initExtra + cat /run/secrets/ (not sessionVariables)
 - [05-01]: gh CLI auth via GH_TOKEN env var (no gh settings — read-only symlink issue)
 - [05-01]: sops secrets with PLACEHOLDER values — user must replace before deploy
+- [05-02]: llm-agents overlay package names are `claude-code` and `codex` (not llm-agents-* prefix)
+- [05-02]: systemd-run --user --scope for agent-spawn (non-root, requires linger)
+- [05-02]: No nixpkgs.follows for llm-agents — pins own nixpkgs for compatibility
 
 ### Roadmap Evolution
 
@@ -128,6 +131,10 @@ Recent decisions affecting current work:
   - 04-01: claw-swap flake + sops secrets + Nix-built Docker image foundation
   - 04-02: NixOS module (3 hardened containers, network, secrets) + agent-neurosys flake integration
 
+- **Phase 5: User Environment + Dev Tools** (2 plans, completed 2026-02-16)
+  - 05-01: Home environment + system packages + secrets (bash, tmux, git, ssh, direnv, mosh, sops)
+  - 05-02: Agent CLIs (claude-code, codex) via llm-agents.nix + agent-spawn + cgroup isolation
+
 ### Phase 8 Decisions (Neurosys Review)
 
 **Approved candidates:**
@@ -161,5 +168,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 5 Plan 01 complete. Next: Plan 05-02 (Agent CLIs + compute infrastructure).
+Stopped at: Phase 5 complete. Next: Phase 6 (User Services + Agent Tooling).
 Resume file: None

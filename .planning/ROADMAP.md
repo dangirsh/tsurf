@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Networking + Secrets + Docker Foundation** - Tailscale connected, full secrets decryption, Docker engine running
 - [x] **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** - Parts exports NixOS module via flake, agent-neurosys imports it, containers via dockerTools, secrets migrated to sops-nix (INSERTED)
 - [ ] **Phase 4: Docker Services** - claw-swap stack with security-hardened containers
-- [ ] **Phase 5: User Environment + Dev Tools** - home-manager shell, dev toolchain, full development experience
+- [x] **Phase 5: User Environment + Dev Tools** - home-manager shell, dev toolchain, full development experience
 - [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
 - [ ] **Phase 7: Backups** - Automated Restic backups to Backblaze B2
 - [x] **Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config** - Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub, identify server-relevant config/services worth porting
@@ -139,7 +139,7 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md -- Home environment + system packages + secrets (bash, tmux, git, ssh, direnv, mosh, system packages, sops secrets)
-- [ ] 05-02-PLAN.md -- Agent CLIs + compute infrastructure (llm-agents.nix, agent-spawn, cgroup slice, binary cache)
+- [x] 05-02-PLAN.md -- Agent CLIs + compute infrastructure (llm-agents.nix, agent-spawn, cgroup slice, binary cache)
 
 ### Phase 6: User Services + Agent Tooling
 **Goal**: The AI agent development infrastructure is operational with file sync, code indexing, and config repos in place
@@ -183,7 +183,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 3. Networking + Secrets + Docker Foundation | 2/2 | ✓ Complete | 2026-02-15 |
 | 3.1 Parts Integration (INSERTED) | 3/3 | ✓ Complete | 2026-02-15 |
 | 4. Docker Services | 2/2 | ✓ Complete | 2026-02-16 |
-| 5. User Environment + Dev Tools | 1/2 | In Progress | - |
+| 5. User Environment + Dev Tools | 2/2 | ✓ Complete | 2026-02-16 |
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
 | 7. Backups | 0/TBD | Not started | - |
 | 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |
