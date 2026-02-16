@@ -2,12 +2,13 @@
 #   (not `llm-agents-claude-code` — the overlay adds packages directly to pkgs namespace)
 # @decision: Using `systemd-run --user --scope` for agent-spawn so dangirsh can run
 #   without root. Requires linger (set below) for persistent user systemd instance.
-{ config, pkgs, inputs, ... }:
+{ config, pkgs, ... }:
 
 let
+  zmx = pkgs.callPackage ../packages/zmx.nix {};
   agent-spawn = pkgs.writeShellApplication {
     name = "agent-spawn";
-    runtimeInputs = [ inputs.zmx.packages.${pkgs.system}.default pkgs.systemd ];
+    runtimeInputs = [ zmx pkgs.systemd ];
     text = ''
       NAME="''${1:?Usage: agent-spawn <name> <project-dir> [claude|codex]}"
       PROJECT_DIR="''${2:?Usage: agent-spawn <name> <project-dir> [claude|codex]}"

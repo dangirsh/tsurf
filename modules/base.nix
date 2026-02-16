@@ -1,4 +1,8 @@
-{ config, lib, pkgs, inputs, ... }: {
+{ config, lib, pkgs, ... }:
+let
+  zmx = pkgs.callPackage ../packages/zmx.nix {};
+in
+{
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
     "claude-code"
   ];
@@ -23,7 +27,7 @@
     yq-go
     ripgrep
     fd
-    inputs.zmx.packages.${pkgs.system}.default
+    zmx
     btop
     nodejs
   ];
