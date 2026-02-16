@@ -26,9 +26,12 @@
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
     };
+    zmx = {
+      url = "github:neurosnap/zmx";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, ... } @ inputs: {
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, zmx, ... } @ inputs: {
     nixosConfigurations.acfs = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };

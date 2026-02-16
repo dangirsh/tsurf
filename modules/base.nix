@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, inputs, ... }: {
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
     "claude-code"
   ];
@@ -23,7 +23,7 @@
     yq-go
     ripgrep
     fd
-    tmux
+    inputs.zmx.packages.${pkgs.system}.default
     btop
     nodejs
   ];
