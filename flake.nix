@@ -18,9 +18,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.sops-nix.follows = "sops-nix";
     };
+    claw-swap = {
+      url = "path:/data/projects/claw-swap"; # path: for local dev; github: for production
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.sops-nix.follows = "sops-nix";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, ... } @ inputs: {
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, ... } @ inputs: {
     nixosConfigurations.acfs = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
@@ -29,6 +34,7 @@
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
         inputs.parts.nixosModules.default
+        inputs.claw-swap.nixosModules.default
         ./hosts/acfs
         {
           home-manager.useGlobalPkgs = true;

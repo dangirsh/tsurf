@@ -1,5 +1,42 @@
 {
   "nodes": {
+    "claw-swap": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "sops-nix": [
+          "sops-nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1771207374,
+        "narHash": "sha256-3RTvXCW3mbntS0JayN9gYTmVArw2QMAZMRSE6V3IQzg=",
+        "path": "/data/projects/claw-swap",
+        "type": "path"
+      },
+      "original": {
+        "path": "/data/projects/claw-swap",
+        "type": "path"
+      }
+    },
+    "clawvault": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771106962,
+        "narHash": "sha256-fxBrYsINDi/nRMXU5eA3mKuRPVxEGCKQAl/qgku/C6U=",
+        "owner": "Versatly",
+        "repo": "clawvault",
+        "rev": "2a199cdad08a352dfc4904581d9cd2cb3bd0dcf3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Versatly",
+        "ref": "v2.4.6",
+        "repo": "clawvault",
+        "type": "github"
+      }
+    },
     "disko": {
       "inputs": {
         "nixpkgs": [
@@ -17,6 +54,24 @@
       "original": {
         "owner": "nix-community",
         "repo": "disko",
+        "type": "github"
+      }
+    },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
         "type": "github"
       }
     },
@@ -57,18 +112,36 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1769188852,
+        "narHash": "sha256-aBAGyMum27K7cP5OR7BMioJOF3icquJMZDDgk6ZEg1A=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a1bab9e494f5f4939442a57a58d0449a109593fe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "parts": {
       "inputs": {
+        "clawvault": "clawvault",
         "nixpkgs": [
           "nixpkgs"
         ],
+        "qmd": "qmd",
         "sops-nix": [
           "sops-nix"
         ]
       },
       "locked": {
-        "lastModified": 1771173867,
-        "narHash": "sha256-MaA381MxPkCuV3wUE/XhxIhBcvoQqvwF+gOzFPf7X1k=",
+        "lastModified": 1771208712,
+        "narHash": "sha256-nGmjneIMlrSAAHgpJ6TGWI+Mu1cieyhpjvSz1a4YZNM=",
         "path": "/data/projects/parts",
         "type": "path"
       },
@@ -77,8 +150,28 @@
         "type": "path"
       }
     },
+    "qmd": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1771180283,
+        "narHash": "sha256-D4oqNepo4c86MiAYRbwN75lNwhsS4WMnSG1E9A6plkg=",
+        "owner": "tobi",
+        "repo": "qmd",
+        "rev": "2279389415910f441fb18cee7c8462eeb8b9fab4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tobi",
+        "repo": "qmd",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
+        "claw-swap": "claw-swap",
         "disko": "disko",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",
@@ -103,6 +196,21 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
+        "type": "github"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
         "type": "github"
       }
     }
