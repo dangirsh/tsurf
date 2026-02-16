@@ -10,5 +10,8 @@
     secrets."b2-account-id" = {};
     secrets."b2-account-key" = {};
     secrets."restic-password" = {};
+    secrets."anthropic-api-key" = { owner = "dangirsh"; };
+    secrets."openai-api-key" = { owner = "dangirsh"; };
+    secrets."github-pat" = { owner = "dangirsh"; };
   };
 }
