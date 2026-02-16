@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Declare and run production Docker containers (claw-swap stack, grok-mcp) with security hardening. Ollama dropped from this phase — no known consumer in v1 scope. All containers get read-only rootfs, cap-drop ALL, no-new-privileges, and resource limits.
+Declare and run the claw-swap production Docker stack with security hardening. Both Ollama and grok-mcp dropped from this phase — no active consumers in v1 scope. All containers get read-only rootfs, cap-drop ALL, no-new-privileges, and resource limits.
 
 </domain>
 
@@ -30,12 +30,10 @@ Declare and run production Docker containers (claw-swap stack, grok-mcp) with se
 - Can be added later as a simple NixOS module if a use case appears (CASS indexer in Phase 6, experiments)
 
 ### grok-mcp
-- Still actively used, keep it
-- Deployment pattern deferred to planning/research time — researcher will investigate source location and complexity
+- DROPPED from Phase 4 — not needed
 
 ### Claude's Discretion
 - Caddy TLS/domain config ownership (claw-swap repo vs agent-neurosys)
-- grok-mcp: inline in agent-neurosys vs own flake module — decide during research based on complexity
 - Exact CPU/memory values per container — start generous, document in config
 - Container restart max retry count
 
@@ -54,6 +52,7 @@ Declare and run production Docker containers (claw-swap stack, grok-mcp) with se
 ## Deferred Ideas
 
 - Ollama AI inference service — add when a consumer exists (Phase 6 CASS indexer may need it)
+- grok-mcp — add back if needed in the future
 - NixOS-native PostgreSQL — could simplify backups in Phase 7, but keep Docker for now
 
 </deferred>

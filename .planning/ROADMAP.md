@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2.1: Base System Fixups from Neurosys Review** - Absorbed into Phase 9 (mutableUsers, execWheelOnly applied; settings module dropped as unnecessary; dev tools moved to Phase 5)
 - [x] **Phase 3: Networking + Secrets + Docker Foundation** - Tailscale connected, full secrets decryption, Docker engine running
 - [x] **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** - Parts exports NixOS module via flake, agent-neurosys imports it, containers via dockerTools, secrets migrated to sops-nix (INSERTED)
-- [ ] **Phase 4: Docker Services + Ollama** - claw-swap stack, grok-mcp container, Ollama service running
+- [ ] **Phase 4: Docker Services** - claw-swap stack with security-hardened containers
 - [ ] **Phase 5: User Environment + Dev Tools** - home-manager shell, dev toolchain, full development experience
 - [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
 - [ ] **Phase 7: Backups** - Automated Restic backups to Backblaze B2
@@ -103,18 +103,17 @@ Plans:
 - [x] 03.1-02-PLAN.md -- Docker image Nix expressions (parts-agent + parts-tools via dockerTools.buildLayeredImage)
 - [x] 03.1-03-PLAN.md -- NixOS module (containers, networks, secrets wiring) + agent-neurosys flake integration
 
-### Phase 4: Docker Services + Ollama
-**Goal**: Production web services and AI inference are running and accessible
+### Phase 4: Docker Services
+**Goal**: claw-swap production stack running with security-hardened containers
 **Depends on**: Phase 3
-**Requirements**: DOCK-02, DOCK-03, DOCK-04, SVC-01
+**Requirements**: DOCK-02, DOCK-04
 **Success Criteria** (what must be TRUE):
   1. claw-swap.com resolves and serves HTTPS traffic through Caddy -> app -> PostgreSQL on the `claw-swap-net` Docker network
-  2. grok-mcp container is running and responding on port 9601
-  3. Ollama service is running and `ollama list` shows the server is responsive (models downloaded manually post-deploy)
-  4. Docker network `claw-swap-net` is created before dependent containers start (verified by `docker network ls`)
-  5. All containers run with security hardening: `--read-only` rootfs with tmpfs for /tmp, `--cap-drop ALL`, `--security-opt=no-new-privileges`, and resource limits (`--memory`, `--cpus`)
+  2. Docker network `claw-swap-net` is created before dependent containers start (verified by `docker network ls`)
+  3. All containers run with security hardening: `--read-only` rootfs with tmpfs for /tmp, `--cap-drop ALL`, `--security-opt=no-new-privileges`, and resource limits (`--memory`, `--cpus`)
 
 **Note:** Container hardening pattern (from Phase 9 research): use `extraOptions` in oci-containers for read-only, cap-drop, no-new-privileges, resource limits. See 09-RESEARCH.md for implementation details.
+**Note:** Ollama and grok-mcp dropped from this phase — no active v1 consumers. Can be added later.
 
 **Plans**: TBD
 
