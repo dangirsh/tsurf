@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 4 Plan 01 COMPLETE — claw-swap flake foundation (module + secrets + Docker image). Next: Phase 4 Plan 02
+**Current focus:** Phase 4 COMPLETE — claw-swap fully declared (flake + module + containers + integration). Next: Phase 5
 
 ## Current Position
 
-Phase: 4 (Docker Services) — IN PROGRESS
-Plan: 1 of 2 in current phase — COMPLETE (04-01)
-Status: 04-01 complete (claw-swap flake + sops secrets + Nix-built Docker image). Next: 04-02 (NixOS module + agent-neurosys integration)
-Last activity: 2026-02-16 -- Phase 4 Plan 01 complete: claw-swap foundation shipped
+Phase: 4 (Docker Services) — COMPLETE
+Plan: 2 of 2 — COMPLETE (04-02)
+Status: Phase 4 complete. claw-swap stack fully declared with 3 hardened containers, secrets, networking, integrated into agent-neurosys.
+Last activity: 2026-02-16 -- Phase 4 Plan 02 complete: NixOS module + flake integration
 
-Progress: Phase 4 started; 04-01 complete; 04-02 next
+Progress: Phase 4 complete; next Phase 5 (Home Environment)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: ~16min
-- Total execution time: ~108 min
+- Total plans completed: 10
+- Average duration: ~17min
+- Total execution time: ~168 min
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: Phase 4 started; 04-01 complete; 04-02 next
 | 2 | 1/2 | ~5min | ~5min |
 | 3 | 2/2 | ~15min | ~7.5min |
 | 3.1 | 3/3 | ~75min | ~25min |
+| 4 | 2/2 | ~60min | ~30min |
 
 **Recent Trend:**
-- Last 2 plans: 03-02 (5min), 02-01 (5min)
-- Trend: well-defined config plans execute fast
+- Last 2 plans: 04-01 (25min), 04-02 (35min)
+- Trend: cross-repo Docker service plans take longer due to multi-repo coordination + Codex handoff
 
 *Updated after each plan completion*
 
@@ -67,6 +68,10 @@ Recent decisions affecting current work:
 - [04-01]: claw-swap matches parts pattern: flake exports nixosModules.default + packages.${system}.claw-swap-app
 - [04-01]: claw-swap secrets use sops-nix with dual recipients (admin + acfs host)
 - [04-01]: buildNpmPackage + dockerTools.buildLayeredImage with --ignore-scripts to avoid sharp postinstall fetching binaries
+- [04-02]: All containers hardened: --read-only, --cap-drop=ALL, --no-new-privileges, resource limits
+- [04-02]: dockerTools.pullImage with digest pinning for postgres:16-alpine and caddy:2-alpine
+- [04-02]: Caddyfile via pkgs.writeText, domain config coupled with app module
+- [04-02]: Docker network claw-swap-net (172.22.0.0/24) as systemd oneshot
 - [09]: Phase 2.1 absorbed into Phase 9 — settings module unnecessary for single-host config
 - [09]: SSH moved to Tailscale-only — port 22 removed from public firewall
 - [09]: Docker container hardening deferred to Phase 4 (scope: agent-neurosys base only)
@@ -115,9 +120,9 @@ Recent decisions affecting current work:
   - 09-01: Security hardening complete (SSH-to-Tailscale-only, mutableUsers, execWheelOnly)
   - 09-02: Roadmap revision complete
 
-- **Phase 4: Docker Services** (2 plans, in progress)
-  - 04-01: claw-swap flake + secrets + Docker image foundation (in /data/projects/claw-swap)
-  - 04-02: claw-swap module + integration (next)
+- **Phase 4: Docker Services** (2 plans, completed 2026-02-16)
+  - 04-01: claw-swap flake + sops secrets + Nix-built Docker image foundation
+  - 04-02: NixOS module (3 hardened containers, network, secrets) + agent-neurosys flake integration
 
 ### Phase 8 Decisions (Neurosys Review)
 
@@ -151,6 +156,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15
-Stopped at: Phase 9 complete. All plans through Phase 9 executed. Next: Phase 4 (Docker Services + Ollama).
+Last session: 2026-02-16
+Stopped at: Phase 4 complete. All plans through Phase 4 executed. Next: Phase 5 (Home Environment).
 Resume file: None
