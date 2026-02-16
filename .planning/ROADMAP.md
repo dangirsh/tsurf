@@ -115,10 +115,11 @@ Plans:
 **Note:** Container hardening pattern (from Phase 9 research): use `extraOptions` in oci-containers for read-only, cap-drop, no-new-privileges, resource limits. See 09-RESEARCH.md for implementation details.
 **Note:** Ollama and grok-mcp dropped from this phase — no active v1 consumers. Can be added later.
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md -- claw-swap flake setup + sops secrets + Docker image Nix expression
+- [ ] 04-02-PLAN.md -- NixOS module (3 hardened containers, network, secrets) + agent-neurosys flake integration
 
 ### Phase 5: User Environment + Dev Tools
 **Goal**: The server provides a complete, comfortable development experience for daily use
@@ -185,7 +186,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 2.1 Base System Fixups (INSERTED) | N/A | Absorbed into Phase 9 | 2026-02-15 |
 | 3. Networking + Secrets + Docker Foundation | 2/2 | ✓ Complete | 2026-02-15 |
 | 3.1 Parts Integration (INSERTED) | 3/3 | ✓ Complete | 2026-02-15 |
-| 4. Docker Services + Ollama | 0/TBD | Not started | - |
+| 4. Docker Services | 0/2 | Planned | - |
 | 5. User Environment + Dev Tools | 0/TBD | Not started | - |
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
 | 7. Backups | 0/TBD | Not started | - |
