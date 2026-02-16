@@ -6,7 +6,6 @@
 
   imports = [
     ./bash.nix
-    ./tmux.nix
     ./git.nix
     ./ssh.nix
     ./direnv.nix
