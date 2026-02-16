@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 4 COMPLETE — claw-swap fully declared (flake + module + containers + integration). Next: Phase 5
+**Current focus:** Phase 5 IN PROGRESS — home environment + agent compute. Plan 01 complete, Plan 02 next.
 
 ## Current Position
 
-Phase: 4 (Docker Services) — COMPLETE
-Plan: 2 of 2 — COMPLETE (04-02)
-Status: Phase 4 complete. claw-swap stack fully declared with 3 hardened containers, secrets, networking, integrated into agent-neurosys.
-Last activity: 2026-02-16 -- Phase 4 Plan 02 complete: NixOS module + flake integration
+Phase: 5 (User Environment + Dev Tools) — IN PROGRESS
+Plan: 1 of 2 — COMPLETE (05-01)
+Status: Home environment modules, system packages, and sops secrets declared. Next: agent CLIs + compute infrastructure.
+Last activity: 2026-02-16 -- Phase 5 Plan 01 complete: home environment + system packages + secrets
 
-Progress: Phase 4 complete; next Phase 5 (Home Environment)
+Progress: Phase 5 plan 1/2 complete; next Plan 05-02 (Agent CLIs + compute)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: ~17min
-- Total execution time: ~168 min
+- Total execution time: ~190 min
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: Phase 4 complete; next Phase 5 (Home Environment)
 | 3 | 2/2 | ~15min | ~7.5min |
 | 3.1 | 3/3 | ~75min | ~25min |
 | 4 | 2/2 | ~60min | ~30min |
+| 5 | 1/2 | ~22min | ~22min |
 
 **Recent Trend:**
-- Last 2 plans: 04-01 (25min), 04-02 (35min)
-- Trend: cross-repo Docker service plans take longer due to multi-repo coordination + Codex handoff
+- Last 2 plans: 04-02 (35min), 05-01 (22min)
+- Trend: NixOS-only plans faster than cross-repo Docker plans
 
 *Updated after each plan completion*
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [09]: Phase 2.1 absorbed into Phase 9 — settings module unnecessary for single-host config
 - [09]: SSH moved to Tailscale-only — port 22 removed from public firewall
 - [09]: Docker container hardening deferred to Phase 4 (scope: agent-neurosys base only)
+- [05-01]: Secret env vars via bash initExtra + cat /run/secrets/ (not sessionVariables)
+- [05-01]: gh CLI auth via GH_TOKEN env var (no gh settings — read-only symlink issue)
+- [05-01]: sops secrets with PLACEHOLDER values — user must replace before deploy
 
 ### Roadmap Evolution
 
@@ -157,5 +161,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 4 complete. All plans through Phase 4 executed. Next: Phase 5 (Home Environment).
+Stopped at: Phase 5 Plan 01 complete. Next: Plan 05-02 (Agent CLIs + compute infrastructure).
 Resume file: None

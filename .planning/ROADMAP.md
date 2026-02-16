@@ -138,7 +138,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Home environment + system packages + secrets (bash, tmux, git, ssh, direnv, mosh, system packages, sops secrets)
+- [x] 05-01-PLAN.md -- Home environment + system packages + secrets (bash, tmux, git, ssh, direnv, mosh, system packages, sops secrets)
 - [ ] 05-02-PLAN.md -- Agent CLIs + compute infrastructure (llm-agents.nix, agent-spawn, cgroup slice, binary cache)
 
 ### Phase 6: User Services + Agent Tooling
@@ -183,7 +183,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 3. Networking + Secrets + Docker Foundation | 2/2 | ✓ Complete | 2026-02-15 |
 | 3.1 Parts Integration (INSERTED) | 3/3 | ✓ Complete | 2026-02-15 |
 | 4. Docker Services | 2/2 | ✓ Complete | 2026-02-16 |
-| 5. User Environment + Dev Tools | 0/2 | Planned | - |
+| 5. User Environment + Dev Tools | 1/2 | In Progress | - |
 | 6. User Services + Agent Tooling | 0/TBD | Not started | - |
 | 7. Backups | 0/TBD | Not started | - |
 | 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |
