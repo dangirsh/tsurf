@@ -23,9 +23,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.sops-nix.follows = "sops-nix";
     };
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, ... } @ inputs: {
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, ... } @ inputs: {
     nixosConfigurations.acfs = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
@@ -35,6 +38,9 @@
         home-manager.nixosModules.home-manager
         inputs.parts.nixosModules.default
         inputs.claw-swap.nixosModules.default
+        {
+          nixpkgs.overlays = [ llm-agents.overlays.default ];
+        }
         ./hosts/acfs
         {
           home-manager.useGlobalPkgs = true;
