@@ -23,7 +23,7 @@ home/
   default.nix          # home-manager entrypoint
   shell.nix            # Zsh, starship, aliases
   git.nix              # Git configuration
-  tmux.nix             # Tmux configuration
+  (tmux removed — zmx binary in packages/zmx.nix)
 ```
 
 ## Key Decisions

@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 Phase: 6 (User Services + Agent Tooling) — COMPLETE
 Plan: 2 of 2 — COMPLETE (06-02)
 Status: Syncthing, CASS, repo cloning, agent config symlinks all declared. Device IDs are placeholders.
-Last activity: 2026-02-16 -- Phase 6 Plan 02 complete: CASS + repos + agent config
+Last activity: 2026-02-16 - Completed quick task 001: Replace tmux with zmx
 
 Progress: Phase 6 complete (2/2 plans); next Phase 7 (Backups)
 
@@ -70,6 +70,10 @@ Recent decisions affecting current work:
   - 06-01: Syncthing declarative module (4 devices, 1 folder, staggered versioning, Tailscale-only GUI)
   - 06-02: CASS binary + timer, repo cloning activation, agent config symlinks
 
+### Roadmap Evolution
+
+- Phase 10 added: Parts Deployment Pipeline — Research + Implementation (understand current parts deployment, implement agent-neurosys-owned deploy flow)
+
 ### Blockers/Concerns
 
 - [RESOLVED]: CASS binary availability — v0.1.64 fetched and patched successfully
@@ -78,6 +82,12 @@ Recent decisions affecting current work:
 - [RESOLVED]: Phase 2.1 scope creep — absorbed into Phase 9 after re-evaluation
 - [NOTE]: Syncthing device IDs are placeholders — user must replace before deploy
 - [NOTE]: home-manager ssh/git options show deprecation warnings (renamed options) — cosmetic, not blocking
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Replace tmux with zmx (github.com/neurosnap/zmx) | 2026-02-16 | d3e0209 | [001-replace-tmux-with-zmx](./quick/001-replace-tmux-with-zmx/) |
 
 ## Session Continuity
 
