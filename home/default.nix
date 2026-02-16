@@ -10,5 +10,7 @@
     ./git.nix
     ./ssh.nix
     ./direnv.nix
+    ./cass.nix
+    ./agent-config.nix
   ];
 }
