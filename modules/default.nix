@@ -6,5 +6,6 @@
     ./networking.nix
     ./secrets.nix
     ./docker.nix
+    ./agent-compute.nix
   ];
 }
