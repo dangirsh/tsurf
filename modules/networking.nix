@@ -2,7 +2,7 @@
 # @decision NET-01: key-only SSH via Tailscale only, no root login
 # @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
 # @decision NET-03: Tailscale VPN connected to tailnet
-# @decision NET-04: ports 80, 443, 22000 on public interface; SSH via Tailscale only
+# @decision NET-04: ports 22, 80, 443, 22000 on public interface (SSH needed for deploy pipeline)
 # @decision NET-05: fail2ban SSH protection with progressive banning
 # @decision NET-06: Tailscale reverse path filtering set to loose
 { config, lib, pkgs, ... }: {
@@ -16,7 +16,7 @@
   networking.firewall = {
     enable = true;
     allowPing = true;
-    allowedTCPPorts = [ 80 443 22000 ];
+    allowedTCPPorts = [ 22 80 443 22000 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
     trustedInterfaces = [ "tailscale0" ];
   };
@@ -28,7 +28,7 @@
     settings = {
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
-      PermitRootLogin = "no";  # root SSH fully disabled; emergency access via Contabo VNC
+      PermitRootLogin = "prohibit-password";  # key-only root access for deploy pipeline
     };
   };
 

@@ -12,11 +12,11 @@
   # --- Static IP (Contabo VPS does not use DHCP) ---
   networking.useDHCP = false;
   networking.interfaces.eth0.ipv4.addresses = [{
-    address = "62.171.134.33";
-    prefixLength = 19;
+    address = "161.97.74.121";
+    prefixLength = 18;
   }];
   networking.defaultGateway = {
-    address = "62.171.128.1";
+    address = "161.97.64.1";
     interface = "eth0";
   };
   networking.nameservers = [ "213.136.95.10" "213.136.95.11" ];

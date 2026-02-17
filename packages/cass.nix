@@ -6,7 +6,7 @@ stdenv.mkDerivation rec {
   version = "0.1.64";
   src = fetchurl {
     url = "https://github.com/Dicklesworthstone/coding_agent_session_search/releases/download/v${version}/cass-linux-amd64.tar.gz";
-    hash = "sha256-buO1m9emp6rJTHkHUayaNSzAQYAxLwhYrQxCJHUaixE=";
+    hash = "sha256-bqMZQO9wKGtZjtNeZlqyDTt0JKOuNvqSs+oBC8pQkWU=";
   };
   nativeBuildInputs = [ autoPatchelfHook ];
   buildInputs = [ stdenv.cc.cc.lib openssl zlib ];

@@ -6,6 +6,7 @@
 #   --mode remote  SSH into server, pull, rebuild on server
 #
 # Flags:
+#   --target USER@HOST  Override SSH target (default: root@acfs)
 #   --skip-update  Skip 'nix flake update parts' step
 #   --help         Print usage
 #
@@ -32,13 +33,15 @@ Deploy agent-neurosys NixOS config to acfs server.
 Options:
   --mode local    Build locally, push closure, switch remotely (default)
   --mode remote   SSH into server, pull repo, rebuild on server
+  --target U@H    Override SSH target (default: root@acfs)
   --skip-update   Skip 'nix flake update parts' before building
   --help          Show this help
 
 Examples:
-  ./scripts/deploy.sh                   # Deploy with latest parts (local build)
-  ./scripts/deploy.sh --skip-update     # Deploy without updating parts input
-  ./scripts/deploy.sh --mode remote     # Build on server instead of locally
+  ./scripts/deploy.sh                              # Deploy with latest parts (local build)
+  ./scripts/deploy.sh --skip-update                # Deploy without updating parts input
+  ./scripts/deploy.sh --mode remote                # Build on server instead of locally
+  ./scripts/deploy.sh --target root@62.171.134.33  # Deploy via public IP
 USAGE
 }
 
@@ -47,6 +50,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --mode)
       MODE="$2"
+      shift 2
+      ;;
+    --target)
+      TARGET="$2"
       shift 2
       ;;
     --skip-update)
@@ -87,8 +94,7 @@ if [[ "$MODE" == "local" ]]; then
   nix shell nixpkgs#nixos-rebuild -c \
     nixos-rebuild switch \
       --flake "$FLAKE_DIR#acfs" \
-      --target-host "$TARGET" \
-      --build-host localhost
+      --target-host "$TARGET"
 else
   echo "==> Deploying via remote rebuild on $TARGET..."
   ssh "$TARGET" bash -s <<'REMOTE'
