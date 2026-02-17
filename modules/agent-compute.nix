@@ -260,6 +260,11 @@ in
     };
   };
 
+  # Pre-create audit log directory (dangirsh can't write to root-owned /data/projects)
+  systemd.tmpfiles.rules = [
+    "d /data/projects/.agent-audit 0750 dangirsh users -"
+  ];
+
   # User linger for persistent systemd user instance (needed for systemd-run --user)
   users.users.dangirsh.linger = true;
 }
