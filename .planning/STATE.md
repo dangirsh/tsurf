@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 10 IN PROGRESS — parts deployment pipeline. Plan 10-01 complete, Plan 10-02 next.
+**Current focus:** Phase 10 COMPLETE — parts deployment pipeline verified end-to-end.
 
 ## Current Position
 
-Phase: 10 (Parts Deployment Pipeline) — IN PROGRESS
-Plan: 1 of 2 — COMPLETE (10-01)
-Status: Flake inputs switched to github:, deploy script created, runbook written. Next: Plan 10-02 (end-to-end deploy test).
-Last activity: 2026-02-17 - Completed Plan 10-01 (inputs + deploy script + runbook)
+Phase: 10 (Parts Deployment Pipeline) — COMPLETE
+Plan: 2 of 2 — COMPLETE (10-01, 10-02)
+Status: Deploy pipeline tested end-to-end. VPS migrated to new IP, all critical fixes applied. Parts containers running.
+Last activity: 2026-02-17 - Completed Plan 10-02 (end-to-end deploy test + VPS migration)
 
-Progress: Plan 10-01 complete (4/4 tasks); Plan 10-02 next (deploy + verify)
+Progress: Phase 10 complete (2/2 plans). Ready to merge to main.
 
 ## Performance Metrics
 
@@ -35,11 +35,11 @@ Progress: Plan 10-01 complete (4/4 tasks); Plan 10-02 next (deploy + verify)
 | 5 | 2/2 | ~37min | ~18.5min |
 | 6 | 2/2 | ~40min | ~20min |
 
-| 10 | 1/2 | ~25min | ~25min |
+| 10 | 2/2 | ~115min | ~57.5min |
 
 **Recent Trend:**
-- Last 2 plans: 06-02 (15min), 10-01 (25min)
-- Trend: Orchestrator direct execution for NixOS-specific work
+- Last 2 plans: 10-01 (25min), 10-02 (90min — includes VPS reinstall)
+- Trend: Deployment testing requires iterative debugging against live infrastructure
 
 *Updated after each plan completion*
 
@@ -60,6 +60,9 @@ Recent decisions affecting current work:
 - [10-01]: Full nixos-rebuild switch every deploy — no partial/container-only path
 - [10-01]: Container health polling (30s) — no app-level health checks
 - [10-01]: No auto-commit of flake.lock — print reminder instead
+- [10-02]: Port 22 must be in allowedTCPPorts for deploy pipeline
+- [10-02]: PermitRootLogin = prohibit-password required for nixos-rebuild --target-host
+- [10-02]: Root authorized keys managed in users.nix
 
 ### Completed Phases
 
@@ -98,5 +101,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Plan 10-01 complete. Executing Plan 10-02 (end-to-end deploy test).
+Stopped at: Phase 10 complete. Merging to main.
 Resume file: None
