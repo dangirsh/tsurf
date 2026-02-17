@@ -14,10 +14,12 @@
   # --- NAT for container outbound internet access ---
   # Required because Docker --iptables=false disables Docker's own NAT/masquerade.
   # Without this, containers cannot reach the internet.
+  # @decision DOCK-02: Use internalIPs instead of internalInterfaces to cover all
+  # Docker networks (default bridge + custom br-* bridges) without naming each one.
   networking.nat = {
     enable = true;
-    internalInterfaces = [ "docker0" ];
-    externalInterface = "eth0";   # NOTE: verify on Contabo -- may be ens3
+    internalIPs = [ "172.16.0.0/12" ];
+    externalInterface = "eth0";
   };
 
   # --- Trust Docker bridge for container-to-container traffic ---
