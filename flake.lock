@@ -32,11 +32,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1771206573,
-        "narHash": "sha256-V2rWemwlTJZkHhTcw/Vh5n1dgogeEketDbxrPIiQ8r8=",
+        "lastModified": 1771332690,
+        "narHash": "sha256-mjDhfCVjRI80pvBoiM0B1g4j9Az5DIi3php2zBY+PuM=",
         "owner": "dangirsh",
         "repo": "claw-swap",
-        "rev": "9845861f60e45c9387a8bde7f7a96d90fa0cd7ba",
+        "rev": "aff5c6822c05b8c23f657715f1b9c2ec7bf60a6f",
         "type": "github"
       },
       "original": {
