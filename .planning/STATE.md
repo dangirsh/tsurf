@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 11 IN PROGRESS — Plan 11-01 sandbox infrastructure implemented, Plan 11-02 validation pending.
+**Current focus:** Phase 11 COMPLETE — Both plans implemented and validated on VPS. Awaiting user checkpoint approval.
 
 ## Current Position
 
-Phase: 11 (Agent Sandboxing) — IN PROGRESS
-Plan: 1 of 2 — IN PROGRESS (11-01 complete, 11-02 pending)
-Status: Core sandbox infrastructure landed (bubblewrap default-on agent-spawn, Podman rootless config, metadata IP block). Runtime deployment validation pending in 11-02.
-Last activity: 2026-02-17 - Completed implementation for Plan 11-01 and recorded summary.
+Phase: 11 (Agent Sandboxing) — COMPLETE (pending user approval)
+Plan: 2 of 2 — COMPLETE
+Status: Full sandbox deployed and validated on VPS. 5 live-testing issues found and fixed. All 12 test cases pass.
+Last activity: 2026-02-17 - Completed live testing (Plan 11-02), all sandbox behaviors verified.
 
-Progress: Phase 11 started (1/2 plans completed). Awaiting runtime validation and fallback testing in Plan 11-02.
+Progress: Phase 11 complete (2/2 plans). Awaiting user checkpoint approval.
 
 ## Performance Metrics
 
@@ -64,9 +64,13 @@ Recent decisions affecting current work:
 - [10-02]: PermitRootLogin = prohibit-password required for nixos-rebuild --target-host
 - [10-02]: Root authorized keys managed in users.nix
 - [11-01]: agent-spawn defaults to bubblewrap sandbox; --no-sandbox is explicit bypass
-- [11-01]: Podman enabled with dockerCompat=true per locked context decision
+- [11-01]: Podman enabled with dockerCompat=false (conflicts with Docker); sandbox-local docker→podman symlink instead
 - [11-01]: Metadata endpoint 169.254.169.254 blocked in nftables output chain
 - [11-01]: API keys are read pre-sandbox from sops secret files and injected via env vars
+- [11-02]: NIX_REMOTE=daemon required inside sandbox (user namespace blocks direct store access)
+- [11-02]: daemon-socket needs rw bind (Unix socket connection requires write permission)
+- [11-02]: zmx binary must be extracted from tarball (dontUnpack was installing gzip as binary)
+- [11-02]: Audit log dir pre-created via systemd.tmpfiles (dangirsh can't write to root-owned /data/projects)
 
 ### Completed Phases
 
@@ -106,5 +110,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 11 Plan 11-01 implemented and documented. Next: Plan 11-02 runtime validation.
+Stopped at: Phase 11 complete. Both plans executed. User checkpoint pending.
 Resume file: None
