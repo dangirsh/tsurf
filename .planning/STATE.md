@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 6 COMPLETE — user services + agent tooling. Next: Phase 7 (Backups).
+**Current focus:** Phase 10 IN PROGRESS — parts deployment pipeline. Plan 10-01 complete, Plan 10-02 next.
 
 ## Current Position
 
-Phase: 6 (User Services + Agent Tooling) — COMPLETE
-Plan: 2 of 2 — COMPLETE (06-02)
-Status: Syncthing, CASS, repo cloning, agent config symlinks all declared. Device IDs are placeholders.
-Last activity: 2026-02-16 - Completed quick task 001: Replace tmux with zmx
+Phase: 10 (Parts Deployment Pipeline) — IN PROGRESS
+Plan: 1 of 2 — COMPLETE (10-01)
+Status: Flake inputs switched to github:, deploy script created, runbook written. Next: Plan 10-02 (end-to-end deploy test).
+Last activity: 2026-02-17 - Completed Plan 10-01 (inputs + deploy script + runbook)
 
-Progress: Phase 6 complete (2/2 plans); next Phase 7 (Backups)
+Progress: Plan 10-01 complete (4/4 tasks); Plan 10-02 next (deploy + verify)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: ~18min
-- Total execution time: ~245 min
+- Total execution time: ~270 min
 
 **By Phase:**
 
@@ -35,9 +35,11 @@ Progress: Phase 6 complete (2/2 plans); next Phase 7 (Backups)
 | 5 | 2/2 | ~37min | ~18.5min |
 | 6 | 2/2 | ~40min | ~20min |
 
+| 10 | 1/2 | ~25min | ~25min |
+
 **Recent Trend:**
-- Last 2 plans: 06-01 (25min), 06-02 (15min)
-- Trend: Codex backend hit nix flake check timeout; orchestrator takeover worked
+- Last 2 plans: 06-02 (15min), 10-01 (25min)
+- Trend: Orchestrator direct execution for NixOS-specific work
 
 *Updated after each plan completion*
 
@@ -54,6 +56,10 @@ Recent decisions affecting current work:
 - [06-02]: Repo cloning is clone-only (never pull/update) to protect dirty working trees
 - [06-02]: mkOutOfStoreSymlink for whole-directory ~/.claude and ~/.codex symlinks
 - [Phase quick-001]: Use fetchurl of pre-built zmx static binary instead of flake input (zig2nix bwrap incompatible with apparmor)
+- [10-01]: Manual deploy only — no CI/CD, NixOS handles incrementality
+- [10-01]: Full nixos-rebuild switch every deploy — no partial/container-only path
+- [10-01]: Container health polling (30s) — no app-level health checks
+- [10-01]: No auto-commit of flake.lock — print reminder instead
 
 ### Completed Phases
 
@@ -91,6 +97,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-16
-Stopped at: Quick-001 (replace tmux with zmx) complete. Next: Phase 7 (Backups).
+Last session: 2026-02-17
+Stopped at: Plan 10-01 complete. Executing Plan 10-02 (end-to-end deploy test).
 Resume file: None
