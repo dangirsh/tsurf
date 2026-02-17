@@ -14,12 +14,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     parts = {
-      url = "path:/data/projects/parts";
+      url = "github:dangirsh/personal-agent-runtime";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.sops-nix.follows = "sops-nix";
     };
     claw-swap = {
-      url = "path:/data/projects/claw-swap"; # path: for local dev; github: for production
+      url = "github:dangirsh/claw-swap";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.sops-nix.follows = "sops-nix";
     };

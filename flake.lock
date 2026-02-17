@@ -32,14 +32,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1771207374,
-        "narHash": "sha256-3RTvXCW3mbntS0JayN9gYTmVArw2QMAZMRSE6V3IQzg=",
-        "path": "/data/projects/claw-swap",
-        "type": "path"
+        "lastModified": 1771206573,
+        "narHash": "sha256-V2rWemwlTJZkHhTcw/Vh5n1dgogeEketDbxrPIiQ8r8=",
+        "owner": "dangirsh",
+        "repo": "claw-swap",
+        "rev": "9845861f60e45c9387a8bde7f7a96d90fa0cd7ba",
+        "type": "github"
       },
       "original": {
-        "path": "/data/projects/claw-swap",
-        "type": "path"
+        "owner": "dangirsh",
+        "repo": "claw-swap",
+        "type": "github"
       }
     },
     "clawvault": {
@@ -198,14 +201,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1771208712,
-        "narHash": "sha256-nGmjneIMlrSAAHgpJ6TGWI+Mu1cieyhpjvSz1a4YZNM=",
-        "path": "/data/projects/parts",
-        "type": "path"
+        "lastModified": 1771296614,
+        "narHash": "sha256-4DaxDFNsR9doFIhlsSdmfTjSZ9sa8NrXMn/A78ZrMdA=",
+        "owner": "dangirsh",
+        "repo": "personal-agent-runtime",
+        "rev": "1bbd22d652de8a67ff28330be9fa6a97fc7cfb48",
+        "type": "github"
       },
       "original": {
-        "path": "/data/projects/parts",
-        "type": "path"
+        "owner": "dangirsh",
+        "repo": "personal-agent-runtime",
+        "type": "github"
       }
     },
     "qmd": {
