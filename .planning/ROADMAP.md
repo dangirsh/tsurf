@@ -241,7 +241,7 @@ Plans:
 
 ### Phase 11: Agent Sandboxing — Default-on bubblewrap (srt) isolation for all coding agents
 
-**Goal:** Every coding agent spawned on acfs runs inside a bubblewrap sandbox by default — filesystem deny-by-default (only project workspace writable), network proxy-filtered (allowlisted domains only), process-isolated, cgroup-limited. Prompt injection of a YOLO-mode agent cannot read secrets, move laterally, persist, or exfiltrate data.
+**Goal:** Every coding agent spawned on acfs runs inside a bubblewrap sandbox by default — filesystem deny-by-default (project workspace writable, sibling projects read-only, secrets/SSH invisible), rootless Podman for Docker workflows, unrestricted network, PID-limited. Prompt injection of a YOLO-mode agent cannot read secrets, escalate via Docker, or move laterally.
 **Depends on:** Phase 5 (agent-spawn exists), Phase 3 (secrets infrastructure to protect)
 **Requirements:** None (security hardening — new capability)
 **Success Criteria** (what must be TRUE):
@@ -253,7 +253,8 @@ Plans:
   6. 100 concurrent sandboxed agents run comfortably within VPS resources (96 GB RAM, 18 vCPU)
   7. Existing agent workflows (Claude Code, Codex CLI) work identically inside the sandbox — no DX regression
 **Research:** Evaluated Daytona, E2B, Firecracker, gVisor, nsjail, Docker, systemd-nspawn, DevContainers. bubblewrap (via Anthropic's open-source srt) selected for: zero overhead (~4KB/sandbox), proven by Claude Code's own sandbox mode, NixOS-native, direct host bind-mounts, proxy-based network filtering.
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 11 to break down)
+- [ ] 11-01-PLAN.md -- Rewrite agent-spawn with bwrap sandbox, Podman NixOS config, metadata IP block, subUid/subGid ranges
+- [ ] 11-02-PLAN.md -- Deploy to VPS, iterative testing of all sandbox behaviors, user verification checkpoint
