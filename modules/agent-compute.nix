@@ -170,7 +170,7 @@ let
         --setenv SHELL /bin/bash
         --setenv TERM "$TERM_VALUE"
         --setenv LANG C.UTF-8
-        --setenv PATH ${sandbox-docker-compat}/bin:/run/current-system/sw/bin:/etc/profiles/per-user/dangirsh/bin:/home/dangirsh/.nix-profile/bin:/nix/var/nix/profiles/default/bin
+        --setenv PATH ${sandbox-docker-compat}/bin:${zmx}/bin:/run/current-system/sw/bin:/etc/profiles/per-user/dangirsh/bin:/home/dangirsh/.nix-profile/bin:/nix/var/nix/profiles/default/bin
         --setenv SANDBOX 1
         --setenv SANDBOX_NAME "$NAME"
         --setenv SANDBOX_PROJECT "$PROJECT_DIR"
