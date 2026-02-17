@@ -3,11 +3,18 @@
 # @decision: Using `systemd-run --user --scope` for agent-spawn so dangirsh can run
 #   without root. Requires linger (set below) for persistent user systemd instance.
 # @decision SANDBOX-11-01: agent-spawn runs in bubblewrap by default; --no-sandbox is explicit opt-out.
-# @decision SANDBOX-11-01: Podman is enabled rootless with dockerCompat=true per 11-CONTEXT locked decision.
+# @decision SANDBOX-11-01: Podman is enabled rootless; dockerCompat=false (conflicts with Docker)
+#   — sandbox uses a PATH-local docker->podman symlink derivation instead.
 { config, pkgs, ... }:
 
 let
   zmx = pkgs.callPackage ../packages/zmx.nix {};
+  # Sandbox-local docker -> podman symlink so agents see `docker` without
+  # system-wide dockerCompat (which conflicts with virtualisation.docker).
+  sandbox-docker-compat = pkgs.runCommandNoCC "sandbox-docker-compat" {} ''
+    mkdir -p $out/bin
+    ln -s ${pkgs.podman}/bin/podman $out/bin/docker
+  '';
   agent-spawn = pkgs.writeShellApplication {
     name = "agent-spawn";
     runtimeInputs = [ zmx pkgs.systemd pkgs.bubblewrap pkgs.coreutils ];
@@ -87,7 +94,7 @@ let
       Visible (rw): $PROJECT_DIR, /home/dangirsh/.local/share/containers, /run/user/$(id -u)/containers
       Hidden: /run/secrets, /home/dangirsh/.ssh, /var/run/docker.sock
       Limits: systemd slice=agent.slice CPUWeight=100 TasksMax=4096, /tmp tmpfs=4GiB
-      Podman: enabled (rootless, dockerCompat=true)
+      Podman: enabled (rootless, docker->podman via sandbox PATH shim)
       Default mode: sandbox on (use --no-sandbox to bypass)
       EOF
         exit 0
@@ -163,7 +170,7 @@ let
         --setenv SHELL /bin/bash
         --setenv TERM "$TERM_VALUE"
         --setenv LANG C.UTF-8
-        --setenv PATH /run/current-system/sw/bin:/etc/profiles/per-user/dangirsh/bin:/home/dangirsh/.nix-profile/bin:/nix/var/nix/profiles/default/bin
+        --setenv PATH ${sandbox-docker-compat}/bin:/run/current-system/sw/bin:/etc/profiles/per-user/dangirsh/bin:/home/dangirsh/.nix-profile/bin:/nix/var/nix/profiles/default/bin
         --setenv SANDBOX 1
         --setenv SANDBOX_NAME "$NAME"
         --setenv SANDBOX_PROJECT "$PROJECT_DIR"
@@ -222,14 +229,14 @@ in
     agent-spawn
   ];
 
-  # With dockerCompat=true, `docker` resolves to Podman system-wide.
-  # Host Docker daemon in modules/docker.nix remains managed by systemd (`dockerd.service`),
-  # but host `docker ps/logs/...` will reflect Podman state, not Docker state.
-  # If deployment UX is unacceptable in 11-02 testing, fallback is dockerCompat=false
-  # and a sandbox-local PATH shim that maps docker -> podman only for agent sessions.
+  # Rootless Podman for sandboxed agent container workflows.
+  # dockerCompat = false because virtualisation.docker.enable = true in docker.nix —
+  # NixOS asserts they cannot coexist. Instead, a sandbox-local docker->podman symlink
+  # (sandbox-docker-compat derivation below) is added to the sandbox PATH so agents
+  # see `docker` resolving to `podman` without affecting the host Docker daemon.
   virtualisation.podman = {
     enable = true;
-    dockerCompat = true;  # Locked decision from CONTEXT.md
+    dockerCompat = false;
     defaultNetwork.settings.dns_enabled = true;
   };
 
