@@ -11,6 +11,15 @@
 
   # --- nftables backend ---
   networking.nftables.enable = true;
+  networking.nftables.tables.agent-metadata-block = {
+    family = "ip";
+    content = ''
+      chain output {
+        type filter hook output priority 0; policy accept;
+        ip daddr 169.254.169.254 drop
+      }
+    '';
+  };
 
   # --- Firewall: per-interface trust ---
   networking.firewall = {
