@@ -21,6 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: User Environment + Dev Tools** - home-manager shell, dev toolchain, full development experience
 - [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
 - [ ] **Phase 7: Backups** - Automated Restic backups to Backblaze B2
+- [ ] **Phase 10: Parts Deployment Pipeline** - Research current deployment, implement agent-neurosys-owned deploy flow where parts defines its own components
 - [x] **Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config** - Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub, identify server-relevant config/services worth porting
 - [x] **Phase 9: Audit & Simplify** - Deep review of all modules and unexecuted plans, optimize for simplicity, minimalism, and security
 
@@ -188,6 +189,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 7. Backups | 0/TBD | Not started | - |
 | 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |
 | 9. Audit & Simplify | 2/2 | ✓ Complete | 2026-02-15 |
+| 10. Parts Deployment Pipeline | 0/2 | Planned | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -217,3 +219,20 @@ Plans:
 Plans:
 - [x] 09-01-PLAN.md -- Security hardening + dead code removal (SSH-to-Tailscale-only, root SSH elimination, mutableUsers, execWheelOnly, example_secret cleanup)
 - [x] 09-02-PLAN.md -- Roadmap revision (absorb Phase 2.1, update Phase 4/5 goals, tighten unexecuted phase plans)
+
+### Phase 10: Parts Deployment Pipeline — Research + Implementation
+
+**Goal:** Understand how parts is currently deployed, then establish a deployment pipeline where agent-neurosys owns the deployment (nixos-rebuild/switch) but the parts repo defines what gets deployed for its own components (containers, services, secrets via its existing NixOS module)
+**Depends on:** Phase 3.1 (parts NixOS module exists), Phase 3 (Docker + secrets infrastructure)
+**Requirements:** None (operational — bridges existing infrastructure)
+**Success Criteria** (what must be TRUE):
+  1. Current parts deployment mechanism is fully documented (how it works today, what triggers it, what it deploys)
+  2. A deployment command from agent-neurosys builds and switches the NixOS config including parts containers/services
+  3. Parts repo defines its own deployable components (containers, networks, secrets) via its `nixosModules.default` — agent-neurosys does not hardcode parts internals
+  4. The deployment flow is tested end-to-end: change in parts module → agent-neurosys picks it up → deploy → services running
+  5. Deployment is documented with a clear runbook (what to run, from where, expected output)
+**Plans:** 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md -- Flake input change (path: to github:) + deploy script (scripts/deploy.sh) with both modes and health verification
+- [ ] 10-02-PLAN.md -- End-to-end deploy verification + user sign-off (checkpoint)
