@@ -22,6 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
 - [ ] **Phase 7: Backups** - Automated Restic backups to Backblaze B2
 - [ ] **Phase 10: Parts Deployment Pipeline** - Research current deployment, implement agent-neurosys-owned deploy flow where parts defines its own components
+- [ ] **Phase 11: Agent Sandboxing** - Default-on bubblewrap (srt) isolation for all coding agents — filesystem deny-by-default, network proxy-filtered, cgroup-limited
 - [x] **Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config** - Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub, identify server-relevant config/services worth porting
 - [x] **Phase 9: Audit & Simplify** - Deep review of all modules and unexecuted plans, optimize for simplicity, minimalism, and security
 
@@ -190,6 +191,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |
 | 9. Audit & Simplify | 2/2 | ✓ Complete | 2026-02-15 |
 | 10. Parts Deployment Pipeline | 0/2 | Planned | - |
+| 11. Agent Sandboxing (bubblewrap/srt) | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -236,3 +238,22 @@ Plans:
 Plans:
 - [ ] 10-01-PLAN.md -- Flake input change (path: to github:) + deploy script (scripts/deploy.sh) with both modes and health verification
 - [ ] 10-02-PLAN.md -- End-to-end deploy verification + user sign-off (checkpoint)
+
+### Phase 11: Agent Sandboxing — Default-on bubblewrap (srt) isolation for all coding agents
+
+**Goal:** Every coding agent spawned on acfs runs inside a bubblewrap sandbox by default — filesystem deny-by-default (only project workspace writable), network proxy-filtered (allowlisted domains only), process-isolated, cgroup-limited. Prompt injection of a YOLO-mode agent cannot read secrets, move laterally, persist, or exfiltrate data.
+**Depends on:** Phase 5 (agent-spawn exists), Phase 3 (secrets infrastructure to protect)
+**Requirements:** None (security hardening — new capability)
+**Success Criteria** (what must be TRUE):
+  1. `agent-spawn <name> <dir>` wraps every agent session in a bubblewrap sandbox with `--unshare-all` (PID, net, mount, user namespaces)
+  2. Sandboxed agents can see `/nix/store` (read-only) and their project workspace (read-write) — nothing else (no `~/.ssh`, no `/run/secrets`, no other projects)
+  3. Network isolation via `--unshare-net` + proxy: agents can reach allowlisted domains (npm, pip, GitHub, Anthropic API) but cannot make arbitrary outbound connections
+  4. Per-agent cgroup limits enforced via systemd slices (memory cap, CPU quota, PID limit)
+  5. `agent-spawn --no-sandbox` exists as explicit opt-out but is not the default
+  6. 100 concurrent sandboxed agents run comfortably within VPS resources (96 GB RAM, 18 vCPU)
+  7. Existing agent workflows (Claude Code, Codex CLI) work identically inside the sandbox — no DX regression
+**Research:** Evaluated Daytona, E2B, Firecracker, gVisor, nsjail, Docker, systemd-nspawn, DevContainers. bubblewrap (via Anthropic's open-source srt) selected for: zero overhead (~4KB/sandbox), proven by Claude Code's own sandbox mode, NixOS-native, direct host bind-mounts, proxy-based network filtering.
+**Plans:** TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 11 to break down)
