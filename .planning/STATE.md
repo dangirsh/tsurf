@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 10 COMPLETE — parts deployment pipeline verified end-to-end.
+**Current focus:** Phase 11 IN PROGRESS — Plan 11-01 sandbox infrastructure implemented, Plan 11-02 validation pending.
 
 ## Current Position
 
-Phase: 10 (Parts Deployment Pipeline) — COMPLETE
-Plan: 2 of 2 — COMPLETE (10-01, 10-02)
-Status: Deploy pipeline tested end-to-end. VPS migrated to new IP, all critical fixes applied. Parts containers running.
-Last activity: 2026-02-17 - Completed Plan 10-02 (end-to-end deploy test + VPS migration)
+Phase: 11 (Agent Sandboxing) — IN PROGRESS
+Plan: 1 of 2 — IN PROGRESS (11-01 complete, 11-02 pending)
+Status: Core sandbox infrastructure landed (bubblewrap default-on agent-spawn, Podman rootless config, metadata IP block). Runtime deployment validation pending in 11-02.
+Last activity: 2026-02-17 - Completed implementation for Plan 11-01 and recorded summary.
 
-Progress: Phase 10 complete (2/2 plans). Ready to merge to main.
+Progress: Phase 11 started (1/2 plans completed). Awaiting runtime validation and fallback testing in Plan 11-02.
 
 ## Performance Metrics
 
@@ -63,6 +63,10 @@ Recent decisions affecting current work:
 - [10-02]: Port 22 must be in allowedTCPPorts for deploy pipeline
 - [10-02]: PermitRootLogin = prohibit-password required for nixos-rebuild --target-host
 - [10-02]: Root authorized keys managed in users.nix
+- [11-01]: agent-spawn defaults to bubblewrap sandbox; --no-sandbox is explicit bypass
+- [11-01]: Podman enabled with dockerCompat=true per locked context decision
+- [11-01]: Metadata endpoint 169.254.169.254 blocked in nftables output chain
+- [11-01]: API keys are read pre-sandbox from sops secret files and injected via env vars
 
 ### Completed Phases
 
@@ -102,5 +106,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 10 complete. Merging to main.
+Stopped at: Phase 11 Plan 11-01 implemented and documented. Next: Plan 11-02 runtime validation.
 Resume file: None
