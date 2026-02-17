@@ -63,6 +63,8 @@ Recent decisions affecting current work:
 - [10-02]: Port 22 must be in allowedTCPPorts for deploy pipeline
 - [10-02]: PermitRootLogin = prohibit-password required for nixos-rebuild --target-host
 - [10-02]: Root authorized keys managed in users.nix
+- [quick-002]: Home Assistant as native NixOS service, not Docker (HA-01)
+- [quick-002]: HA GUI accessible via Tailscale only, same trustedInterfaces pattern as Syncthing (HA-02)
 
 ### Completed Phases
 
@@ -98,9 +100,10 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 001 | Replace tmux with zmx (github.com/neurosnap/zmx) | 2026-02-16 | d3e0209 | [001-replace-tmux-with-zmx](./quick/001-replace-tmux-with-zmx/) |
+| 002 | Add Home Assistant as native NixOS service | 2026-02-17 | 6a95e07 | [002-add-home-assistant-as-native-nixos-servi](./quick/002-add-home-assistant-as-native-nixos-servi/) |
 
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 10 complete. Merging to main.
+Stopped at: Completed quick-002 (Home Assistant NixOS service)
 Resume file: None
