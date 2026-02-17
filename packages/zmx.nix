@@ -9,10 +9,10 @@ stdenv.mkDerivation rec {
     url = "https://zmx.sh/a/zmx-${version}-linux-x86_64.tar.gz";
     hash = "sha256-/K/xWB61pqPll4Gq13qMoGm0Q1vC/sQT3TI7RaTf3zI=";
   };
-  dontUnpack = true;
+  sourceRoot = ".";
   installPhase = ''
     runHook preInstall
-    install -m755 -D $src $out/bin/zmx
+    install -m755 -D zmx $out/bin/zmx
     runHook postInstall
   '';
   meta = with lib; {
