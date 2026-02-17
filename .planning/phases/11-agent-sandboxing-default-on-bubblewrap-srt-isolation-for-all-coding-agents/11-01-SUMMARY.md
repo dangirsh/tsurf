@@ -57,7 +57,7 @@ Each task was committed atomically:
 
 1. **Task 1: Rewrite agent-spawn with bubblewrap + Podman + metadata block** - `32c9b9b` (feat)
 
-**Plan metadata:** pending in follow-up docs commit
+**Plan metadata:** captured in plan documentation commits for this branch
 
 ## Files Created/Modified
 
