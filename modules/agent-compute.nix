@@ -120,7 +120,7 @@ let
         --new-session
 
         --ro-bind /nix/store /nix/store
-        --ro-bind /nix/var/nix/daemon-socket /nix/var/nix/daemon-socket
+        --bind /nix/var/nix/daemon-socket /nix/var/nix/daemon-socket
         --ro-bind /nix/var/nix/db /nix/var/nix/db
         --ro-bind /nix/var/nix/gcroots /nix/var/nix/gcroots
 
@@ -143,7 +143,7 @@ let
 
         --proc /proc
         --dev /dev
-        --tmpfs /tmp --size 4294967296
+        --size 4294967296 --tmpfs /tmp
 
         --ro-bind /data/projects /data/projects
         --bind "$PROJECT_DIR" "$PROJECT_DIR"
@@ -174,6 +174,7 @@ let
         --setenv SANDBOX 1
         --setenv SANDBOX_NAME "$NAME"
         --setenv SANDBOX_PROJECT "$PROJECT_DIR"
+        --setenv NIX_REMOTE daemon
         --chdir "$PROJECT_DIR"
       )
 
