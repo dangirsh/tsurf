@@ -258,3 +258,21 @@ Plans:
 Plans:
 - [ ] 11-01-PLAN.md -- Rewrite agent-spawn with bwrap sandbox, Podman NixOS config, metadata IP block, subUid/subGid ranges
 - [ ] 11-02-PLAN.md -- Deploy to VPS, iterative testing of all sandbox behaviors, user verification checkpoint
+
+### Phase 12: Security audit of agent-neurosys NixOS configuration — review all modules for hardening gaps, secret handling, network exposure, sandbox escape vectors, and supply chain risks
+
+**Goal:** [To be planned]
+**Depends on:** Phase 11
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 12 to break down)
+
+### Phase 13: Research similar personal server projects (hyperion-hub, etc.) — enumerate good ideas for agent-neurosys: messaging integrations, monitoring patterns, security approaches, agent orchestration
+
+**Goal:** Survey the ecosystem of NixOS homelab and personal server projects, curate a catalog of 11 ideas across 6 categories (monitoring, messaging, security, agent orchestration, backup, reverse proxy), and present findings to the user for cherry-picking — approved ideas become new phases or TODOs in the roadmap
+**Depends on:** Phase 12
+**Plans:** 1 plan
+
+Plans:
+- [ ] 13-01-PLAN.md — Present 11 research ideas for user cherry-picking, capture decisions into ROADMAP.md and STATE.md
