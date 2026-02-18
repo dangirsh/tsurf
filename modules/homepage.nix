@@ -11,6 +11,7 @@
       theme = "dark";
       color = "slate";
       headerStyle = "clean";
+      statusStyle = "dot";
     };
 
     widgets = [
@@ -24,6 +25,7 @@
           {
             "Grafana" = {
               href = "http://100.127.245.9:3000";
+              siteMonitor = "http://localhost:3000/api/health";
               description = "System dashboards — CPU, memory, disk, network. Node Exporter Full pre-provisioned.";
               icon = "grafana";
             };
@@ -31,6 +33,7 @@
           {
             "Prometheus" = {
               href = "http://100.127.245.9:9090";
+              siteMonitor = "http://localhost:9090/-/healthy";
               description = "Metrics scraper — 15s interval, 90-day retention. Alerts for disk, memory, CPU, systemd failures.";
               icon = "prometheus";
             };
@@ -38,6 +41,7 @@
           {
             "Alertmanager" = {
               href = "http://100.127.245.9:9093";
+              siteMonitor = "http://localhost:9093/-/healthy";
               description = "Alert routing — forwards to ntfy via alertmanager-ntfy bridge. Use Silences tab to mute.";
               icon = "alertmanager";
             };
@@ -49,6 +53,7 @@
           {
             "ntfy" = {
               href = "http://100.127.245.9:2586";
+              siteMonitor = "http://localhost:2586/v1/health";
               description = "Push notifications — topics: alerts, deploys, security. Subscribe via Android app.";
               icon = "ntfy";
             };
@@ -56,6 +61,7 @@
           {
             "Syncthing" = {
               href = "http://100.127.245.9:8384";
+              siteMonitor = "http://localhost:8384";
               description = "File sync — bidirectional sync across devices with staggered versioning.";
               icon = "syncthing";
             };
@@ -67,6 +73,7 @@
           {
             "Home Assistant" = {
               href = "http://100.127.245.9:8123";
+              siteMonitor = "http://localhost:8123";
               description = "Home automation — native NixOS service. ESPHome on port 6052.";
               icon = "home-assistant";
             };
