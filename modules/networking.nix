@@ -74,5 +74,23 @@
       maxtime = "168h";     # Max 1 week ban
       overalljails = true;
     };
+
+    jails.sshd.settings = {
+      action = "%(action_)s\n            ntfy";
+    };
   };
+
+  # fail2ban ntfy notification on ban
+  environment.etc."fail2ban/action.d/ntfy.local".text = ''
+    [Definition]
+    norestored = true
+    actionban = ${pkgs.curl}/bin/curl \
+      --fail --show-error --silent \
+      --max-time 10 --retry 3 \
+      -H "Title: fail2ban: <ip> banned" \
+      -H "Priority: default" \
+      -H "Tags: police_car_light" \
+      -d "<name> jail banned <ip> after <failures> failures on $(hostname)" \
+      http://localhost:2586/security
+  '';
 }
