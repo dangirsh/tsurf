@@ -4,6 +4,7 @@
   services.homepage-dashboard = {
     enable = true;
     listenPort = 8082;
+    allowedHosts = "100.127.245.9,acfs,localhost";
 
     settings = {
       title = "acfs";
