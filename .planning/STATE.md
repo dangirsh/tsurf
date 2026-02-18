@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 Phase: 14 (Monitoring + Notifications)
 Plan: 2 of 2 — COMPLETE
 Status: Plan 14-02 implemented and validated (deploy ntfy notifications + generic notify helper + full flake validation). Phase 14 complete.
-Last activity: 2026-02-18 - Completed quick task 6: Add Hue and ESPHome extraComponents to Home Assistant
+Last activity: 2026-02-18 - Completed quick task 6: Add Hue and ESPHome extraComponents to Home Assistant and deploy
 
 Progress: Phase 14 complete (2/2 plans complete).
 
@@ -90,6 +90,8 @@ Recent decisions affecting current work:
 - [14-02]: Deploy notifications run from local deploy script via SSH + server-local ntfy POST to `deploys`
 - [14-02]: Deploy notification delivery is best-effort (`|| true`) so ntfy outages cannot break deploy pipeline
 - [14-02]: Generic server-side `scripts/notify.sh` introduced for reusable notifications (agents, cron, future restic hooks)
+- [quick-005]: MON-05: Alertmanager, ntfy, Grafana removed -- agents query Prometheus /api/v1/alerts directly
+- [quick-005]: fail2ban reverts to default ban action (no ntfy notification)
 - [quick-006]: ESPHome binds 0.0.0.0:6052 with openFirewall=false (Tailscale-only, same pattern as HA and Syncthing)
 
 ### Completed Phases
@@ -140,6 +142,7 @@ Recent decisions affecting current work:
 | 002 | Add Home Assistant as native NixOS service | 2026-02-17 | 6a95e07 | [002-add-home-assistant-as-native-nixos-servi](./quick/002-add-home-assistant-as-native-nixos-servi/) |
 | 003 | Add homepage dashboard linking all services | 2026-02-18 | 48b0182 | [3-add-a-nixos-native-homepage-dashboard-li](./quick/3-add-a-nixos-native-homepage-dashboard-li/) |
 | 004 | Add concurrent deploy lock to deploy.sh | 2026-02-18 | ef1fc65 | [4-add-concurrent-deploy-lock-to-deploy-sh](./quick/4-add-concurrent-deploy-lock-to-deploy-sh/) |
+| 005 | Minimize monitoring stack to Prometheus-only | 2026-02-18 | c5fa13b | [5-minimize-monitoring-notification-stack-t](./quick/5-minimize-monitoring-notification-stack-t/) |
 | 006 | Add Hue and ESPHome extraComponents to Home Assistant | 2026-02-18 | 8512fa9 | [6-add-hue-and-esphome-extracomponents-to-h](./quick/6-add-hue-and-esphome-extracomponents-to-h/) |
 
 ### Quick Tasks Pending (from Phase 13)
@@ -153,5 +156,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed quick task 6: Add Hue and ESPHome extraComponents to Home Assistant
+Stopped at: Completed quick task 5: Minimize monitoring stack to Prometheus-only
 Resume file: None
