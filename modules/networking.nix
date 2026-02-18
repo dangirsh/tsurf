@@ -10,13 +10,10 @@ let
   # Ports that must NEVER appear in allowedTCPPorts (Tailscale-only services).
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
   internalOnlyPorts = {
-    "2586" = "ntfy";
-    "3000" = "grafana";
     "8082" = "homepage-dashboard";
     "8123" = "home-assistant";
     "8384" = "syncthing-gui";
     "9090" = "prometheus";
-    "9093" = "alertmanager";
     "9100" = "node-exporter";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
@@ -95,22 +92,5 @@ in {
       overalljails = true;
     };
 
-    jails.sshd.settings = {
-      action = "%(action_)s\n            ntfy";
-    };
   };
-
-  # fail2ban ntfy notification on ban
-  environment.etc."fail2ban/action.d/ntfy.local".text = ''
-    [Definition]
-    norestored = true
-    actionban = ${pkgs.curl}/bin/curl \
-      --fail --show-error --silent \
-      --max-time 10 --retry 3 \
-      -H "Title: fail2ban: <ip> banned" \
-      -H "Priority: default" \
-      -H "Tags: police_car_light" \
-      -d "<name> jail banned <ip> after <failures> failures on $(hostname)" \
-      http://localhost:2586/security
-  '';
 }

@@ -20,7 +20,6 @@ FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET="root@acfs"
 MODE="local"
 SKIP_UPDATE=false
-NTFY_TOPIC="deploys"
 SECONDS=0
 
 CONTAINERS=("parts-tools" "parts-agent" "claw-swap-db" "claw-swap-app" "claw-swap-caddy")
@@ -175,13 +174,6 @@ if [[ "$FAILED" -eq 0 ]]; then
   echo "=== Deploy SUCCESS ==="
   echo "Parts revision: $PARTS_REV_SHORT"
   echo "Duration: $((DURATION / 60))m $((DURATION % 60))s"
-  # Best-effort ntfy notification (never blocks deploy).
-  ssh "$TARGET" "curl --silent --max-time 10 \
-    -H 'Title: Deploy succeeded' \
-    -H 'Priority: low' \
-    -H 'Tags: white_check_mark' \
-    -d 'acfs deployed (parts: $PARTS_REV_SHORT) in $((DURATION / 60))m $((DURATION % 60))s' \
-    http://localhost:2586/$NTFY_TOPIC" 2>/dev/null || true
   echo ""
   echo "Container status:"
   ssh "$TARGET" "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E '(NAMES|parts-|claw-swap-)'"
@@ -192,13 +184,6 @@ if [[ "$FAILED" -eq 0 ]]; then
   fi
 else
   echo "=== Deploy FAILED ==="
-  # Best-effort ntfy notification (never blocks deploy).
-  ssh "$TARGET" "curl --silent --max-time 10 \
-    -H 'Title: Deploy FAILED' \
-    -H 'Priority: high' \
-    -H 'Tags: rotating_light' \
-    -d 'acfs deploy failed after $((DURATION / 60))m $((DURATION % 60))s. Check containers.' \
-    http://localhost:2586/$NTFY_TOPIC" 2>/dev/null || true
   echo "Containers not running after 30s:"
   for c in "${CONTAINERS[@]}"; do
     if ! ssh "$TARGET" "docker ps --filter name=^${c}\$ --filter status=running -q" 2>/dev/null | grep -q .; then
