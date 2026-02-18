@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 11 COMPLETE — Both plans implemented and validated on VPS. Awaiting user checkpoint approval.
+**Current focus:** Phase 13 COMPLETE — Research findings presented, user cherry-picked adoptions. Next: Phase 14 (Monitoring + Notifications).
 
 ## Current Position
 
-Phase: 11 (Agent Sandboxing) — COMPLETE (pending user approval)
-Plan: 2 of 2 — COMPLETE
-Status: Full sandbox deployed and validated on VPS. 5 live-testing issues found and fixed. All 12 test cases pass.
-Last activity: 2026-02-17 - Completed live testing (Plan 11-02), all sandbox behaviors verified.
+Phase: 13 (Research Similar Projects) — COMPLETE
+Plan: 1 of 1 — COMPLETE
+Status: All 11 ideas presented and dispositioned. 5 adopted, 1 evaluated, 2 rejected, 4 deferred. New phases 14 and 15 created.
+Last activity: 2026-02-18 - User cherry-picked research findings, decisions captured.
 
-Progress: Phase 11 complete (2/2 plans). Awaiting user checkpoint approval.
+Progress: Phase 13 complete (1/1 plans). Phases 14-15 created from adopted ideas.
 
 ## Performance Metrics
 
@@ -73,6 +73,16 @@ Recent decisions affecting current work:
 - [11-02]: Audit log dir pre-created via systemd.tmpfiles (dangirsh can't write to root-owned /data/projects)
 - [quick-002]: Home Assistant as native NixOS service, not Docker (HA-01)
 - [quick-002]: HA GUI accessible via Tailscale only, same trustedInterfaces pattern as Syncthing (HA-02)
+- [13-01]: ntfy ADOPTED — foundational notification layer (Android push urgent, email non-urgent)
+- [13-01]: Prometheus+Grafana ADOPTED — minimal monitoring stack, Tailscale-only dashboards
+- [13-01]: CrowdSec ADOPTED — collaborative sharing enabled, for public-facing services (claw-swap)
+- [13-01]: Agent Teams ADOPTED — env var config change, quick task
+- [13-01]: MCP-NixOS EVALUATE — local .mcp.json only, test and remove if noisy
+- [13-01]: TKA (Tailnet Key Authority) ADOPTED — self-custody Tailscale signing keys, quick task
+- [13-01]: Uptime Kuma DEFERRED — Grafana covers status dashboards
+- [13-01]: endlessh-go REJECTED — minimal value with Tailscale-primary SSH
+- [13-01]: Headscale REJECTED — TKA covers key sovereignty concern
+- [13-01]: Caddy, Authelia, Loki+Alloy DEFERRED — not needed until services are internet-facing or specific log search needs arise
 
 ### Completed Phases
 
@@ -88,11 +98,19 @@ Recent decisions affecting current work:
 - **Phase 6: User Services + Agent Tooling** (2 plans, completed 2026-02-16)
   - 06-01: Syncthing declarative module (4 devices, 1 folder, staggered versioning, Tailscale-only GUI)
   - 06-02: CASS binary + timer, repo cloning activation, agent config symlinks
+- **Phase 10: Parts Deployment Pipeline** (2 plans, completed 2026-02-17)
+- **Phase 11: Agent Sandboxing** (2 plans, completed 2026-02-17)
+- **Phase 13: Research Similar Projects** (1 plan, completed 2026-02-18)
+  - 13-01: Presented 11 ideas, user cherry-picked 5 adoptions (ntfy, Prometheus+Grafana, CrowdSec, Agent Teams, TKA), 1 evaluate (MCP-NixOS), 2 rejected, 4 deferred
 
 ### Roadmap Evolution
 
 - Phase 10 added: Parts Deployment Pipeline — Research + Implementation (understand current parts deployment, implement agent-neurosys-owned deploy flow)
 - Phase 11 added: Agent Sandboxing — Default-on bubblewrap (srt) isolation for all coding agents. Research: evaluated Daytona, E2B, Firecracker, gVisor, nsjail, Docker, systemd-nspawn. bubblewrap selected for zero overhead, NixOS-native, proven by Claude Code's own sandbox. VPS: Contabo Cloud VPS 60 NVMe (18 vCPU, 96GB RAM) — no KVM, rules out microVMs.
+- Phase 12 added: Security audit — review all modules for hardening gaps, secret handling, network exposure, sandbox escape vectors, and supply chain risks
+- Phase 13 added: Research similar personal server projects — 11 ideas surveyed, 5 adopted, 1 evaluated, 2 rejected, 4 deferred
+- Phase 14 added: Monitoring + Notifications — Prometheus + node_exporter + Grafana + ntfy (from Phase 13 research adoptions)
+- Phase 15 added: CrowdSec Intrusion Prevention — collaborative threat intelligence with community sharing (from Phase 13 research)
 
 ### Blockers/Concerns
 
@@ -110,8 +128,16 @@ Recent decisions affecting current work:
 | 001 | Replace tmux with zmx (github.com/neurosnap/zmx) | 2026-02-16 | d3e0209 | [001-replace-tmux-with-zmx](./quick/001-replace-tmux-with-zmx/) |
 | 002 | Add Home Assistant as native NixOS service | 2026-02-17 | 6a95e07 | [002-add-home-assistant-as-native-nixos-servi](./quick/002-add-home-assistant-as-native-nixos-servi/) |
 
+### Quick Tasks Pending (from Phase 13)
+
+| Task | What | Effort |
+|------|------|--------|
+| Agent Teams env var | Add `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true` to agent-spawn | Minutes |
+| MCP-NixOS evaluate | Add to `.mcp.json`, test in sessions, remove if context-polluting | Minutes |
+| Tailnet Key Authority | Run `tailscale lock init` + sign nodes | Minutes |
+
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Phase 11 complete. Both plans executed and verified on VPS.
+Last session: 2026-02-18
+Stopped at: Phase 13 complete. Decisions captured. Next: plan Phase 14 or execute quick tasks.
 Resume file: None

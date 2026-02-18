@@ -25,6 +25,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 11: Agent Sandboxing** - Default-on bubblewrap (srt) isolation for all coding agents — filesystem deny-by-default, network proxy-filtered, cgroup-limited
 - [x] **Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config** - Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub, identify server-relevant config/services worth porting
 - [x] **Phase 9: Audit & Simplify** - Deep review of all modules and unexecuted plans, optimize for simplicity, minimalism, and security
+- [x] **Phase 13: Research Similar Personal Server Projects** - Survey ecosystem, present 11 ideas, user cherry-picks monitoring/notifications/security adoptions
+- [ ] **Phase 14: Monitoring + Notifications** - Prometheus + node_exporter + Grafana dashboards + ntfy push notifications (Tailscale-only)
+- [ ] **Phase 15: CrowdSec Intrusion Prevention** - Collaborative threat intelligence with community sharing, complementing fail2ban for public-facing services
 
 ## Phase Details
 
@@ -190,8 +193,12 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 7. Backups | 0/TBD | Not started | - |
 | 8. Review Old Neurosys + Doom.d | 1/1 | ✓ Complete | 2026-02-15 |
 | 9. Audit & Simplify | 2/2 | ✓ Complete | 2026-02-15 |
-| 10. Parts Deployment Pipeline | 0/2 | Planned | - |
-| 11. Agent Sandboxing (bubblewrap/srt) | 0/TBD | Not started | - |
+| 10. Parts Deployment Pipeline | 2/2 | ✓ Complete | 2026-02-17 |
+| 11. Agent Sandboxing (bubblewrap/srt) | 2/2 | ✓ Complete | 2026-02-17 |
+| 12. Security Audit | 0/TBD | Not started | - |
+| 13. Research Similar Projects | 1/1 | ✓ Complete | 2026-02-18 |
+| 14. Monitoring + Notifications | 0/TBD | Not started | - |
+| 15. CrowdSec Intrusion Prevention | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -275,4 +282,36 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 13-01-PLAN.md — Present 11 research ideas for user cherry-picking, capture decisions into ROADMAP.md and STATE.md
+- [x] 13-01-PLAN.md — Present 11 research ideas for user cherry-picking, capture decisions into ROADMAP.md and STATE.md
+
+### Phase 14: Monitoring + Notifications — Prometheus + Grafana + ntfy
+
+**Goal:** Declarative monitoring stack with persistent metrics history, Grafana dashboards (Tailscale-only), and ntfy push notifications for server events (deploy, backup, agent completion, security). Email for non-urgent, Android push for urgent.
+**Depends on:** Phase 3 (Tailscale, secrets infrastructure)
+**Requirements:** None (new capability from Phase 13 research)
+**Success Criteria** (what must be TRUE):
+  1. Prometheus scrapes node_exporter metrics (CPU, memory, disk, systemd services) and stores time-series data
+  2. Grafana displays system dashboards accessible via Tailscale IP only (not public)
+  3. ntfy-sh is running and reachable at localhost for internal notifications, with Android push and email delivery configured
+  4. Deploy script, fail2ban, and restic backups send notifications via ntfy on success/failure
+  5. `nix flake check` passes with monitoring module added
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 14 to break down)
+
+### Phase 15: CrowdSec Intrusion Prevention — Collaborative threat intelligence
+
+**Goal:** CrowdSec analyzes logs for attack patterns and shares threat intelligence with the community. Complements existing fail2ban for public-facing services (claw-swap). Community sharing enabled (user approved).
+**Depends on:** Phase 12 (security audit), Phase 14 (ntfy for CrowdSec alerts)
+**Requirements:** None (security hardening from Phase 13 research)
+**Success Criteria** (what must be TRUE):
+  1. CrowdSec agent is running and analyzing SSH + web access logs
+  2. Community blocklists are active and CrowdSec shares anonymized attack signals back
+  3. CrowdSec bouncer blocks IPs from community blocklists at firewall level
+  4. CrowdSec alerts route to ntfy for notification
+  5. `nix flake check` passes with CrowdSec module added
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 15 to break down)
