@@ -10,6 +10,7 @@
     ./home-assistant.nix
     ./syncthing.nix
     ./agent-compute.nix
+    ./restic.nix
     ./repos.nix
     ./homepage.nix
   ];

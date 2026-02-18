@@ -13,5 +13,12 @@
     secrets."anthropic-api-key" = { owner = "dangirsh"; };
     secrets."openai-api-key" = { owner = "dangirsh"; };
     secrets."github-pat" = { owner = "dangirsh"; };
+
+    templates."restic-b2-env" = {
+      content = ''
+        AWS_ACCESS_KEY_ID=${config.sops.placeholder."b2-account-id"}
+        AWS_SECRET_ACCESS_KEY=${config.sops.placeholder."b2-account-key"}
+      '';
+    };
   };
 }
