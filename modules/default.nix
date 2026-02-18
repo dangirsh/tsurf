@@ -13,5 +13,6 @@
     ./syncthing.nix
     ./agent-compute.nix
     ./repos.nix
+    ./homepage.nix
   ];
 }
