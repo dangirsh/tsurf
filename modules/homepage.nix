@@ -13,27 +13,32 @@
       headerStyle = "clean";
     };
 
+    widgets = [
+      { openmeteo = { label = "acfs"; timezone = "Europe/Berlin"; }; }
+      { greeting = { text = "All services are Tailscale-only"; }; }
+    ];
+
     services = [
       {
         "Monitoring" = [
           {
             "Grafana" = {
               href = "http://100.127.245.9:3000";
-              description = "System dashboards — CPU, memory, disk, network. Node Exporter Full pre-provisioned. Login: admin + sops secret.";
+              description = "System dashboards — CPU, memory, disk, network. Node Exporter Full pre-provisioned.";
               icon = "grafana";
             };
           }
           {
             "Prometheus" = {
               href = "http://100.127.245.9:9090";
-              description = "Metrics scraper — 15s interval, 90-day retention. 6 alert rules (disk, memory, CPU, systemd, instance down).";
+              description = "Metrics scraper — 15s interval, 90-day retention. Alerts for disk, memory, CPU, systemd failures.";
               icon = "prometheus";
             };
           }
           {
             "Alertmanager" = {
               href = "http://100.127.245.9:9093";
-              description = "Alert routing — fires through alertmanager-ntfy bridge to ntfy 'alerts' topic. Check Silences tab to mute.";
+              description = "Alert routing — forwards to ntfy via alertmanager-ntfy bridge. Use Silences tab to mute.";
               icon = "alertmanager";
             };
           }
@@ -44,14 +49,14 @@
           {
             "ntfy" = {
               href = "http://100.127.245.9:2586";
-              description = "Push notifications — topics: alerts (system), deploys (CI), security (fail2ban). Subscribe via Android app.";
+              description = "Push notifications — topics: alerts, deploys, security. Subscribe via Android app.";
               icon = "ntfy";
             };
           }
           {
             "Syncthing" = {
               href = "http://100.127.245.9:8384";
-              description = "File sync — bidirectional sync across devices. Staggered versioning. 4 devices configured.";
+              description = "File sync — bidirectional sync across devices with staggered versioning.";
               icon = "syncthing";
             };
           }
@@ -62,7 +67,7 @@
           {
             "Home Assistant" = {
               href = "http://100.127.245.9:8123";
-              description = "Home automation — native NixOS service, Tailscale-only access. ESPHome on port 6052.";
+              description = "Home automation — native NixOS service. ESPHome on port 6052.";
               icon = "home-assistant";
             };
           }
