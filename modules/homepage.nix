@@ -14,6 +14,10 @@
       statusStyle = "dot";
     };
 
+    docker = {
+      local.socket = "/var/run/docker.sock";
+    };
+
     widgets = [
       { openmeteo = { label = "acfs"; timezone = "Europe/Berlin"; }; }
       { greeting = { text = "All services are Tailscale-only"; }; }
@@ -64,6 +68,36 @@
               siteMonitor = "http://localhost:8384";
               description = "File sync — bidirectional sync across devices with staggered versioning.";
               icon = "syncthing";
+            };
+          }
+        ];
+      }
+      {
+        "Applications" = [
+          {
+            "claw-swap" = {
+              href = "https://claw-swap.com";
+              siteMonitor = "http://localhost:80";
+              description = "Trading platform — Caddy + Node.js + PostgreSQL.";
+              server = "local";
+              container = "claw-swap-app";
+              icon = "caddy";
+            };
+          }
+          {
+            "Parts Tools" = {
+              description = "Telegram bot toolkit — API integrations, data pipelines.";
+              server = "local";
+              container = "parts-tools";
+              icon = "docker";
+            };
+          }
+          {
+            "Parts Agent" = {
+              description = "Autonomous agent — runs tasks via Telegram bot.";
+              server = "local";
+              container = "parts-agent";
+              icon = "docker";
             };
           }
         ];
