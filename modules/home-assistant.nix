@@ -11,6 +11,11 @@
     enable = true;
     openFirewall = false;
 
+    extraComponents = [
+      "hue"
+      "esphome"
+    ];
+
     config = {
       homeassistant = {
         name = "Home";
@@ -25,5 +30,13 @@
 
       default_config = {};
     };
+  };
+
+  # ESPHome for managing ESP devices
+  services.esphome = {
+    enable = true;
+    address = "0.0.0.0";
+    port = 6052;
+    openFirewall = false;
   };
 }
