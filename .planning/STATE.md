@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 13 COMPLETE — Research findings presented, user cherry-picked adoptions. Next: Phase 14 (Monitoring + Notifications).
+**Current focus:** Phase 14 in progress — Monitoring + Notifications (Plan 14-01 complete, Plan 14-02 pending).
 
 ## Current Position
 
-Phase: 13 (Research Similar Projects) — COMPLETE
-Plan: 1 of 1 — COMPLETE
-Status: All 11 ideas presented and dispositioned. 5 adopted, 1 evaluated, 2 rejected, 4 deferred. New phases 14 and 15 created.
-Last activity: 2026-02-18 - User cherry-picked research findings, decisions captured.
+Phase: 14 (Monitoring + Notifications)
+Plan: 1 of 2 — COMPLETE
+Status: Plan 14-01 implemented and validated (Prometheus + Alertmanager + ntfy + Grafana). Plan 14-02 remains.
+Last activity: 2026-02-18 - Monitoring stack implemented, verified, and summarized.
 
-Progress: Phase 13 complete (1/1 plans). Phases 14-15 created from adopted ideas.
+Progress: Phase 14 in progress (1/2 plans complete).
 
 ## Performance Metrics
 
@@ -83,6 +83,9 @@ Recent decisions affecting current work:
 - [13-01]: endlessh-go REJECTED — minimal value with Tailscale-primary SSH
 - [13-01]: Headscale REJECTED — TKA covers key sovereignty concern
 - [13-01]: Caddy, Authelia, Loki+Alloy DEFERRED — not needed until services are internet-facing or specific log search needs arise
+- [14-01]: Monitoring baseline implemented with Prometheus 15s scrape + 90d retention and node_exporter collectors (systemd/processes/tcpstat)
+- [14-01]: Alert routing standardized as Alertmanager -> alertmanager-ntfy -> local ntfy topic `alerts`
+- [14-01]: Grafana credentials sourced from sops secrets via file provider (not hardcoded in Nix store)
 
 ### Completed Phases
 
