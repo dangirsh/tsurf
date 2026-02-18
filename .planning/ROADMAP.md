@@ -199,7 +199,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 11. Agent Sandboxing (bubblewrap/srt) | 2/2 | ✓ Complete | 2026-02-17 |
 | 12. Security Audit | 0/TBD | Not started | - |
 | 13. Research Similar Projects | 1/1 | ✓ Complete | 2026-02-18 |
-| 14. Monitoring + Notifications | 0/TBD | Not started | - |
+| 14. Monitoring + Notifications | 0/2 | Not started | - |
 | 15. CrowdSec Intrusion Prevention | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
@@ -298,10 +298,11 @@ Plans:
   3. ntfy-sh is running and reachable at localhost for internal notifications, with Android push and email delivery configured
   4. Deploy script, fail2ban, and restic backups send notifications via ntfy on success/failure
   5. `nix flake check` passes with monitoring module added
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 14 to break down)
+- [ ] 14-01-PLAN.md -- Core monitoring + notification modules (Prometheus, node_exporter, Alertmanager, alertmanager-ntfy, ntfy-sh, Grafana, sops secrets, fail2ban ntfy action)
+- [ ] 14-02-PLAN.md -- Deploy script ntfy integration + final validation (nix flake check)
 
 ### Phase 15: CrowdSec Intrusion Prevention — Collaborative threat intelligence
 
