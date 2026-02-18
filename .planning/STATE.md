@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 14 in progress — Monitoring + Notifications (Plan 14-01 complete, Plan 14-02 pending).
+**Current focus:** Phase 15 next — CrowdSec Intrusion Prevention (Phase 14 monitoring + notifications complete).
 
 ## Current Position
 
 Phase: 14 (Monitoring + Notifications)
-Plan: 1 of 2 — COMPLETE
-Status: Plan 14-01 implemented and validated (Prometheus + Alertmanager + ntfy + Grafana). Plan 14-02 remains.
-Last activity: 2026-02-18 - Monitoring stack implemented, verified, and summarized.
+Plan: 2 of 2 — COMPLETE
+Status: Plan 14-02 implemented and validated (deploy ntfy notifications + generic notify helper + full flake validation). Phase 14 complete.
+Last activity: 2026-02-18 - Plan 14-02 completed, summarized, and decisions recorded.
 
-Progress: Phase 14 in progress (1/2 plans complete).
+Progress: Phase 14 complete (2/2 plans complete).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: ~18min
-- Total execution time: ~270 min
+- Total plans completed: 16
+- Average duration: ~17.5min
+- Total execution time: ~278 min
 
 **By Phase:**
 
@@ -36,10 +36,11 @@ Progress: Phase 14 in progress (1/2 plans complete).
 | 6 | 2/2 | ~40min | ~20min |
 
 | 10 | 2/2 | ~115min | ~57.5min |
+| 14 | 2/2 | ~20min | ~10min |
 
 **Recent Trend:**
-- Last 2 plans: 10-01 (25min), 10-02 (90min — includes VPS reinstall)
-- Trend: Deployment testing requires iterative debugging against live infrastructure
+- Last 2 plans: 14-01 (~12min), 14-02 (~8min)
+- Trend: Monitoring/notification execution is stabilizing with fast iteration and verification.
 
 *Updated after each plan completion*
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [14-01]: Monitoring baseline implemented with Prometheus 15s scrape + 90d retention and node_exporter collectors (systemd/processes/tcpstat)
 - [14-01]: Alert routing standardized as Alertmanager -> alertmanager-ntfy -> local ntfy topic `alerts`
 - [14-01]: Grafana credentials sourced from sops secrets via file provider (not hardcoded in Nix store)
+- [14-02]: Deploy notifications run from local deploy script via SSH + server-local ntfy POST to `deploys`
+- [14-02]: Deploy notification delivery is best-effort (`|| true`) so ntfy outages cannot break deploy pipeline
+- [14-02]: Generic server-side `scripts/notify.sh` introduced for reusable notifications (agents, cron, future restic hooks)
 
 ### Completed Phases
 
@@ -105,6 +109,9 @@ Recent decisions affecting current work:
 - **Phase 11: Agent Sandboxing** (2 plans, completed 2026-02-17)
 - **Phase 13: Research Similar Projects** (1 plan, completed 2026-02-18)
   - 13-01: Presented 11 ideas, user cherry-picked 5 adoptions (ntfy, Prometheus+Grafana, CrowdSec, Agent Teams, TKA), 1 evaluate (MCP-NixOS), 2 rejected, 4 deferred
+- **Phase 14: Monitoring + Notifications** (2 plans, completed 2026-02-18)
+  - 14-01: Prometheus + Alertmanager + ntfy + Grafana baseline with 6 alert rules and sops-managed Grafana secrets
+  - 14-02: Deploy outcome notifications + generic `notify.sh` helper + full `nix flake check` validation
 
 ### Roadmap Evolution
 
@@ -142,5 +149,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Phase 13 complete. Decisions captured. Next: plan Phase 14 or execute quick tasks.
+Stopped at: Phase 14 complete. Summary and state updated for plan 14-02.
 Resume file: None
