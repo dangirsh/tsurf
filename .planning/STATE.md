@@ -71,6 +71,8 @@ Recent decisions affecting current work:
 - [11-02]: daemon-socket needs rw bind (Unix socket connection requires write permission)
 - [11-02]: zmx binary must be extracted from tarball (dontUnpack was installing gzip as binary)
 - [11-02]: Audit log dir pre-created via systemd.tmpfiles (dangirsh can't write to root-owned /data/projects)
+- [quick-002]: Home Assistant as native NixOS service, not Docker (HA-01)
+- [quick-002]: HA GUI accessible via Tailscale only, same trustedInterfaces pattern as Syncthing (HA-02)
 
 ### Completed Phases
 
@@ -106,9 +108,10 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 001 | Replace tmux with zmx (github.com/neurosnap/zmx) | 2026-02-16 | d3e0209 | [001-replace-tmux-with-zmx](./quick/001-replace-tmux-with-zmx/) |
+| 002 | Add Home Assistant as native NixOS service | 2026-02-17 | 6a95e07 | [002-add-home-assistant-as-native-nixos-servi](./quick/002-add-home-assistant-as-native-nixos-servi/) |
 
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 11 complete. Both plans executed. User checkpoint pending.
+Stopped at: Phase 11 complete. Both plans executed and verified on VPS.
 Resume file: None
