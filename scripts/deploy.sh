@@ -25,6 +25,18 @@ SECONDS=0
 
 CONTAINERS=("parts-tools" "parts-agent" "claw-swap-db" "claw-swap-app" "claw-swap-caddy")
 
+# @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
+LOCAL_LOCK="/tmp/neurosys-deploy.local.lock"
+REMOTE_LOCK_DIR="/var/lock/neurosys-deploy.lock"
+REMOTE_LOCK_HELD=false
+
+cleanup() {
+  if [[ "$REMOTE_LOCK_HELD" == true ]]; then
+    ssh "$TARGET" "rm -rf '$REMOTE_LOCK_DIR'" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+
 usage() {
   cat <<USAGE
 Usage: $(basename "$0") [OPTIONS]
@@ -77,6 +89,37 @@ if [[ "$MODE" != "local" && "$MODE" != "remote" ]]; then
   echo "Error: --mode must be 'local' or 'remote', got '$MODE'"
   exit 1
 fi
+
+# --- Local lock (prevent concurrent deploys from same machine) ---
+exec 9>"$LOCAL_LOCK"
+if command -v flock &>/dev/null; then
+  if ! flock --nonblock 9; then
+    echo "ERROR: Another deploy is already running on this machine (lock: $LOCAL_LOCK)."
+    exit 1
+  fi
+else
+  echo "WARNING: flock not available — local concurrent-deploy protection skipped."
+fi
+
+# --- Remote lock (prevent concurrent deploys from different machines) ---
+GIT_SHA=$(git -C "$FLAKE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+LOCK_INFO="holder=$(whoami)@$(hostname)
+pid=$$
+timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+sha=$GIT_SHA"
+
+if ! ssh "$TARGET" "mkdir '$REMOTE_LOCK_DIR' 2>/dev/null"; then
+  echo "ERROR: Deploy already in progress on the remote server."
+  echo ""
+  echo "Lock info:"
+  ssh "$TARGET" "cat '$REMOTE_LOCK_DIR/info.txt' 2>/dev/null" || echo "  (could not read lock metadata)"
+  echo ""
+  echo "If the previous deploy crashed, remove the lock manually:"
+  echo "  ssh $TARGET rm -rf $REMOTE_LOCK_DIR"
+  exit 1
+fi
+REMOTE_LOCK_HELD=true
+printf '%s\n' "$LOCK_INFO" | ssh "$TARGET" "cat > '$REMOTE_LOCK_DIR/info.txt'" 2>/dev/null || true
 
 # --- Update parts input ---
 if [[ "$SKIP_UPDATE" == false ]]; then
