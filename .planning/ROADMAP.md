@@ -145,6 +145,8 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md -- Home environment + system packages + secrets (bash, tmux, git, ssh, direnv, mosh, system packages, sops secrets)
 - [x] 05-02-PLAN.md -- Agent CLIs + compute infrastructure (llm-agents.nix, agent-spawn, cgroup slice, binary cache)
+- [ ] TODO(from-research): Add `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true` env var to agent-spawn
+- [ ] TODO(from-research): Add MCP-NixOS server to `.mcp.json` — evaluate, remove if context-polluting
 
 ### Phase 6: User Services + Agent Tooling
 **Goal**: The AI agent development infrastructure is operational with file sync, code indexing, and config repos in place
@@ -265,6 +267,7 @@ Plans:
 Plans:
 - [ ] 11-01-PLAN.md -- Rewrite agent-spawn with bwrap sandbox, Podman NixOS config, metadata IP block, subUid/subGid ranges
 - [ ] 11-02-PLAN.md -- Deploy to VPS, iterative testing of all sandbox behaviors, user verification checkpoint
+- [ ] TODO(from-research): Enable Tailnet Key Authority (`tailscale lock init` + sign existing nodes)
 
 ### Phase 12: Security audit of agent-neurosys NixOS configuration — review all modules for hardening gaps, secret handling, network exposure, sandbox escape vectors, and supply chain risks
 
