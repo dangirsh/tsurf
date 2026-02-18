@@ -289,20 +289,20 @@ Plans:
 
 ### Phase 14: Monitoring + Notifications — Prometheus + Grafana + ntfy
 
-**Goal:** Declarative monitoring stack with persistent metrics history, Grafana dashboards (Tailscale-only), and ntfy push notifications for server events (deploy, backup, agent completion, security). Email for non-urgent, Android push for urgent.
+**Goal:** Declarative monitoring stack with persistent metrics history, Grafana dashboards (Tailscale-only), and ntfy push notifications for server events (deploy, agent completion, security). Email for non-urgent, Android push for urgent. Backup notifications (restic -> ntfy) deferred to Phase 7 when backups are implemented.
 **Depends on:** Phase 3 (Tailscale, secrets infrastructure)
 **Requirements:** None (new capability from Phase 13 research)
 **Success Criteria** (what must be TRUE):
   1. Prometheus scrapes node_exporter metrics (CPU, memory, disk, systemd services) and stores time-series data
   2. Grafana displays system dashboards accessible via Tailscale IP only (not public)
-  3. ntfy-sh is running and reachable at localhost for internal notifications, with Android push and email delivery configured
-  4. Deploy script, fail2ban, and restic backups send notifications via ntfy on success/failure
+  3. ntfy-sh is running and reachable at localhost for internal notifications, with write-only default access (Tailscale-only, safe)
+  4. Deploy script and fail2ban send notifications via ntfy on success/failure; a generic notify.sh helper exists for agent completion and future backup hooks (Phase 7)
   5. `nix flake check` passes with monitoring module added
 **Plans:** 2 plans
 
 Plans:
 - [ ] 14-01-PLAN.md -- Core monitoring + notification modules (Prometheus, node_exporter, Alertmanager, alertmanager-ntfy, ntfy-sh, Grafana, sops secrets, fail2ban ntfy action)
-- [ ] 14-02-PLAN.md -- Deploy script ntfy integration + final validation (nix flake check)
+- [ ] 14-02-PLAN.md -- Deploy script ntfy integration + generic notify.sh helper + final validation (nix flake check)
 
 ### Phase 15: CrowdSec Intrusion Prevention — Collaborative threat intelligence
 
