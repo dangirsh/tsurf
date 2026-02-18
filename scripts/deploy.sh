@@ -20,10 +20,21 @@ FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET="root@acfs"
 MODE="local"
 SKIP_UPDATE=false
-NTFY_TOPIC="deploys"
 SECONDS=0
 
 CONTAINERS=("parts-tools" "parts-agent" "claw-swap-db" "claw-swap-app" "claw-swap-caddy")
+
+# @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
+LOCAL_LOCK="/tmp/neurosys-deploy.local.lock"
+REMOTE_LOCK_DIR="/var/lock/neurosys-deploy.lock"
+REMOTE_LOCK_HELD=false
+
+cleanup() {
+  if [[ "$REMOTE_LOCK_HELD" == true ]]; then
+    ssh "$TARGET" "rm -rf '$REMOTE_LOCK_DIR'" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
 
 usage() {
   cat <<USAGE
@@ -77,6 +88,37 @@ if [[ "$MODE" != "local" && "$MODE" != "remote" ]]; then
   echo "Error: --mode must be 'local' or 'remote', got '$MODE'"
   exit 1
 fi
+
+# --- Local lock (prevent concurrent deploys from same machine) ---
+exec 9>"$LOCAL_LOCK"
+if command -v flock &>/dev/null; then
+  if ! flock --nonblock 9; then
+    echo "ERROR: Another deploy is already running on this machine (lock: $LOCAL_LOCK)."
+    exit 1
+  fi
+else
+  echo "WARNING: flock not available — local concurrent-deploy protection skipped."
+fi
+
+# --- Remote lock (prevent concurrent deploys from different machines) ---
+GIT_SHA=$(git -C "$FLAKE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+LOCK_INFO="holder=$(whoami)@$(hostname)
+pid=$$
+timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+sha=$GIT_SHA"
+
+if ! ssh "$TARGET" "mkdir '$REMOTE_LOCK_DIR' 2>/dev/null"; then
+  echo "ERROR: Deploy already in progress on the remote server."
+  echo ""
+  echo "Lock info:"
+  ssh "$TARGET" "cat '$REMOTE_LOCK_DIR/info.txt' 2>/dev/null" || echo "  (could not read lock metadata)"
+  echo ""
+  echo "If the previous deploy crashed, remove the lock manually:"
+  echo "  ssh $TARGET rm -rf $REMOTE_LOCK_DIR"
+  exit 1
+fi
+REMOTE_LOCK_HELD=true
+printf '%s\n' "$LOCK_INFO" | ssh "$TARGET" "cat > '$REMOTE_LOCK_DIR/info.txt'" 2>/dev/null || true
 
 # --- Update parts input ---
 if [[ "$SKIP_UPDATE" == false ]]; then
@@ -132,13 +174,6 @@ if [[ "$FAILED" -eq 0 ]]; then
   echo "=== Deploy SUCCESS ==="
   echo "Parts revision: $PARTS_REV_SHORT"
   echo "Duration: $((DURATION / 60))m $((DURATION % 60))s"
-  # Best-effort ntfy notification (never blocks deploy).
-  ssh "$TARGET" "curl --silent --max-time 10 \
-    -H 'Title: Deploy succeeded' \
-    -H 'Priority: low' \
-    -H 'Tags: white_check_mark' \
-    -d 'acfs deployed (parts: $PARTS_REV_SHORT) in $((DURATION / 60))m $((DURATION % 60))s' \
-    http://localhost:2586/$NTFY_TOPIC" 2>/dev/null || true
   echo ""
   echo "Container status:"
   ssh "$TARGET" "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E '(NAMES|parts-|claw-swap-)'"
@@ -149,13 +184,6 @@ if [[ "$FAILED" -eq 0 ]]; then
   fi
 else
   echo "=== Deploy FAILED ==="
-  # Best-effort ntfy notification (never blocks deploy).
-  ssh "$TARGET" "curl --silent --max-time 10 \
-    -H 'Title: Deploy FAILED' \
-    -H 'Priority: high' \
-    -H 'Tags: rotating_light' \
-    -d 'acfs deploy failed after $((DURATION / 60))m $((DURATION % 60))s. Check containers.' \
-    http://localhost:2586/$NTFY_TOPIC" 2>/dev/null || true
   echo "Containers not running after 30s:"
   for c in "${CONTAINERS[@]}"; do
     if ! ssh "$TARGET" "docker ps --filter name=^${c}\$ --filter status=running -q" 2>/dev/null | grep -q .; then

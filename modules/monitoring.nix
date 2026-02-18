@@ -1,8 +1,6 @@
 # modules/monitoring.nix
-# @decision MON-01: Keep monitoring components local-only and route notifications through ntfy.
 # @decision MON-02: Scrape node metrics every 15s with 90-day retention for operational history.
-# @decision MON-03: Route Alertmanager notifications through alertmanager-ntfy to centralize delivery policy.
-# @decision MON-04: Use a shared systemd OnFailure template for critical service crash notifications.
+# @decision MON-05: Alertmanager, ntfy, Grafana removed — agents query Prometheus /api/v1/alerts directly.
 { config, pkgs, ... }: {
 
   services.prometheus.exporters.node = {
@@ -38,16 +36,6 @@
         static_configs = [
           {
             targets = [ "127.0.0.1:${toString config.services.prometheus.port}" ];
-          }
-        ];
-      }
-    ];
-
-    alertmanagers = [
-      {
-        static_configs = [
-          {
-            targets = [ "127.0.0.1:${toString config.services.prometheus.alertmanager.port}" ];
           }
         ];
       }
@@ -137,84 +125,4 @@
       }))
     ];
   };
-
-  services.prometheus.alertmanager = {
-    enable = true;
-    port = 9093;
-    configuration = {
-      route = {
-        receiver = "ntfy";
-        group_wait = "30s";
-        group_interval = "5m";
-        repeat_interval = "4h";
-        routes = [
-          {
-            receiver = "ntfy";
-            matchers = [ ''severity="critical"'' ];
-            repeat_interval = "1h";
-          }
-        ];
-      };
-      receivers = [
-        {
-          name = "ntfy";
-          webhook_configs = [
-            {
-              url = "http://127.0.0.1:8000/hook";
-              send_resolved = true;
-            }
-          ];
-        }
-      ];
-    };
-  };
-
-  services.prometheus.alertmanager-ntfy = {
-    enable = true;
-    settings = {
-      http.addr = "127.0.0.1:8000";
-      ntfy = {
-        baseurl = "http://localhost:2586";
-        notification = {
-          topic = "alerts";
-          priority = ''status == "firing" ? "high" : "default"'';
-          tags = [
-            {
-              tag = "rotating_light";
-              condition = ''status == "firing"'';
-            }
-            {
-              tag = "+1";
-              condition = ''status == "resolved"'';
-            }
-          ];
-          templates = {
-            title = ''{{ if eq .Status "resolved" }}Resolved: {{ end }}{{ index .Annotations "summary" }}'';
-            description = ''{{ index .Annotations "description" }}'';
-          };
-        };
-      };
-    };
-  };
-
-  systemd.services."ntfy-failure@" = {
-    description = "Send ntfy notification for failed service instance %i";
-    path = [ pkgs.curl pkgs.hostname ];
-    scriptArgs = "%i";
-    script = ''
-      curl --fail --show-error --silent \
-        -H "Title: Service crashed: $1" \
-        -H "Priority: urgent" \
-        -H "Tags: skull" \
-        -d "$1 failed on $(hostname) at $(date -Iseconds)" \
-        http://localhost:2586/alerts
-    '';
-    serviceConfig = {
-      Type = "oneshot";
-    };
-  };
-
-  systemd.services.docker.unitConfig.OnFailure = "ntfy-failure@%n.service";
-  systemd.services.prometheus.unitConfig.OnFailure = "ntfy-failure@%n.service";
-  systemd.services.grafana.unitConfig.OnFailure = "ntfy-failure@%n.service";
 }

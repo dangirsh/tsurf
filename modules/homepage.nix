@@ -27,41 +27,17 @@
       {
         "Monitoring" = [
           {
-            "Grafana" = {
-              href = "http://100.127.245.9:3000";
-              siteMonitor = "http://localhost:3000/api/health";
-              description = "System dashboards — CPU, memory, disk, network. Node Exporter Full pre-provisioned.";
-              icon = "grafana";
-            };
-          }
-          {
             "Prometheus" = {
               href = "http://100.127.245.9:9090";
               siteMonitor = "http://localhost:9090/-/healthy";
-              description = "Metrics scraper — 15s interval, 90-day retention. Alerts for disk, memory, CPU, systemd failures.";
+              description = "Metrics + alerts — 15s scrape, 90d retention. Agents query /api/v1/alerts.";
               icon = "prometheus";
-            };
-          }
-          {
-            "Alertmanager" = {
-              href = "http://100.127.245.9:9093";
-              siteMonitor = "http://localhost:9093/-/healthy";
-              description = "Alert routing — forwards to ntfy via alertmanager-ntfy bridge. Use Silences tab to mute.";
-              icon = "alertmanager";
             };
           }
         ];
       }
       {
-        "Notifications & Sync" = [
-          {
-            "ntfy" = {
-              href = "http://100.127.245.9:2586";
-              siteMonitor = "http://localhost:2586/v1/health";
-              description = "Push notifications — topics: alerts, deploys, security. Subscribe via Android app.";
-              icon = "ntfy";
-            };
-          }
+        "Sync" = [
           {
             "Syncthing" = {
               href = "http://100.127.245.9:8384";
