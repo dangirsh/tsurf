@@ -9,6 +9,10 @@
     STNODEFAULTFOLDER = "true";
   };
 
+  systemd.tmpfiles.rules = [
+    "d /home/dangirsh/Sync 0755 dangirsh users -"
+  ];
+
   services.syncthing = {
     enable = true;
     user = "dangirsh";
@@ -23,16 +27,10 @@
     settings = {
       devices = {
         "MacBook-Pro.local" = {
-          id = "DEVICE-ID-PLACEHOLDER-1";
-        };
-        "DC-1" = {
-          id = "DEVICE-ID-PLACEHOLDER-2";
+          id = "LYQPMIK-QXAB6PL-T64O22N-GRNCANW-JYFZJJX-J5WGGR5-R2MQ5ZO-V23ZLQU";
         };
         "Pixel 10 Pro" = {
-          id = "DEVICE-ID-PLACEHOLDER-3";
-        };
-        "MacBook-Pro-von-Theda.local" = {
-          id = "DEVICE-ID-PLACEHOLDER-4";
+          id = "YBHZJDE-2XWYQN2-LOONB2Z-UICZJAC-VNHP56V-LU4BPFW-KRCCPWX-AH5BXQY";
         };
       };
 
@@ -43,9 +41,7 @@
           path = "/home/dangirsh/Sync";
           devices = [
             "MacBook-Pro.local"
-            "DC-1"
             "Pixel 10 Pro"
-            "MacBook-Pro-von-Theda.local"
           ];
           type = "sendreceive";
           rescanIntervalS = 60;
