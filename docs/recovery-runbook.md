@@ -98,6 +98,8 @@ The new VPS may have a different IP than the old one (`161.97.74.121`). Record t
 
 ## 3. What's Where
 
+**Backup approach:** Blanket `/` with `--one-file-system` and exclusions. All stateful paths on the root filesystem are backed up automatically -- no manual path additions needed when services are added. See `modules/restic.nix` for the exclusion list. To opt out a directory, place a `.nobackup` file in it.
+
 | Data | Source | Recovery Method |
 |------|--------|----------------|
 | NixOS configuration | Git repo | `nix flake check` validates, `nixos-anywhere` deploys |
@@ -108,6 +110,7 @@ The new VPS may have a different IP than the old one (`161.97.74.121`). Record t
 | Home Assistant state | B2 backup | `restic restore` to `/var/lib/hass/` |
 | User home + Syncthing | B2 backup | `restic restore` to `/home/dangirsh/` |
 | Code repos | B2 backup + git remotes | B2 has latest uncommitted work; git has committed history |
+| All other `/var/lib/*` state | B2 backup | Auto-included by blanket backup (Syncthing certs, NixOS UID maps, fail2ban, etc.) |
 | sops-nix secrets | Git repo (encrypted) | Decrypted automatically once SSH host key is restored |
 | Tailscale auth | Manual re-auth | Only if `/var/lib/tailscale/` restore is stale |
 | Home Assistant device pairing | Manual re-setup | Only if `/var/lib/hass/` restore fails |
@@ -262,39 +265,24 @@ systemctl stop home-assistant.service
 systemctl stop tailscaled.service
 ```
 
-### Step 2.4: Restore Docker bind mount data
+### Step 2.4: Restore all stateful data
+
+**Option A -- Full restore (recommended):**
+
+The blanket backup includes everything on the root filesystem except ephemeral/reproducible paths. Restore it all at once:
+
+```bash
+restic restore latest --target /
+```
+
+**Option B -- Selective restore (if you only need specific paths):**
 
 ```bash
 restic restore latest --target / \
   --include /var/lib/claw-swap \
-  --include /var/lib/parts
-```
-
-This restores:
-- `/var/lib/claw-swap/pgdata/` -- PostgreSQL data + logical dump (`backup.sql`)
-- `/var/lib/claw-swap/caddy-data/` -- Caddy TLS certificates
-- `/var/lib/claw-swap/caddy-config/` -- Caddy runtime config
-- `/var/lib/parts/data/` -- Parts tools runtime data
-- `/var/lib/parts/sessions/` -- Parts agent sessions
-
-### Step 2.5: Restore Tailscale state
-
-```bash
-restic restore latest --target / \
-  --include /var/lib/tailscale
-```
-
-### Step 2.6: Restore Home Assistant
-
-```bash
-restic restore latest --target / \
-  --include /var/lib/hass
-```
-
-### Step 2.7: Restore user data and projects
-
-```bash
-restic restore latest --target / \
+  --include /var/lib/parts \
+  --include /var/lib/tailscale \
+  --include /var/lib/hass \
   --include /data/projects \
   --include /home/dangirsh
 ```
@@ -436,14 +424,24 @@ If any check fails, refer to the relevant Phase above to debug. Common issues:
 
 ---
 
-## 9. Appendix -- What's NOT Backed Up (Accepted Losses)
+## 9. Appendix -- Excluded from Backup
 
-| Path | Why Skipped | Impact of Loss |
+Restic backs up the entire root filesystem (`/`) with `--one-file-system` (skips /proc, /sys, /dev, /run, /tmp automatically). The following paths are explicitly excluded in `modules/restic.nix`:
+
+| Path | Why Excluded | Impact of Loss |
 |------|-------------|----------------|
-| `/var/lib/prometheus/` | Metrics rebuilt from scratch; saves B2 storage cost | Lose historical metrics graphs (accepted -- monitoring restarts clean) |
-| `/var/lib/fail2ban/` | Reconstructible ban history | Ban counters restart from zero (no security impact -- rules still active) |
-| `/nix/store/` | Fully reproducible from `flake.lock` | Rebuilt automatically during `nixos-anywhere` deploy |
-| `/var/lib/esphome/` | Small YAML configs, easily recreated | Minor inconvenience if ESPHome devices need reconfiguration |
+| `/nix` | Fully reproducible from `flake.lock` (50-200 GB) | Rebuilt automatically during `nixos-anywhere` deploy |
+| `/var/lib/docker/overlay2` | Docker image layers, rebuilt from images (potentially huge) | `docker compose up` or NixOS activation rebuilds them |
+| `/var/lib/docker/tmp` | Docker temp files | None |
+| `/var/lib/docker/buildkit` | BuildKit cache | None |
+| `/var/cache` | System package caches | Rebuilt automatically |
+| `**/.cache` | User cache directories | Rebuilt automatically |
+| `/var/lib/prometheus` | Metrics rebuilt from scratch | Lose historical graphs (accepted -- monitoring restarts clean) |
+| `.git/objects` | Fetched from git remotes | `git fetch` restores them |
+| `.git/config` | May contain credential tokens | Recreated by `git clone` |
+| `node_modules`, `__pycache__`, `.direnv`, `result` | Language/build artifacts | Rebuilt from lockfiles |
+
+**Ad-hoc opt-out:** Place a `.nobackup` file in any directory to exclude it from backup (uses restic's `--exclude-if-present`). Directories with a `CACHEDIR.TAG` file are also excluded (`--exclude-caches`).
 
 ---
 
@@ -500,7 +498,6 @@ ssh root@161.97.74.121 'rm -rf /tmp/restore-test'
 ### When to re-test
 
 Re-run the dry-run restore test after:
-- Adding or removing backup paths in `modules/restic.nix`
-- Adding new services with stateful data
+- Adding new exclusions to `modules/restic.nix`
 - Changing the sops-nix secrets structure
 - Changing the VPS provider or disk layout
