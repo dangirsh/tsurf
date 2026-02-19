@@ -28,6 +28,7 @@
     exclude = [
       "/nix/store"
       ".git/objects"
+      ".git/config"
       "node_modules"
       "__pycache__"
       ".direnv"

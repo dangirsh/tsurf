@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 15 next — CrowdSec Intrusion Prevention (Phase 14 monitoring + notifications complete).
+**Current focus:** Phase 17 COMPLETE — Hardcore Simplicity & Security Audit. All 4 plans executed and validated.
 
 ## Current Position
 
-Phase: 14 (Monitoring + Notifications)
-Plan: 2 of 2 — COMPLETE
-Status: Plan 14-02 implemented and validated (deploy ntfy notifications + generic notify helper + full flake validation). Phase 14 complete.
-Last activity: 2026-02-19 - Completed quick task 7: Configure restic backups to Backblaze B2
+Phase: 17 (Hardcore Simplicity & Security Audit)
+Plan: 4 of 4 — ALL COMPLETE
+Status: Phase 17 fully executed. SSH hardened, credentials fixed, CLAUDE.md guardrails added, Docker audit complete, sandbox assessed.
+Last activity: 2026-02-19 - Completed Phase 17 Plans 01-04
 
-Progress: Phase 14 complete (2/2 plans complete).
+Progress: Phase 17 complete (4/4 plans).
 
 ## Performance Metrics
 
@@ -38,9 +38,11 @@ Progress: Phase 14 complete (2/2 plans complete).
 | 10 | 2/2 | ~115min | ~57.5min |
 | 14 | 2/2 | ~20min | ~10min |
 
+| 17 | 4/4 | ~76min | ~19min |
+
 **Recent Trend:**
-- Last 2 plans: 14-01 (~12min), 14-02 (~8min)
-- Trend: Monitoring/notification execution is stabilizing with fast iteration and verification.
+- Last 4 plans: 17-01 (~31min), 17-02 (~15min), 17-03 (~10min), 17-04 (~20min)
+- Trend: Security audit and docs work executes efficiently with clear plans.
 
 *Updated after each plan completion*
 
@@ -93,6 +95,22 @@ Recent decisions affecting current work:
 - [quick-005]: MON-05: Alertmanager, ntfy, Grafana removed -- agents query Prometheus /api/v1/alerts directly
 - [quick-005]: fail2ban reverts to default ban action (no ntfy notification)
 - [quick-006]: ESPHome binds 0.0.0.0:6052 with openFirewall=false (Tailscale-only, same pattern as HA and Syncthing)
+- [17-01]: zmx removed from base module and kept in agent-compute package set; duplicate package declaration eliminated
+- [17-01]: git-lfs and podman-compose removed as unused features/packages
+- [17-01]: stale `parts-agent@vm` SSH key removed from `dangirsh` and `root` authorized keys
+- [17-01]: deploy local lock moved from `/tmp` to project-local `tmp/` path
+- [17-01]: kernel sysctl hardening enabled (dmesg/kptr restrictions, unprivileged bpf off, redirects off, martian logging on)
+- [17-01]: homepage Tailscale IP centralized in a single `let` binding for one-line updates
+- [17-01]: `llm-agents.inputs.nixpkgs` now follows root `nixpkgs`; lock update and flake checks passed
+- [17-02]: Port 22 removed from public firewall; SSH accessible only via Tailscale (trustedInterfaces)
+- [17-02]: Build-time assertion prevents port 22 from being re-added to allowedTCPPorts
+- [17-02]: Repo cloning uses git credential.helper store (no PAT in URLs, process args, or .git/config)
+- [17-02]: .git/config added to restic excludes to prevent backing up leaked tokens
+- [17-03]: CLAUDE.md updated with Security Conventions, Simplicity Conventions, Module Change Checklist
+- [17-03]: Accepted Risks documented: SEC3, SEC5, SEC9, SEC11
+- [17-04]: Docker audit: claw-swap fully hardened, parts containers lack all hardening (tracked for remediation)
+- [17-04]: Sandbox escape vectors confirmed and documented (SEC5 settings.json, SEC6 Docker socket, cross-project read, no network sandbox)
+- [17-04]: Audit log gets journald dual-logging via systemd-cat for tamper resistance
 
 ### Completed Phases
 
@@ -115,6 +133,11 @@ Recent decisions affecting current work:
 - **Phase 14: Monitoring + Notifications** (2 plans, completed 2026-02-18)
   - 14-01: Prometheus + Alertmanager + ntfy + Grafana baseline with 6 alert rules and sops-managed Grafana secrets
   - 14-02: Deploy outcome notifications + generic `notify.sh` helper + full `nix flake check` validation
+- **Phase 17: Hardcore Simplicity & Security Audit** (4 plans, completed 2026-02-19)
+  - 17-01: Simplicity cleanup + kernel hardening + llm-agents nixpkgs follow
+  - 17-02: SSH hardening (Tailscale-only), credential leak fix, restic backup excludes
+  - 17-03: CLAUDE.md guardrails — security conventions, simplicity rules, module checklist
+  - 17-04: Docker container audit, sandbox escape assessment, audit log journald dual-logging
 
 ### Roadmap Evolution
 
@@ -125,6 +148,7 @@ Recent decisions affecting current work:
 - Phase 14 added: Monitoring + Notifications — Prometheus + node_exporter + Grafana + ntfy (from Phase 13 research adoptions)
 - Phase 15 added: CrowdSec Intrusion Prevention — collaborative threat intelligence with community sharing (from Phase 13 research)
 - Phase 16 added: Disaster Recovery & Backup Completeness — audit stateful paths, complete restic coverage, create tested recovery runbook (< 2hr recovery from git + B2)
+- Phase 17 added: Hardcore Simplicity & Security Audit — critical line-by-line review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering/YAGNI and security gaps. Establish repo guardrails for future agentic development.
 
 ### Blockers/Concerns
 

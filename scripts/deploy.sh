@@ -23,9 +23,10 @@ SKIP_UPDATE=false
 SECONDS=0
 
 CONTAINERS=("parts-tools" "parts-agent" "claw-swap-db" "claw-swap-app" "claw-swap-caddy")
+mkdir -p "$FLAKE_DIR/tmp"
 
 # @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
-LOCAL_LOCK="/tmp/neurosys-deploy.local.lock"
+LOCAL_LOCK="$FLAKE_DIR/tmp/neurosys-deploy.local.lock"
 REMOTE_LOCK_DIR="/var/lock/neurosys-deploy.lock"
 REMOTE_LOCK_HELD=false
 

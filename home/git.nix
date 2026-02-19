@@ -3,7 +3,6 @@
     enable = true;
     userName = "Dan Girshovich";
     userEmail = "dan.girshovich@gmail.com";
-    lfs.enable = true;
   };
 
   programs.gh = {

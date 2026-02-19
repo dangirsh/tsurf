@@ -1,10 +1,14 @@
 # modules/homepage.nix
 # @decision HP-01: Use NixOS-native homepage-dashboard service; listen on 0.0.0.0 for Tailscale reachability.
-{ config, pkgs, ... }: {
+{ config, pkgs, ... }:
+let
+  tailscaleIP = "100.127.245.9";
+in
+{
   services.homepage-dashboard = {
     enable = true;
     listenPort = 8082;
-    allowedHosts = "100.127.245.9:8082,100.127.245.9,acfs,localhost";
+    allowedHosts = "${tailscaleIP}:8082,${tailscaleIP},acfs,localhost";
 
     settings = {
       title = "acfs";
@@ -76,7 +80,7 @@
         "Home" = [
           {
             "Home Assistant" = {
-              href = "http://100.127.245.9:8123";
+              href = "http://${tailscaleIP}:8123";
               siteMonitor = "http://localhost:8123";
               description = "Home automation — native NixOS service. ESPHome on port 6052.";
               icon = "home-assistant";
