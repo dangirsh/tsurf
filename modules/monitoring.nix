@@ -2,7 +2,13 @@
 # @decision MON-02: Scrape node metrics every 15s with 90-day retention for operational history.
 # @decision MON-05: Alertmanager, ntfy, Grafana removed — agents query Prometheus /api/v1/alerts directly.
 # @decision MON-06: Prometheus localhost-only — no web dashboard, agents query API from localhost.
+# @decision MON-07: Textfile collector exposes restic backup timestamp for staleness alerting.
 { config, pkgs, ... }: {
+
+  # Directory for node_exporter textfile collector .prom files
+  systemd.tmpfiles.rules = [
+    "d /var/lib/prometheus-node-exporter 0755 root root -"
+  ];
 
   services.prometheus.exporters.node = {
     enable = true;
@@ -11,6 +17,10 @@
       "systemd"
       "processes"
       "tcpstat"
+      "textfile"
+    ];
+    extraFlags = [
+      "--collector.textfile.directory=/var/lib/prometheus-node-exporter"
     ];
   };
 
@@ -119,6 +129,18 @@
                 annotations = {
                   summary = "Systemd unit failed on {{ $labels.instance }}";
                   description = "Unit {{ $labels.name }} is in failed state on {{ $labels.instance }}.";
+                };
+              }
+              {
+                alert = "BackupStale";
+                expr = ''
+                  (time() - restic_backup_last_run_timestamp) > 36 * 3600
+                '';
+                for = "5m";
+                labels.severity = "warning";
+                annotations = {
+                  summary = "Restic backup stale on {{ $labels.instance }}";
+                  description = "Last restic backup is older than 36 hours on {{ $labels.instance }}.";
                 };
               }
             ];

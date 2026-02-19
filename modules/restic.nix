@@ -58,6 +58,8 @@
 
     backupCleanupCommand = ''
       rm -f /var/lib/claw-swap/pgdata/backup.sql
+      # Write timestamp for node_exporter textfile collector (BackupStale alert + homepage widget)
+      echo "restic_backup_last_run_timestamp $(date +%s)" > /var/lib/prometheus-node-exporter/restic.prom
     '';
   };
 }
