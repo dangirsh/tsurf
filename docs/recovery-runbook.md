@@ -1,4 +1,4 @@
-# Disaster Recovery Runbook -- acfs VPS
+# Disaster Recovery Runbook -- neurosys VPS
 
 > **Last verified: 2026-02-19.** Review after any changes to backup paths, services, or secrets.
 
@@ -67,17 +67,17 @@ ssh root@<new-vps-ip> echo "SSH works"
 
 ### 2.4 Restic credentials (needed BEFORE sops-nix works on the new server)
 
-The restic password and B2 API keys are encrypted in `secrets/acfs.yaml`. On recovery, the new server cannot decrypt them yet (no SSH host key = no age key). Extract them locally using your admin age private key.
+The restic password and B2 API keys are encrypted in `secrets/neurosys.yaml`. On recovery, the new server cannot decrypt them yet (no SSH host key = no age key). Extract them locally using your admin age private key.
 
 **Admin age private key must be at:** `~/.config/sops/age/keys.txt` on your local machine.
 
 ```bash
 # Extract restic repository password
-sops -d secrets/acfs.yaml | grep restic-password
+sops -d secrets/neurosys.yaml | grep restic-password
 
 # Extract B2 credentials
-sops -d secrets/acfs.yaml | grep b2-key-id
-sops -d secrets/acfs.yaml | grep b2-application-key
+sops -d secrets/neurosys.yaml | grep b2-key-id
+sops -d secrets/neurosys.yaml | grep b2-application-key
 ```
 
 Write these values down or export them -- you will need them in Phase 1 and Phase 2.
@@ -122,10 +122,10 @@ The SSH host key is the **single most critical file**. Without it, sops-nix cann
 
 ```bash
 # On your LOCAL machine -- set restic credentials from step 2.4
-export AWS_ACCESS_KEY_ID="<b2-key-id from sops -d secrets/acfs.yaml>"
-export AWS_SECRET_ACCESS_KEY="<b2-application-key from sops -d secrets/acfs.yaml>"
+export AWS_ACCESS_KEY_ID="<b2-key-id from sops -d secrets/neurosys.yaml>"
+export AWS_SECRET_ACCESS_KEY="<b2-application-key from sops -d secrets/neurosys.yaml>"
 export RESTIC_REPOSITORY="s3:s3.eu-central-003.backblazeb2.com/SyncBkp"
-export RESTIC_PASSWORD="<restic-password from sops -d secrets/acfs.yaml>"
+export RESTIC_PASSWORD="<restic-password from sops -d secrets/neurosys.yaml>"
 ```
 
 ```bash
@@ -163,14 +163,14 @@ cd /path/to/agent-neurosys
 
 # Edit the hardware/networking config
 # Look for the old IP and replace with the new one
-grep -r "161.97.74.121" hosts/acfs/
+grep -r "161.97.74.121" hosts/neurosys/
 # Update the matching file(s)
 ```
 
 Commit the change if needed:
 
 ```bash
-git add hosts/acfs/
+git add hosts/neurosys/
 git commit -m "fix: update VPS IP for disaster recovery"
 ```
 
@@ -179,7 +179,7 @@ git commit -m "fix: update VPS IP for disaster recovery"
 ```bash
 cd /path/to/agent-neurosys
 nixos-anywhere --extra-files /tmp/host-keys \
-  --flake .#acfs root@<new-vps-ip>
+  --flake .#neurosys root@<new-vps-ip>
 ```
 
 This will:
@@ -194,7 +194,7 @@ This will:
 ```bash
 # SSH works
 ssh root@<new-vps-ip> hostname
-# Expected: "acfs"
+# Expected: "neurosys"
 
 # sops secrets decrypted successfully
 ssh root@<new-vps-ip> ls /run/secrets/ | wc -l
@@ -356,10 +356,10 @@ Option A -- Update sops secret and redeploy (persistent fix):
 
 ```bash
 # On your LOCAL machine:
-sops secrets/acfs.yaml
+sops secrets/neurosys.yaml
 # Edit the tailscale-authkey value with the fresh key from Prerequisite 2.5
 
-git add secrets/acfs.yaml
+git add secrets/neurosys.yaml
 git commit -m "fix: update Tailscale auth key for recovery"
 
 # Redeploy to apply the new secret
@@ -426,13 +426,13 @@ If any check fails, refer to the relevant Phase above to debug. Common issues:
 | Admin age private key | `~/.config/sops/age/keys.txt` (local machine) | File on admin workstation -- **back this up separately** |
 | Admin age public key | `age1vma7w9nqlg9da8z60a99g8wv53ufakfmzxpkdnnzw39y34grug7qklz3xz` | In `.sops.yaml` |
 | Host age public key | `age1jgn7pqqf4hvalqdrzqysxtnsydd5urnuczrfm86umr7yfr8pu5gqqet2t3` | Derived from SSH host key; in `.sops.yaml` |
-| Restic password | `secrets/acfs.yaml` (encrypted) | `sops -d secrets/acfs.yaml \| grep restic-password` |
-| B2 key ID | `secrets/acfs.yaml` (encrypted) | `sops -d secrets/acfs.yaml \| grep b2-key-id` |
-| B2 application key | `secrets/acfs.yaml` (encrypted) | `sops -d secrets/acfs.yaml \| grep b2-application-key` |
+| Restic password | `secrets/neurosys.yaml` (encrypted) | `sops -d secrets/neurosys.yaml \| grep restic-password` |
+| B2 key ID | `secrets/neurosys.yaml` (encrypted) | `sops -d secrets/neurosys.yaml \| grep b2-key-id` |
+| B2 application key | `secrets/neurosys.yaml` (encrypted) | `sops -d secrets/neurosys.yaml \| grep b2-application-key` |
 | Tailscale auth key | Tailscale admin console | https://login.tailscale.com/admin/settings/keys |
-| All other service secrets | `secrets/acfs.yaml` (encrypted) | Decrypted by sops-nix on server using SSH host key |
+| All other service secrets | `secrets/neurosys.yaml` (encrypted) | Decrypted by sops-nix on server using SSH host key |
 
-**Critical note:** The admin age private key is the **root of trust** for disaster recovery. If you lose both the server AND the admin age key, you cannot decrypt `secrets/acfs.yaml` and must regenerate all secrets from scratch. Keep a secure backup of `~/.config/sops/age/keys.txt` outside the server (password manager, encrypted USB, etc.).
+**Critical note:** The admin age private key is the **root of trust** for disaster recovery. If you lose both the server AND the admin age key, you cannot decrypt `secrets/neurosys.yaml` and must regenerate all secrets from scratch. Keep a secure backup of `~/.config/sops/age/keys.txt` outside the server (password manager, encrypted USB, etc.).
 
 ---
 

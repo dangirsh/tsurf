@@ -27,7 +27,7 @@ in {
     }
     {
       assertion = !builtins.elem 22 config.networking.firewall.allowedTCPPorts;
-      message = "SECURITY: Port 22 must NOT be in allowedTCPPorts. SSH is Tailscale-only (trustedInterfaces). Deploy uses root@acfs which resolves via Tailscale MagicDNS.";
+      message = "SECURITY: Port 22 must NOT be in allowedTCPPorts. SSH is Tailscale-only (trustedInterfaces). Deploy uses root@neurosys which resolves via Tailscale MagicDNS.";
     }
   ];
 

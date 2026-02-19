@@ -30,7 +30,7 @@
   };
 
   outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, ... } @ inputs: {
-    nixosConfigurations.acfs = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.neurosys = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
       modules = [
@@ -42,7 +42,7 @@
         {
           nixpkgs.overlays = [ llm-agents.overlays.default ];
         }
-        ./hosts/acfs
+        ./hosts/neurosys
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;

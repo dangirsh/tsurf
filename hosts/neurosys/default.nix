@@ -5,7 +5,7 @@
     ../../modules
   ];
 
-  networking.hostName = "acfs";
+  networking.hostName = "neurosys";
   time.timeZone = "Europe/Berlin";
   i18n.defaultLocale = "C.UTF-8";
 

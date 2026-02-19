@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# scripts/deploy.sh — Deploy agent-neurosys NixOS config to acfs
+# scripts/deploy.sh — Deploy agent-neurosys NixOS config to neurosys
 #
 # Modes:
 #   --mode local   (default) Build locally, push + switch remotely
 #   --mode remote  SSH into server, pull, rebuild on server
 #
 # Flags:
-#   --target USER@HOST  Override SSH target (default: root@acfs)
+#   --target USER@HOST  Override SSH target (default: root@neurosys)
 #   --skip-update  Skip 'nix flake update parts' step
 #   --help         Print usage
 #
@@ -17,7 +17,7 @@
 set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-TARGET="root@acfs"
+TARGET="root@neurosys"
 MODE="local"
 SKIP_UPDATE=false
 SECONDS=0
@@ -41,12 +41,12 @@ usage() {
   cat <<USAGE
 Usage: $(basename "$0") [OPTIONS]
 
-Deploy agent-neurosys NixOS config to acfs server.
+Deploy agent-neurosys NixOS config to neurosys server.
 
 Options:
   --mode local    Build locally, push closure, switch remotely (default)
   --mode remote   SSH into server, pull repo, rebuild on server
-  --target U@H    Override SSH target (default: root@acfs)
+  --target U@H    Override SSH target (default: root@neurosys)
   --skip-update   Skip 'nix flake update parts' before building
   --help          Show this help
 
@@ -137,7 +137,7 @@ if [[ "$MODE" == "local" ]]; then
   echo "==> Building locally and deploying to $TARGET..."
   nix shell nixpkgs#nixos-rebuild -c \
     nixos-rebuild switch \
-      --flake "$FLAKE_DIR#acfs" \
+      --flake "$FLAKE_DIR#neurosys" \
       --target-host "$TARGET"
 else
   echo "==> Deploying via remote rebuild on $TARGET..."
@@ -145,7 +145,7 @@ else
     set -euo pipefail
     cd /data/projects/agent-neurosys
     git pull --ff-only
-    nixos-rebuild switch --flake .#acfs
+    nixos-rebuild switch --flake .#neurosys
 REMOTE
 fi
 

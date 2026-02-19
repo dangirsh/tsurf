@@ -8,10 +8,10 @@ in
   services.homepage-dashboard = {
     enable = true;
     listenPort = 8082;
-    allowedHosts = "${tailscaleIP}:8082,${tailscaleIP},acfs,localhost";
+    allowedHosts = "${tailscaleIP}:8082,${tailscaleIP},neurosys,localhost";
 
     settings = {
-      title = "acfs";
+      title = "neurosys";
       theme = "dark";
       color = "slate";
       headerStyle = "clean";
@@ -23,7 +23,7 @@ in
     };
 
     widgets = [
-      { openmeteo = { label = "acfs"; timezone = "Europe/Berlin"; }; }
+      { openmeteo = { label = "neurosys"; timezone = "Europe/Berlin"; }; }
       { greeting = { text = "All services are Tailscale-only"; }; }
     ];
 

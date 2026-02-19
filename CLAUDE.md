@@ -1,14 +1,14 @@
 # CLAUDE.md — agent-neurosys
 
-NixOS configuration for the `acfs` server (and future machines). Declarative system management with flakes + home-manager.
+NixOS configuration for the `neurosys` server (and future machines). Declarative system management with flakes + home-manager.
 
 ## Project Structure
 
 ```
-flake.nix              # Entrypoint — inputs (7), outputs, nixosConfigurations.acfs
+flake.nix              # Entrypoint — inputs (7), outputs, nixosConfigurations.neurosys
 flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-nix, disko, parts, claw-swap, llm-agents)
 hosts/
-  acfs/
+  neurosys/
     default.nix        # Host-specific NixOS config (imports all modules)
     hardware.nix       # Hardware/disk config (disko, Contabo VPS)
 modules/
@@ -40,7 +40,7 @@ packages/
 scripts/
   deploy.sh            # Deploy script (local/remote build, locking, container health check)
 secrets/
-  acfs.yaml            # sops-encrypted secrets (7 secrets + 1 template)
+  neurosys.yaml            # sops-encrypted secrets (7 secrets + 1 template)
 ```
 
 ## Key Decisions
@@ -57,8 +57,8 @@ secrets/
 
 NixOS configs are validated with:
 - `nix flake check` — Flake evaluation
-- `nixos-rebuild build --flake .#acfs` — Build without switching
-- `nixos-rebuild test --flake .#acfs` — Build and switch (test, no boot entry)
+- `nixos-rebuild build --flake .#neurosys` — Build without switching
+- `nixos-rebuild test --flake .#neurosys` — Build and switch (test, no boot entry)
 
 ## Conventions
 

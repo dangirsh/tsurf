@@ -57,7 +57,7 @@
       (pkgs.writeText "alert-rules.json" (builtins.toJSON {
         groups = [
           {
-            name = "acfs-alerts";
+            name = "neurosys-alerts";
             rules = [
               {
                 alert = "InstanceDown";
