@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 15 next — CrowdSec Intrusion Prevention (Phase 14 monitoring + notifications complete).
+**Current focus:** Phase 17 execution — Hardcore Simplicity & Security Audit (Plan 01 complete).
 
 ## Current Position
 
-Phase: 14 (Monitoring + Notifications)
-Plan: 2 of 2 — COMPLETE
-Status: Plan 14-02 implemented and validated (deploy ntfy notifications + generic notify helper + full flake validation). Phase 14 complete.
-Last activity: 2026-02-19 - Completed quick task 7: Configure restic backups to Backblaze B2
+Phase: 17 (Hardcore Simplicity & Security Audit)
+Plan: 1 of 4 — COMPLETE
+Status: Plan 17-01 implemented and validated (simplicity cleanup + kernel hardening + llm-agents nixpkgs follow).
+Last activity: 2026-02-19 - Completed Phase 17 Plan 01
 
-Progress: Phase 14 complete (2/2 plans complete).
+Progress: Phase 17 in progress (1/4 plans complete).
 
 ## Performance Metrics
 
@@ -93,6 +93,13 @@ Recent decisions affecting current work:
 - [quick-005]: MON-05: Alertmanager, ntfy, Grafana removed -- agents query Prometheus /api/v1/alerts directly
 - [quick-005]: fail2ban reverts to default ban action (no ntfy notification)
 - [quick-006]: ESPHome binds 0.0.0.0:6052 with openFirewall=false (Tailscale-only, same pattern as HA and Syncthing)
+- [17-01]: zmx removed from base module and kept in agent-compute package set; duplicate package declaration eliminated
+- [17-01]: git-lfs and podman-compose removed as unused features/packages
+- [17-01]: stale `parts-agent@vm` SSH key removed from `dangirsh` and `root` authorized keys
+- [17-01]: deploy local lock moved from `/tmp` to project-local `tmp/` path
+- [17-01]: kernel sysctl hardening enabled (dmesg/kptr restrictions, unprivileged bpf off, redirects off, martian logging on)
+- [17-01]: homepage Tailscale IP centralized in a single `let` binding for one-line updates
+- [17-01]: `llm-agents.inputs.nixpkgs` now follows root `nixpkgs`; lock update and flake checks passed
 
 ### Completed Phases
 
