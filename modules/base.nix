@@ -1,7 +1,4 @@
 { config, lib, pkgs, ... }:
-let
-  zmx = pkgs.callPackage ../packages/zmx.nix {};
-in
 {
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
     "claude-code"
@@ -27,7 +24,6 @@ in
     yq-go
     ripgrep
     fd
-    zmx
     btop
     nodejs
   ];

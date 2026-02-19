@@ -226,7 +226,7 @@ in
   environment.systemPackages = [
     pkgs.claude-code
     pkgs.codex
-    pkgs.podman-compose
+    zmx
     agent-spawn
   ];
 
