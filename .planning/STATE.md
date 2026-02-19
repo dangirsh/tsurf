@@ -177,6 +177,7 @@ Recent decisions affecting current work:
 | 005 | Minimize monitoring stack to Prometheus-only | 2026-02-18 | c5fa13b | [5-minimize-monitoring-notification-stack-t](./quick/5-minimize-monitoring-notification-stack-t/) |
 | 006 | Add Hue and ESPHome extraComponents to Home Assistant | 2026-02-18 | 8512fa9 | [6-add-hue-and-esphome-extracomponents-to-h](./quick/6-add-hue-and-esphome-extracomponents-to-h/) |
 | 007 | Configure restic backups to Backblaze B2 | 2026-02-19 | 1536d80 | [7-configure-restic-backups-to-backblaze-b2](./quick/7-configure-restic-backups-to-backblaze-b2/) |
+| 008 | Switch restic to blanket root backup with exclusions | 2026-02-19 | 6483029 | [8-switch-restic-backups-from-hard-coded-pa](./quick/8-switch-restic-backups-from-hard-coded-pa/) |
 
 ### Quick Tasks Pending (from Phase 13)
 
@@ -189,5 +190,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 16 complete — backup gaps closed, recovery runbook written, deployed, verified with dry-run restore
+Stopped at: Quick-008 complete — blanket restic backup, hostname rename, backup status on homepage deployed
 Resume file: None
