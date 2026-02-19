@@ -12,7 +12,11 @@
       CLONE_DIR="/data/projects"
       GH_TOKEN="$(cat ${config.sops.secrets."github-pat".path} 2>/dev/null || true)"
 
-      # Ensure clone directory exists
+      # Write token to a temporary credential store file.
+      # This prevents the token from appearing in process arguments, journal logs, or .git/config.
+      CRED_FILE=$(mktemp)
+      chmod 600 "$CRED_FILE"
+
       mkdir -p "$CLONE_DIR"
 
       for repo in "''${repos[@]}"; do
@@ -20,11 +24,17 @@
         target="$CLONE_DIR/$name"
         if [ ! -d "$target" ]; then
           echo "Cloning $repo to $target..."
-          ${pkgs.git}/bin/git clone "https://''${GH_TOKEN:+$GH_TOKEN@}github.com/$repo.git" "$target" || echo "WARNING: Failed to clone $repo (will retry on next activation)"
-          # Fix ownership: activation runs as root, repos must be owned by dangirsh
+          # Write credential in git credential store format
+          printf 'https://x-access-token:%s@github.com\n' "$GH_TOKEN" > "$CRED_FILE"
+          GIT_TERMINAL_PROMPT=0 ${pkgs.git}/bin/git \
+            -c credential.helper="store --file=$CRED_FILE" \
+            clone "https://github.com/$repo.git" "$target" \
+            || echo "WARNING: Failed to clone $repo (will retry on next activation)"
           chown -R dangirsh:users "$target" 2>/dev/null || true
         fi
       done
+
+      rm -f "$CRED_FILE"
     '';
   };
 }

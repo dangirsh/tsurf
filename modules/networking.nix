@@ -1,8 +1,8 @@
 # modules/networking.nix
-# @decision NET-01: key-only SSH via Tailscale only, no root login
+# @decision NET-01: key-only SSH via Tailscale only (port 22 NOT on public firewall)
 # @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
 # @decision NET-03: Tailscale VPN connected to tailnet
-# @decision NET-04: ports 22, 80, 443, 22000 on public interface (SSH needed for deploy pipeline)
+# @decision NET-04: ports 80, 443, 22000 on public interface; SSH via Tailscale only
 # @decision NET-05: fail2ban SSH protection with progressive banning
 # @decision NET-06: Tailscale reverse path filtering set to loose
 { config, lib, pkgs, ... }:
@@ -20,10 +20,16 @@ let
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;
 in {
-  assertions = [{
-    assertion = exposed == [];
-    message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain Tailscale-only (trustedInterfaces).";
-  }];
+  assertions = [
+    {
+      assertion = exposed == [];
+      message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain Tailscale-only (trustedInterfaces).";
+    }
+    {
+      assertion = !builtins.elem 22 config.networking.firewall.allowedTCPPorts;
+      message = "SECURITY: Port 22 must NOT be in allowedTCPPorts. SSH is Tailscale-only (trustedInterfaces). Deploy uses root@acfs which resolves via Tailscale MagicDNS.";
+    }
+  ];
 
   programs.mosh.enable = true;
 
@@ -43,7 +49,7 @@ in {
   networking.firewall = {
     enable = true;
     allowPing = true;
-    allowedTCPPorts = [ 22 80 443 22000 ];
+    allowedTCPPorts = [ 80 443 22000 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
     trustedInterfaces = [ "tailscale0" ];
   };
