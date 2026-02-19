@@ -203,7 +203,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 13. Research Similar Projects | 1/1 | ✓ Complete | 2026-02-18 |
 | 14. Monitoring + Notifications | 2/2 | ✓ Complete | 2026-02-18 |
 | 15. CrowdSec Intrusion Prevention | 0/TBD | Not started | - |
-| 16. Disaster Recovery & Backup Completeness | 0/TBD | Not started | - |
+| 16. Disaster Recovery & Backup Completeness | 2/2 | ✓ Complete | 2026-02-19 |
 | 17. Hardcore Simplicity & Security Audit | 4/4 | ✓ Complete | 2026-02-19 |
 | 18. VPS Consolidation | 0/TBD | Not started | - |
 
@@ -340,8 +340,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md -- Close backup gaps (SSH host keys, Docker bind mounts, Tailscale state, pg_dump hook) + deploy + dry-run restore verification
-- [ ] 16-02-PLAN.md -- Disaster recovery runbook (docs/recovery-runbook.md)
+- [x] 16-01-PLAN.md -- Close backup gaps (SSH host keys, Docker bind mounts, Tailscale state, pg_dump hook) + deploy + dry-run restore verification
+- [x] 16-02-PLAN.md -- Disaster recovery runbook (docs/recovery-runbook.md)
 
 ### Phase 17: Hardcore Simplicity & Security Audit
 

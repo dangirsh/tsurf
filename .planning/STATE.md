@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 17 COMPLETE — Hardcore Simplicity & Security Audit. All 4 plans executed and validated.
+**Current focus:** Phase 16 COMPLETE — Disaster Recovery & Backup Completeness. All 2 plans executed, deployed, and verified with dry-run restore.
 
 ## Current Position
 
-Phase: 17 (Hardcore Simplicity & Security Audit)
-Plan: 4 of 4 — ALL COMPLETE
-Status: Phase 17 fully executed. SSH hardened, credentials fixed, CLAUDE.md guardrails added, Docker audit complete, sandbox assessed.
-Last activity: 2026-02-19 - Completed Phase 17 Plans 01-04
+Phase: 16 (Disaster Recovery & Backup Completeness)
+Plan: 2 of 2 — ALL COMPLETE
+Status: Phase 16 fully executed. Backup gaps closed (SSH host key, Docker bind mounts, Tailscale state, pg_dump hook), recovery runbook written, deployed to VPS, backup snapshot verified with dry-run restore (1911 files, 63.6 MiB).
+Last activity: 2026-02-19 - Completed Phase 16 Plans 01-02
 
-Progress: Phase 17 complete (4/4 plans).
+Progress: Phase 16 complete (2/2 plans).
 
 ## Performance Metrics
 
@@ -38,11 +38,12 @@ Progress: Phase 17 complete (4/4 plans).
 | 10 | 2/2 | ~115min | ~57.5min |
 | 14 | 2/2 | ~20min | ~10min |
 
+| 16 | 2/2 | ~25min | ~12.5min |
 | 17 | 4/4 | ~76min | ~19min |
 
 **Recent Trend:**
-- Last 4 plans: 17-01 (~31min), 17-02 (~15min), 17-03 (~10min), 17-04 (~20min)
-- Trend: Security audit and docs work executes efficiently with clear plans.
+- Last 4 plans: 17-04 (~20min), 16-01 (~15min), 16-02 (~10min)
+- Trend: Parallel agent execution for independent plans continues to be efficient.
 
 *Updated after each plan completion*
 
@@ -111,6 +112,9 @@ Recent decisions affecting current work:
 - [17-04]: Docker audit: claw-swap fully hardened, parts containers lack all hardening (tracked for remediation)
 - [17-04]: Sandbox escape vectors confirmed and documented (SEC5 settings.json, SEC6 Docker socket, cross-project read, no network sandbox)
 - [17-04]: Audit log gets journald dual-logging via systemd-cat for tamper resistance
+- [16-01]: RESTIC-04: Back up SSH host key (sops-nix age chain), Docker bind mounts (/var/lib/claw-swap, /var/lib/parts), Tailscale state (/var/lib/tailscale); pg_dumpall pre-hook for PostgreSQL consistency
+- [16-01]: Deploy SSH now uses Tailscale MagicDNS (root@acfs) — public IP port 22 closed by Phase 17
+- [16-02]: Recovery runbook at docs/recovery-runbook.md — 4-phase flow, RTO < 2hr, RPO 24hr
 
 ### Completed Phases
 
@@ -133,6 +137,9 @@ Recent decisions affecting current work:
 - **Phase 14: Monitoring + Notifications** (2 plans, completed 2026-02-18)
   - 14-01: Prometheus + Alertmanager + ntfy + Grafana baseline with 6 alert rules and sops-managed Grafana secrets
   - 14-02: Deploy outcome notifications + generic `notify.sh` helper + full `nix flake check` validation
+- **Phase 16: Disaster Recovery & Backup Completeness** (2 plans, completed 2026-02-19)
+  - 16-01: Backup gap closure — SSH host key, Docker bind mounts, Tailscale state, pg_dumpall pre-hook; deployed and verified with dry-run restore
+  - 16-02: Recovery runbook (docs/recovery-runbook.md) — 4-phase recovery flow, RTO < 2hr, RPO 24hr
 - **Phase 17: Hardcore Simplicity & Security Audit** (4 plans, completed 2026-02-19)
   - 17-01: Simplicity cleanup + kernel hardening + llm-agents nixpkgs follow
   - 17-02: SSH hardening (Tailscale-only), credential leak fix, restic backup excludes
@@ -181,6 +188,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-18
-Stopped at: Completed quick task 5: Minimize monitoring stack to Prometheus-only
+Last session: 2026-02-19
+Stopped at: Phase 16 complete — backup gaps closed, recovery runbook written, deployed, verified with dry-run restore
 Resume file: None
