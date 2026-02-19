@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 17 execution — Hardcore Simplicity & Security Audit (Plan 01 complete).
+**Current focus:** Phase 17 COMPLETE — Hardcore Simplicity & Security Audit. All 4 plans executed and validated.
 
 ## Current Position
 
 Phase: 17 (Hardcore Simplicity & Security Audit)
-Plan: 1 of 4 — COMPLETE
-Status: Plan 17-01 implemented and validated (simplicity cleanup + kernel hardening + llm-agents nixpkgs follow).
-Last activity: 2026-02-19 - Completed Phase 17 Plan 01
+Plan: 4 of 4 — ALL COMPLETE
+Status: Phase 17 fully executed. SSH hardened, credentials fixed, CLAUDE.md guardrails added, Docker audit complete, sandbox assessed.
+Last activity: 2026-02-19 - Completed Phase 17 Plans 01-04
 
-Progress: Phase 17 in progress (1/4 plans complete).
+Progress: Phase 17 complete (4/4 plans).
 
 ## Performance Metrics
 
@@ -38,9 +38,11 @@ Progress: Phase 17 in progress (1/4 plans complete).
 | 10 | 2/2 | ~115min | ~57.5min |
 | 14 | 2/2 | ~20min | ~10min |
 
+| 17 | 4/4 | ~76min | ~19min |
+
 **Recent Trend:**
-- Last 2 plans: 14-01 (~12min), 14-02 (~8min)
-- Trend: Monitoring/notification execution is stabilizing with fast iteration and verification.
+- Last 4 plans: 17-01 (~31min), 17-02 (~15min), 17-03 (~10min), 17-04 (~20min)
+- Trend: Security audit and docs work executes efficiently with clear plans.
 
 *Updated after each plan completion*
 
@@ -100,6 +102,15 @@ Recent decisions affecting current work:
 - [17-01]: kernel sysctl hardening enabled (dmesg/kptr restrictions, unprivileged bpf off, redirects off, martian logging on)
 - [17-01]: homepage Tailscale IP centralized in a single `let` binding for one-line updates
 - [17-01]: `llm-agents.inputs.nixpkgs` now follows root `nixpkgs`; lock update and flake checks passed
+- [17-02]: Port 22 removed from public firewall; SSH accessible only via Tailscale (trustedInterfaces)
+- [17-02]: Build-time assertion prevents port 22 from being re-added to allowedTCPPorts
+- [17-02]: Repo cloning uses git credential.helper store (no PAT in URLs, process args, or .git/config)
+- [17-02]: .git/config added to restic excludes to prevent backing up leaked tokens
+- [17-03]: CLAUDE.md updated with Security Conventions, Simplicity Conventions, Module Change Checklist
+- [17-03]: Accepted Risks documented: SEC3, SEC5, SEC9, SEC11
+- [17-04]: Docker audit: claw-swap fully hardened, parts containers lack all hardening (tracked for remediation)
+- [17-04]: Sandbox escape vectors confirmed and documented (SEC5 settings.json, SEC6 Docker socket, cross-project read, no network sandbox)
+- [17-04]: Audit log gets journald dual-logging via systemd-cat for tamper resistance
 
 ### Completed Phases
 
@@ -122,6 +133,11 @@ Recent decisions affecting current work:
 - **Phase 14: Monitoring + Notifications** (2 plans, completed 2026-02-18)
   - 14-01: Prometheus + Alertmanager + ntfy + Grafana baseline with 6 alert rules and sops-managed Grafana secrets
   - 14-02: Deploy outcome notifications + generic `notify.sh` helper + full `nix flake check` validation
+- **Phase 17: Hardcore Simplicity & Security Audit** (4 plans, completed 2026-02-19)
+  - 17-01: Simplicity cleanup + kernel hardening + llm-agents nixpkgs follow
+  - 17-02: SSH hardening (Tailscale-only), credential leak fix, restic backup excludes
+  - 17-03: CLAUDE.md guardrails — security conventions, simplicity rules, module checklist
+  - 17-04: Docker container audit, sandbox escape assessment, audit log journald dual-logging
 
 ### Roadmap Evolution
 
