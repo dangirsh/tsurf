@@ -1,9 +1,6 @@
 # modules/syncthing.nix
 # @decision SVC-02: Syncthing runs as user dangirsh with fully declarative devices/folders.
-# GUI security model:
-# - Syncthing GUI listens on 0.0.0.0:8384 to avoid startup ordering issues with tailscale0.
-# - Port 8384 is intentionally not in firewall.allowedTCPPorts.
-# - tailscale0 is a trusted interface in networking.nix, so GUI access is effectively tailnet-only.
+# @decision SVC-03: GUI/API localhost-only — agents interact via filesystem, not web UI.
 { ... }: {
   systemd.services.syncthing.environment = {
     STNODEFAULTFOLDER = "true";
@@ -20,7 +17,7 @@
     dataDir = "/home/dangirsh";
     configDir = "/home/dangirsh/.config/syncthing";
     openDefaultPorts = true;
-    guiAddress = "0.0.0.0:8384";
+    guiAddress = "127.0.0.1:8384";
     overrideDevices = true;
     overrideFolders = true;
 

@@ -7,13 +7,14 @@
 # @decision NET-06: Tailscale reverse path filtering set to loose
 { config, lib, pkgs, ... }:
 let
-  # Ports that must NEVER appear in allowedTCPPorts (Tailscale-only services).
+  # Ports that must NEVER appear in allowedTCPPorts (internal services).
+  # Services bind to localhost or are Tailscale-only — never on the public interface.
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
   internalOnlyPorts = {
     "8082" = "homepage-dashboard";
     "8123" = "home-assistant";
-    "8384" = "syncthing-gui";
-    "9090" = "prometheus";
+    "8384" = "syncthing-gui (localhost)";
+    "9090" = "prometheus (localhost)";
     "9100" = "node-exporter";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;

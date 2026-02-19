@@ -25,24 +25,18 @@
 
     services = [
       {
-        "Monitoring" = [
+        "Infrastructure" = [
           {
             "Prometheus" = {
-              href = "http://100.127.245.9:9090";
               siteMonitor = "http://localhost:9090/-/healthy";
-              description = "Metrics + alerts — 15s scrape, 90d retention. Agents query /api/v1/alerts.";
+              description = "Metrics + alerts — localhost-only, agents query /api/v1/alerts.";
               icon = "prometheus";
             };
           }
-        ];
-      }
-      {
-        "Sync" = [
           {
             "Syncthing" = {
-              href = "http://100.127.245.9:8384";
               siteMonitor = "http://localhost:8384";
-              description = "File sync — bidirectional sync across devices with staggered versioning.";
+              description = "File sync — localhost-only, agents interact via filesystem.";
               icon = "syncthing";
             };
           }
