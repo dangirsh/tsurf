@@ -29,6 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 14: Monitoring + Notifications** - Prometheus + node_exporter + Grafana dashboards + ntfy push notifications (Tailscale-only)
 - [ ] **Phase 15: CrowdSec Intrusion Prevention** - Collaborative threat intelligence with community sharing, complementing fail2ban for public-facing services
 - [x] **Phase 17: Hardcore Simplicity & Security Audit** - Critical review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering and security gaps. Establish guardrails for future agentic development.
+- [ ] **Phase 18: VPS Consolidation** - Merge acfs dev environment into agent-neurosys. Single VPS for dev, personal services, prod. Component audit, security model, self-deploy ergonomics, state tracking, Parts management interface architecture.
 
 ## Phase Details
 
@@ -204,6 +205,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 15. CrowdSec Intrusion Prevention | 0/TBD | Not started | - |
 | 16. Disaster Recovery & Backup Completeness | 0/TBD | Not started | - |
 | 17. Hardcore Simplicity & Security Audit | 4/4 | ✓ Complete | 2026-02-19 |
+| 18. VPS Consolidation | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -335,10 +337,11 @@ Plans:
   4. Recovery has been tested (at minimum: dry-run restore of a snapshot, verify file integrity)
   5. SSH host keys are backed up so sops-nix age key derivation works on restore
   6. Total estimated recovery time is documented and under 2 hours
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 16 to break down)
+- [ ] 16-01-PLAN.md -- Close backup gaps (SSH host keys, Docker bind mounts, Tailscale state, pg_dump hook) + deploy + dry-run restore verification
+- [ ] 16-02-PLAN.md -- Disaster recovery runbook (docs/recovery-runbook.md)
 
 ### Phase 17: Hardcore Simplicity & Security Audit
 
@@ -362,3 +365,29 @@ Plans:
 - [x] 17-02-PLAN.md — SSH hardening + credential leak fix (remove port 22 from public firewall, fix token leak in repo cloning, exclude .git/config from backups)
 - [x] 17-03-PLAN.md — CLAUDE.md guardrails (update project structure, add security conventions, simplicity conventions, module change checklist)
 - [x] 17-04-PLAN.md — Docker container hardening audit + agent sandbox escape vector assessment (SEC3 audit with BEADS entries, SEC5/SEC6 confirmation, audit log tamper protection)
+
+### Phase 18: VPS Consolidation — Merge acfs Dev Environment into agent-neurosys
+
+**Goal:** Consolidate from two VPSes (acfs dev + agent-neurosys prod) into a single agent-neurosys VPS that serves as the one-stop shop: development environment, personal services (Parts), production services (claw-swap), monitoring, backups, and agent infrastructure. The acfs VPS can then be decommissioned entirely. This phase requires deep research and planning across five dimensions:
+
+1. **Component Gap Audit** — Enumerate every component on acfs not yet in agent-neurosys (AgentBox/Tetragon, GitHub Actions runner, PostgreSQL 18, codex-monitor-daemon, agent-mail, custom scripts, 33+ project dirs, plaintext API keys). For each: migrate, drop, or defer.
+2. **Security — Co-located Dev + Prod** — Analyze implications of prompt-injectable dev agents sharing a host with production services (claw-swap public traffic, Parts with Telegram/API access). Cover: sandbox blast radius, Docker network isolation, secrets boundaries, nixos-rebuild cross-contamination, resource contention.
+3. **Dev Ergonomics — Self-Deploying NixOS** — When the single VPS runs nixos-rebuild on itself: SSH session survival, tmux/zmx persistence, Docker container restart behavior, active agent session continuity, deploy script self-execution safety. Design safe self-deployment patterns with staging builds, atomic switches, and rollback.
+4. **State Tracking — Nothing Left Behind** — Audit all state against the constraint: "If it's not in git, Syncthing, or B2, it doesn't survive a rebuild." Cross-reference Phase 16 (Disaster Recovery). Cover: /data/projects/ git status, database state, Docker volumes, Syncthing sync state, sops-nix vs manual secrets, home directory dotfiles.
+5. **Parts as Agent-Neurosys Management Interface** — Design architecture for Parts to become the primary interface for managing the entire system (configure Syncthing, redeploy services, read Prometheus, manage dev agents, view logs). ALL destructive/irreversible/sensitive operations MUST go through an explicit human approval gate that a compromised Parts agent cannot bypass. Likely requires a custom CLI/MCP with discrete typed operations, audit logging, and read-only auto-approve vs write-requires-confirmation split. Implementation may be a follow-up phase, but the consolidation design MUST NOT paint into a corner.
+
+**Depends on:** Phase 16 (Disaster Recovery — ensures backups cover all state before consolidation), Phase 17 (Hardcore Simplicity — clean foundation to consolidate onto)
+**Requirements:** None (architectural migration)
+**Success Criteria** (what must be TRUE):
+  1. Complete inventory of acfs components with migrate/drop/defer decisions for each
+  2. Security model documented for co-located dev+prod with concrete isolation boundaries
+  3. Self-deployment workflow designed and tested (nixos-rebuild on self, session survival, rollback)
+  4. State audit complete — every important artifact tracked in git, Syncthing, or B2
+  5. Parts management interface architecture designed (CLI/MCP spec, approval gate design, capability model)
+  6. Migration runbook: exact steps to go from two VPSes to one, with rollback plan
+  7. acfs VPS can be decommissioned with confidence that nothing is lost
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 18 to break down)
+>>>>>>> main
