@@ -86,12 +86,11 @@ Rules that agents MUST follow when modifying any module:
 
 ### Accepted Risks (documented, not actionable)
 
-- **SEC5:** `--no-sandbox` mode allows agents to modify `~/.claude/settings.json` -- mitigated by requiring explicit opt-in
-- **SEC11:** Pre-built binaries (zmx, cass) lack signature verification -- mitigated by SHA256 hash pinning
 - **SEC3:** Docker container hardening (read-only rootfs, cap-drop, no-new-privileges) is deferred -- containers are declared in external repos (parts, claw-swap), changes needed there
+- **SEC5:** `--no-sandbox` agents can modify `~/.claude/settings.json` -- mitigated by default sandbox-on and requiring explicit `--no-sandbox` flag
+- **SEC6:** Docker socket mounted in homepage-dashboard -- mitigated by Tailscale-only access (port 8082 in internalOnlyPorts)
 - **SEC9:** Systemd service hardening (ProtectHome, PrivateTmp) is deferred -- NixOS service modules provide baseline defaults, custom overrides risk breaking services
-- **SEC5 (sandbox):** `--no-sandbox` agents can modify `~/.claude/settings.json` -- mitigated by default sandbox-on and requiring explicit `--no-sandbox` flag
-- **SEC6 (homepage):** Docker socket mounted in homepage-dashboard -- mitigated by Tailscale-only access, read-only socket
+- **SEC11:** Pre-built binaries (zmx, cass) lack signature verification -- mitigated by SHA256 hash pinning
 - **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
 
 ## Simplicity Conventions
