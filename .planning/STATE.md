@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 Phase: 14 (Monitoring + Notifications)
 Plan: 2 of 2 — COMPLETE
 Status: Plan 14-02 implemented and validated (deploy ntfy notifications + generic notify helper + full flake validation). Phase 14 complete.
-Last activity: 2026-02-18 - Completed quick task 6: Add Hue and ESPHome extraComponents to Home Assistant and deploy
+Last activity: 2026-02-19 - Completed quick task 7: Configure restic backups to Backblaze B2
 
 Progress: Phase 14 complete (2/2 plans complete).
 
@@ -144,6 +144,7 @@ Recent decisions affecting current work:
 | 004 | Add concurrent deploy lock to deploy.sh | 2026-02-18 | ef1fc65 | [4-add-concurrent-deploy-lock-to-deploy-sh](./quick/4-add-concurrent-deploy-lock-to-deploy-sh/) |
 | 005 | Minimize monitoring stack to Prometheus-only | 2026-02-18 | c5fa13b | [5-minimize-monitoring-notification-stack-t](./quick/5-minimize-monitoring-notification-stack-t/) |
 | 006 | Add Hue and ESPHome extraComponents to Home Assistant | 2026-02-18 | 8512fa9 | [6-add-hue-and-esphome-extracomponents-to-h](./quick/6-add-hue-and-esphome-extracomponents-to-h/) |
+| 007 | Configure restic backups to Backblaze B2 | 2026-02-19 | 1536d80 | [7-configure-restic-backups-to-backblaze-b2](./quick/7-configure-restic-backups-to-backblaze-b2/) |
 
 ### Quick Tasks Pending (from Phase 13)
 
