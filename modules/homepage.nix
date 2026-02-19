@@ -71,7 +71,6 @@ in
           {
             "claw-swap" = {
               href = "https://claw-swap.com";
-              siteMonitor = "http://localhost:80";
               description = "Trading platform — Caddy + Node.js + PostgreSQL.";
               server = "local";
               container = "claw-swap-app";
