@@ -77,7 +77,7 @@ Rules that agents MUST follow when modifying any module:
 - **Never** commit unencrypted secrets to any file -- use sops-nix for all credentials
 - **Never** embed credentials in URLs or command-line arguments -- use environment variables, credential helpers, or file-based injection
 - **Never** weaken the bubblewrap sandbox defaults in `agent-compute.nix` -- `--no-sandbox` is for trusted operations only
-- **Never** run Claude Code or Codex with `--no-sandbox` unless explicitly instructed by the user for a specific trusted operation -- sandbox is the default for a reason
+- **Never** run Claude Code or Codex with `--no-sandbox` unless explicitly instructed by the user for a specific trusted operation -- sandbox is the default for a reason (CVE: GHSA-ff64-7w26-62rf)
 - **Never** mount the Docker socket into a service unless strictly required and documented with a @decision annotation
 - All network-facing services MUST have `openFirewall = false` (Tailscale-only via `trustedInterfaces`)
 - New services MUST add their port to `internalOnlyPorts` in `networking.nix` if they should not be public
@@ -90,6 +90,9 @@ Rules that agents MUST follow when modifying any module:
 - **SEC11:** Pre-built binaries (zmx, cass) lack signature verification -- mitigated by SHA256 hash pinning
 - **SEC3:** Docker container hardening (read-only rootfs, cap-drop, no-new-privileges) is deferred -- containers are declared in external repos (parts, claw-swap), changes needed there
 - **SEC9:** Systemd service hardening (ProtectHome, PrivateTmp) is deferred -- NixOS service modules provide baseline defaults, custom overrides risk breaking services
+- **SEC5 (sandbox):** `--no-sandbox` agents can modify `~/.claude/settings.json` -- mitigated by default sandbox-on and requiring explicit `--no-sandbox` flag
+- **SEC6 (homepage):** Docker socket mounted in homepage-dashboard -- mitigated by Tailscale-only access, read-only socket
+- **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
 
 ## Simplicity Conventions
 

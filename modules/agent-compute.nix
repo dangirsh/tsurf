@@ -203,6 +203,9 @@ let
       fi
       printf "%s SPAWN agent=%s name=%s project=%s sandbox=%s\n" \
         "$(date -Iseconds)" "$AGENT" "$NAME" "$PROJECT_DIR" "$SANDBOX_STATE" >> "$AUDIT_DIR/spawn.log"
+      # Tamper-resistant copy via journald (root-owned journal, agents cannot modify)
+      printf "AGENT_SPAWN agent=%s name=%s project=%s sandbox=%s" \
+        "$AGENT" "$NAME" "$PROJECT_DIR" "$SANDBOX_STATE" | systemd-cat -t agent-spawn -p info
 
       if [ "$NO_SANDBOX" -eq 1 ]; then
         systemd-run --user --scope --slice=agent.slice \
@@ -260,7 +263,11 @@ in
     };
   };
 
-  # Pre-create audit log directory (dangirsh can't write to root-owned /data/projects)
+  # Pre-create audit log directory for agent-spawn.
+  # NOTE (SEC-17-04): spawn.log is writable by dangirsh -- a compromised agent
+  # could tamper with it. For forensic-grade audit integrity, forward spawn events
+  # to journald (systemd-cat) in a future hardening pass. Current risk: LOW
+  # (operational log, not security boundary).
   systemd.tmpfiles.rules = [
     "d /data/projects/.agent-audit 0750 dangirsh users -"
   ];
