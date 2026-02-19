@@ -201,6 +201,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 13. Research Similar Projects | 1/1 | ✓ Complete | 2026-02-18 |
 | 14. Monitoring + Notifications | 2/2 | ✓ Complete | 2026-02-18 |
 | 15. CrowdSec Intrusion Prevention | 0/TBD | Not started | - |
+| 16. Disaster Recovery & Backup Completeness | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -319,3 +320,20 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 15 to break down)
+
+### Phase 16: Disaster Recovery & Backup Completeness
+
+**Goal:** Catastrophic VPS loss recovers in < few hours from `agent-neurosys` git state + Backblaze B2 backup. Audit all stateful paths, add missing ones to restic (Tailscale state, SSH host keys, claw-swap DB, parts state, ESPHome configs, Prometheus metrics). Document exactly what's restorable from backups vs what needs manual re-auth/setup. Create and test a recovery runbook: `nixos-anywhere` + `restic restore` + minimal manual steps = fully working server.
+**Depends on:** Phase 7 (restic backups operational)
+**Requirements:** None (operational resilience)
+**Success Criteria** (what must be TRUE):
+  1. All critical stateful paths are backed up to B2 (audit complete, no gaps)
+  2. Recovery runbook exists documenting exact steps: nixos-anywhere deploy → restic restore → manual re-auth list
+  3. Manual re-auth list is minimal and documented (Tailscale re-auth, any API keys that are node-specific)
+  4. Recovery has been tested (at minimum: dry-run restore of a snapshot, verify file integrity)
+  5. SSH host keys are backed up so sops-nix age key derivation works on restore
+  6. Total estimated recovery time is documented and under 2 hours
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 16 to break down)
