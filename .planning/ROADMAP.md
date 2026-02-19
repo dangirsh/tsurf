@@ -28,6 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 13: Research Similar Personal Server Projects** - Survey ecosystem, present 11 ideas, user cherry-picks monitoring/notifications/security adoptions
 - [ ] **Phase 14: Monitoring + Notifications** - Prometheus + node_exporter + Grafana dashboards + ntfy push notifications (Tailscale-only)
 - [ ] **Phase 15: CrowdSec Intrusion Prevention** - Collaborative threat intelligence with community sharing, complementing fail2ban for public-facing services
+- [ ] **Phase 17: Hardcore Simplicity & Security Audit** - Critical review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering and security gaps. Establish guardrails for future agentic development.
 
 ## Phase Details
 
@@ -202,6 +203,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 14. Monitoring + Notifications | 2/2 | ✓ Complete | 2026-02-18 |
 | 15. CrowdSec Intrusion Prevention | 0/TBD | Not started | - |
 | 16. Disaster Recovery & Backup Completeness | 0/TBD | Not started | - |
+| 17. Hardcore Simplicity & Security Audit | 0/3 | Planning complete | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -337,3 +339,25 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 16 to break down)
+
+### Phase 17: Hardcore Simplicity & Security Audit
+
+**Goal:** Meticulous, critical review of the entire NixOS infrastructure — every module, service, secret, network rule, Docker config, firewall rule, and deployment script — through two lenses: (1) simplicity (YAGNI violations, over-engineering, unnecessary abstraction, dead code, premature generalization) and (2) security (hardening gaps, attack surface, secret exposure, privilege escalation, network exposure, supply chain risks). This infrastructure is the foundation for a digital life managed by agent swarms — it must be rock solid. Beyond fixing existing issues, establish repo-level guardrails (CLAUDE.md conventions, hooks, linting rules) that keep simplicity and security standards high as agents autonomously develop on this codebase.
+**Depends on:** Nothing (independent audit — can run anytime, but benefits from all current work being complete)
+**Requirements:** None (quality gate)
+**Success Criteria** (what must be TRUE):
+  1. Every Nix module has been reviewed line-by-line for unnecessary complexity, dead code, unused options, and over-abstraction — findings documented with concrete fixes
+  2. Every network-facing service has been audited for minimum-privilege: bind addresses, firewall rules, authentication, TLS — no unnecessary exposure
+  3. All sops-nix secrets reviewed: no unused secrets, no secrets with overly broad access, no secrets that could be eliminated
+  4. Docker containers audited for security hardening: read-only rootfs, cap-drop, no-new-privileges, resource limits, network isolation
+  5. Deployment scripts reviewed for security: no credential leaks, proper error handling, no TOCTOU races
+  6. Agent sandbox (bubblewrap) escape vectors assessed — can a compromised agent reach secrets, other projects, or the host?
+  7. Supply chain review: flake inputs pinned, no unnecessary inputs, lock file hygiene
+  8. CLAUDE.md and repo conventions updated with explicit simplicity and security guardrails for future agentic development
+  9. All actionable findings implemented (not just documented) — `nix flake check` passes after changes
+**Plans:** 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Simplicity cleanup + kernel hardening (remove dead code, duplicate packages, unused features, stale keys; add sysctl hardening, fix llm-agents supply chain)
+- [ ] 17-02-PLAN.md — SSH hardening + credential leak fix (remove port 22 from public firewall, fix token leak in repo cloning, exclude .git/config from backups)
+- [ ] 17-03-PLAN.md — CLAUDE.md guardrails (update project structure, add security conventions, simplicity conventions, module change checklist)
