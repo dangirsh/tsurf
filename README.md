@@ -33,7 +33,7 @@
 | `llm-agents` | `github:numtide/llm-agents.nix` | Agent CLI overlay (`claude-code`, `codex`) |
 
 ## NixOS Modules
-All 13 NixOS modules in `modules/` are active via `modules/default.nix`.
+All 13 NixOS modules in `modules/` are active via `modules/default.nix` (excluding the `modules/default.nix` import hub itself).
 
 | Module | Role | Key Config Highlights |
 |---|---|---|
@@ -131,6 +131,13 @@ Default behavior:
 - `--mode local`: local build + remote switch.
 - `--mode remote`: SSH to target, `git pull --ff-only`, then remote `nixos-rebuild switch`.
 - `--skip-update`: skip `nix flake update parts` step.
+
+### Post-Deploy Verification
+```bash
+ssh root@neurosys hostname
+ssh root@neurosys "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E '(parts-|claw-swap-)'"
+ssh root@neurosys "curl -fsS http://127.0.0.1:9090/-/healthy"
+```
 
 ## Operations
 ### Deploy
