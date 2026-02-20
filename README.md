@@ -7,8 +7,7 @@ Single entry point for deploying, operating, and recovering the `neurosys` host.
 - Manages networking/security, users, secrets, Docker workloads, monitoring, and backups for a Contabo VPS deployment.
 - Uses `home-manager` for user environment and `sops-nix` for encrypted secret delivery.
 - Runs Docker services plus native NixOS services (Home Assistant, Syncthing, Prometheus, Homepage).
-- Includes agent compute tooling (`claude-code`, `codex`, `agent-spawn`, `zmx`, rootless Podman) for day-to-day operations.
-- Target audience: operators who need to deploy, maintain, and recover this server quickly.
+- Includes agent compute tooling (`claude-code`, `codex`, `agent-spawn`, `zmx`, rootless Podman) for operators who need to deploy, maintain, and recover this server quickly.
 
 ## Infrastructure
 - Provider: Contabo VPS profile (18 vCPU AMD EPYC, 96 GB RAM, 350 GB NVMe).
@@ -316,6 +315,11 @@ Decisions below are extracted from `@decision` annotations in source modules and
 | `SANDBOX-11-01` | `agent-spawn` defaults to bubblewrap sandbox; opt-out requires `--no-sandbox`; Podman rootless with no system `dockerCompat`. | Enforce safer defaults while preserving explicit escape hatch and avoiding Docker conflicts. |
 | `AGENT-01` | Agent config directories (`~/.claude`, `~/.codex`) are symlinked to shared repo. | Centralized policy/config for all agent tooling. |
 | `AGENT-02` | Repo bootstrap is clone-only on activation (no pull). | Idempotent provisioning without mutating dirty checkouts. |
+| `DEPLOY-01` | Deploys are manual via `scripts/deploy.sh`; no CI/CD path. | Keep deploy control explicit and local while relying on NixOS incrementality. |
+| `DEPLOY-02` | Deploy always runs full `nixos-rebuild switch` instead of partial updates. | Preserve single predictable deploy path and rollback semantics. |
+| `DEPLOY-03` | Deploy script polls required containers for up to 30 seconds after switch. | Catch broken runtime state immediately after activation. |
+| `DEPLOY-04` | `flake.lock` updates are never auto-committed by deploy script. | Prevent unreviewed dependency changes from being persisted automatically. |
+| `DEPLOY-05` | Deploy lock is two-level (`flock` local + lock dir on target). | Prevent concurrent deploy corruption from same or different operator machines. |
 | `RESTIC-01` | Use S3-compatible B2 backend for restic. | Stable repository access with known-compatible path. |
 | `RESTIC-02` | Retention policy is 7 daily / 5 weekly / 12 monthly. | Balances recovery depth and storage growth. |
 | `RESTIC-03` | Restic credentials are provided through sops template and secret files. | Keep credentials out of plaintext config/runtime arguments. |
