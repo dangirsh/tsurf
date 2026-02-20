@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 16 COMPLETE — Disaster Recovery & Backup Completeness. All 2 plans executed, deployed, and verified with dry-run restore.
+**Current focus:** Phase 19 COMPLETE -- Comprehensive project README created and source-validated.
 
 ## Current Position
 
-Phase: 16 (Disaster Recovery & Backup Completeness)
-Plan: 2 of 2 — ALL COMPLETE
-Status: Phase 16 fully executed. Backup gaps closed (SSH host key, Docker bind mounts, Tailscale state, pg_dump hook), recovery runbook written, deployed to VPS, backup snapshot verified with dry-run restore (1911 files, 63.6 MiB).
-Last activity: 2026-02-20 - Completed quick task 9: Research similar projects to neurosys
+Phase: 19 (Generate Comprehensive Project README)
+Plan: 1 of 1 -- COMPLETE
+Status: Phase 19 executed. README.md added at repo root with full module/service/security/deploy/operations coverage and cross-validation against source modules.
+Last activity: 2026-02-20 - Completed plan 19-01: comprehensive README + validation + summary
 
-Progress: Phase 16 complete (2/2 plans).
+Progress: Phase 19 complete (1/1 plans).
 
 ## Performance Metrics
 
@@ -64,7 +64,7 @@ Recent decisions affecting current work:
 - [10-01]: Full nixos-rebuild switch every deploy — no partial/container-only path
 - [10-01]: Container health polling (30s) — no app-level health checks
 - [10-01]: No auto-commit of flake.lock — print reminder instead
-- [10-02]: Port 22 must be in allowedTCPPorts for deploy pipeline
+- [10-02]: Port 22 must NOT be in allowedTCPPorts; SSH is Tailscale-only via trustedInterfaces + assertion
 - [10-02]: PermitRootLogin = prohibit-password required for nixos-rebuild --target-host
 - [10-02]: Root authorized keys managed in users.nix
 - [11-01]: agent-spawn defaults to bubblewrap sandbox; --no-sandbox is explicit bypass
@@ -113,8 +113,10 @@ Recent decisions affecting current work:
 - [17-04]: Sandbox escape vectors confirmed and documented (SEC5 settings.json, SEC6 Docker socket, cross-project read, no network sandbox)
 - [17-04]: Audit log gets journald dual-logging via systemd-cat for tamper resistance
 - [16-01]: RESTIC-04: Back up SSH host key (sops-nix age chain), Docker bind mounts (/var/lib/claw-swap, /var/lib/parts), Tailscale state (/var/lib/tailscale); pg_dumpall pre-hook for PostgreSQL consistency
-- [16-01]: Deploy SSH now uses Tailscale MagicDNS (root@acfs) — public IP port 22 closed by Phase 17
+- [16-01]: Deploy SSH uses Tailscale MagicDNS (`root@neurosys`) with public port 22 closed
 - [16-02]: Recovery runbook at docs/recovery-runbook.md — 4-phase flow, RTO < 2hr, RPO 24hr
+- [19-01]: README.md generated as single operator entry point; all claims cross-validated against flake/modules/home/packages/scripts sources
+- [19-01]: Services, design decisions, and accepted risks documented in table-first format for skimmable operations handoff
 
 ### Completed Phases
 
@@ -179,7 +181,7 @@ Recent decisions affecting current work:
 | 006 | Add Hue and ESPHome extraComponents to Home Assistant | 2026-02-18 | 8512fa9 | [6-add-hue-and-esphome-extracomponents-to-h](./quick/6-add-hue-and-esphome-extracomponents-to-h/) |
 | 007 | Configure restic backups to Backblaze B2 | 2026-02-19 | 1536d80 | [7-configure-restic-backups-to-backblaze-b2](./quick/7-configure-restic-backups-to-backblaze-b2/) |
 | 008 | Switch restic to blanket root backup with exclusions | 2026-02-19 | 6483029 | [8-switch-restic-backups-from-hard-coded-pa](./quick/8-switch-restic-backups-from-hard-coded-pa/) |
-| 009 | Research similar projects to neurosys (dev env + VPS + agentic dev) | 2026-02-20 | pending | [9-research-similar-projects-to-neurosys-fo](./quick/9-research-similar-projects-to-neurosys-fo/) |
+| 009 | Research similar projects to neurosys (dev env + VPS + agentic dev) | 2026-02-20 | 2a91200 | [9-research-similar-projects-to-neurosys-fo](./quick/9-research-similar-projects-to-neurosys-fo/) |
 
 ### Quick Tasks Pending (from Phase 13)
 
