@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 Phase: 19 (Generate Comprehensive Project README)
 Plan: 1 of 1 -- COMPLETE
-Status: Phase 19 executed. README.md added at repo root with full module/service/security/deploy/operations coverage and cross-validation against source modules.
-Last activity: 2026-02-20 - Revalidated and finalized plan 19-01 (`20c50ae`, `2975cdb`) with updated summary/state artifacts
+Status: Phase 19 executed. README.md updated and source-revalidated with full module/service/security/deploy/operations coverage.
+Last activity: 2026-02-20 - Revalidated and finalized plan 19-01 (`72250ef`, `ca7b352`) with refreshed summary/state artifacts
 
 Progress: Phase 19 complete (1/1 plans).
 
@@ -117,6 +117,7 @@ Recent decisions affecting current work:
 - [16-02]: Recovery runbook at docs/recovery-runbook.md — 4-phase flow, RTO < 2hr, RPO 24hr
 - [19-01]: README.md finalized as single operator entry point; overview/deploy sections tightened for first-time deploy readability
 - [19-01]: Design decision and accepted-risk tables constrained to source-grounded IDs; stale-content checks and source cross-validation rerun clean
+- [19-01]: Added deploy-script decision rows and explicit 7-input flake validation note in README after checklist verification
 
 ### Completed Phases
 
