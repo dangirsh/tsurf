@@ -17,57 +17,57 @@ tech-stack:
 
 key-files:
   created: []
-  modified: [README.md, .planning/phases/19-generate-comprehensive-project-readme/19-01-SUMMARY.md, .planning/STATE.md]
+  modified: [README.md, .planning/STATE.md, .planning/phases/19-generate-comprehensive-project-readme/19-01-SUMMARY.md]
 
 key-decisions:
-  - "Keep README table-first and scan-friendly while preserving all required operational commands"
-  - "Restrict design decision/risk IDs to source-grounded identifiers (remove non-canonical IDs)"
-  - "Run explicit cross-validation checks against flake/modules/home/packages/scripts/hosts before completion"
+  - "Treat source files as single truth and re-validate every README fact against flake/modules/home/packages/scripts"
+  - "Keep README table-first for modules, ports, design decisions, and accepted risks"
+  - "Include deploy-script @decision annotations in the design decisions matrix"
 
-duration: 3 min
+duration: 5 min
 completed: 2026-02-20
 ---
 
 # Phase 19 Plan 01: Generate Comprehensive Project README Summary
 
-**README.md now provides a source-validated, skimmable operator entry point covering deployment, all modules/services, security controls, operations, and accepted risks.**
+**README.md is now a source-validated operator entry point covering deployment, services, security, operations, decisions, and accepted risks for neurosys.**
 
 ## Performance
 
-- **Duration:** 3 min
-- **Started:** 2026-02-20T11:34:38Z
-- **Completed:** 2026-02-20T11:38:31Z
+- **Duration:** 5 min
+- **Started:** 2026-02-20T11:37:28Z
+- **Completed:** 2026-02-20T11:43:13Z
 - **Tasks:** 2
 - **Files modified:** 3
 
 ## Accomplishments
-- Refined `README.md` to match plan formatting constraints (header descriptor, 3-5 overview bullets, deploy synopsis).
-- Removed non-canonical decision/risk rows so decision IDs are sourced from module `@decision` annotations and CLAUDE accepted-risk IDs.
-- Completed checklist-based claim validation for inputs, module/home counts, ports, versions, secrets, alert rules, retention, deploy flags, and host identity.
+- Refined README structure and kept it fully skimmable while preserving full module/service coverage.
+- Cross-validated flake inputs, module/home counts, ports, package versions, secrets/templates, alert rules, restic retention, deploy flags, and static IP against source.
+- Updated project state to reflect this run's commit hashes and Phase 19 completion context.
 
 ## Task Commits
 
-1. **Task 1: Write README.md from module source files** - `20c50ae` (docs)
-2. **Task 2: Cross-validate README claims against source code** - `2975cdb` (docs)
+1. **Task 1: Write README.md from module source files** - `72250ef` (docs)
+2. **Task 2: Cross-validate README claims against source code** - `ca7b352` (docs)
 
 ## Files Created/Modified
-- `README.md` - Comprehensive operator-facing project documentation.
-- `.planning/phases/19-generate-comprehensive-project-readme/19-01-SUMMARY.md` - Updated execution summary with current commits/timestamps.
-- `.planning/STATE.md` - Updated current position and recent phase-19 decision entries.
+- `README.md` - Comprehensive project documentation and quick-start/operations reference.
+- `.planning/STATE.md` - Updated phase status and latest 19-01 decision notes.
+- `.planning/phases/19-generate-comprehensive-project-readme/19-01-SUMMARY.md` - Refreshed phase summary for this execution run.
 
 ## Decisions Made
-- Keep tables as the dominant format for modules, ports, decisions, and accepted risks.
-- Keep README claims tied to live source code and explicit verification checks.
-- Keep stale-content guard checks as a required completion gate.
+- Explicitly documented deploy-script design choices in the README decision matrix.
+- Kept stale-content guardrails (`ollama|grafana|alertmanager|ntfy|atuin|zsh|acfs|tmux`) as a hard validation gate.
+- Preserved quick-start and operations sections as concrete command-first runbooks.
 
 ## Deviations from Plan
 None - plan executed as written.
 
 ## Issues Encountered
-- Repository contained unrelated existing changes (`flake.lock`, untracked quick-task summary); staging remained limited to phase files.
+- Existing unrelated workspace changes were present (`flake.lock`, untracked quick summary file); these were intentionally excluded from staging.
 
 ## Next Phase Readiness
-Phase 19 complete and ready for transition.
+Phase complete, ready for transition.
 
 ---
 *Phase: 19-generate-comprehensive-project-readme*
