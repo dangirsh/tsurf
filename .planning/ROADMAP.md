@@ -31,6 +31,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 17: Hardcore Simplicity & Security Audit** - Critical review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering and security gaps. Establish guardrails for future agentic development.
 - [ ] **Phase 18: VPS Consolidation** - Merge acfs dev environment into neurosys. Single VPS for dev, personal services, prod. Component audit, security model, self-deploy ergonomics, state tracking, Parts management interface architecture.
 - [x] **Phase 19: Generate Comprehensive Project README** - Concise, skimmable README.md enumerating all key features, goals, assumptions, constraints, and preferences. Bullets & tables over prose. Deployment quick-start, operating details, design decisions, accepted risks.
+- [ ] **Phase 21: Impermanence (Ephemeral Root)** - Wipe root on every boot via nix-community/impermanence. BTRFS subvolumes + initrd rollback. Explicit /persist state manifest. Drift-proof, smaller backups, simpler DR.
+- [ ] **Phase 22: Secret Proxy (Netclode Pattern)** - Two-tier proxy so real API keys never enter agent sandboxes. Header-only injection, per-session allowlisting, reflection prevention.
+- [ ] **Phase 23: Tailscale Security & Self-Sovereignty** - TKA (Tailnet Key Authority), ACL hardening, device approval, auth key rotation, node key expiry. Self-custodied signing keys.
+- [ ] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix.
+- [ ] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
+- [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
 
 ## Phase Details
 
@@ -209,6 +215,12 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 18. VPS Consolidation | 0/TBD | Not started | - |
 | 19. Generate Project README | 1/1 | ✓ Complete | 2026-02-20 |
 | 20. Deep Ecosystem Research | 1/1 | ✓ Complete | 2026-02-20 |
+| 21. Impermanence (Ephemeral Root) | 0/TBD | Not started | - |
+| 22. Secret Proxy (Netclode Pattern) | 0/TBD | Not started | - |
+| 23. Tailscale Security & Self-Sovereignty | 0/TBD | Not started | - |
+| 24. Server Hardening + DX | 0/TBD | Not started | - |
+| 25. Deploy Safety (deploy-rs) | 0/1 | Planned | - |
+| 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -275,7 +287,7 @@ Plans:
 Plans:
 - [ ] 11-01-PLAN.md -- Rewrite agent-spawn with bwrap sandbox, Podman NixOS config, metadata IP block, subUid/subGid ranges
 - [ ] 11-02-PLAN.md -- Deploy to VPS, iterative testing of all sandbox behaviors, user verification checkpoint
-- [ ] TODO(from-research): Enable Tailnet Key Authority (`tailscale lock init` + sign existing nodes)
+- [x] TODO(from-research): Enable Tailnet Key Authority — moved to Phase 23 (Tailscale Security & Self-Sovereignty)
 
 ### Phase 12: Security audit of neurosys NixOS configuration — review all modules for hardening gaps, secret handling, network exposure, sandbox escape vectors, and supply chain risks
 
@@ -424,3 +436,121 @@ Plans:
 
 Plans:
 - [x] 20-01-SUMMARY.md — Synthesize 10 parallel agent reports into unified adoption report
+
+### Phase 21: Impermanence (Ephemeral Root)
+
+**Goal:** Wipe root filesystem on every boot via [nix-community/impermanence](https://github.com/nix-community/impermanence). Only explicitly declared paths survive via bind-mounts from `/persist`. BTRFS subvolumes + initrd rollback to blank snapshot (not tmpfs — server workloads need disk-backed root). Drift-proof state, explicit state manifest, smaller backups (`/persist` instead of `/`), simpler disaster recovery. From ecosystem research item 6.
+**Depends on:** Phase 16 (disaster recovery — must have solid backups before disk reprovisioning)
+**Requirements:** None (architectural improvement)
+**Success Criteria** (what must be TRUE):
+  1. Root filesystem is wiped on every boot via BTRFS subvolume rollback to blank snapshot in initrd
+  2. `/persist` subvolume holds all stateful paths: `/etc/ssh`, `/var/lib/tailscale`, `/var/lib/docker`, sops age key, etc.
+  3. `environment.persistence."/persist"` declares every stateful path — nothing survives reboot unless explicitly listed
+  4. sops-nix age key re-pointed to `/persist/etc/ssh/ssh_host_ed25519_key`
+  5. Restic backup path updated from `/` to `/persist` (smaller, more focused backups)
+  6. Recovery runbook updated for impermanence (restore `/persist` from restic, reboot, done)
+  7. Disk reprovisioning via nixos-anywhere redeploy tested successfully
+  8. All services survive a reboot with ephemeral root (Docker, Tailscale, sops secrets, Syncthing, Home Assistant, Prometheus)
+**Effort:** High — requires disk reprovisioning (nixos-anywhere redeploy). Test in VM first.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 21 to break down)
+
+### Phase 22: Secret Proxy (Netclode Pattern)
+
+**Goal:** Two-tier proxy where real API keys never enter agent sandboxes. Inspired by [Netclode](https://github.com/nichochar/netclode) and [Fly's Tokenizer](https://github.com/superfly/tokenizer). Agents see placeholder keys + HTTP_PROXY; the secret-proxy (outside sandbox) validates agent identity, replaces placeholders in HTTP headers only (not body — prevents reflection attacks), and forwards to upstream APIs. Per-session SDK-type allowlisting (Claude → anthropic.com only). From ecosystem research item 7.
+**Depends on:** Phase 11 (agent sandboxing — proxy integrates with sandbox HTTP_PROXY)
+**Requirements:** None (security hardening — new capability)
+**Success Criteria** (what must be TRUE):
+  1. Secret proxy service runs outside agent sandboxes, listening on localhost
+  2. Agents receive `ANTHROPIC_API_KEY=PLACEHOLDER` and `HTTP_PROXY=localhost:<port>` — real keys never enter sandbox
+  3. Proxy performs header-only token injection (prevents reflection/exfiltration of real keys via response body)
+  4. Per-session allowlisting: Claude agents can only reach anthropic.com, Codex agents only openai.com
+  5. Validation failure blocks the request entirely (placeholder never leaks to upstream)
+  6. Agent identity validated before token injection (session ID or sandbox identity)
+  7. Real API keys sourced from sops-nix secrets, read only by the proxy service
+  8. Existing agent workflows (Claude Code, Codex CLI) work transparently through the proxy
+**Effort:** Medium — small Go/Rust proxy service + NixOS module + agent-spawn integration.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 22 to break down)
+
+### Phase 23: Tailscale Security and Self-Sovereignty
+
+**Goal:** Harden Tailscale configuration for maximum security and self-sovereignty. Enable Tailnet Key Authority (TKA) so Tailscale coordination server compromise cannot inject rogue nodes — signing keys are self-custodied. Audit and tighten ACLs (device-level, user-level, tag-based). Review auth key rotation, device approval policies, MagicDNS configuration, and exit node settings. Ensure neurosys owns its identity chain end-to-end. Previously adopted in Phase 13 research (TKA quick task) but never executed; Headscale was rejected since TKA covers the key sovereignty concern.
+**Depends on:** Phase 3 (Tailscale operational)
+**Requirements:** None (security hardening)
+**Success Criteria** (what must be TRUE):
+  1. Tailnet Key Authority enabled (`tailscale lock init`) — all existing nodes signed
+  2. New nodes cannot join the tailnet without explicit TKA signing (coordination server compromise cannot inject rogue nodes)
+  3. ACLs reviewed and tightened: principle of least privilege for each device/service (neurosys, laptops, phones)
+  4. Device auto-approval disabled — new devices require explicit admin approval
+  5. Auth key rotation policy documented and implemented (no long-lived pre-auth keys)
+  6. MagicDNS configuration reviewed for information leakage
+  7. Tailscale node key expiry policy configured (force periodic re-authentication)
+  8. SSH via Tailscale verified hardened (no fallback to public IP possible)
+  9. `nix flake check` passes with any Tailscale module changes
+**Effort:** Low-Medium — mostly operational (CLI commands + ACL policy), small NixOS config changes.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 23 to break down)
+
+### Phase 24: Server Hardening and DX
+
+**Goal:** Adopt [srvos](https://github.com/nix-community/srvos) server profile for ~20 battle-tested hardening defaults (watchdog, OOM priority, auto-GC, LLMNR off, emergency mode off, etc.). Add `--unshare-pid` and `--unshare-cgroup` to agent-spawn bubblewrap flags so agents can't see host processes or cgroup hierarchy. Add [gVisor](https://gvisor.dev/) (runsc) with systrap platform as Docker OCI runtime for security-sensitive containers. Improve DX: flake check that builds toplevel, devShell with sops+age+deploy tooling, treefmt-nix (nixfmt + shellcheck), `self` reference pattern. From ecosystem research items 1, 2, 3 + reference config patterns.
+**Depends on:** Nothing (independent hardening — can run anytime)
+**Requirements:** None (hardening + DX improvements)
+**Success Criteria** (what must be TRUE):
+  1. srvos flake input added and `srvos.nixosModules.server` imported — redundant manual settings removed
+  2. `networking.useNetworkd` tested with Contabo static IP (override with `mkForce false` if incompatible)
+  3. `--unshare-pid` and `--unshare-cgroup` added to agent-spawn bwrap flags — agents can't see host `/proc` or cgroups
+  4. gVisor (runsc) registered as Docker OCI runtime with `--platform=systrap` — security-sensitive containers can use `--runtime=runsc`
+  5. `checks.x86_64-linux.nixos-neurosys = self.nixosConfigurations.neurosys.config.system.build.toplevel` in flake.nix
+  6. DevShell includes sops, age, and deploy tooling
+  7. treefmt-nix configured with nixfmt + shellcheck
+  8. `nix flake check` passes with all changes
+**Effort:** Low-Medium — srvos is the bulk, rest are small additions.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 24 to break down)
+
+### Phase 25: Deploy Safety with deploy-rs
+
+**Goal:** Add [deploy-rs](https://github.com/serokell/deploy-rs) magic rollback alongside existing deploy.sh. For a Tailscale-only server, a misconfigured firewall or networking change locks you out permanently. deploy-rs auto-rolls back via inotify canary if the deployer can't SSH back within the confirmation timeout. Evolve deploy.sh into a wrapper: `nix flake update parts && deploy .#neurosys --confirm-timeout 120 && <container health check>`. From ecosystem research item 5.
+**Depends on:** Phase 10 (existing deploy pipeline)
+**Requirements:** None (deployment safety)
+**Success Criteria** (what must be TRUE):
+  1. deploy-rs added as flake input with `deploy.nodes.neurosys` configuration
+  2. Magic rollback works: intentionally break networking config → deploy → rollback fires within timeout → server recovers
+  3. deploy.sh evolved into wrapper that calls `deploy .#neurosys` with confirmation timeout
+  4. Container health check still runs after successful deploy
+  5. `nix flake check` passes (deploy-rs includes its own flake checks)
+  6. Rollback behavior documented in deploy runbook
+**Effort:** Low — 15 lines flake config + deploy.sh wrapper evolution.
+**Plans:** 1 plan
+
+Plans:
+- [ ] 25-01-PLAN.md -- deploy-rs flake integration + deploy.sh wrapper evolution + recovery runbook update
+
+### Phase 26: Agent Notifications via Telegram Bot
+
+**Goal:** Minimal Telegram Bot API integration so agents can notify the operator. Currently no agent reach-back mechanism — agents can't proactively notify when done, stuck, or need approval. Uses Bot API (not Telethon user API) for simplicity and no account suspension risk. Outbound HTTPS only, no inbound ports. 2 sops secrets: `telegram-bot-token`, `telegram-chat-id`. Later: wrap as MCP server for bidirectional agent-operator messaging. From ecosystem research item 4.
+**Depends on:** Phase 3 (sops-nix secrets infrastructure)
+**Requirements:** None (new capability)
+**Success Criteria** (what must be TRUE):
+  1. `notify-telegram` script available on PATH via `pkgs.writeShellApplication`
+  2. `notify-telegram "test message"` sends message to configured Telegram chat
+  3. 2 sops secrets added: `telegram-bot-token`, `telegram-chat-id` — decrypted at activation
+  4. agent-spawn integration: agents can call `notify-telegram` from inside sandbox (outbound HTTPS)
+  5. Deploy script sends Telegram notification on success/failure (alongside existing notification mechanisms)
+  6. No inbound ports opened — outbound HTTPS only
+  7. `nix flake check` passes with notification module
+**Effort:** Low — writeShellApplication + 2 sops secrets + agent-spawn PATH.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 26 to break down)
