@@ -23,6 +23,8 @@ Single entry point for deploying, operating, and recovering the `neurosys` host.
 - `packages/` for custom packaged binaries (`zmx`, `cass`).
 
 ### Flake Inputs
+`flake.nix` defines exactly 7 top-level inputs:
+
 | Input | Source | Purpose |
 |---|---|---|
 | `nixpkgs` | `github:NixOS/nixpkgs/nixos-25.11` | Base package set and NixOS modules |
