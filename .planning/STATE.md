@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 Phase: 19 (Generate Comprehensive Project README)
 Plan: 1 of 1 -- COMPLETE
 Status: Phase 19 executed. README.md added at repo root with full module/service/security/deploy/operations coverage and cross-validation against source modules.
-Last activity: 2026-02-20 - Completed plan 19-01: comprehensive README + validation + summary
+Last activity: 2026-02-20 - Revalidated and finalized plan 19-01 (`20c50ae`, `2975cdb`) with updated summary/state artifacts
 
 Progress: Phase 19 complete (1/1 plans).
 
@@ -115,8 +115,8 @@ Recent decisions affecting current work:
 - [16-01]: RESTIC-04: Back up SSH host key (sops-nix age chain), Docker bind mounts (/var/lib/claw-swap, /var/lib/parts), Tailscale state (/var/lib/tailscale); pg_dumpall pre-hook for PostgreSQL consistency
 - [16-01]: Deploy SSH uses Tailscale MagicDNS (`root@neurosys`) with public port 22 closed
 - [16-02]: Recovery runbook at docs/recovery-runbook.md — 4-phase flow, RTO < 2hr, RPO 24hr
-- [19-01]: README.md generated as single operator entry point; all claims cross-validated against flake/modules/home/packages/scripts sources
-- [19-01]: Services, design decisions, and accepted risks documented in table-first format for skimmable operations handoff
+- [19-01]: README.md finalized as single operator entry point; overview/deploy sections tightened for first-time deploy readability
+- [19-01]: Design decision and accepted-risk tables constrained to source-grounded IDs; stale-content checks and source cross-validation rerun clean
 
 ### Completed Phases
 
@@ -193,6 +193,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: Quick-008 complete — blanket restic backup, hostname rename, backup status on homepage deployed
+Last session: 2026-02-20
+Stopped at: Phase 19 complete — README/docs validation and summary/state updates finished
 Resume file: None

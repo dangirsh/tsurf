@@ -16,58 +16,58 @@ tech-stack:
   patterns: [skimmable-docs, tables-over-prose]
 
 key-files:
-  created: [README.md, .planning/phases/19-generate-comprehensive-project-readme/19-01-SUMMARY.md]
-  modified: [.planning/STATE.md]
+  created: []
+  modified: [README.md, .planning/phases/19-generate-comprehensive-project-readme/19-01-SUMMARY.md, .planning/STATE.md]
 
 key-decisions:
-  - "Use source-first documentation: all README facts validated against flake/modules/home/packages/scripts"
-  - "Table-first structure for modules, ports, decisions, and accepted risks to maximize scan speed"
-  - "Keep deprecated stack components out of README via explicit stale-content guard checks"
+  - "Keep README table-first and scan-friendly while preserving all required operational commands"
+  - "Restrict design decision/risk IDs to source-grounded identifiers (remove non-canonical IDs)"
+  - "Run explicit cross-validation checks against flake/modules/home/packages/scripts/hosts before completion"
 
-duration: 5 min
+duration: 3 min
 completed: 2026-02-20
 ---
 
 # Phase 19 Plan 01: Generate Comprehensive Project README Summary
 
-**Comprehensive README.md now documents all active modules/services, security model, deployment quick-start, operations runbook hooks, design decisions, and accepted risks in a source-validated format.**
+**README.md now provides a source-validated, skimmable operator entry point covering deployment, all modules/services, security controls, operations, and accepted risks.**
 
 ## Performance
 
-- **Duration:** 5 min
-- **Started:** 2026-02-20T11:18:55Z
-- **Completed:** 2026-02-20T11:24:40Z
+- **Duration:** 3 min
+- **Started:** 2026-02-20T11:34:38Z
+- **Completed:** 2026-02-20T11:38:31Z
 - **Tasks:** 2
 - **Files modified:** 3
 
 ## Accomplishments
-- Added a 375-line root `README.md` with all required sections, complete module/home coverage, concrete operator commands, and table-first design.
-- Cross-validated README claims against live source (`flake.nix`, `modules/*.nix`, `home/*.nix`, `packages/*.nix`, `scripts/deploy.sh`, `hosts/neurosys/default.nix`).
-- Updated `.planning/STATE.md` to reflect Phase 19 completion and corrected stale decision entries to current networking/deploy truth.
+- Refined `README.md` to match plan formatting constraints (header descriptor, 3-5 overview bullets, deploy synopsis).
+- Removed non-canonical decision/risk rows so decision IDs are sourced from module `@decision` annotations and CLAUDE accepted-risk IDs.
+- Completed checklist-based claim validation for inputs, module/home counts, ports, versions, secrets, alert rules, retention, deploy flags, and host identity.
 
 ## Task Commits
 
-1. **Task 1: Write README.md from module source files** - `a78a12a` (docs)
-2. **Task 2: Cross-validate README claims against source code** - `bb2c21e` (docs)
+1. **Task 1: Write README.md from module source files** - `20c50ae` (docs)
+2. **Task 2: Cross-validate README claims against source code** - `2975cdb` (docs)
 
 ## Files Created/Modified
-- `README.md` - Comprehensive project documentation and operator entry point.
-- `.planning/phases/19-generate-comprehensive-project-readme/19-01-SUMMARY.md` - Phase execution summary.
-- `.planning/STATE.md` - Updated current phase position and recent decisions.
+- `README.md` - Comprehensive operator-facing project documentation.
+- `.planning/phases/19-generate-comprehensive-project-readme/19-01-SUMMARY.md` - Updated execution summary with current commits/timestamps.
+- `.planning/STATE.md` - Updated current position and recent phase-19 decision entries.
 
 ## Decisions Made
-- Kept module, service, and risk inventories in tables to make operational scanning fast.
-- Added post-deploy verification commands in quick-start to improve first-time deploy confidence.
-- Preserved source-of-truth discipline by verifying counts/ports/versions/flags directly from code before finalizing README.
+- Keep tables as the dominant format for modules, ports, decisions, and accepted risks.
+- Keep README claims tied to live source code and explicit verification checks.
+- Keep stale-content guard checks as a required completion gate.
 
 ## Deviations from Plan
-- Minor scope extension: added explicit post-deploy verification commands in quick-start to strengthen "first-time deployer" usability.
+None - plan executed as written.
 
 ## Issues Encountered
-- Existing repository had unrelated local modifications (`flake.lock`, `.planning/STATE.md`, and one untracked quick-task summary); work was isolated by staging only phase-specific files.
+- Repository contained unrelated existing changes (`flake.lock`, untracked quick-task summary); staging remained limited to phase files.
 
 ## Next Phase Readiness
-Phase 19 complete and documented; repository is ready for transition to the next planned phase.
+Phase 19 complete and ready for transition.
 
 ---
 *Phase: 19-generate-comprehensive-project-readme*
