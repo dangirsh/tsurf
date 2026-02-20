@@ -32,11 +32,11 @@ We surveyed **60+ projects** across NixOS server configs, agentic dev infrastruc
 
 | Rank | Project | Why Similar | Key Difference |
 |------|---------|-------------|----------------|
-| 1 | **Netclode** | Self-hosted remote coding agent server, Tailscale, multiple agent SDKs | Uses k3s + Kata microVMs instead of NixOS + bubblewrap |
-| 2 | **ACFS** | Same "bootstrap VPS for multi-agent dev" goal | Imperative Bash on Ubuntu, no NixOS |
-| 3 | **barrucadu/nixfiles** | NixOS flake, Prometheus, restic-to-B2 | No agent compute focus |
-| 4 | **nix-sandbox-mcp** | Nix + bubblewrap sandboxing for agents | MCP server only, not full server config |
-| 5 | **hyperion-hub** | Claude Code on VPS with messaging MCP servers | Imperative Bash, no reproducibility/backups/monitoring |
+| 1 | [**Netclode**](https://github.com/angristan/netclode) | Self-hosted remote coding agent server, Tailscale, multiple agent SDKs | Uses k3s + Kata microVMs instead of NixOS + bubblewrap |
+| 2 | [**ACFS**](https://github.com/Dicklesworthstone/agentic_coding_flywheel_setup) | Same "bootstrap VPS for multi-agent dev" goal | Imperative Bash on Ubuntu, no NixOS |
+| 3 | [**barrucadu/nixfiles**](https://github.com/barrucadu/nixfiles) | NixOS flake, Prometheus, restic-to-B2 | No agent compute focus |
+| 4 | [**nix-sandbox-mcp**](https://github.com/SecBear/nix-sandbox-mcp) | Nix + bubblewrap sandboxing for agents | MCP server only, not full server config |
+| 5 | [**hyperion-hub**](https://github.com/aeschylus/hyperion-hub) | Claude Code on VPS with messaging MCP servers | Imperative Bash, no reproducibility/backups/monitoring |
 
 **The landscape has three camps:**
 1. **NixOS declarative configs** (neurosys, barrucadu, ryan4yin, Misterio77) — reproducible, atomic rollbacks, mature ecosystem. None except neurosys prioritize agent compute.
@@ -293,13 +293,13 @@ Open-source personal AI assistant that runs 24/7 on your hardware. Multi-channel
 | Tool | Stars | Type | Multi-host | Secrets | Rollback | Flake Support | Best For |
 |------|-------|------|------------|---------|----------|---------------|----------|
 | **nixos-rebuild** | built-in | Push | Manual | No | Via generations | Yes | Single host (neurosys) |
-| **nixos-anywhere** | ~2,700 | Provision | Yes | --extra-files | N/A | Yes | Initial install |
-| **deploy-rs** | ~1,800 | Push | Yes | No | Magic rollback | Yes | Multi-profile deploys |
-| **Colmena** | ~2,000 | Push | Parallel | Built-in | No | Yes | Fleet management |
-| **NixOps** | ~2,100 | Full lifecycle | Yes | deployment.keys | No | Poor | Legacy, avoid |
-| **comin** | ~350 | Pull (GitOps) | Yes | Separate | N/A | Yes | GitOps workflows |
-| **Clan** | ~500 | P2P platform | Yes | Built-in | N/A | Yes | Full platform with GUI |
-| **Nixinate** | ~280 | Push (flake app) | Yes | No | No | Yes | Minimal wrapper |
+| [**nixos-anywhere**](https://github.com/nix-community/nixos-anywhere) | ~2,700 | Provision | Yes | --extra-files | N/A | Yes | Initial install |
+| [**deploy-rs**](https://github.com/serokell/deploy-rs) | ~1,800 | Push | Yes | No | Magic rollback | Yes | Multi-profile deploys |
+| [**Colmena**](https://github.com/zhaofengli/colmena) | ~2,000 | Push | Parallel | Built-in | No | Yes | Fleet management |
+| [**NixOps**](https://github.com/NixOS/nixops) | ~2,100 | Full lifecycle | Yes | deployment.keys | No | Poor | Legacy, avoid |
+| [**comin**](https://github.com/nlewo/comin) | ~350 | Pull (GitOps) | Yes | Separate | N/A | Yes | GitOps workflows |
+| [**Clan**](https://github.com/clan-lol/clan-core) | ~500 | P2P platform | Yes | Built-in | N/A | Yes | Full platform with GUI |
+| [**Nixinate**](https://github.com/MatthewCroughan/nixinate) | ~280 | Push (flake app) | Yes | No | No | Yes | Minimal wrapper |
 
 **For neurosys (single VPS):** Plain `nixos-rebuild` via `deploy.sh` is the community-standard approach. deploy-rs or Colmena become justified at 3+ machines.
 
@@ -307,9 +307,9 @@ Open-source personal AI assistant that runs 24/7 on your hardware. Multi-channel
 
 | Tool | Stars | Encryption | Templating | Backend | Best For |
 |------|-------|-----------|------------|---------|----------|
-| **sops-nix** | ~2,600 | age, GPG, KMS | Yes | YAML/JSON/dotenv/INI | Flexibility (neurosys) |
-| **agenix** | ~2,200 | age only | No | .age files | Simplicity |
-| **ragenix** | ~250 | age only | No | .age files | Better agenix CLI |
+| [**sops-nix**](https://github.com/Mic92/sops-nix) | ~2,600 | age, GPG, KMS | Yes | YAML/JSON/dotenv/INI | Flexibility (neurosys) |
+| [**agenix**](https://github.com/ryantm/agenix) | ~2,200 | age only | No | .age files | Simplicity |
+| [**ragenix**](https://github.com/yaxitech/ragenix) | ~250 | age only | No | .age files | Better agenix CLI |
 
 **For neurosys:** sops-nix is the right choice — neurosys uses template rendering (`sops.templates`) which agenix doesn't support.
 
@@ -356,17 +356,17 @@ These are widely-cited NixOS configs that serve as architectural references:
 
 | Config | Stars | Notable For |
 |--------|-------|------------|
-| **Misterio77/nix-starter-configs** | 3,579 | THE canonical NixOS flake starter template |
-| **mitchellh/nixos-config** | ~2,900 | HashiCorp co-founder's NixOS-in-VM setup |
-| **hlissner/dotfiles** | 1,890 | Doom Emacs author, pioneering flake structure |
-| **ryan4yin/nix-config** | 1,807 | NixOS & Flakes Book author |
-| **Misterio77/nix-config** | 1,214 | Impermanence + YubiKey sops |
-| **fufexan/dotfiles** | 1,054 | flake-parts organization |
-| **MatthiasBenaets/nix-config** | 727 | Multi-platform with YouTube tutorials |
-| **Mic92/dotfiles** | 727 | sops-nix/disko/nixos-anywhere creator |
-| **wimpysworld/nix-config** | ~600 | Former Ubuntu MATE lead, Linux Matters podcast |
-| **EmergentMind/nix-config** | 592 | Private secrets repo pattern |
-| **srid/nixos-config** | 572 | KISS philosophy, flake-parts |
+| [**Misterio77/nix-starter-configs**](https://github.com/Misterio77/nix-starter-configs) | 3,579 | THE canonical NixOS flake starter template |
+| [**mitchellh/nixos-config**](https://github.com/mitchellh/nixos-config) | ~2,900 | HashiCorp co-founder's NixOS-in-VM setup |
+| [**hlissner/dotfiles**](https://github.com/hlissner/dotfiles) | 1,890 | Doom Emacs author, pioneering flake structure |
+| [**ryan4yin/nix-config**](https://github.com/ryan4yin/nix-config) | 1,807 | NixOS & Flakes Book author |
+| [**Misterio77/nix-config**](https://github.com/Misterio77/nix-config) | 1,214 | Impermanence + YubiKey sops |
+| [**fufexan/dotfiles**](https://github.com/fufexan/dotfiles) | 1,054 | flake-parts organization |
+| [**MatthiasBenaets/nix-config**](https://github.com/MatthiasBenaets/nix-config) | 727 | Multi-platform with YouTube tutorials |
+| [**Mic92/dotfiles**](https://github.com/Mic92/dotfiles) | 727 | sops-nix/disko/nixos-anywhere creator |
+| [**wimpysworld/nix-config**](https://github.com/wimpysworld/nix-config) | ~600 | Former Ubuntu MATE lead, Linux Matters podcast |
+| [**EmergentMind/nix-config**](https://github.com/EmergentMind/nix-config) | 592 | Private secrets repo pattern |
+| [**srid/nixos-config**](https://github.com/srid/nixos-config) | 572 | KISS philosophy, flake-parts |
 
 ---
 
@@ -376,10 +376,10 @@ For completeness — these are the major non-NixOS approaches to the same proble
 
 | Project | Stars | Tech | Approach |
 |---------|-------|------|----------|
-| **khuedoan/homelab** | 9,108 | Terraform + Ansible + K3s + ArgoCD | Full Kubernetes GitOps from bare metal |
-| **matrix-docker-ansible-deploy** | 6,052 | Ansible + Docker | Single-service (Matrix) on one server |
-| **anandslab/docker-traefik** | 3,416 | Docker Compose + Traefik + CrowdSec | Container stack with reverse proxy |
-| **n8n self-hosted AI starter** | ~2,000 | Docker Compose + n8n + Ollama | Low-code agent workflows |
+| [**khuedoan/homelab**](https://github.com/khuedoan/homelab) | 9,108 | Terraform + Ansible + K3s + ArgoCD | Full Kubernetes GitOps from bare metal |
+| [**matrix-docker-ansible-deploy**](https://github.com/spantaleev/matrix-docker-ansible-deploy) | 6,052 | Ansible + Docker | Single-service (Matrix) on one server |
+| [**anandslab/docker-traefik**](https://github.com/anandslab/docker-traefik) | 3,416 | Docker Compose + Traefik + CrowdSec | Container stack with reverse proxy |
+| [**n8n self-hosted AI starter**](https://github.com/n8n-io/self-hosted-ai-starter-kit) | ~2,000 | Docker Compose + n8n + Ollama | Low-code agent workflows |
 
 These demonstrate valid approaches but lack NixOS's atomic rollbacks, reproducibility, and declarative guarantees.
 
@@ -389,7 +389,7 @@ These demonstrate valid approaches but lack NixOS's atomic rollbacks, reproducib
 
 ### Feature Matrix: Neurosys vs Top Similar Projects
 
-| Feature | neurosys | barrucadu | Netclode | ACFS | hyperion-hub | nix-dock |
+| Feature | neurosys | [barrucadu](https://github.com/barrucadu/nixfiles) | [Netclode](https://github.com/angristan/netclode) | [ACFS](https://github.com/Dicklesworthstone/agentic_coding_flywheel_setup) | [hyperion-hub](https://github.com/aeschylus/hyperion-hub) | [nix-dock](https://github.com/MathieuDR/nix-dock) |
 |---------|----------|-----------|----------|------|-------------|----------|
 | **Infrastructure** | NixOS flake | NixOS flake | k3s + Ansible | Bash script | Bash script | NixOS flake |
 | **Reproducible** | Yes | Yes | Partially | No | No | Yes |
@@ -452,25 +452,25 @@ Neurosys uses bubblewrap (leftmost) — lightest overhead, good for personal/tru
 
 ### High-Value Adoptions (Effort: Low-Medium)
 
-1. **srvos server profiles** — Import `srvos.nixosModules.server` as a flake input. Battle-tested server defaults from Numtide (same team as llm-agents.nix). Supplements `base.nix` and `networking.nix` hardening. Effort: hours.
+1. [**srvos**](https://github.com/nix-community/srvos) **server profiles** — Import `srvos.nixosModules.server` as a flake input. Battle-tested server defaults from Numtide (same team as llm-agents.nix). Supplements `base.nix` and `networking.nix` hardening. Effort: hours.
 
-2. **nix-sandbox-mcp** — Evaluate as an MCP server for agent workflows. Uses the same Nix + bubblewrap approach neurosys already employs. Would give agents declarative, reproducible sandbox environments via MCP. Effort: hours.
+2. [**nix-sandbox-mcp**](https://github.com/SecBear/nix-sandbox-mcp) — Evaluate as an MCP server for agent workflows. Uses the same Nix + bubblewrap approach neurosys already employs. Would give agents declarative, reproducible sandbox environments via MCP. Effort: hours.
 
-3. **Private secrets repo pattern** — Extract `secrets/neurosys.yaml` to a private repo consumed as a flake input. Allows the main config to be fully public. Used by EmergentMind and ryan4yin. Effort: hours.
+3. **Private secrets repo pattern** — Extract `secrets/neurosys.yaml` to a private repo consumed as a flake input. Allows the main config to be fully public. Used by [EmergentMind](https://github.com/EmergentMind/nix-config) and [ryan4yin](https://github.com/ryan4yin/nix-config). Effort: hours.
 
 ### Medium-Value Adoptions (Effort: Medium)
 
-4. **selfhostblocks** — Consume as flake input when adding new services. Built-in backup, monitoring, and SSO integration. Most valuable when service count grows. Effort: days per service migration.
+4. [**selfhostblocks**](https://github.com/ibizaman/selfhostblocks) — Consume as flake input when adding new services. Built-in backup, monitoring, and SSO integration. Most valuable when service count grows. Effort: days per service migration.
 
-5. **Impermanence** — Adopt ephemeral root for stronger reproducibility. Forces explicit declaration of all stateful paths (neurosys's restic backup already tracks most of these). Significant refactoring. Effort: days.
+5. [**Impermanence**](https://github.com/nix-community/impermanence) — Adopt ephemeral root for stronger reproducibility. Forces explicit declaration of all stateful paths (neurosys's restic backup already tracks most of these). Significant refactoring. Effort: days.
 
 ### Future Considerations
 
-6. **microvm.nix for agent isolation** — If neurosys migrates to a KVM-capable host, microvm.nix would provide the strongest agent isolation. Currently blocked by Contabo's lack of nested virtualization.
+6. [**microvm.nix**](https://github.com/microvm-nix/microvm.nix) **for agent isolation** — If neurosys migrates to a KVM-capable host, microvm.nix would provide the strongest agent isolation. Currently blocked by Contabo's lack of nested virtualization.
 
-7. **Colmena/deploy-rs** — When/if neurosys expands to multiple hosts, replace `deploy.sh` with a purpose-built fleet deployment tool.
+7. [**Colmena**](https://github.com/zhaofengli/colmena)/[**deploy-rs**](https://github.com/serokell/deploy-rs) — When/if neurosys expands to multiple hosts, replace `deploy.sh` with a purpose-built fleet deployment tool.
 
-8. **MCP messaging integrations** — Hyperion-hub's Telegram/Signal/SMS MCP servers could be interesting for agent reach-back. Low priority but unique capability.
+8. **MCP messaging integrations** — [Hyperion-hub](https://github.com/aeschylus/hyperion-hub)'s Telegram/Signal/SMS MCP servers could be interesting for agent reach-back. Low priority but unique capability.
 
 ---
 
