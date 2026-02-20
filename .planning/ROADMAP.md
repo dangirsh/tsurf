@@ -208,6 +208,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 17. Hardcore Simplicity & Security Audit | 4/4 | ✓ Complete | 2026-02-19 |
 | 18. VPS Consolidation | 0/TBD | Not started | - |
 | 19. Generate Project README | 1/1 | ✓ Complete | 2026-02-20 |
+| 20. Deep Ecosystem Research | 1/1 | ✓ Complete | 2026-02-20 |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -408,3 +409,18 @@ Plans:
 
 Plans:
 - [x] 19-01-PLAN.md — Write and validate comprehensive README.md (all modules, services, security, deployment, operations, decisions, risks)
+
+### Phase 20: Deep Ecosystem Research — What to Adopt for Neurosys
+
+**Goal:** Comprehensive research across the NixOS ecosystem to identify tools, patterns, libraries, and configurations that neurosys should adopt. 10 parallel research agents deep-dive into: Netclode (secret proxy), nix-sandbox-mcp (bubblewrap patterns), microvm.nix (agent VMs), impermanence (ephemeral root), srvos + selfhostblocks (server hardening), Mic92 + EmergentMind configs (reference patterns), MCP messaging + OpenClaw (agent reach-back), deployment tools (deploy-rs/Colmena/comin/Clan), multi-node scaling, and E2B + Docker sandboxes (VM sandboxing platforms).
+**Depends on:** Nothing (research phase)
+**Requirements:** None (research — informs future phases)
+**Success Criteria** (what must be TRUE):
+  1. All 10 research dimensions covered with concrete findings
+  2. Each finding includes: what it is, why it matters for neurosys, integration effort, and recommendation (adopt/defer/skip)
+  3. Actionable adoption roadmap with immediate, short-term, medium-term, and long-term categories
+  4. Key decisions documented with rationale
+**Plans:** 1 plan
+
+Plans:
+- [x] 20-01-SUMMARY.md — Synthesize 10 parallel agent reports into unified adoption report

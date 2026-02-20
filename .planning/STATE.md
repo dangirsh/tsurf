@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 19 COMPLETE -- Comprehensive project README created and source-validated.
+**Current focus:** Phase 20 COMPLETE -- Deep ecosystem research synthesized into adoption report.
 
 ## Current Position
 
-Phase: 19 (Generate Comprehensive Project README)
+Phase: 20 (Deep Ecosystem Research)
 Plan: 1 of 1 -- COMPLETE
-Status: Phase 19 executed. README.md updated and source-revalidated with full module/service/security/deploy/operations coverage.
-Last activity: 2026-02-20 - Revalidated and finalized plan 19-01 (`72250ef`, `ca7b352`) with refreshed summary/state artifacts
+Status: Phase 20 executed. 10 parallel research agents synthesized into unified adoption report with actionable roadmap.
+Last activity: 2026-02-20 - Synthesized 10 agent reports into 20-01-SUMMARY.md with adoption roadmap and key decisions
 
-Progress: Phase 19 complete (1/1 plans).
+Progress: Phase 20 complete (1/1 plans).
 
 ## Performance Metrics
 
@@ -148,6 +148,10 @@ Recent decisions affecting current work:
   - 17-02: SSH hardening (Tailscale-only), credential leak fix, restic backup excludes
   - 17-03: CLAUDE.md guardrails — security conventions, simplicity rules, module checklist
   - 17-04: Docker container audit, sandbox escape assessment, audit log journald dual-logging
+- **Phase 19: Generate Project README** (1 plan, completed 2026-02-20)
+  - 19-01: Comprehensive README.md with all modules, services, security, deployment, operations, decisions, risks
+- **Phase 20: Deep Ecosystem Research** (1 plan, completed 2026-02-20)
+  - 20-01: 10 parallel research agents → unified adoption report covering srvos, sandbox hardening, gVisor, deploy-rs, impermanence, secret proxy, microvm.nix, multi-node scaling, messaging, reference configs
 
 ### Roadmap Evolution
 
@@ -160,6 +164,7 @@ Recent decisions affecting current work:
 - Phase 16 added: Disaster Recovery & Backup Completeness — audit stateful paths, complete restic coverage, create tested recovery runbook (< 2hr recovery from git + B2)
 - Phase 17 added: Hardcore Simplicity & Security Audit — critical line-by-line review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering/YAGNI and security gaps. Establish repo guardrails for future agentic development.
 - Phase 19 added: Generate comprehensive project README — concise, skimmable README.md with all features, goals, constraints, deployment quick-start, operating details, design decisions, accepted risks
+- Phase 20 added: Deep Ecosystem Research — 10 parallel agents surveying sandboxing, deployment, hardening, impermanence, messaging, multi-node scaling, and reference configs
 
 ### Blockers/Concerns
 
