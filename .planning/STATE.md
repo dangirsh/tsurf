@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 Phase: 16 (Disaster Recovery & Backup Completeness)
 Plan: 2 of 2 — ALL COMPLETE
 Status: Phase 16 fully executed. Backup gaps closed (SSH host key, Docker bind mounts, Tailscale state, pg_dump hook), recovery runbook written, deployed to VPS, backup snapshot verified with dry-run restore (1911 files, 63.6 MiB).
-Last activity: 2026-02-19 - Completed Phase 16 Plans 01-02
+Last activity: 2026-02-20 - Completed quick task 9: Research similar projects to neurosys
 
 Progress: Phase 16 complete (2/2 plans).
 
@@ -156,6 +156,7 @@ Recent decisions affecting current work:
 - Phase 15 added: CrowdSec Intrusion Prevention — collaborative threat intelligence with community sharing (from Phase 13 research)
 - Phase 16 added: Disaster Recovery & Backup Completeness — audit stateful paths, complete restic coverage, create tested recovery runbook (< 2hr recovery from git + B2)
 - Phase 17 added: Hardcore Simplicity & Security Audit — critical line-by-line review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering/YAGNI and security gaps. Establish repo guardrails for future agentic development.
+- Phase 19 added: Generate comprehensive project README — concise, skimmable README.md with all features, goals, constraints, deployment quick-start, operating details, design decisions, accepted risks
 
 ### Blockers/Concerns
 
@@ -178,6 +179,7 @@ Recent decisions affecting current work:
 | 006 | Add Hue and ESPHome extraComponents to Home Assistant | 2026-02-18 | 8512fa9 | [6-add-hue-and-esphome-extracomponents-to-h](./quick/6-add-hue-and-esphome-extracomponents-to-h/) |
 | 007 | Configure restic backups to Backblaze B2 | 2026-02-19 | 1536d80 | [7-configure-restic-backups-to-backblaze-b2](./quick/7-configure-restic-backups-to-backblaze-b2/) |
 | 008 | Switch restic to blanket root backup with exclusions | 2026-02-19 | 6483029 | [8-switch-restic-backups-from-hard-coded-pa](./quick/8-switch-restic-backups-from-hard-coded-pa/) |
+| 009 | Research similar projects to neurosys (dev env + VPS + agentic dev) | 2026-02-20 | pending | [9-research-similar-projects-to-neurosys-fo](./quick/9-research-similar-projects-to-neurosys-fo/) |
 
 ### Quick Tasks Pending (from Phase 13)
 
