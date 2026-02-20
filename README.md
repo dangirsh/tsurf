@@ -1,11 +1,13 @@
 # neurosys -- NixOS configuration for the neurosys server
 
+Single entry point for deploying, operating, and recovering the `neurosys` host.
+
 ## Overview
 - Declarative NixOS infrastructure for the `neurosys` host, built with flakes and host modules.
-- Manages base OS, networking/security, users, secrets, containers, observability, backups, and operator tooling.
+- Manages networking/security, users, secrets, Docker workloads, monitoring, and backups for a Contabo VPS deployment.
 - Uses `home-manager` for user environment and `sops-nix` for encrypted secret delivery.
-- Runs Docker workloads plus native services (Home Assistant, Syncthing, Prometheus, Homepage).
-- Includes agent compute tooling (Claude Code, Codex, `agent-spawn`, `zmx`, rootless Podman).
+- Runs Docker services plus native NixOS services (Home Assistant, Syncthing, Prometheus, Homepage).
+- Includes agent compute tooling (`claude-code`, `codex`, `agent-spawn`, `zmx`, rootless Podman) for day-to-day operations.
 - Target audience: operators who need to deploy, maintain, and recover this server quickly.
 
 ## Infrastructure
@@ -142,6 +144,10 @@ ssh root@neurosys "curl -fsS http://127.0.0.1:9090/-/healthy"
 ## Operations
 ### Deploy
 Use `scripts/deploy.sh` for routine rollout.
+
+```bash
+./scripts/deploy.sh [--mode local|remote] [--target user@host] [--skip-update]
+```
 
 ```bash
 # Default deploy (local build -> remote switch)
@@ -315,8 +321,6 @@ Decisions below are extracted from `@decision` annotations in source modules and
 | `RESTIC-03` | Restic credentials are provided through sops template and secret files. | Keep credentials out of plaintext config/runtime arguments. |
 | `RESTIC-04` | Run `pg_dumpall` pre-backup hook. | Capture consistent logical DB snapshot alongside filesystem backup. |
 | `RESTIC-05` | Backup scope is blanket `/` with exclusions and `.nobackup` opt-out. | New stateful paths are protected by default without recurring config edits. |
-| `DPLY-01` | Deployment is manual via script with full `nixos-rebuild switch`. | Keep operator control and avoid fragmented deploy paths. |
-| `DPLY-02` | Deploy verifies container health and uses local+remote locking. | Prevent concurrent rollout conflicts and surface post-deploy failure quickly. |
 
 ## Accepted Risks
 Accepted risks documented in `CLAUDE.md` plus sandbox-related design choices.
@@ -330,7 +334,6 @@ Accepted risks documented in `CLAUDE.md` plus sandbox-related design choices.
 | `SEC11` | Custom binaries (`zmx`, `cass`) are pre-built artifacts without signature verification. | Pinned SHA256 hashes enforce deterministic artifact integrity. |
 | `SANDBOX-CHOICE-01` | Sandbox allows read access to sibling repos under `/data/projects`. | Deliberate tradeoff to support cross-repo operator/agent workflows. |
 | `SANDBOX-CHOICE-02` | Sandbox does not block outbound network by default. | Required for API and git workflows; metadata endpoint is still blocked. |
-| `SEC-17-04` | User-writable spawn log file can be tampered with. | Spawn events are mirrored to journald for stronger audit trail. |
 
 ## Project Structure
 Authoritative high-level layout (aligned to `CLAUDE.md`):
