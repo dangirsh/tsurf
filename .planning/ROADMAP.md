@@ -30,6 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 15: CrowdSec Intrusion Prevention** - Collaborative threat intelligence with community sharing, complementing fail2ban for public-facing services
 - [x] **Phase 17: Hardcore Simplicity & Security Audit** - Critical review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering and security gaps. Establish guardrails for future agentic development.
 - [ ] **Phase 18: VPS Consolidation** - Merge acfs dev environment into neurosys. Single VPS for dev, personal services, prod. Component audit, security model, self-deploy ergonomics, state tracking, Parts management interface architecture.
+- [ ] **Phase 19: Generate Comprehensive Project README** - Concise, skimmable README.md enumerating all key features, goals, assumptions, constraints, and preferences. Bullets & tables over prose. Deployment quick-start, operating details, design decisions, accepted risks.
 
 ## Phase Details
 
@@ -206,6 +207,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 16. Disaster Recovery & Backup Completeness | 2/2 | ✓ Complete | 2026-02-19 |
 | 17. Hardcore Simplicity & Security Audit | 4/4 | ✓ Complete | 2026-02-19 |
 | 18. VPS Consolidation | 0/TBD | Not started | - |
+| 19. Generate Project README | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -390,4 +392,19 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 18 to break down)
->>>>>>> main
+
+### Phase 19: Generate Comprehensive Project README
+
+**Goal:** Create a concise, skimmable README.md that enumerates all key features, goals, assumptions, constraints, and preferences — gleaned from `.planning/` docs and the actual implementation. Prefer bullets and tables over long prose. Include: project overview, architecture summary, all services/modules, security model, deployment quick-start for first-timers, key operating details (deploy, backup, monitoring, secrets management), design decisions table, and accepted risks. Target audience: someone who needs to understand and operate this system quickly.
+**Depends on:** Nothing (documentation — can run anytime)
+**Requirements:** None (documentation)
+**Success Criteria** (what must be TRUE):
+  1. README.md exists at repo root with complete, accurate content covering all modules and services
+  2. First-time deployer can follow the quick-start section to deploy the system
+  3. Key operating details (deploy, backup, monitoring, secrets) are documented with concrete commands
+  4. Design decisions and accepted risks are enumerated in table format
+  5. Content is skimmable — bullets, tables, and headers over prose paragraphs
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 19 to break down)
