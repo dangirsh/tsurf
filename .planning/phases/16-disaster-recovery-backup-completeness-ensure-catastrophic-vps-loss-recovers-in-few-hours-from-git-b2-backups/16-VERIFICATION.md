@@ -8,7 +8,7 @@ re_verification: false
 
 # Phase 16: Disaster Recovery & Backup Completeness -- Verification Report
 
-**Phase Goal:** Catastrophic VPS loss recovers in < few hours from agent-neurosys git state + Backblaze B2 backup. Audit all stateful paths, add missing ones to restic. Document what's restorable vs what needs manual re-auth. Create and test a recovery runbook.
+**Phase Goal:** Catastrophic VPS loss recovers in < few hours from neurosys git state + Backblaze B2 backup. Audit all stateful paths, add missing ones to restic. Document what's restorable vs what needs manual re-auth. Create and test a recovery runbook.
 
 **Verified:** 2026-02-19T13:15:00Z
 **Status:** PASSED

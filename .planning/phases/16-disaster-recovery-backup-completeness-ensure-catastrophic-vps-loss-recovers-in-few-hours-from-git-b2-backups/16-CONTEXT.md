@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Ensure catastrophic VPS loss recovers in < 2 hours from `agent-neurosys` git state + Backblaze B2 backups. Audit all stateful paths, close backup gaps, create a tested recovery runbook. This phase does NOT add new services or change backup infrastructure — it completes and documents what's already in place.
+Ensure catastrophic VPS loss recovers in < 2 hours from `neurosys` git state + Backblaze B2 backups. Audit all stateful paths, close backup gaps, create a tested recovery runbook. This phase does NOT add new services or change backup infrastructure — it completes and documents what's already in place.
 
 </domain>
 

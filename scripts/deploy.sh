@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/deploy.sh — Deploy agent-neurosys NixOS config to neurosys
+# scripts/deploy.sh — Deploy neurosys NixOS config to neurosys
 #
 # Modes:
 #   --mode local   (default) Build locally, push + switch remotely
@@ -41,7 +41,7 @@ usage() {
   cat <<USAGE
 Usage: $(basename "$0") [OPTIONS]
 
-Deploy agent-neurosys NixOS config to neurosys server.
+Deploy neurosys NixOS config to neurosys server.
 
 Options:
   --mode local    Build locally, push closure, switch remotely (default)
@@ -143,7 +143,7 @@ else
   echo "==> Deploying via remote rebuild on $TARGET..."
   ssh "$TARGET" bash -s <<'REMOTE'
     set -euo pipefail
-    cd /data/projects/agent-neurosys
+    cd /data/projects/neurosys
     git pull --ff-only
     nixos-rebuild switch --flake .#neurosys
 REMOTE

@@ -471,7 +471,7 @@ The `backupPrepareCommand` approach is the right one because:
 5. `/var/lib/tailscale/tailscaled.state` -- Tailscale device identity
 6. `/var/lib/hass/home-assistant_v2.db` -- Home Assistant database
 7. `/home/dangirsh/.config/syncthing/config.xml` -- Syncthing configuration
-8. `/data/projects/agent-neurosys/flake.nix` -- Confirms code repos are in backup
+8. `/data/projects/neurosys/flake.nix` -- Confirms code repos are in backup
 
 ### Runbook Section Organization
 **Recommendation:**
@@ -520,9 +520,9 @@ The `backupPrepareCommand` approach is the right one because:
 ## Sources
 
 ### Primary (HIGH confidence)
-- `/data/projects/agent-neurosys/modules/restic.nix` -- Current backup configuration
-- `/data/projects/agent-neurosys/modules/secrets.nix` -- sops-nix configuration with age key path
-- `/data/projects/agent-neurosys/.sops.yaml` -- Age key references (admin + host_acfs)
+- `/data/projects/neurosys/modules/restic.nix` -- Current backup configuration
+- `/data/projects/neurosys/modules/secrets.nix` -- sops-nix configuration with age key path
+- `/data/projects/neurosys/.sops.yaml` -- Age key references (admin + host_acfs)
 - `/data/projects/claw-swap/nix/module.nix` -- Docker volume mounts (host bind paths)
 - `/data/projects/parts/nix/module.nix` -- Docker volume mounts (host bind paths)
 - [NixOS restic module source](https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/backup/restic.nix) -- backupPrepareCommand/backupCleanupCommand implementation

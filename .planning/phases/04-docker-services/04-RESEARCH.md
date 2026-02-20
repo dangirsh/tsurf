@@ -14,7 +14,7 @@
 - Agent-neurosys imports it as a flake input
 - Docker images built with Nix dockerTools (not pulled from registry) -- reproducible, same as parts
 - PostgreSQL stays as a Docker container (not NixOS-native) -- keep current approach
-- Service-specific config (containers, networks, secrets) lives in the claw-swap repo, not agent-neurosys
+- Service-specific config (containers, networks, secrets) lives in the claw-swap repo, not neurosys
 
 #### Container resource limits
 - Generous headroom: 512MB for lightweight containers, 2GB for Java/heavy ones (47GB RAM VPS)
@@ -29,7 +29,7 @@
 - DROPPED from Phase 4 -- not needed
 
 ### Claude's Discretion
-- Caddy TLS/domain config ownership (claw-swap repo vs agent-neurosys)
+- Caddy TLS/domain config ownership (claw-swap repo vs neurosys)
 - Exact CPU/memory values per container -- start generous, document in config
 - Container restart max retry count
 
@@ -99,7 +99,7 @@ claw-swap/
 
 ### Pattern 1: Cross-Flake Module (Same as Parts)
 
-**What:** claw-swap exports a NixOS module that agent-neurosys imports as a flake input.
+**What:** claw-swap exports a NixOS module that neurosys imports as a flake input.
 **When to use:** Always -- this is a locked decision.
 
 claw-swap `flake.nix`:
@@ -120,7 +120,7 @@ claw-swap `flake.nix`:
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
   in {
-    # NixOS module for agent-neurosys to import
+    # NixOS module for neurosys to import
     nixosModules.default = import ./nix/module.nix { inherit self sops-nix; };
 
     # Standalone image package for testing
@@ -295,11 +295,11 @@ sops.templates."claw-swap-db-env" = {
 
 ### Anti-Patterns to Avoid
 
-- **Setting `sops.defaultSopsFile` in the claw-swap module:** Conflicts with agent-neurosys' own default. Use per-secret `sopsFile` overrides (same lesson as parts).
+- **Setting `sops.defaultSopsFile` in the claw-swap module:** Conflicts with neurosys' own default. Use per-secret `sopsFile` overrides (same lesson as parts).
 - **Importing sops-nix module in claw-swap:** Agent-neurosys already imports it. Claw-swap module just declares `sops.secrets` entries.
 - **Using `buildLayeredImage` for PostgreSQL/Caddy:** These images have complex init logic. Use `pullImage` with digest pinning.
 - **Hardcoding secrets in environment:** Use `sops.templates` + `environmentFiles`, never plaintext in Nix config.
-- **Declaring `virtualisation.docker.enable` in claw-swap module:** Docker engine is system-level config owned by agent-neurosys.
+- **Declaring `virtualisation.docker.enable` in claw-swap module:** Docker engine is system-level config owned by neurosys.
 - **Forgetting `--tmpfs` with `--read-only`:** PostgreSQL and Node.js apps need writable /tmp. PostgreSQL also needs /run/postgresql.
 - **Missing `--shm-size` for PostgreSQL:** Default Docker shared memory (64MB) causes PostgreSQL performance issues and crashes under load.
 
@@ -310,7 +310,7 @@ sops.templates."claw-swap-db-env" = {
 **Recommendation: Caddy container and Caddyfile live in the claw-swap repo's NixOS module.**
 
 Rationale:
-- The user decision says "service-specific config lives in the claw-swap repo, not agent-neurosys"
+- The user decision says "service-specific config lives in the claw-swap repo, not neurosys"
 - Caddy is service-specific -- it reverse-proxies to the claw-swap app and terminates TLS for `claw-swap.com`
 - The Caddyfile is tightly coupled to the app's port and routing structure
 - If another service needs its own Caddy/reverse proxy, it would declare its own
@@ -429,8 +429,8 @@ nix-prefetch-docker --image-name postgres --image-tag 16-alpine --quiet
 ### Pitfall 8: sops-nix Double Module Import (Same as Parts)
 
 **What goes wrong:** NixOS evaluation fails with "option 'sops' already declared".
-**Why it happens:** Both agent-neurosys and claw-swap try to import `sops-nix.nixosModules.sops`.
-**How to avoid:** Only agent-neurosys imports the sops-nix module. The claw-swap module just declares `sops.secrets` entries. Use `inputs.sops-nix.follows = "sops-nix"` to share the same instance.
+**Why it happens:** Both neurosys and claw-swap try to import `sops-nix.nixosModules.sops`.
+**How to avoid:** Only neurosys imports the sops-nix module. The claw-swap module just declares `sops.secrets` entries. Use `inputs.sops-nix.follows = "sops-nix"` to share the same instance.
 
 ## Code Examples
 
@@ -828,7 +828,7 @@ claw-swap-world-id-app-id: app_69e5d2d8b8c90c82122276386f6778b2
 
 ### Primary (HIGH confidence)
 - Codebase inspection: `/data/projects/claw-swap/` -- Dockerfile, package.json, src/, deploy/secrets/, .planning/ examined directly
-- Codebase inspection: `/data/projects/agent-neurosys/` -- all modules, flake.nix, secrets, .sops.yaml examined directly
+- Codebase inspection: `/data/projects/neurosys/` -- all modules, flake.nix, secrets, .sops.yaml examined directly
 - Codebase inspection: `/data/projects/parts/` -- flake.nix, nix/module.nix, nix/parts-agent.nix, nix/parts-tools.nix examined directly (reference implementation)
 - Phase 9 research: `09-RESEARCH.md` -- Docker container hardening executive summary with code patterns
 - Phase 3.1 research: `03.1-RESEARCH.md` -- cross-flake module pattern, oci-containers, sops-nix integration

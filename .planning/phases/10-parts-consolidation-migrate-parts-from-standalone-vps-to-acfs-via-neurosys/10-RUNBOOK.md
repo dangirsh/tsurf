@@ -6,7 +6,7 @@
 
 - SSH access to `root@acfs` via Tailscale (`ssh root@acfs` must work)
 - Nix installed with flakes enabled
-- agent-neurosys repo checked out
+- neurosys repo checked out
 - GitHub access token configured in `~/.config/nix/nix.conf` (for private repos)
 
 ## Deploy Commands
@@ -25,7 +25,7 @@ Updates the `parts` flake input to latest `main`, builds the NixOS system locall
 ./scripts/deploy.sh --skip-update
 ```
 
-Skips `nix flake update parts`. Use when only agent-neurosys NixOS config changed (not parts).
+Skips `nix flake update parts`. Use when only neurosys NixOS config changed (not parts).
 
 ### Deploy from the server itself
 

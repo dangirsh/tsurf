@@ -11,7 +11,7 @@
 
 #### Deployment trigger
 - Manual CLI command only -- no CI/CD, no webhooks, no automation
-- Deploy script lives at `scripts/deploy.sh` in the agent-neurosys repo
+- Deploy script lives at `scripts/deploy.sh` in the neurosys repo
 - Supports two modes: local-push (build locally, push closure, switch remotely) and remote-self-deploy (SSH in, run on server)
 - Every deploy is a full `nixos-rebuild switch` -- no partial/container-only deploys
 - NixOS handles incrementality natively (only changed derivations rebuild, only affected containers restart)
@@ -42,7 +42,7 @@
 
 ## Summary
 
-This phase wraps the existing NixOS flake integration (from Phase 3.1) in an operational deploy script. The infrastructure is already built: parts exports `nixosModules.default`, agent-neurosys imports it, Docker images are built via `dockerTools.buildLayeredImage`, and secrets flow through sops-nix. What's missing is the operational workflow -- a single command that updates the parts input, builds the system, pushes the closure to the server, activates it, and verifies that containers came up healthy.
+This phase wraps the existing NixOS flake integration (from Phase 3.1) in an operational deploy script. The infrastructure is already built: parts exports `nixosModules.default`, neurosys imports it, Docker images are built via `dockerTools.buildLayeredImage`, and secrets flow through sops-nix. What's missing is the operational workflow -- a single command that updates the parts input, builds the system, pushes the closure to the server, activates it, and verifies that containers came up healthy.
 
 The primary technical challenge is that the build machine is Ubuntu (not NixOS), so `nixos-rebuild` is not natively available. The established pattern from Phase 2 (DEPLOY-02) uses `nix copy --to ssh://` + remote `switch-to-configuration switch`. However, `nixos-rebuild` can be obtained on non-NixOS machines via `nix shell nixpkgs#nixos-rebuild`, which is the cleaner approach since it handles building, copying, and switching atomically. The second challenge is the flake input type: both `parts` and `claw-swap` currently use `path:` inputs (local filesystem paths), which must change to `github:` inputs for the deploy pipeline to work from the server or any other machine. The `path:` inputs only resolve on the local development machine where `/data/projects/parts` exists.
 
@@ -86,7 +86,7 @@ scripts/
   deploy.sh           # Main deploy script (both modes)
 ```
 
-The script is a single file in the agent-neurosys repo. No library dependencies, no framework.
+The script is a single file in the neurosys repo. No library dependencies, no framework.
 
 ### Pattern 1: Local-Push Mode (nixos-rebuild --target-host)
 
@@ -126,7 +126,7 @@ nix shell nixpkgs#nixos-rebuild -c \
 ```bash
 # SSH into server and run remotely
 ssh root@acfs "
-  cd /data/projects/agent-neurosys && \
+  cd /data/projects/neurosys && \
   git pull && \
   nix flake update parts && \
   nixos-rebuild switch --flake .#acfs
@@ -134,10 +134,10 @@ ssh root@acfs "
 ```
 
 **Key details:**
-- Requires the agent-neurosys repo to be cloned on the server (already done via repos.nix activation script)
+- Requires the neurosys repo to be cloned on the server (already done via repos.nix activation script)
 - Requires `github:` input for parts (so the server can fetch parts from GitHub, not from a local path)
 - Server has nixos-rebuild natively (it IS a NixOS machine)
-- The `git pull` fetches the latest agent-neurosys config from GitHub
+- The `git pull` fetches the latest neurosys config from GitHub
 
 ### Pattern 3: Flake Input Update (parts only)
 
@@ -185,7 +185,7 @@ done
 
 - **Using `nix flake update` (no args) during deploys:** This updates ALL inputs, not just parts. Nixpkgs updates can break the build. Always use `nix flake update parts` to update only the parts input.
 - **Using `path:` inputs for production:** `path:` resolves to a local filesystem path. The deploy script on the server cannot resolve `/data/projects/parts` to the same content as the dev machine. Use `github:` for deployable configs.
-- **Building on the server without git pull:** If the agent-neurosys repo on the server is stale, the NixOS config won't include recent changes. Always `git pull` before `nixos-rebuild` in remote-self-deploy mode.
+- **Building on the server without git pull:** If the neurosys repo on the server is stale, the NixOS config won't include recent changes. Always `git pull` before `nixos-rebuild` in remote-self-deploy mode.
 - **Checking container health immediately after switch:** Containers may take a few seconds to start (especially if Docker images need loading). Add a brief delay or polling loop.
 - **Committing flake.lock changes from the deploy script:** The `nix flake update parts` step modifies flake.lock. This is a deployment concern, not a source change. The script should update, build, and deploy, but NOT commit flake.lock automatically. The user decides when to commit the lock update.
 
@@ -251,7 +251,7 @@ done
 
 ```bash
 #!/usr/bin/env bash
-# scripts/deploy.sh -- Deploy agent-neurosys NixOS config to acfs
+# scripts/deploy.sh -- Deploy neurosys NixOS config to acfs
 set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -312,7 +312,7 @@ fi
 # Remote mode: SSH in, pull, update, rebuild on the server
 ssh "$TARGET" bash -s <<'REMOTE'
   set -euo pipefail
-  cd /data/projects/agent-neurosys
+  cd /data/projects/neurosys
   git pull --ff-only
   nix flake update parts
   nixos-rebuild switch --flake .#acfs
@@ -415,7 +415,7 @@ The parts NixOS module (`/data/projects/parts/nix/module.nix`) declares:
 - Systemd ordering (containers after networks)
 - tmpfiles rules for host directories (/var/lib/parts/*)
 
-This module is already imported in agent-neurosys flake.nix as `inputs.parts.nixosModules.default`.
+This module is already imported in neurosys flake.nix as `inputs.parts.nixosModules.default`.
 
 ## Open Questions
 
@@ -437,11 +437,11 @@ This module is already imported in agent-neurosys flake.nix as `inputs.parts.nix
 ## Sources
 
 ### Primary (HIGH confidence)
-- **Codebase investigation:** `/data/projects/agent-neurosys/flake.nix` -- current flake inputs, module imports
+- **Codebase investigation:** `/data/projects/neurosys/flake.nix` -- current flake inputs, module imports
 - **Codebase investigation:** `/data/projects/parts/nix/module.nix` -- parts NixOS module structure (200 lines)
 - **Codebase investigation:** `/data/projects/parts/flake.nix` -- parts flake outputs
-- **Codebase investigation:** `/data/projects/agent-neurosys/flake.lock` -- current input lock state
-- **Codebase investigation:** `/data/projects/agent-neurosys/.planning/phases/02-bootable-base-system/02-02-SUMMARY.md` -- DEPLOY-02, DEPLOY-03 decisions
+- **Codebase investigation:** `/data/projects/neurosys/flake.lock` -- current input lock state
+- **Codebase investigation:** `/data/projects/neurosys/.planning/phases/02-bootable-base-system/02-02-SUMMARY.md` -- DEPLOY-02, DEPLOY-03 decisions
 - **Codebase investigation:** Parts repo remote = `github:dangirsh/personal-agent-runtime` (NOT `dangirsh/parts`)
 - **Codebase investigation:** Build machine = Ubuntu with Nix 2.33.1, no nixos-rebuild
 

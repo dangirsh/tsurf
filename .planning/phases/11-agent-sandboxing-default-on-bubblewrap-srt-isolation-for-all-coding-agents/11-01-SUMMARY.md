@@ -4,7 +4,7 @@ plan: 11-01
 subsystem: infra
 tags: [bubblewrap, podman, nftables, sops-nix, systemd-run, sandbox]
 requires:
-  - phase: 10-parts-consolidation-migrate-parts-from-standalone-vps-to-acfs-via-agent-neurosys
+  - phase: 10-parts-consolidation-migrate-parts-from-standalone-vps-to-acfs-via-neurosys
     provides: deployable NixOS baseline with agent tooling modules
 provides:
   - Default-on bubblewrap isolation for `agent-spawn` sessions

@@ -280,7 +280,7 @@ services.fail2ban = {
 **Source:** [sops-nix README](https://github.com/Mic92/sops-nix), [Michael Stapelberg: Secret Management with sops-nix](https://michael.stapelberg.ch/posts/2025-08-24-secret-management-with-sops-nix/)
 
 **Key details:**
-- All secrets use the `defaultSopsFile` (secrets/acfs.yaml) since they are system-level secrets owned by agent-neurosys, not project-level secrets (those use per-secret `sopsFile` overrides, as parts already does).
+- All secrets use the `defaultSopsFile` (secrets/acfs.yaml) since they are system-level secrets owned by neurosys, not project-level secrets (those use per-secret `sopsFile` overrides, as parts already does).
 - `restartUnits` on tailscale-authkey ensures the Tailscale daemon restarts if the key changes.
 - B2 credentials are declared now but consumed in Phase 7. Declaring them early means they will be decrypted and available at `/run/secrets/b2-account-id` etc. when Phase 7 needs them.
 - The actual encrypted values must be added to `secrets/acfs.yaml` using `sops secrets/acfs.yaml` (requires the admin age private key).

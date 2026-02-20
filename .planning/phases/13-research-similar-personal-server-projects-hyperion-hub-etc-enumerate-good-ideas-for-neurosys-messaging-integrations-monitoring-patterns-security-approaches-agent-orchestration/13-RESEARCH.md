@@ -6,11 +6,11 @@
 
 ## Summary
 
-This phase surveys the ecosystem of personal/homelab server projects (both NixOS-specific and general self-hosted) to identify good ideas for agent-neurosys across four domains: messaging integrations, monitoring patterns, security approaches, and agent orchestration. The research covers real-world NixOS homelab configurations (rwiankowski/homeserver-nixos, badele/nix-homelab, arsfeld's multi-host setup), agent sandboxing approaches (Stapelberg's microvm.nix, rymcg's immutable VMs, the sandbox-comparison survey), the 2026 homelab stack consensus, and the emerging multi-agent orchestration landscape.
+This phase surveys the ecosystem of personal/homelab server projects (both NixOS-specific and general self-hosted) to identify good ideas for neurosys across four domains: messaging integrations, monitoring patterns, security approaches, and agent orchestration. The research covers real-world NixOS homelab configurations (rwiankowski/homeserver-nixos, badele/nix-homelab, arsfeld's multi-host setup), agent sandboxing approaches (Stapelberg's microvm.nix, rymcg's immutable VMs, the sandbox-comparison survey), the 2026 homelab stack consensus, and the emerging multi-agent orchestration landscape.
 
 The project "hyperion-hub" referenced in the phase name does not appear to be a specific identifiable open-source project. The closest matches are agiliq/hyperion (a Pingdom alternative for uptime monitoring) and the Hyperion ambient lighting project -- neither is a personal server management system. Research proceeded by surveying the broader ecosystem instead.
 
-**Primary recommendation:** agent-neurosys should prioritize adding (1) a lightweight monitoring stack (Prometheus + node_exporter + Grafana + ntfy for alerts), (2) push notifications via ntfy for server events, (3) CrowdSec + endlessh-go for security hardening, and (4) evaluate Claude Code's native Agent Teams feature before building custom orchestration.
+**Primary recommendation:** neurosys should prioritize adding (1) a lightweight monitoring stack (Prometheus + node_exporter + Grafana + ntfy for alerts), (2) push notifications via ntfy for server events, (3) CrowdSec + endlessh-go for security hardening, and (4) evaluate Claude Code's native Agent Teams feature before building custom orchestration.
 
 ## Reference Projects
 
@@ -41,7 +41,7 @@ The project "hyperion-hub" referenced in the phase name does not appear to be a 
 **What:** Declarative system monitoring with time-series metrics collection, dashboards, and alerting.
 **Confidence:** HIGH (first-class NixOS modules exist for all components)
 **From:** shinbunbun/nixos-observability, rwiankowski/homeserver-nixos, 2026 homelab consensus
-**agent-neurosys fit:** Single-server deployment. node_exporter scrapes CPU, memory, disk, network. Prometheus stores metrics. Grafana visualizes. All configured declaratively in NixOS.
+**neurosys fit:** Single-server deployment. node_exporter scrapes CPU, memory, disk, network. Prometheus stores metrics. Grafana visualizes. All configured declaratively in NixOS.
 **Recommendation:** USE. Start minimal: node_exporter + Prometheus + Grafana. Add exporters as needed.
 
 **NixOS pattern:**
@@ -75,21 +75,21 @@ The project "hyperion-hub" referenced in the phase name does not appear to be a 
 **What:** Lightweight, self-hosted service status page with push notifications.
 **Confidence:** HIGH (nixpkgs package exists, 2026 homelab survey consensus pick)
 **From:** 2026 homelab stack survey
-**agent-neurosys fit:** Monitor Docker containers (parts-agent, parts-tools, claw-swap), Syncthing, Home Assistant, SSH. Simple web UI dashboard.
+**neurosys fit:** Monitor Docker containers (parts-agent, parts-tools, claw-swap), Syncthing, Home Assistant, SSH. Simple web UI dashboard.
 **Recommendation:** CONSIDER. Useful if you want a simple "is everything running?" dashboard. Overlaps somewhat with Prometheus alerting but much simpler to set up.
 
 #### Idea 1.3: VictoriaMetrics as Prometheus Alternative
 **What:** Lighter-weight, single-binary time-series database compatible with Prometheus scrape format and Grafana.
 **Confidence:** MEDIUM (NixOS package exists but less community documentation for NixOS-specific setup)
 **From:** 2026 homelab stack survey, community recommendations
-**agent-neurosys fit:** If Prometheus memory/CPU overhead is a concern on the VPS. Drop-in replacement.
+**neurosys fit:** If Prometheus memory/CPU overhead is a concern on the VPS. Drop-in replacement.
 **Recommendation:** DEFER. Start with Prometheus. VictoriaMetrics is the escape hatch if resource usage becomes a problem.
 
 #### Idea 1.4: Loki + Alloy for Log Aggregation
 **What:** Centralized log search and aggregation. Loki stores logs, Grafana Alloy collects them (replacing deprecated Promtail).
 **Confidence:** MEDIUM (Loki has NixOS module; Alloy is newer and NixOS support uncertain)
 **From:** shinbunbun/nixos-observability, Grafana ecosystem
-**agent-neurosys fit:** Single server means journald is already centralized. Loki adds persistent log search in Grafana. Most useful for Docker container logs and agent audit logs.
+**neurosys fit:** Single server means journald is already centralized. Loki adds persistent log search in Grafana. Most useful for Docker container logs and agent audit logs.
 **Critical note:** Promtail is deprecated (EOL March 2026). Grafana Alloy is the replacement. Check NixOS packaging before committing.
 **Recommendation:** CONSIDER for Phase 14+. Not urgent for single-server setup where `journalctl` works fine.
 
@@ -99,7 +99,7 @@ The project "hyperion-hub" referenced in the phase name does not appear to be a 
 **What:** Simple HTTP pub-sub notification service. Self-hosted, no signup required. Supports phone, desktop, email notifications via REST API.
 **Confidence:** HIGH (NixOS module exists: `services.ntfy-sh`)
 **From:** ntfy.sh, alertmanager-ntfy project, 2026 homelab consensus
-**agent-neurosys fit:** Notify on: deploy success/failure, agent completion, backup status, service health changes, security events (fail2ban bans). Single `curl` command to send. Phone app available for iOS/Android.
+**neurosys fit:** Notify on: deploy success/failure, agent completion, backup status, service health changes, security events (fail2ban bans). Single `curl` command to send. Phone app available for iOS/Android.
 **Recommendation:** USE. Lightweight, self-hosted, integrates with everything via HTTP POST.
 
 **Integration points:**
@@ -130,14 +130,14 @@ The project "hyperion-hub" referenced in the phase name does not appear to be a 
 **What:** Send alerts to Telegram via bot API.
 **Confidence:** HIGH (well-documented, Alertmanager has native Telegram receiver)
 **From:** Community patterns, Alertmanager native support
-**agent-neurosys fit:** If user already uses Telegram. Alertmanager has built-in Telegram receiver config.
+**neurosys fit:** If user already uses Telegram. Alertmanager has built-in Telegram receiver config.
 **Recommendation:** CONSIDER as alternative to ntfy. ntfy is more flexible (HTTP API, phone app, self-hosted). Telegram requires internet connectivity and external dependency.
 
 #### Idea 2.3: Home Assistant as Notification Hub
 **What:** Use HA's automation engine to route notifications from multiple sources.
-**Confidence:** MEDIUM (HA already deployed on agent-neurosys, but notification integrations need HA UI config)
+**Confidence:** MEDIUM (HA already deployed on neurosys, but notification integrations need HA UI config)
 **From:** Home Assistant 2025-2026 releases, AI Task integration
-**agent-neurosys fit:** HA is already running. Could route ntfy notifications, trigger automations based on server state. HA's new AI Task integration (2025.8+) can generate structured data from AI, usable in automations.
+**neurosys fit:** HA is already running. Could route ntfy notifications, trigger automations based on server state. HA's new AI Task integration (2025.8+) can generate structured data from AI, usable in automations.
 **Recommendation:** DEFER. Useful later once monitoring and ntfy are in place. HA becomes the orchestration layer for cross-service automation.
 
 ### Category 3: Security Approaches
@@ -146,35 +146,35 @@ The project "hyperion-hub" referenced in the phase name does not appear to be a 
 **What:** Real-time log analysis + collaborative threat intelligence. Detects brute force, port scans, web exploits. Shares blocklists with community.
 **Confidence:** MEDIUM (NixOS community module exists as flake, not in mainline nixpkgs)
 **From:** rwiankowski/homeserver-nixos, cybersecurity tools survey, CrowdSec community
-**agent-neurosys fit:** Complements existing fail2ban. CrowdSec adds collaborative threat intelligence (shared blocklists). Analyzes fail2ban-style patterns plus web server logs if Caddy/nginx are added.
+**neurosys fit:** Complements existing fail2ban. CrowdSec adds collaborative threat intelligence (shared blocklists). Analyzes fail2ban-style patterns plus web server logs if Caddy/nginx are added.
 **Recommendation:** CONSIDER. Adds value over fail2ban via collaborative blocklists. Community NixOS module available. Deploy alongside fail2ban initially, migrate later if desired.
 
 #### Idea 3.2: endlessh-go SSH Tarpit
 **What:** SSH tarpit that wastes attacker resources by slowly sending an infinite SSH banner.
 **Confidence:** HIGH (NixOS module exists: `services.endlessh-go`)
 **From:** NixOS security wiki, cybersecurity tools survey
-**agent-neurosys fit:** Move real SSH to non-standard port (e.g., 2222), bind endlessh-go to port 22. Attackers waste time on the tarpit. Minimal resource usage.
+**neurosys fit:** Move real SSH to non-standard port (e.g., 2222), bind endlessh-go to port 22. Attackers waste time on the tarpit. Minimal resource usage.
 **Recommendation:** CONSIDER. Low effort, high entertainment value. Pairs well with CrowdSec (endlessh-go logs feed CrowdSec for threat intel). Only useful if SSH is exposed publicly (currently Tailscale-only access reduces the attack surface).
 
 #### Idea 3.3: Authentik/Authelia SSO
 **What:** Single sign-on portal for all web services behind a reverse proxy.
 **Confidence:** MEDIUM (NixOS support exists but requires reverse proxy setup)
 **From:** rwiankowski/homeserver-nixos, arsfeld's homelab, 2026 homelab consensus
-**agent-neurosys fit:** Protects Grafana, Syncthing, Home Assistant, Uptime Kuma behind a single login. Authelia is lightweight (forward-auth proxy companion). Authentik is full OIDC provider.
-**Recommendation:** DEFER. Only valuable when multiple web services are exposed. Currently, services are Tailscale-only which provides implicit authentication. If services ever become internet-facing, Authelia is the simpler choice for agent-neurosys's scale.
+**neurosys fit:** Protects Grafana, Syncthing, Home Assistant, Uptime Kuma behind a single login. Authelia is lightweight (forward-auth proxy companion). Authentik is full OIDC provider.
+**Recommendation:** DEFER. Only valuable when multiple web services are exposed. Currently, services are Tailscale-only which provides implicit authentication. If services ever become internet-facing, Authelia is the simpler choice for neurosys's scale.
 
 #### Idea 3.4: NixOS Hardened Profile
 **What:** NixOS ships a `profiles/hardened.nix` that enables kernel hardening, restricts modules, enables apparmor.
 **Confidence:** HIGH (built into NixOS)
 **From:** NixOS security wiki, hardening guides
-**agent-neurosys fit:** Phase 12 (security audit) should evaluate which hardened profile options are compatible with the agent workload. Some options (e.g., `security.lockKernelModules`) may conflict with Docker.
+**neurosys fit:** Phase 12 (security audit) should evaluate which hardened profile options are compatible with the agent workload. Some options (e.g., `security.lockKernelModules`) may conflict with Docker.
 **Recommendation:** EVALUATE in Phase 12. Don't adopt blindly -- test each option against agent-spawn + Docker + Podman compatibility.
 
 #### Idea 3.5: Headscale (Self-Hosted Tailscale Control)
 **What:** Open-source, self-hosted implementation of the Tailscale coordination server.
 **Confidence:** HIGH (active project, NixOS module exists)
 **From:** 2026 homelab stack, multiple homelab configs
-**agent-neurosys fit:** Eliminates dependency on Tailscale's hosted control plane. Full privacy. Uses official Tailscale clients.
+**neurosys fit:** Eliminates dependency on Tailscale's hosted control plane. Full privacy. Uses official Tailscale clients.
 **Recommendation:** CONSIDER for future. Tailscale's free tier is sufficient for personal use. Headscale adds operational complexity (running your own coordination server). Worth evaluating if Tailscale's pricing or policies change, or if privacy requirements escalate.
 
 ### Category 4: Agent Orchestration
@@ -183,35 +183,35 @@ The project "hyperion-hub" referenced in the phase name does not appear to be a 
 **What:** Built-in multi-agent orchestration in Claude Code. One session acts as team lead, spawns teammates, shared task list, inbox-based communication.
 **Confidence:** HIGH (documented feature, experimental flag)
 **From:** Claude Code docs, community guides
-**agent-neurosys fit:** Already using Claude Code. Agent Teams enables parallel work without external tooling. Teammates can work in different worktrees. Enable via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true`.
+**neurosys fit:** Already using Claude Code. Agent Teams enables parallel work without external tooling. Teammates can work in different worktrees. Enable via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true`.
 **Recommendation:** USE. This is the native solution. Evaluate before building any custom orchestration.
 
 #### Idea 4.2: microvm.nix Ephemeral Agent VMs
 **What:** Disposable NixOS VMs for each agent session. Full kernel isolation, shared workspace via virtiofs, ephemeral state.
 **Confidence:** HIGH (well-documented by Stapelberg, active project)
 **From:** Michael Stapelberg's blog (Feb 2026), microvm.nix project
-**agent-neurosys fit:** BLOCKED. Contabo VPS does not provide KVM/nested virtualization. microvm.nix requires hardware virtualization support. This approach is only viable if agent-neurosys moves to a host with KVM access.
+**neurosys fit:** BLOCKED. Contabo VPS does not provide KVM/nested virtualization. microvm.nix requires hardware virtualization support. This approach is only viable if neurosys moves to a host with KVM access.
 **Recommendation:** NOT APPLICABLE for current VPS. Document as aspirational pattern for future hardware. The existing bubblewrap sandbox (Phase 11) is the correct approach for this VPS.
 
 #### Idea 4.3: claude-flow Multi-Agent Framework
 **What:** Third-party orchestration platform for Claude with swarm intelligence, MCP integration, 60+ agents.
 **Confidence:** LOW (marketing-heavy, unverified claims about performance)
 **From:** github.com/ruvnet/claude-flow
-**agent-neurosys fit:** Heavy external dependency. Claude Code's native Agent Teams feature covers the same use case with less complexity. claude-flow adds MCP-based orchestration which may be useful for specific workflows.
+**neurosys fit:** Heavy external dependency. Claude Code's native Agent Teams feature covers the same use case with less complexity. claude-flow adds MCP-based orchestration which may be useful for specific workflows.
 **Recommendation:** DEFER. Evaluate only if Claude Code's native Agent Teams prove insufficient for specific multi-agent workflows.
 
 #### Idea 4.4: Composable Agent Profiles (from rymcg)
 **What:** Mixin-based profiles for agent environments (core, docker, podman, dev, python, rust, claude).
 **Confidence:** MEDIUM (pattern from rymcg blog, not a formal project)
 **From:** rymcg code agent VMs blog
-**agent-neurosys fit:** agent-spawn could support profiles that pre-configure sandbox environments. E.g., `agent-spawn --profile python myproject /data/projects/myproject` would include Python toolchain in the sandbox.
+**neurosys fit:** agent-spawn could support profiles that pre-configure sandbox environments. E.g., `agent-spawn --profile python myproject /data/projects/myproject` would include Python toolchain in the sandbox.
 **Recommendation:** CONSIDER for Phase 11 iteration. Current agent-spawn is one-size-fits-all. Profiles would reduce friction for specialized workloads.
 
 #### Idea 4.5: MCP-NixOS Server
 **What:** MCP server providing real-time NixOS package/option information to Claude. Prevents hallucination about NixOS configs.
 **Confidence:** HIGH (active project, documented Claude Code integration)
 **From:** mcp-nixos.io, utensils/mcp-nixos
-**agent-neurosys fit:** Install as MCP server for Claude Code sessions working on agent-neurosys. Provides accurate NixOS option lookup, package search, Home Manager option discovery.
+**neurosys fit:** Install as MCP server for Claude Code sessions working on neurosys. Provides accurate NixOS option lookup, package search, Home Manager option discovery.
 **Recommendation:** USE. Low effort, high value for NixOS configuration work. Add to `.mcp.json` in project root.
 
 ### Category 5: Backup & Recovery
@@ -220,7 +220,7 @@ The project "hyperion-hub" referenced in the phase name does not appear to be a 
 **What:** Declarative Restic backup configuration with systemd timers, automatic initialization, retention policies.
 **Confidence:** HIGH (first-class NixOS module, well-documented community patterns)
 **From:** NixOS wiki, community blogs, rwiankowski/homeserver-nixos
-**agent-neurosys fit:** Already planned for Phase 7. NixOS has excellent Restic module. Pair with ntfy for backup status notifications.
+**neurosys fit:** Already planned for Phase 7. NixOS has excellent Restic module. Pair with ntfy for backup status notifications.
 **Recommendation:** ALREADY PLANNED (Phase 7). Add ntfy notification hook.
 
 ### Category 6: Reverse Proxy & Service Exposure
@@ -229,7 +229,7 @@ The project "hyperion-hub" referenced in the phase name does not appear to be a 
 **What:** Automatic HTTPS, simple configuration, reverse proxy for internal services.
 **Confidence:** HIGH (NixOS module exists, 2026 homelab consensus pick)
 **From:** rwiankowski/homeserver-nixos, 2026 homelab stack survey
-**agent-neurosys fit:** If services need to be exposed (even internally on Tailscale with proper DNS). Caddy auto-provisions Let's Encrypt certs. Simpler config than nginx.
+**neurosys fit:** If services need to be exposed (even internally on Tailscale with proper DNS). Caddy auto-provisions Let's Encrypt certs. Simpler config than nginx.
 **Recommendation:** CONSIDER when adding DNS-based service routing. Currently not needed if all access is via Tailscale IP:port.
 
 ## Don't Hand-Roll
@@ -355,11 +355,11 @@ INFO (silent):         ntfy low-priority → app badge only
 | Old Approach | Current Approach (2026) | When Changed | Impact |
 |--------------|-------------------------|--------------|--------|
 | Promtail for log collection | Grafana Alloy | Feb 2025 (deprecation) | Must use Alloy for new deployments |
-| OpenVPN for remote access | WireGuard / Tailscale / Headscale | 2020-2024 | agent-neurosys already uses Tailscale |
+| OpenVPN for remote access | WireGuard / Tailscale / Headscale | 2020-2024 | neurosys already uses Tailscale |
 | Pi-hole for DNS ad blocking | AdGuard Home | 2024-2025 community shift | Modern UI, more features |
 | Self-hosted Bitwarden | Vaultwarden | 2023-2024 | Same API, 1/10th resources |
 | Manual agent sessions | Claude Code Agent Teams | Feb 2026 | Native multi-agent in Claude Code |
-| Docker-only sandboxing | bubblewrap + cgroup (OS primitives) | 2025-2026 | agent-neurosys Phase 11 already uses this |
+| Docker-only sandboxing | bubblewrap + cgroup (OS primitives) | 2025-2026 | neurosys Phase 11 already uses this |
 | Custom monitoring scripts | Prometheus + Grafana | Long-established | Declarative NixOS modules available |
 | Email alerts | ntfy push notifications | 2023-2025 | Self-hosted, phone app, REST API |
 
@@ -392,7 +392,7 @@ INFO (silent):         ntfy low-priority → app badge only
 
 ## Priority Ranking for Implementation
 
-Based on value-to-effort ratio for agent-neurosys:
+Based on value-to-effort ratio for neurosys:
 
 | Priority | Idea | Effort | Value | Phase |
 |----------|------|--------|-------|-------|

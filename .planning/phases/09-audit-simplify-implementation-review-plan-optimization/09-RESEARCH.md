@@ -13,7 +13,7 @@
 - Minimal config that meets all requirements — nothing extra
 - Keep options/config that are referenced by future phase plans; only strip truly dead code
 - Service-specific details (e.g., Caddy TLS config) belong in service repos (claw-swap), not here
-- Audit scope is agent-neurosys base repo only
+- Audit scope is neurosys base repo only
 
 #### Security stance
 - Best security without interfering with use cases
@@ -107,7 +107,7 @@ This phase is an audit-and-act pass across three domains: (1) the committed NixO
 
 #### 7. Parts cross-flake pattern assessment (CLAUDE'S DISCRETION)
 **Current:** Parts uses a curried module pattern: `{ self, sops-nix }: { config, lib, pkgs }: { ... }`. It declares 10 sops secrets, 2 sops templates, 2 Docker networks, 2 containers, and systemd ordering.
-**Assessment:** The curried pattern earns its complexity. It solves a real problem — parts needs `self` for `sopsFile` paths and must NOT import sops-nix (agent-neurosys owns that). The `sops.templates` pattern for env files is the idiomatic sops-nix approach. The module is 200 lines but well-structured with clear sections.
+**Assessment:** The curried pattern earns its complexity. It solves a real problem — parts needs `self` for `sopsFile` paths and must NOT import sops-nix (neurosys owns that). The `sops.templates` pattern for env files is the idiomatic sops-nix approach. The module is 200 lines but well-structured with clear sections.
 **Recommendation:** Keep as-is. No simplification needed. The complexity is proportional to the problem.
 
 #### 8. Small modules assessment (CLAUDE'S DISCRETION)
@@ -185,8 +185,8 @@ NixOS `virtualisation.oci-containers` supports these via:
 
 **Implement hardening in Phase 4 (Docker Services), not in this audit phase.** Rationale:
 1. Phase 4 is when claw-swap containers are declared — that's when container security matters (public-facing service)
-2. Parts containers are already declared in the parts repo's `nix/module.nix`, not in agent-neurosys. Hardening parts containers requires changes to the parts repo
-3. The audit phase's scope is agent-neurosys base repo only (per user decision)
+2. Parts containers are already declared in the parts repo's `nix/module.nix`, not in neurosys. Hardening parts containers requires changes to the parts repo
+3. The audit phase's scope is neurosys base repo only (per user decision)
 
 **Deliver this research as a recommendation section in the ROADMAP Phase 4 goals.** The implementation pattern is clear:
 ```nix
@@ -218,7 +218,7 @@ capabilities = { ALL = false; };
 | TODO | Assessment | Recommendation |
 |------|-----------|----------------|
 | Settings module (`config.settings.*`) | Adds indirection for 3 values (name, username, email) used in 1-2 places. Over-engineered for a single-host config. | **Drop.** Hardcoded values in the 1-2 places they appear is simpler. |
-| System packages baseline (16 pkgs) | Useful but agent-neurosys is base infra. Dev tools belong in Phase 5 (home-manager). System packages should be minimal. | **Slim down.** Move most to Phase 5. Keep only system-level tools: `git`, `curl`, `wget`, `rsync`, `jq`, `tmux`. Dev tools (ripgrep, fd, shellcheck, sd, etc.) go to Phase 5 as home-manager packages. |
+| System packages baseline (16 pkgs) | Useful but neurosys is base infra. Dev tools belong in Phase 5 (home-manager). System packages should be minimal. | **Slim down.** Move most to Phase 5. Keep only system-level tools: `git`, `curl`, `wget`, `rsync`, `jq`, `tmux`. Dev tools (ripgrep, fd, shellcheck, sd, etc.) go to Phase 5 as home-manager packages. |
 | `users.mutableUsers = false` | Good security — prevents `passwd` changes outside Nix. | **Keep.** |
 | `security.sudo.wheelNeedsPassword = false` | Already implemented during deployment. | **Already done.** Remove from TODO. |
 | `security.sudo.execWheelOnly = true` | Good security — only wheel users can use sudo. | **Keep.** |
@@ -236,8 +236,8 @@ capabilities = { ALL = false; };
 
 **Revision suggestions:**
 - Add container hardening to success criteria (read-only rootfs, cap-drop, no-new-privileges)
-- claw-swap containers should be declared in a claw-swap flake module (same pattern as parts), not inline in agent-neurosys. This keeps service-specific config in service repos per user decision.
-- grok-mcp: evaluate if still needed. If yes, declare as a simple oci-container in agent-neurosys.
+- claw-swap containers should be declared in a claw-swap flake module (same pattern as parts), not inline in neurosys. This keeps service-specific config in service repos per user decision.
+- grok-mcp: evaluate if still needed. If yes, declare as a simple oci-container in neurosys.
 - Ollama: simple NixOS service module. Keep.
 
 ### Phase 5: User Environment + Dev Tools
@@ -421,7 +421,7 @@ security.sudo.execWheelOnly = true;
 ## Sources
 
 ### Primary (HIGH confidence)
-- NixOS codebase: all 12 .nix files in agent-neurosys read directly
+- NixOS codebase: all 12 .nix files in neurosys read directly
 - Parts codebase: flake.nix, nix/module.nix, nix/parts-agent.nix, nix/parts-tools.nix read directly
 - Planning documents: ROADMAP.md, STATE.md, v1-MILESTONE-AUDIT.md, all phase plans and summaries
 - [MyNixOS: services.openssh.openFirewall](https://mynixos.com/nixpkgs/option/services.openssh.openFirewall) — default value confirmed as `true`

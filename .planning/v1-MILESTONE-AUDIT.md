@@ -22,7 +22,7 @@ gaps:
     - "BACK-01: Restic backups not configured (Phase 7 not started)"
   integration:
     - "Parts flake uses path: URI — must change to github: before deployment"
-    - "Host key mismatch between agent-neurosys .sops.yaml and parts .sops.yaml"
+    - "Host key mismatch between neurosys .sops.yaml and parts .sops.yaml"
     - "acfs secrets contain placeholder values — deployment will fail"
   flows:
     - "Secrets decryption pipeline: broken at step 1 (placeholder values)"
@@ -38,7 +38,7 @@ tech_debt:
   - phase: 03.1-parts-migration
     items:
       - "Parts flake input uses path: (local dev) — must become github: for production"
-      - "Host age key in parts .sops.yaml differs from agent-neurosys .sops.yaml"
+      - "Host age key in parts .sops.yaml differs from neurosys .sops.yaml"
   - phase: planning
     items:
       - "No VERIFICATION.md exists for any completed phase"
@@ -116,13 +116,13 @@ tech_debt:
 
 **Score: 15/15 exports connected, 0 orphaned**
 
-All completed modules compose correctly. `nix flake check` passes. Cross-flake integration (parts → agent-neurosys) works.
+All completed modules compose correctly. `nix flake check` passes. Cross-flake integration (parts → neurosys) works.
 
 ### Production Blockers (3)
 
 1. **Parts flake uses `path:` URI** — `flake.nix:17` must change to `github:dangirsh/parts` before deployment
 2. **acfs secrets contain placeholders** — `secrets/acfs.yaml` has `placeholder-replace-me` for all 4 secrets
-3. **Host key mismatch** — agent-neurosys `.sops.yaml` has `age1jgn7pqqf4h...`, parts `.sops.yaml` has `age1k55y5y...` — one is wrong
+3. **Host key mismatch** — neurosys `.sops.yaml` has `age1jgn7pqqf4h...`, parts `.sops.yaml` has `age1k55y5y...` — one is wrong
 
 ### Warnings (2)
 

@@ -51,7 +51,7 @@ Output: Deployed NixOS config with HA extraComponents and ESPHome service active
     The change to modules/home-assistant.nix is already made (unstaged on main). Follow the sacred worktree workflow:
 
     1. Stash the unstaged change on main:
-       `git stash` (from /data/projects/agent-neurosys)
+       `git stash` (from /data/projects/neurosys)
 
     2. Create a worktree + branch:
        `git worktree add .worktrees/quick-6 -b quick-6`

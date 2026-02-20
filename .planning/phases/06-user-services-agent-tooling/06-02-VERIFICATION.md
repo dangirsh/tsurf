@@ -139,4 +139,4 @@ All 6 must-haves verified. Phase goal achieved at configuration level.
 
 _Verified: 2026-02-16T18:45:00Z_
 _Verifier: Claude Code (gsd-verifier)_
-_Worktree: /data/projects/agent-neurosys-phase-06_
+_Worktree: /data/projects/neurosys-phase-06_

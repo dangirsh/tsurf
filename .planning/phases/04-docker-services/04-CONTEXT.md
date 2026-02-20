@@ -18,7 +18,7 @@ Declare and run the claw-swap production Docker stack with security hardening. B
 - Agent-neurosys imports it as a flake input
 - Docker images built with Nix dockerTools (not pulled from registry) — reproducible, same as parts
 - PostgreSQL stays as a Docker container (not NixOS-native) — keep current approach
-- Service-specific config (containers, networks, secrets) lives in the claw-swap repo, not agent-neurosys
+- Service-specific config (containers, networks, secrets) lives in the claw-swap repo, not neurosys
 
 ### Container resource limits
 - Generous headroom: 512MB for lightweight containers, 2GB for Java/heavy ones (47GB RAM VPS)
@@ -33,7 +33,7 @@ Declare and run the claw-swap production Docker stack with security hardening. B
 - DROPPED from Phase 4 — not needed
 
 ### Claude's Discretion
-- Caddy TLS/domain config ownership (claw-swap repo vs agent-neurosys)
+- Caddy TLS/domain config ownership (claw-swap repo vs neurosys)
 - Exact CPU/memory values per container — start generous, document in config
 - Container restart max retry count
 

@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Deep review of all committed NixOS modules (flake.nix, modules/, secrets, .sops.yaml) and all unexecuted phase plans (2, 2.1, 4, 5, 6, 7). Optimize the entire repo for simplicity, minimalism, and security — remove unnecessary complexity, tighten security defaults, simplify module structure, and streamline future plans. Also review roadmap structure (merge/reorder/drop phases). Scope limited to agent-neurosys repo only — service-specific config belongs in service repos.
+Deep review of all committed NixOS modules (flake.nix, modules/, secrets, .sops.yaml) and all unexecuted phase plans (2, 2.1, 4, 5, 6, 7). Optimize the entire repo for simplicity, minimalism, and security — remove unnecessary complexity, tighten security defaults, simplify module structure, and streamline future plans. Also review roadmap structure (merge/reorder/drop phases). Scope limited to neurosys repo only — service-specific config belongs in service repos.
 
 </domain>
 
@@ -17,7 +17,7 @@ Deep review of all committed NixOS modules (flake.nix, modules/, secrets, .sops.
 - Minimal config that meets all requirements — nothing extra
 - Keep options/config that are referenced by future phase plans; only strip truly dead code
 - Service-specific details (e.g., Caddy TLS config) belong in service repos (claw-swap), not here
-- Audit scope is agent-neurosys base repo only
+- Audit scope is neurosys base repo only
 
 ### Security stance
 - Best security without interfering with use cases

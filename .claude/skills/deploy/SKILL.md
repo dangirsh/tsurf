@@ -1,25 +1,25 @@
 ---
 name: deploy
-description: Deploy agent-neurosys NixOS config to neurosys server
+description: Deploy neurosys NixOS config to neurosys server
 user_invocable: true
 ---
 
 # Deploy Skill
 
-Deploy the agent-neurosys NixOS configuration to the Contabo VPS (neurosys) via `nixos-rebuild`.
+Deploy the neurosys NixOS configuration to the Contabo VPS (neurosys) via `nixos-rebuild`.
 
 ## How to Deploy
 
 When the user asks to deploy (or invokes `/deploy`), follow these steps:
 
 1. **Detect repo and resolve script path**:
-   - From **agent-neurosys**: `./scripts/deploy.sh`
-   - From **parts**: `../agent-neurosys/scripts/deploy.sh`
+   - From **neurosys**: `./scripts/deploy.sh`
+   - From **parts**: `../neurosys/scripts/deploy.sh`
    - Verify the script exists before proceeding.
 
 2. **Execute the deploy script**:
    ```bash
-   # From agent-neurosys:
+   # From neurosys:
    ./scripts/deploy.sh
 
    # Or with flags:
@@ -36,7 +36,7 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
    - On success, it prints the Parts git revision deployed and duration.
 
 5. **Commit flake.lock if updated**:
-   - If deployed without `--skip-update`, the script reminds you to commit `flake.lock` in agent-neurosys.
+   - If deployed without `--skip-update`, the script reminds you to commit `flake.lock` in neurosys.
 
 ## Flags
 

@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Establish a deployment pipeline where agent-neurosys owns the deployment (nixos-rebuild switch) but the parts repo defines what gets deployed for its own components (containers, services, secrets via its existing NixOS module). Includes a deploy script, input tracking, health verification, and rollback documentation. Research of current deployment mechanism is included.
+Establish a deployment pipeline where neurosys owns the deployment (nixos-rebuild switch) but the parts repo defines what gets deployed for its own components (containers, services, secrets via its existing NixOS module). Includes a deploy script, input tracking, health verification, and rollback documentation. Research of current deployment mechanism is included.
 
 </domain>
 
@@ -15,7 +15,7 @@ Establish a deployment pipeline where agent-neurosys owns the deployment (nixos-
 
 ### Deployment trigger
 - Manual CLI command only — no CI/CD, no webhooks, no automation
-- Deploy script lives at `scripts/deploy.sh` in the agent-neurosys repo
+- Deploy script lives at `scripts/deploy.sh` in the neurosys repo
 - Supports two modes: local-push (build locally, push closure, switch remotely) and remote-self-deploy (SSH in, run on server)
 - Every deploy is a full `nixos-rebuild switch` — no partial/container-only deploys
 - NixOS handles incrementality natively (only changed derivations rebuild, only affected containers restart)
@@ -60,5 +60,5 @@ Establish a deployment pipeline where agent-neurosys owns the deployment (nixos-
 
 ---
 
-*Phase: 10-parts-consolidation-migrate-parts-from-standalone-vps-to-acfs-via-agent-neurosys*
+*Phase: 10-parts-consolidation-migrate-parts-from-standalone-vps-to-acfs-via-neurosys*
 *Context gathered: 2026-02-17*

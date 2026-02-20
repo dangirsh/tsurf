@@ -78,7 +78,7 @@ All claw-swap containers use tmpfs with noexec,nosuid for writable scratch areas
 
 ## Decisions Made
 - Kept spawn.log directory owned by dangirsh (needed for agent-spawn writes) — tamper resistance via journald, not filesystem permissions
-- Parts container hardening tracked as documentation items (changes needed in external repo, not agent-neurosys)
+- Parts container hardening tracked as documentation items (changes needed in external repo, not neurosys)
 
 ## Deviations from Plan
 - Plan suggested BEADS entries for parts container gaps — documented as numbered remediation items in SUMMARY instead (BEADS creation is a separate workflow step)

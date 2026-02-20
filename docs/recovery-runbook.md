@@ -10,7 +10,7 @@ This document covers **complete VPS recovery from catastrophic loss** -- total d
 
 | Source | Contains |
 |--------|----------|
-| Git repo (`agent-neurosys`) | NixOS configuration, encrypted secrets, flake lock |
+| Git repo (`neurosys`) | NixOS configuration, encrypted secrets, flake lock |
 | Backblaze B2 (`SyncBkp`) | Stateful data: projects, home dir, Docker data, SSH host key, Tailscale state, Home Assistant |
 | Manual | Tailscale re-auth (if backup stale), Home Assistant device pairing (if restore fails) |
 
@@ -46,11 +46,11 @@ Before starting recovery, gather the following. **You need items 1-4 before anyt
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 ```
 
-### 2.2 The agent-neurosys git repo cloned locally
+### 2.2 The neurosys git repo cloned locally
 
 ```bash
-git clone git@github.com:<org>/agent-neurosys.git
-cd agent-neurosys
+git clone git@github.com:<org>/neurosys.git
+cd neurosys
 ```
 
 ### 2.3 SSH access to the new VPS
@@ -162,7 +162,7 @@ ls -la /tmp/host-keys/etc/ssh/ssh_host_ed25519_key
 If the new VPS has a different IP than `161.97.74.121`, update the static IP configuration:
 
 ```bash
-cd /path/to/agent-neurosys
+cd /path/to/neurosys
 
 # Edit the hardware/networking config
 # Look for the old IP and replace with the new one
@@ -180,7 +180,7 @@ git commit -m "fix: update VPS IP for disaster recovery"
 ### Step 1.3: Deploy with nixos-anywhere
 
 ```bash
-cd /path/to/agent-neurosys
+cd /path/to/neurosys
 nixos-anywhere --extra-files /tmp/host-keys \
   --flake .#neurosys root@<new-vps-ip>
 ```
@@ -317,7 +317,7 @@ systemctl status home-assistant.service --no-pager
 # Expected: "active (running)"
 
 # Projects restored
-ls /data/projects/agent-neurosys/flake.nix
+ls /data/projects/neurosys/flake.nix
 # Expected: file exists
 
 # User home restored
@@ -458,7 +458,7 @@ Restic backs up the entire root filesystem (`/`) with `--one-file-system` (skips
   - `/var/lib/tailscale/` -- device state present
   - `/var/lib/hass/home-assistant_v2.db` -- Home Assistant database present
   - `/home/dangirsh/` -- user home populated
-  - `/data/projects/agent-neurosys/flake.nix` -- code repos present
+  - `/data/projects/neurosys/flake.nix` -- code repos present
 - **nixos-anywhere deploy:** Proven in Phase 2 (2026-02-15) initial deployment and Phase 10 VPS migration (2026-02-17)
 - **`--extra-files` pattern:** Used successfully during initial deployment to inject pre-generated SSH host key
 
@@ -489,7 +489,7 @@ ssh root@161.97.74.121 'ls -la /tmp/restore-test/etc/ssh/ssh_host_ed25519_key'
 ssh root@161.97.74.121 'ls /tmp/restore-test/var/lib/claw-swap/pgdata/PG_VERSION'
 ssh root@161.97.74.121 'ls /tmp/restore-test/var/lib/tailscale/'
 ssh root@161.97.74.121 'ls /tmp/restore-test/var/lib/hass/home-assistant_v2.db'
-ssh root@161.97.74.121 'ls /tmp/restore-test/data/projects/agent-neurosys/flake.nix'
+ssh root@161.97.74.121 'ls /tmp/restore-test/data/projects/neurosys/flake.nix'
 
 # 4. Clean up
 ssh root@161.97.74.121 'rm -rf /tmp/restore-test'

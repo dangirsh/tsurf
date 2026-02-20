@@ -61,7 +61,7 @@ Roadmap revised: Phase 2.1 absorbed, Phase 4 gets container hardening, Phase 5 a
 **Decisions:**
 - [09]: Phase 2.1 absorbed — settings module unnecessary for single-host config
 - [09]: SSH moved to Tailscale-only — port 22 removed from public firewall
-- [09]: Docker container hardening deferred to Phase 4 (scope: agent-neurosys base only)
+- [09]: Docker container hardening deferred to Phase 4 (scope: neurosys base only)
 
 **Blockers/Concerns:**
 - Added: [RESOLVED] Phase 2.1 scope creep — absorbed after re-evaluation

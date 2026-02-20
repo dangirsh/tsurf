@@ -1,4 +1,4 @@
-# Roadmap: agent-neurosys
+# Roadmap: neurosys
 
 ## Overview
 
@@ -16,12 +16,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Bootable Base System** - NixOS boots on Contabo, SSH works, firewall active, user exists
 - [x] **Phase 2.1: Base System Fixups from Neurosys Review** - Absorbed into Phase 9 (mutableUsers, execWheelOnly applied; settings module dropped as unnecessary; dev tools moved to Phase 5)
 - [x] **Phase 3: Networking + Secrets + Docker Foundation** - Tailscale connected, full secrets decryption, Docker engine running
-- [x] **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** - Parts exports NixOS module via flake, agent-neurosys imports it, containers via dockerTools, secrets migrated to sops-nix (INSERTED)
+- [x] **Phase 3.1: Parts Integration — Flake Module + Declarative Containers** - Parts exports NixOS module via flake, neurosys imports it, containers via dockerTools, secrets migrated to sops-nix (INSERTED)
 - [ ] **Phase 4: Docker Services** - claw-swap stack with security-hardened containers
 - [x] **Phase 5: User Environment + Dev Tools** - home-manager shell, dev toolchain, full development experience
 - [ ] **Phase 6: User Services + Agent Tooling** - Syncthing, CASS indexer, infrastructure repos cloned and symlinked
 - [ ] **Phase 7: Backups** - Automated Restic backups to Backblaze B2
-- [ ] **Phase 10: Parts Deployment Pipeline** - Research current deployment, implement agent-neurosys-owned deploy flow where parts defines its own components
+- [ ] **Phase 10: Parts Deployment Pipeline** - Research current deployment, implement neurosys-owned deploy flow where parts defines its own components
 - [ ] **Phase 11: Agent Sandboxing** - Default-on bubblewrap (srt) isolation for all coding agents — filesystem deny-by-default, network proxy-filtered, cgroup-limited
 - [x] **Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config** - Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub, identify server-relevant config/services worth porting
 - [x] **Phase 9: Audit & Simplify** - Deep review of all modules and unexecuted plans, optimize for simplicity, minimalism, and security
@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 14: Monitoring + Notifications** - Prometheus + node_exporter + Grafana dashboards + ntfy push notifications (Tailscale-only)
 - [ ] **Phase 15: CrowdSec Intrusion Prevention** - Collaborative threat intelligence with community sharing, complementing fail2ban for public-facing services
 - [x] **Phase 17: Hardcore Simplicity & Security Audit** - Critical review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering and security gaps. Establish guardrails for future agentic development.
-- [ ] **Phase 18: VPS Consolidation** - Merge acfs dev environment into agent-neurosys. Single VPS for dev, personal services, prod. Component audit, security model, self-deploy ergonomics, state tracking, Parts management interface architecture.
+- [ ] **Phase 18: VPS Consolidation** - Merge acfs dev environment into neurosys. Single VPS for dev, personal services, prod. Component audit, security model, self-deploy ergonomics, state tracking, Parts management interface architecture.
 
 ## Phase Details
 
@@ -95,20 +95,20 @@ Plans:
 
 ### Phase 3.1: Parts Integration — Flake Module + Declarative Containers (INSERTED)
 
-**Goal:** Parts repo exports a NixOS module (via flake) declaring its containers, networks, and secrets; agent-neurosys imports it as a flake input
+**Goal:** Parts repo exports a NixOS module (via flake) declaring its containers, networks, and secrets; neurosys imports it as a flake input
 **Depends on:** Phase 3 (Docker engine, Tailscale, secrets infrastructure)
 **Success Criteria** (what must be TRUE):
   1. Parts repo has a `flake.nix` with `nixosModules.default` that declares its Docker containers (parts-agent, parts-tools), networks (agent_net, tools_net), and sops-nix secrets
   2. Agent-neurosys imports `inputs.parts.nixosModules.default` and `nix flake check` passes for both flakes
   3. Parts Docker images are built via Nix `dockerTools.buildImage` (no external registry, no Dockerfiles)
   4. All parts secrets (Telegram bot token, API keys, OAuth creds) use sops-nix (migrated from agenix) and decrypt at activation
-  5. Parts repo has no `nixos-rebuild` in its CI; agent-neurosys handles all NixOS config deployment
+  5. Parts repo has no `nixos-rebuild` in its CI; neurosys handles all NixOS config deployment
 **Plans:** 3 plans
 
 Plans:
 - [x] 03.1-01-PLAN.md -- Secrets migration (agenix to sops-nix) + parts flake.nix rewrite
 - [x] 03.1-02-PLAN.md -- Docker image Nix expressions (parts-agent + parts-tools via dockerTools.buildLayeredImage)
-- [x] 03.1-03-PLAN.md -- NixOS module (containers, networks, secrets wiring) + agent-neurosys flake integration
+- [x] 03.1-03-PLAN.md -- NixOS module (containers, networks, secrets wiring) + neurosys flake integration
 
 ### Phase 4: Docker Services
 **Goal**: claw-swap production stack running with security-hardened containers
@@ -126,7 +126,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md -- claw-swap flake setup + sops secrets + Docker image Nix expression
-- [x] 04-02-PLAN.md -- NixOS module (3 hardened containers, network, secrets) + agent-neurosys flake integration
+- [x] 04-02-PLAN.md -- NixOS module (3 hardened containers, network, secrets) + neurosys flake integration
 
 ### Phase 5: User Environment + Dev Tools
 **Goal**: The server provides an agent-optimized compute environment where AI coding agents can be launched and managed via tmux
@@ -208,12 +208,12 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 18. VPS Consolidation | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
-**Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into agent-neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
+**Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
 **Depends on**: Nothing (research phase, can run anytime)
 **Requirements**: None (advisory — informs other phases)
 **Success Criteria** (what must be TRUE):
   1. Both repos (dangirsh/neurosys, dangirsh/.doom.d) have been reviewed and a summary of server-relevant findings is presented
-  2. Each candidate config/service includes: what it does, where it lived in the old repo, and which agent-neurosys phase/module it would slot into
+  2. Each candidate config/service includes: what it does, where it lived in the old repo, and which neurosys phase/module it would slot into
   3. User has approved or rejected each candidate — approved items are captured as TODOs or folded into existing phase plans
 **Plans**: 1 plan
 
@@ -238,14 +238,14 @@ Plans:
 
 ### Phase 10: Parts Deployment Pipeline — Research + Implementation
 
-**Goal:** Understand how parts is currently deployed, then establish a deployment pipeline where agent-neurosys owns the deployment (nixos-rebuild/switch) but the parts repo defines what gets deployed for its own components (containers, services, secrets via its existing NixOS module)
+**Goal:** Understand how parts is currently deployed, then establish a deployment pipeline where neurosys owns the deployment (nixos-rebuild/switch) but the parts repo defines what gets deployed for its own components (containers, services, secrets via its existing NixOS module)
 **Depends on:** Phase 3.1 (parts NixOS module exists), Phase 3 (Docker + secrets infrastructure)
 **Requirements:** None (operational — bridges existing infrastructure)
 **Success Criteria** (what must be TRUE):
   1. Current parts deployment mechanism is fully documented (how it works today, what triggers it, what it deploys)
-  2. A deployment command from agent-neurosys builds and switches the NixOS config including parts containers/services
-  3. Parts repo defines its own deployable components (containers, networks, secrets) via its `nixosModules.default` — agent-neurosys does not hardcode parts internals
-  4. The deployment flow is tested end-to-end: change in parts module → agent-neurosys picks it up → deploy → services running
+  2. A deployment command from neurosys builds and switches the NixOS config including parts containers/services
+  3. Parts repo defines its own deployable components (containers, networks, secrets) via its `nixosModules.default` — neurosys does not hardcode parts internals
+  4. The deployment flow is tested end-to-end: change in parts module → neurosys picks it up → deploy → services running
   5. Deployment is documented with a clear runbook (what to run, from where, expected output)
 **Plans:** 2 plans
 
@@ -274,7 +274,7 @@ Plans:
 - [ ] 11-02-PLAN.md -- Deploy to VPS, iterative testing of all sandbox behaviors, user verification checkpoint
 - [ ] TODO(from-research): Enable Tailnet Key Authority (`tailscale lock init` + sign existing nodes)
 
-### Phase 12: Security audit of agent-neurosys NixOS configuration — review all modules for hardening gaps, secret handling, network exposure, sandbox escape vectors, and supply chain risks
+### Phase 12: Security audit of neurosys NixOS configuration — review all modules for hardening gaps, secret handling, network exposure, sandbox escape vectors, and supply chain risks
 
 **Goal:** [To be planned]
 **Depends on:** Phase 11
@@ -283,7 +283,7 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 12 to break down)
 
-### Phase 13: Research similar personal server projects (hyperion-hub, etc.) — enumerate good ideas for agent-neurosys: messaging integrations, monitoring patterns, security approaches, agent orchestration
+### Phase 13: Research similar personal server projects (hyperion-hub, etc.) — enumerate good ideas for neurosys: messaging integrations, monitoring patterns, security approaches, agent orchestration
 
 **Goal:** Survey the ecosystem of NixOS homelab and personal server projects, curate a catalog of 11 ideas across 6 categories (monitoring, messaging, security, agent orchestration, backup, reverse proxy), and present findings to the user for cherry-picking — approved ideas become new phases or TODOs in the roadmap
 **Depends on:** Phase 12
@@ -327,7 +327,7 @@ Plans:
 
 ### Phase 16: Disaster Recovery & Backup Completeness
 
-**Goal:** Catastrophic VPS loss recovers in < few hours from `agent-neurosys` git state + Backblaze B2 backup. Audit all stateful paths, add missing ones to restic (Tailscale state, SSH host keys, claw-swap DB, parts state, ESPHome configs, Prometheus metrics). Document exactly what's restorable from backups vs what needs manual re-auth/setup. Create and test a recovery runbook: `nixos-anywhere` + `restic restore` + minimal manual steps = fully working server.
+**Goal:** Catastrophic VPS loss recovers in < few hours from `neurosys` git state + Backblaze B2 backup. Audit all stateful paths, add missing ones to restic (Tailscale state, SSH host keys, claw-swap DB, parts state, ESPHome configs, Prometheus metrics). Document exactly what's restorable from backups vs what needs manual re-auth/setup. Create and test a recovery runbook: `nixos-anywhere` + `restic restore` + minimal manual steps = fully working server.
 **Depends on:** Phase 7 (restic backups operational)
 **Requirements:** None (operational resilience)
 **Success Criteria** (what must be TRUE):
@@ -366,11 +366,11 @@ Plans:
 - [x] 17-03-PLAN.md — CLAUDE.md guardrails (update project structure, add security conventions, simplicity conventions, module change checklist)
 - [x] 17-04-PLAN.md — Docker container hardening audit + agent sandbox escape vector assessment (SEC3 audit with BEADS entries, SEC5/SEC6 confirmation, audit log tamper protection)
 
-### Phase 18: VPS Consolidation — Merge acfs Dev Environment into agent-neurosys
+### Phase 18: VPS Consolidation — Merge acfs Dev Environment into neurosys
 
-**Goal:** Consolidate from two VPSes (acfs dev + agent-neurosys prod) into a single agent-neurosys VPS that serves as the one-stop shop: development environment, personal services (Parts), production services (claw-swap), monitoring, backups, and agent infrastructure. The acfs VPS can then be decommissioned entirely. This phase requires deep research and planning across five dimensions:
+**Goal:** Consolidate from two VPSes (acfs dev + neurosys prod) into a single neurosys VPS that serves as the one-stop shop: development environment, personal services (Parts), production services (claw-swap), monitoring, backups, and agent infrastructure. The acfs VPS can then be decommissioned entirely. This phase requires deep research and planning across five dimensions:
 
-1. **Component Gap Audit** — Enumerate every component on acfs not yet in agent-neurosys (AgentBox/Tetragon, GitHub Actions runner, PostgreSQL 18, codex-monitor-daemon, agent-mail, custom scripts, 33+ project dirs, plaintext API keys). For each: migrate, drop, or defer.
+1. **Component Gap Audit** — Enumerate every component on acfs not yet in neurosys (AgentBox/Tetragon, GitHub Actions runner, PostgreSQL 18, codex-monitor-daemon, agent-mail, custom scripts, 33+ project dirs, plaintext API keys). For each: migrate, drop, or defer.
 2. **Security — Co-located Dev + Prod** — Analyze implications of prompt-injectable dev agents sharing a host with production services (claw-swap public traffic, Parts with Telegram/API access). Cover: sandbox blast radius, Docker network isolation, secrets boundaries, nixos-rebuild cross-contamination, resource contention.
 3. **Dev Ergonomics — Self-Deploying NixOS** — When the single VPS runs nixos-rebuild on itself: SSH session survival, tmux/zmx persistence, Docker container restart behavior, active agent session continuity, deploy script self-execution safety. Design safe self-deployment patterns with staging builds, atomic switches, and rollback.
 4. **State Tracking — Nothing Left Behind** — Audit all state against the constraint: "If it's not in git, Syncthing, or B2, it doesn't survive a rebuild." Cross-reference Phase 16 (Disaster Recovery). Cover: /data/projects/ git status, database state, Docker volumes, Syncthing sync state, sops-nix vs manual secrets, home directory dotfiles.

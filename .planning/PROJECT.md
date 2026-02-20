@@ -1,4 +1,4 @@
-# agent-neurosys
+# neurosys
 
 ## What This Is
 

@@ -102,7 +102,7 @@ Use the Nix list-of-attrsets structure that maps to YAML. For example:
 Add a file header comment and a @decision annotation:
   # @decision HP-01: Use NixOS-native homepage-dashboard service; listen on 0.0.0.0 for Tailscale reachability.
   </action>
-  <verify>nix flake check from /data/projects/agent-neurosys (after git add)</verify>
+  <verify>nix flake check from /data/projects/neurosys (after git add)</verify>
   <done>modules/homepage.nix exists and `nix flake check` evaluates without errors</done>
 </task>
 

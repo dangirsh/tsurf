@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Merge two VPSes (acfs dev + agent-neurosys prod) into a single agent-neurosys VPS. Decommission acfs after 1-week parallel run. Design (not build) the neurosys-ctl management interface. The consolidated VPS serves as: development environment, personal services (Parts), production services (claw-swap), monitoring, backups, and agent infrastructure.
+Merge two VPSes (acfs dev + neurosys prod) into a single neurosys VPS. Decommission acfs after 1-week parallel run. Design (not build) the neurosys-ctl management interface. The consolidated VPS serves as: development environment, personal services (Parts), production services (claw-swap), monitoring, backups, and agent infrastructure.
 
 </domain>
 
@@ -14,7 +14,7 @@ Merge two VPSes (acfs dev + agent-neurosys prod) into a single agent-neurosys VP
 ## Implementation Decisions
 
 ### Migration triage
-- **6 repos to keep**: parts, parts-awig, agent-neurosys, agent-base, worldcoin-ai, global-agent-conf — all clean, re-clone from GitHub
+- **6 repos to keep**: parts, parts-awig, neurosys, agent-base, worldcoin-ai, global-agent-conf — all clean, re-clone from GitHub
 - **Drop everything else**: all other project dirs (~27 repos), AgentBox, codex-monitor-daemon, agent-mail, GitHub Actions runner, PostgreSQL 18 instance
 - **Secrets**: migrate any acfs-only secrets into sops-nix. No database state to preserve
 - **Non-project state**: researcher should enumerate non-repo state on acfs (~/bin scripts, cron jobs, systemd user services, /etc customizations) for triage
@@ -76,5 +76,5 @@ Merge two VPSes (acfs dev + agent-neurosys prod) into a single agent-neurosys VP
 
 ---
 
-*Phase: 18-vps-consolidation-merge-acfs-dev-environment-into-agent-neurosys*
+*Phase: 18-vps-consolidation-merge-acfs-dev-environment-into-neurosys*
 *Context gathered: 2026-02-20*

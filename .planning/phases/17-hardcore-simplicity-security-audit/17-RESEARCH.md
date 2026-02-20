@@ -146,8 +146,8 @@ boot.kernel.sysctl = {
 ### Finding SEC3: Docker Container Hardening Missing (MEDIUM)
 **What:** Docker containers (parts-tools, parts-agent, claw-swap-*) are declared in external flake modules (parts, claw-swap repos). Phase 9 research recommended hardening but it was deferred.
 **Impact:** Containers may run without read-only rootfs, without capability dropping, without no-new-privileges, without resource limits.
-**Fix:** This audit should verify the current state of container declarations in the parts and claw-swap modules. If hardening is missing, document what should be added. Note: changes to parts/claw-swap containers require changes in THOSE repos, not agent-neurosys.
-**Recommendation:** For containers declared in agent-neurosys scope, apply hardening. For external repos, document findings and create follow-up issues.
+**Fix:** This audit should verify the current state of container declarations in the parts and claw-swap modules. If hardening is missing, document what should be added. Note: changes to parts/claw-swap containers require changes in THOSE repos, not neurosys.
+**Recommendation:** For containers declared in neurosys scope, apply hardening. For external repos, document findings and create follow-up issues.
 **Confidence:** HIGH (that hardening is missing) -- Phase 9 explicitly deferred this.
 
 ### Finding SEC4: Repos Clone Leaks Token (LOW-MEDIUM)
@@ -461,7 +461,7 @@ A checklist agents must follow before committing module changes:
 ## Sources
 
 ### Primary (HIGH confidence)
-- All 14 modules + 7 home files + 2 packages + 1 script read directly from `/data/projects/agent-neurosys/`
+- All 14 modules + 7 home files + 2 packages + 1 script read directly from `/data/projects/neurosys/`
 - `flake.lock` analyzed for supply chain (7 direct inputs, transitive dependencies)
 - Phase 9 research and summaries (09-RESEARCH.md, 09-01-SUMMARY.md)
 - Phase 10 summary (10-02-SUMMARY.md) documenting SSH revert

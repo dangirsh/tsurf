@@ -8,9 +8,9 @@
 
 Both repos (`dangirsh/neurosys` and `dangirsh/.doom.d`) have been fully reviewed. The old neurosys is a literate Org-mode NixOS configuration (NixOS 20.03, pre-flakes, niv-pinned) targeting a Linode VPS running as a remote dev server with XMonad. The `.doom.d` repo is a Doom Emacs configuration -- almost entirely desktop/editor-specific with one notable exception (a neurosys deployment module).
 
-The old neurosys contains **7 server-relevant candidates** worth evaluating for agent-neurosys, and the `.doom.d` repo contains **0 directly portable items** (everything is Emacs/desktop-specific). The highest-value findings are: (1) the Syncthing declarative config pattern with device IDs, folder versioning, and receive-only semantics; (2) the `settings.nix` pattern for centralizing user identity constants; (3) the Tarsnap backup pattern (informing the Restic migration); (4) system packages for a server CLI baseline; and (5) SSH hardening patterns.
+The old neurosys contains **7 server-relevant candidates** worth evaluating for neurosys, and the `.doom.d` repo contains **0 directly portable items** (everything is Emacs/desktop-specific). The highest-value findings are: (1) the Syncthing declarative config pattern with device IDs, folder versioning, and receive-only semantics; (2) the `settings.nix` pattern for centralizing user identity constants; (3) the Tarsnap backup pattern (informing the Restic migration); (4) system packages for a server CLI baseline; and (5) SSH hardening patterns.
 
-**Primary recommendation:** Cherry-pick the Syncthing declarative pattern, settings constants, system packages list, and SSH agent/controlMaster patterns. All other items are either already handled by agent-neurosys or are desktop-specific and should be discarded.
+**Primary recommendation:** Cherry-pick the Syncthing declarative pattern, settings constants, system packages list, and SSH agent/controlMaster patterns. All other items are either already handled by neurosys or are desktop-specific and should be discarded.
 
 ## Repo Overview
 
@@ -76,8 +76,8 @@ modules/personal/neurosys/config.el  # Remote deployment functions
 
 **Where it lived:** `nixos/configuration.nix` (tangled from README.org `Services > Syncthing`)
 
-**What's new vs agent-neurosys:**
-agent-neurosys already has `modules/syncthing.nix` in the CLAUDE.md project structure, and networking.nix already opens port 22000. The old config provides a **concrete reference implementation** for the declarative device/folder config that Phase 6 will need to implement.
+**What's new vs neurosys:**
+neurosys already has `modules/syncthing.nix` in the CLAUDE.md project structure, and networking.nix already opens port 22000. The old config provides a **concrete reference implementation** for the declarative device/folder config that Phase 6 will need to implement.
 
 **Relevant patterns to port:**
 - `receiveonly` type for server-as-backup-target
@@ -123,8 +123,8 @@ with lib;
 
 **Where it lived:** `nixos/settings.nix` (tangled from README.org `Global Constants`)
 
-**What's new vs agent-neurosys:**
-agent-neurosys currently hardcodes `"dangirsh"` in `modules/users.nix` and `home/default.nix`, and `"acfs"` in `hosts/acfs/default.nix`. There is no centralized settings module.
+**What's new vs neurosys:**
+neurosys currently hardcodes `"dangirsh"` in `modules/users.nix` and `home/default.nix`, and `"acfs"` in `hosts/acfs/default.nix`. There is no centralized settings module.
 
 **Relevant patterns to port:**
 - Central module with `mkOption` for name, username, email
@@ -160,8 +160,8 @@ environment.systemPackages = with pkgs; [
 
 **Where it lived:** `nixos/configuration.nix` (tangled from README.org `Packages`)
 
-**What's new vs agent-neurosys:**
-agent-neurosys `modules/base.nix` currently only sets `nix.settings` and `nix.gc`. There are no system packages declared yet. The dev-tools module (mentioned in CLAUDE.md but not yet implemented) will cover development toolchains, but these are **system-level** utilities that should be available regardless.
+**What's new vs neurosys:**
+neurosys `modules/base.nix` currently only sets `nix.settings` and `nix.gc`. There are no system packages declared yet. The dev-tools module (mentioned in CLAUDE.md but not yet implemented) will cover development toolchains, but these are **system-level** utilities that should be available regardless.
 
 **Relevant packages to port:**
 - `curl`, `wget` -- HTTP clients
@@ -189,17 +189,17 @@ agent-neurosys `modules/base.nix` currently only sets `nix.settings` and `nix.gc
 **Source:** `neurosys/nixos/configuration.nix` -> `nix`
 **What it does:**
 - `useSandbox = true` -- build sandboxing (now default, renamed to `nix.settings.sandbox`)
-- `autoOptimiseStore = true` -- already in agent-neurosys
+- `autoOptimiseStore = true` -- already in neurosys
 - `maxJobs = 3` -- parallel build jobs (should match CPU cores)
-- `gc.automatic = true` with `dates = "23:00"` and `--delete-older-than 30d` -- already in agent-neurosys (weekly)
+- `gc.automatic = true` with `dates = "23:00"` and `--delete-older-than 30d` -- already in neurosys (weekly)
 - Binary caches with public keys for ghcide, hercules-ci, iohk (Haskell-specific -- NOT relevant)
 
 **Where it lived:** `nixos/configuration.nix` (tangled from README.org `Nix`)
 
-**What's new vs agent-neurosys:**
-agent-neurosys `modules/base.nix` already handles `nix.settings.auto-optimise-store` and `nix.gc`. Two items worth noting:
-1. `nix.settings.sandbox = true` -- not explicitly set in agent-neurosys (it's the default on NixOS, but being explicit is good practice)
-2. `nix.settings.max-jobs` -- not set in agent-neurosys (should match Contabo VPS CPU count)
+**What's new vs neurosys:**
+neurosys `modules/base.nix` already handles `nix.settings.auto-optimise-store` and `nix.gc`. Two items worth noting:
+1. `nix.settings.sandbox = true` -- not explicitly set in neurosys (it's the default on NixOS, but being explicit is good practice)
+2. `nix.settings.max-jobs` -- not set in neurosys (should match Contabo VPS CPU count)
 
 **Target phase:** Phase 2 (Bootable Base System)
 **Target module:** `modules/base.nix`
@@ -212,19 +212,19 @@ agent-neurosys `modules/base.nix` already handles `nix.settings.auto-optimise-st
 **Confidence:** HIGH
 **Source:** `neurosys/nixos/configuration.nix` -> `services.openssh` and `users`
 **What it does:**
-- SSH key-only auth (password disabled) -- already in agent-neurosys
+- SSH key-only auth (password disabled) -- already in neurosys
 - `forwardX11 = true` -- NOT relevant for headless server
-- `permitRootLogin = "without-password"` -- agent-neurosys uses `"prohibit-password"` (equivalent)
+- `permitRootLogin = "without-password"` -- neurosys uses `"prohibit-password"` (equivalent)
 - `users.mutableUsers = false` -- makes user management purely declarative
 - `security.sudo.wheelNeedsPassword = false` -- passwordless sudo for wheel group
 - `programs.ssh.startAgent = true` -- SSH agent for outbound connections
 
 **Where it lived:** `nixos/configuration.nix` (tangled from README.org `SSH` and `User Definition`)
 
-**What's new vs agent-neurosys:**
-1. `users.mutableUsers = false` -- NOT in agent-neurosys. Forces all user management through Nix (no `passwd`, no `useradd`). Highly recommended for declarative servers.
-2. `security.sudo.wheelNeedsPassword = false` -- NOT in agent-neurosys. Useful for automation/agents.
-3. `programs.ssh.startAgent = true` -- NOT in agent-neurosys. Needed if the server initiates outbound SSH (git push, rsync to other hosts).
+**What's new vs neurosys:**
+1. `users.mutableUsers = false` -- NOT in neurosys. Forces all user management through Nix (no `passwd`, no `useradd`). Highly recommended for declarative servers.
+2. `security.sudo.wheelNeedsPassword = false` -- NOT in neurosys. Useful for automation/agents.
+3. `programs.ssh.startAgent = true` -- NOT in neurosys. Needed if the server initiates outbound SSH (git push, rsync to other hosts).
 
 **Target phase:** Phase 2 (Bootable Base System)
 **Target module:** `modules/users.nix` and `modules/networking.nix`
@@ -247,14 +247,14 @@ agent-neurosys `modules/base.nix` already handles `nix.settings.auto-optimise-st
 
 **Where it lived:** `nixos/home.nix` (tangled from README.org `Programs > SSH`)
 
-**What's new vs agent-neurosys:**
-agent-neurosys `home/default.nix` is minimal (just username, homeDirectory, stateVersion). No SSH client config exists. The server will likely SSH to GitHub (for git operations), other hosts, etc.
+**What's new vs neurosys:**
+neurosys `home/default.nix` is minimal (just username, homeDirectory, stateVersion). No SSH client config exists. The server will likely SSH to GitHub (for git operations), other hosts, etc.
 
 **Relevant patterns to port:**
 - `controlMaster`/`controlPersist` for connection multiplexing (big performance win for repeated SSH connections)
 - `serverAliveInterval` to prevent dropped connections
 - `hashKnownHosts` for security
-- `matchBlocks` for named host shortcuts (with updated hosts relevant to agent-neurosys)
+- `matchBlocks` for named host shortcuts (with updated hosts relevant to neurosys)
 
 **NOT relevant:**
 - The specific matchBlocks (droplet, dangirsh.org, nixos-dev) -- those hosts are old/gone
@@ -277,8 +277,8 @@ agent-neurosys `home/default.nix` is minimal (just username, homeDirectory, stat
 
 **Where it lived:** `nixos/configuration.nix` (tangled from README.org `Services > Tarsnap`)
 
-**What's new vs agent-neurosys:**
-agent-neurosys plans Restic to B2 (Phase 7), not Tarsnap. However, the pattern of **what to back up** is informative:
+**What's new vs neurosys:**
+neurosys plans Restic to B2 (Phase 7), not Tarsnap. However, the pattern of **what to back up** is informative:
 - Syncthing data directories (the canonical data the server holds)
 - Key files stored in synced directories (bootstrap problem -- keys needed before sync works)
 
@@ -305,8 +305,8 @@ The following items from both repos are **desktop/laptop/Emacs-specific** and sh
 | Rofi, xclip, arandr, xtrlock-pam, maim | All X11/GUI tools |
 | Firefox | Browser -- desktop only |
 | pass/gnupg user packages | Desktop-oriented password management |
-| Bash shell config with vterm integration | Emacs-specific; agent-neurosys uses Zsh |
-| niv/sources.nix pinning | Replaced by flake.lock in agent-neurosys |
+| Bash shell config with vterm integration | Emacs-specific; neurosys uses Zsh |
+| niv/sources.nix pinning | Replaced by flake.lock in neurosys |
 | rsync.sh deployment | Replaced by nixos-anywhere + `nixos-rebuild` via SSH |
 | Linode-specific hardware config | Different VPS provider (Contabo) |
 | Binary caches (ghcide, hercules, iohk) | Haskell-specific caches not needed |
@@ -372,13 +372,13 @@ with lib;
 ## Common Pitfalls
 
 ### Pitfall 1: Stale Device IDs in Syncthing Config
-**What goes wrong:** Old device IDs from the neurosys config are copy-pasted into agent-neurosys. Syncthing fails to connect because devices have been replaced/regenerated.
+**What goes wrong:** Old device IDs from the neurosys config are copy-pasted into neurosys. Syncthing fails to connect because devices have been replaced/regenerated.
 **Why it happens:** Device IDs are hardware/identity-specific. The old nixos-dev, x1carbon9, pixel6-pro IDs are from 2020-era devices.
 **How to avoid:** Generate fresh device IDs from current devices. Only use the old config as a **structural template**, never copy IDs verbatim.
 **Warning signs:** Syncthing logs showing "unknown device" or connection failures.
 
 ### Pitfall 2: NixOS 20.03 Option Names
-**What goes wrong:** Old option names from NixOS 20.03 are used in agent-neurosys (NixOS 25.11). Many have been renamed or removed.
+**What goes wrong:** Old option names from NixOS 20.03 are used in neurosys (NixOS 25.11). Many have been renamed or removed.
 **Why it happens:** Direct copy-paste from old neurosys without checking current option names.
 **How to avoid:** Always verify option names against current NixOS manual or `nixos-option`. Known renames:
 - `nix.useSandbox` -> `nix.settings.sandbox`
@@ -395,13 +395,13 @@ with lib;
 
 ### Pitfall 3: users.mutableUsers = false Without Password Strategy
 **What goes wrong:** Setting `users.mutableUsers = false` locks out interactive login if no password hash is provided and SSH keys aren't working.
-**Why it happens:** The old neurosys relied on SSH keys exclusively. If agent-neurosys needs console access (e.g., recovery), no password means no login.
+**Why it happens:** The old neurosys relied on SSH keys exclusively. If neurosys needs console access (e.g., recovery), no password means no login.
 **How to avoid:** Either set `hashedPasswordFile` pointing to a sops-nix secret, or ensure at least one SSH key is always configured and the network is reachable. For VPS recovery consoles, consider having a rescue password.
 **Warning signs:** Locked out of server after applying config.
 
 ## State of the Art
 
-| Old Approach (neurosys 2020) | Current Approach (agent-neurosys 2026) | Impact |
+| Old Approach (neurosys 2020) | Current Approach (neurosys 2026) | Impact |
 |------------------------------|---------------------------------------|--------|
 | niv for pinning | Flake inputs + flake.lock | Better reproducibility, no external tool |
 | home-manager via channel | home-manager as flake input | Lockfile-pinned, version-matched |
@@ -438,7 +438,7 @@ with lib;
 
 3. **Teleport usage**
    - What we know: .doom.d references Teleport TRAMP integration. Teleport is an access management tool.
-   - What's unclear: Is Teleport currently in use for server access? Should it be part of the agent-neurosys networking story?
+   - What's unclear: Is Teleport currently in use for server access? Should it be part of the neurosys networking story?
    - Recommendation: Ask user. If yes, add as Phase 3 or Phase 6 consideration.
 
 4. **Direnv on server**
@@ -451,7 +451,7 @@ with lib;
 ### Primary (HIGH confidence)
 - `gh api repos/dangirsh/neurosys/contents/...` -- Full source code of all .nix files and README.org
 - `gh api repos/dangirsh/.doom.d/contents/...` -- Full source code of all .el files
-- Agent-neurosys local codebase (`/data/projects/agent-neurosys/`) -- All current .nix modules
+- Agent-neurosys local codebase (`/data/projects/neurosys/`) -- All current .nix modules
 
 ### Secondary (MEDIUM confidence)
 - NixOS option renames verified against known migration patterns (20.03 -> 25.11 is a 5-year gap with multiple major renames)
@@ -465,4 +465,4 @@ with lib;
 - NixOS option renames: MEDIUM -- some renames may be missing for the 20.03->25.11 gap
 
 **Research date:** 2026-02-14
-**Valid until:** No expiry (repos are static/archived; agent-neurosys roadmap is the moving target)
+**Valid until:** No expiry (repos are static/archived; neurosys roadmap is the moving target)

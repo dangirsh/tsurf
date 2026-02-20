@@ -1,4 +1,4 @@
-# Requirements: agent-neurosys
+# Requirements: neurosys
 
 **Defined:** 2026-02-13
 **Core Value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned — no manual setup steps.

@@ -10,8 +10,8 @@ requires:
     provides: claw-swap flake (nixosModules.default + packages) + sops secrets + Docker image
 provides:
   - Complete NixOS module with 3 hardened containers, 1 Docker network, 5 secrets, 2 env templates
-  - agent-neurosys flake integration importing claw-swap alongside parts
-affects: [phase-04-docker-services, agent-neurosys-flake]
+  - neurosys flake integration importing claw-swap alongside parts
+affects: [phase-04-docker-services, neurosys-flake]
 
 tech-stack:
   added: [caddy, postgres-alpine]
@@ -21,8 +21,8 @@ key-files:
   created: []
   modified:
     - /data/projects/claw-swap/nix/module.nix
-    - /data/projects/agent-neurosys/flake.nix
-    - /data/projects/agent-neurosys/flake.lock
+    - /data/projects/neurosys/flake.nix
+    - /data/projects/neurosys/flake.lock
   bugfix:
     - /data/projects/parts/flake.nix
     - /data/projects/parts/nix/module.nix
@@ -42,14 +42,14 @@ completed: 2026-02-16
 
 # Phase 4 Plan 02: Claw-Swap NixOS Module + Agent-Neurosys Integration
 
-**Shipped the complete claw-swap NixOS module (3 hardened containers, network, secrets) and integrated it into agent-neurosys as a flake input. `nix flake check` validates the full combined stack.**
+**Shipped the complete claw-swap NixOS module (3 hardened containers, network, secrets) and integrated it into neurosys as a flake input. `nix flake check` validates the full combined stack.**
 
 ## Performance
 
 - **Duration:** ~35 min
 - **Completed:** 2026-02-16
 - **Tasks:** 2 (plus parts bugfix for clawvault/qmd args)
-- **Repos touched:** /data/projects/claw-swap, /data/projects/agent-neurosys, /data/projects/parts (bugfix)
+- **Repos touched:** /data/projects/claw-swap, /data/projects/neurosys, /data/projects/parts (bugfix)
 
 ## Accomplishments
 
@@ -62,16 +62,16 @@ completed: 2026-02-16
   - 3 hardened containers (db, app, caddy) with --read-only, --cap-drop=ALL, --no-new-privileges, resource limits
   - Systemd ordering (after + requires) for all containers on network service
   - tmpfiles.rules for 4 host directories
-- Added claw-swap as flake input in agent-neurosys with nixpkgs + sops-nix follows
+- Added claw-swap as flake input in neurosys with nixpkgs + sops-nix follows
 - Fixed parts module bug (missing clawvault/qmd args in callPackage calls)
-- `nix flake check` passes for both claw-swap and agent-neurosys
+- `nix flake check` passes for both claw-swap and neurosys
 
 ## Task Commits
 
 **claw-swap repo:**
 1. **Task 1: NixOS module with hardened containers** — `9845861`
 
-**agent-neurosys repo:**
+**neurosys repo:**
 2. **Task 2: Flake integration** — `4433ebf`
 
 **parts repo (bugfix):**
@@ -80,8 +80,8 @@ completed: 2026-02-16
 ## Files Modified
 
 - `/data/projects/claw-swap/nix/module.nix` — Complete NixOS module (220 lines)
-- `/data/projects/agent-neurosys/flake.nix` — Added claw-swap input + module import
-- `/data/projects/agent-neurosys/flake.lock` — Updated with claw-swap + parts inputs
+- `/data/projects/neurosys/flake.nix` — Added claw-swap input + module import
+- `/data/projects/neurosys/flake.lock` — Updated with claw-swap + parts inputs
 - `/data/projects/parts/flake.nix` — Pass clawvault/qmd to module (bugfix)
 - `/data/projects/parts/nix/module.nix` — Accept and forward clawvault/qmd (bugfix)
 
@@ -100,7 +100,7 @@ completed: 2026-02-16
 
 All plan verification criteria met:
 - `nix flake check` passes for claw-swap (module + containers valid)
-- `nix flake check` passes for agent-neurosys (full system with parts + claw-swap)
+- `nix flake check` passes for neurosys (full system with parts + claw-swap)
 - All 3 containers have security hardening (read-only, cap-drop ALL, no-new-privileges, memory, cpus)
 - Docker network has systemd ordering for all containers
 - All secrets use sops.templates (no plaintext)

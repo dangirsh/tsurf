@@ -1,6 +1,6 @@
 # Project Research Summary
 
-**Project:** agent-neurosys
+**Project:** neurosys
 **Domain:** NixOS declarative server configuration (Ubuntu-to-NixOS VPS migration)
 **Researched:** 2026-02-13
 **Confidence:** HIGH

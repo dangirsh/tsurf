@@ -1,4 +1,4 @@
-# CLAUDE.md — agent-neurosys
+# CLAUDE.md — neurosys
 
 NixOS configuration for the `neurosys` server (and future machines). Declarative system management with flakes + home-manager.
 

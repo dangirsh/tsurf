@@ -86,7 +86,7 @@ completed: 2026-02-16
 
 ## Next Phase Readiness
 
-- Ready for Phase 4 Plan 02: implement the real NixOS module (containers, networks, templates) and integrate claw-swap into agent-neurosys.
+- Ready for Phase 4 Plan 02: implement the real NixOS module (containers, networks, templates) and integrate claw-swap into neurosys.
 
 ---
 *Phase: 04-docker-services*

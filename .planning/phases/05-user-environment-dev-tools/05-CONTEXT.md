@@ -95,7 +95,7 @@ The server provides a complete, agent-optimized compute environment. SSH in, lau
 <specifics>
 ## Specific Ideas
 
-- "The 'agent' in agent-neurosys is the key. Humans should never need to use tools directly ever again."
+- "The 'agent' in neurosys is the key. Humans should never need to use tools directly ever again."
 - "100% of interactions are agent-mediated, so 100% of tool choice boils down to 'does this help the agent be more effective?'"
 - "The most I'll do is launch btop and a bunch of mosh + tmux sessions to control a team of agents"
 - Jeffrey Emanuel's ACFS flywheel researched — relevant patterns (Agent Mail, CASS, NTM) noted but deferred. The key insight is agent coordination infrastructure, not human developer ergonomics.
