@@ -215,7 +215,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 18. VPS Consolidation | 0/TBD | Not started | - |
 | 19. Generate Project README | 1/1 | ✓ Complete | 2026-02-20 |
 | 20. Deep Ecosystem Research | 1/1 | ✓ Complete | 2026-02-20 |
-| 21. Impermanence (Ephemeral Root) | 0/TBD | Not started | - |
+| 21. Impermanence (Ephemeral Root) | 0/2 | Planned | - |
 | 22. Secret Proxy (Netclode Pattern) | 0/TBD | Not started | - |
 | 23. Tailscale Security & Self-Sovereignty | 0/TBD | Not started | - |
 | 24. Server Hardening + DX | 0/TBD | Not started | - |
@@ -452,10 +452,11 @@ Plans:
   7. Disk reprovisioning via nixos-anywhere redeploy tested successfully
   8. All services survive a reboot with ephemeral root (Docker, Tailscale, sops secrets, Syncthing, Home Assistant, Prometheus)
 **Effort:** High — requires disk reprovisioning (nixos-anywhere redeploy). Test in VM first.
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 21 to break down)
+- [ ] 21-01-PLAN.md -- NixOS config changes: BTRFS disko, impermanence module, initrd rollback, restic path migration, recovery runbook
+- [ ] 21-02-PLAN.md -- Migration execution: backup verification, nixos-anywhere redeploy, state restoration, service verification (human checkpoint)
 
 ### Phase 22: Secret Proxy (Netclode Pattern)
 
