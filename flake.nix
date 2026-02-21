@@ -27,9 +27,13 @@
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, ... } @ inputs: {
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, deploy-rs, ... } @ inputs: {
     nixosConfigurations.neurosys = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
@@ -51,5 +55,23 @@
         }
       ];
     };
+
+    deploy.nodes.neurosys = {
+      hostname = "neurosys";
+      sshUser = "root";
+      magicRollback = true;
+      autoRollback = true;
+      confirmTimeout = 120;
+      profiles.system = {
+        user = "root";
+        path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.neurosys;
+      };
+    };
+
+    packages.x86_64-linux.deploy-rs = deploy-rs.packages.x86_64-linux.default;
+
+    checks = builtins.mapAttrs
+      (system: deployLib: deployLib.deployChecks self.deploy)
+      deploy-rs.lib;
   };
 }
