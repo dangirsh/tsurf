@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 22: Secret Proxy (Netclode Pattern)** - Two-tier proxy so real API keys never enter agent sandboxes. Header-only injection, per-session allowlisting, reflection prevention.
 - [ ] **Phase 23: Tailscale Security & Self-Sovereignty** - TKA (Tailnet Key Authority), ACL hardening, device approval, auth key rotation, node key expiry. Self-custodied signing keys.
 - [ ] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix.
-- [ ] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
+- [x] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
 - [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
 
 ## Phase Details
@@ -219,7 +219,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 22. Secret Proxy (Netclode Pattern) | 0/TBD | Not started | - |
 | 23. Tailscale Security & Self-Sovereignty | 0/TBD | Not started | - |
 | 24. Server Hardening + DX | 0/TBD | Not started | - |
-| 25. Deploy Safety (deploy-rs) | 0/1 | Planned | - |
+| 25. Deploy Safety (deploy-rs) | 1/1 | ✓ Complete | 2026-02-21 |
 | 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
@@ -534,7 +534,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 25-01-PLAN.md -- deploy-rs flake integration + deploy.sh wrapper evolution + recovery runbook update
+- [x] 25-01-PLAN.md -- deploy-rs flake integration + deploy.sh wrapper evolution + recovery runbook update
 
 ### Phase 26: Agent Notifications via Telegram Bot
 

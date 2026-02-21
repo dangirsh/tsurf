@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 20 COMPLETE -- Deep ecosystem research synthesized into adoption report.
+**Current focus:** Phase 25 COMPLETE -- deploy-rs magic rollback integrated into deployment pipeline.
 
 ## Current Position
 
-Phase: 20 (Deep Ecosystem Research)
+Phase: 25 (Deploy Safety with deploy-rs)
 Plan: 1 of 1 -- COMPLETE
-Status: Phase 20 executed. 10 parallel research agents synthesized into unified adoption report with actionable roadmap.
-Last activity: 2026-02-20 - Synthesized 10 agent reports into 20-01-SUMMARY.md with adoption roadmap and key decisions
+Status: Phase 25 executed. deploy-rs magic rollback wired into flake + deploy.sh + recovery runbook with full flake/schema validation.
+Last activity: 2026-02-21 - Completed 25-01 with deploy-rs node config, deploy.sh migration, and rollback runbook appendix
 
-Progress: Phase 20 complete (1/1 plans).
+Progress: Phase 25 complete (1/1 plans).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: ~17.5min
-- Total execution time: ~278 min
+- Total plans completed: 17
+- Average duration: ~18.2min
+- Total execution time: ~310 min
 
 **By Phase:**
 
@@ -40,10 +40,13 @@ Progress: Phase 20 complete (1/1 plans).
 
 | 16 | 2/2 | ~25min | ~12.5min |
 | 17 | 4/4 | ~76min | ~19min |
+| 19 | 1/1 | ~18min | ~18min |
+| 20 | 1/1 | ~24min | ~24min |
+| 25 | 1/1 | ~32min | ~32min |
 
 **Recent Trend:**
-- Last 4 plans: 17-04 (~20min), 16-01 (~15min), 16-02 (~10min)
-- Trend: Parallel agent execution for independent plans continues to be efficient.
+- Last 4 plans: 25-01 (~32min), 20-01 (~24min), 19-01 (~18min), 17-04 (~20min)
+- Trend: Execution remains stable; validation-heavy plans trend slightly longer due full `nix flake check` runs.
 
 *Updated after each plan completion*
 
@@ -118,6 +121,9 @@ Recent decisions affecting current work:
 - [19-01]: README.md finalized as single operator entry point; overview/deploy sections tightened for first-time deploy readability
 - [19-01]: Design decision and accepted-risk tables constrained to source-grounded IDs; stale-content checks and source cross-validation rerun clean
 - [19-01]: Added deploy-script decision rows and explicit 7-input flake validation note in README after checklist verification
+- [25-01]: Deploy activation moved from `nixos-rebuild` to pinned `nix run .#deploy-rs` with flake-level `deploy.nodes.neurosys`
+- [25-01]: Magic rollback enabled by default with `confirmTimeout = 120`; explicit `--first-deploy` and `--no-magic-rollback` bypass flags added
+- [25-01]: Existing local+remote deploy locking and post-deploy container health polling retained around deploy-rs
 
 ### Completed Phases
 
@@ -152,6 +158,8 @@ Recent decisions affecting current work:
   - 19-01: Comprehensive README.md with all modules, services, security, deployment, operations, decisions, risks
 - **Phase 20: Deep Ecosystem Research** (1 plan, completed 2026-02-20)
   - 20-01: 10 parallel research agents → unified adoption report covering srvos, sandbox hardening, gVisor, deploy-rs, impermanence, secret proxy, microvm.nix, multi-node scaling, messaging, reference configs
+- **Phase 25: Deploy Safety (deploy-rs)** (1 plan, completed 2026-02-21)
+  - 25-01: deploy-rs input + deploy node + deployChecks, deploy.sh migration with rollback flags, recovery runbook Appendix 11
 
 ### Roadmap Evolution
 
@@ -165,6 +173,13 @@ Recent decisions affecting current work:
 - Phase 17 added: Hardcore Simplicity & Security Audit — critical line-by-line review of all modules, services, secrets, networking, Docker, firewall, deployment for over-engineering/YAGNI and security gaps. Establish repo guardrails for future agentic development.
 - Phase 19 added: Generate comprehensive project README — concise, skimmable README.md with all features, goals, constraints, deployment quick-start, operating details, design decisions, accepted risks
 - Phase 20 added: Deep Ecosystem Research — 10 parallel agents surveying sandboxing, deployment, hardening, impermanence, messaging, multi-node scaling, and reference configs
+- Phase 21 added: Impermanence (Ephemeral Root) — wipe root on every boot via nix-community/impermanence, BTRFS subvolumes + initrd rollback, explicit /persist state manifest (from ecosystem research item 6)
+- Phase 22 added: Secret Proxy (Netclode Pattern) — two-tier proxy where real API keys never enter agent sandboxes, header-only injection, per-session allowlisting (from ecosystem research item 7)
+- Phase 23 added: Tailscale Security & Self-Sovereignty — TKA (Tailnet Key Authority), ACL hardening, device approval, auth key rotation, self-custodied signing keys (from Phase 13 adoption + ecosystem research)
+- Phase 24 added: Server Hardening + DX — srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix (from ecosystem research items 1, 2, 3 + reference patterns)
+- Phase 25 added: Deploy Safety (deploy-rs) — magic rollback via inotify canary, evolve deploy.sh into wrapper (from ecosystem research item 5)
+- Phase 26 added: Agent Notifications (Telegram Bot) — Bot API integration, 2 sops secrets, agent reach-back mechanism (from ecosystem research item 4)
+- Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
 
 ### Blockers/Concerns
 
@@ -199,6 +214,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-20
-Stopped at: Phase 19 complete — README/docs validation and summary/state updates finished
+Last session: 2026-02-21
+Stopped at: Phase 25 complete — deploy-rs safety rollout verified, summary/roadmap/state updated
 Resume file: None
