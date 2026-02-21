@@ -52,9 +52,12 @@
         };
       };
 
+      gui = {
+        insecureSkipHostcheck = true;  # API accessed via Docker bridge (host.docker.internal)
+      };
+
       options = {
         urAccepted = -1;
-        insecureSkipHostcheck = true;  # API accessed via Docker bridge (host.docker.internal)
       };
     };
   };
