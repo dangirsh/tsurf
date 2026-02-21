@@ -1,7 +1,7 @@
 # modules/monitoring.nix
 # @decision MON-02: Scrape node metrics every 15s with 90-day retention for operational history.
 # @decision MON-05: Alertmanager, ntfy, Grafana removed — agents query Prometheus /api/v1/alerts directly.
-# @decision MON-06: Prometheus localhost-only — no web dashboard, agents query API from localhost.
+# @decision MON-06: Prometheus binds 0.0.0.0 — NixOS firewall restricts access to Docker bridges and Tailscale.
 # @decision MON-07: Textfile collector exposes restic backup timestamp for staleness alerting.
 { config, pkgs, ... }: {
 
@@ -26,7 +26,7 @@
 
   services.prometheus = {
     enable = true;
-    listenAddress = "127.0.0.1";
+    listenAddress = "0.0.0.0";
     port = 9090;
     retentionTime = "90d";
 

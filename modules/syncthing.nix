@@ -1,6 +1,6 @@
 # modules/syncthing.nix
 # @decision SVC-02: Syncthing runs as user dangirsh with fully declarative devices/folders.
-# @decision SVC-03: GUI/API localhost-only — agents interact via filesystem, not web UI.
+# @decision SVC-03: GUI/API binds 0.0.0.0 — NixOS firewall restricts access to Docker bridges and Tailscale.
 { ... }: {
   systemd.services.syncthing.environment = {
     STNODEFAULTFOLDER = "true";
@@ -17,7 +17,7 @@
     dataDir = "/home/dangirsh";
     configDir = "/home/dangirsh/.config/syncthing";
     openDefaultPorts = true;
-    guiAddress = "127.0.0.1:8384";
+    guiAddress = "0.0.0.0:8384";
     overrideDevices = true;
     overrideFolders = true;
 
