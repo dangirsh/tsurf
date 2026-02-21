@@ -2,16 +2,19 @@
 # scripts/deploy.sh — Deploy neurosys NixOS config to neurosys
 #
 # Modes:
-#   --mode local   (default) Build locally, push + switch remotely
-#   --mode remote  SSH into server, pull, rebuild on server
+#   --mode local   (default) Build locally, deploy remotely via deploy-rs
+#   --mode remote  Build remotely via deploy-rs --remote-build
 #
 # Flags:
 #   --target USER@HOST  Override SSH target (default: root@neurosys)
+#   --first-deploy  Disable magic rollback once for migration from nixos-rebuild
+#   --no-magic-rollback  Disable magic rollback for intentional network/SSH changes
 #   --skip-update  Skip 'nix flake update parts' step
 #   --help         Print usage
 #
 # @decision Manual deploy only — no CI/CD. NixOS handles incrementality.
-# @decision Full nixos-rebuild switch every deploy — no partial/container-only.
+# @decision Full deploy-rs system activation every deploy — no partial/container-only.
+# @decision Magic rollback enabled by default with 120s confirm timeout.
 # @decision Container health polling (30s) — no app-level checks.
 # @decision No auto-commit of flake.lock — print reminder instead.
 set -euo pipefail
@@ -19,6 +22,8 @@ set -euo pipefail
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET="root@neurosys"
 MODE="local"
+FIRST_DEPLOY=false
+NO_MAGIC_ROLLBACK=false
 SKIP_UPDATE=false
 SECONDS=0
 
@@ -44,17 +49,20 @@ Usage: $(basename "$0") [OPTIONS]
 Deploy neurosys NixOS config to neurosys server.
 
 Options:
-  --mode local    Build locally, push closure, switch remotely (default)
-  --mode remote   SSH into server, pull repo, rebuild on server
+  --mode local          Build locally, deploy remotely (default)
+  --mode remote         Build on target host via deploy-rs --remote-build
   --target U@H    Override SSH target (default: root@neurosys)
-  --skip-update   Skip 'nix flake update parts' before building
-  --help          Show this help
+  --first-deploy        Disable magic rollback for one-time migration
+  --no-magic-rollback   Disable magic rollback for this deploy
+  --skip-update         Skip 'nix flake update parts' before building
+  --help                Show this help
 
 Examples:
-  ./scripts/deploy.sh                              # Deploy with latest parts (local build)
+  ./scripts/deploy.sh                              # Deploy with magic rollback (local build)
+  ./scripts/deploy.sh --first-deploy               # First migration deploy from nixos-rebuild
+  ./scripts/deploy.sh --no-magic-rollback          # Intentional networking change deploy
   ./scripts/deploy.sh --skip-update                # Deploy without updating parts input
   ./scripts/deploy.sh --mode remote                # Build on server instead of locally
-  ./scripts/deploy.sh --target root@62.171.134.33  # Deploy via public IP
 USAGE
 }
 
@@ -68,6 +76,14 @@ while [[ $# -gt 0 ]]; do
     --target)
       TARGET="$2"
       shift 2
+      ;;
+    --first-deploy)
+      FIRST_DEPLOY=true
+      shift
+      ;;
+    --no-magic-rollback)
+      NO_MAGIC_ROLLBACK=true
+      shift
       ;;
     --skip-update)
       SKIP_UPDATE=true
@@ -133,20 +149,32 @@ PARTS_REV_SHORT="${PARTS_REV:0:7}"
 echo "==> Parts revision: $PARTS_REV_SHORT"
 
 # --- Build + deploy ---
+if [[ "$TARGET" != "root@neurosys" ]]; then
+  echo "WARNING: --target affects SSH locking/health checks only."
+  echo "         deploy-rs deploy target is flake node 'neurosys' (hostname=neurosys)."
+fi
+
+DEPLOY_ARGS=(
+  "$FLAKE_DIR#neurosys"
+  --confirm-timeout 120
+)
+if [[ "$FIRST_DEPLOY" == true || "$NO_MAGIC_ROLLBACK" == true ]]; then
+  DEPLOY_ARGS+=(--magic-rollback false)
+fi
+
+if [[ "$FIRST_DEPLOY" == true ]]; then
+  echo "==> First deploy mode enabled: magic rollback disabled for migration."
+fi
+if [[ "$NO_MAGIC_ROLLBACK" == true ]]; then
+  echo "==> Magic rollback disabled for this deploy (intentional networking/SSH changes)."
+fi
+
 if [[ "$MODE" == "local" ]]; then
-  echo "==> Building locally and deploying to $TARGET..."
-  nix shell nixpkgs#nixos-rebuild -c \
-    nixos-rebuild switch \
-      --flake "$FLAKE_DIR#neurosys" \
-      --target-host "$TARGET"
+  echo "==> Deploying to $TARGET with deploy-rs (confirm timeout: 120s)..."
+  nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}"
 else
-  echo "==> Deploying via remote rebuild on $TARGET..."
-  ssh "$TARGET" bash -s <<'REMOTE'
-    set -euo pipefail
-    cd /data/projects/neurosys
-    git pull --ff-only
-    nixos-rebuild switch --flake .#neurosys
-REMOTE
+  echo "==> Deploying via remote build on $TARGET with deploy-rs..."
+  nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}" --remote-build
 fi
 
 # --- Verify containers ---
@@ -195,7 +223,8 @@ else
   echo "All container status:"
   ssh "$TARGET" "docker ps -a --format 'table {{.Names}}\t{{.Status}}' | grep -E '(NAMES|parts-|claw-swap-)'" || true
   echo ""
-  echo "To rollback:"
+  echo "Connectivity failures auto-rollback with deploy-rs magic rollback."
+  echo "For non-connectivity issues (for example containers failing after deploy), use manual rollback:"
   echo "  ssh $TARGET nixos-rebuild switch --rollback"
   exit 1
 fi

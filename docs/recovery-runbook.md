@@ -501,3 +501,51 @@ Re-run the dry-run restore test after:
 - Adding new exclusions to `modules/restic.nix`
 - Changing the sops-nix secrets structure
 - Changing the VPS provider or disk layout
+
+---
+
+## 11. Appendix -- deploy-rs Magic Rollback Safety
+
+`scripts/deploy.sh` now deploys with deploy-rs. This adds automatic rollback protection for connectivity failures.
+
+### 11.1 How magic rollback works
+
+During activation, deploy-rs installs a rollback canary and waits for deployment confirmation. If the deployer cannot reconnect and confirm in time, deploy-rs rolls back to the previous NixOS generation automatically.
+
+- Deploy timeout in this repo: `confirmTimeout = 120` seconds
+- Trigger condition: deployer cannot confirm over SSH within the timeout
+- Result: automatic revert to the previous generation (prevents permanent SSH lockout)
+
+### 11.2 First deploy procedure (one-time migration)
+
+The first deploy after migrating from `nixos-rebuild` must disable magic rollback because there is no deploy-rs-compatible prior generation yet.
+
+```bash
+./scripts/deploy.sh --first-deploy
+```
+
+This is a one-time step. After the first successful deploy-rs activation, run normal deploys without `--first-deploy`.
+
+### 11.3 Manual rollback (when SSH still works)
+
+Magic rollback primarily protects connectivity failures. If deployment succeeds but services are unhealthy (for example container startup failures), do a manual rollback:
+
+```bash
+ssh root@neurosys nixos-rebuild switch --rollback
+```
+
+### 11.4 When to disable magic rollback intentionally
+
+Disable magic rollback only when making intentional networking changes that can temporarily interrupt SSH confirmation:
+
+- Tailscale reconfiguration
+- SSH daemon configuration changes
+- Firewall/trusted interface changes
+
+Use:
+
+```bash
+./scripts/deploy.sh --no-magic-rollback
+```
+
+Re-enable the default behavior on the next deploy.
