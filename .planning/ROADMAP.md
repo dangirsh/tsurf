@@ -37,6 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix.
 - [x] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
 - [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
+- [ ] **Phase 27: Automaton Fleet — Profit Exploration** - Deploy 4 sovereign AI agents (Conway Automaton) on Conway Cloud with $1k USDC. Seed hypotheses (x402 APIs, human tasks, info speed, meta-tools). Monitor P&L, kill underperformers after 3 days, relaunch with refined prompts. Day 30 scale-or-sunset gate.
 
 ## Phase Details
 
@@ -215,12 +216,13 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 18. VPS Consolidation | 0/TBD | Not started | - |
 | 19. Generate Project README | 1/1 | ✓ Complete | 2026-02-20 |
 | 20. Deep Ecosystem Research | 1/1 | ✓ Complete | 2026-02-20 |
-| 21. Impermanence (Ephemeral Root) | 0/2 | Planned | - |
+| 21. Impermanence (Ephemeral Root) | 1/2 | In progress | - |
 | 22. Secret Proxy (Netclode Pattern) | 0/TBD | Not started | - |
 | 23. Tailscale Security & Self-Sovereignty | 0/TBD | Not started | - |
 | 24. Server Hardening + DX | 0/TBD | Not started | - |
 | 25. Deploy Safety (deploy-rs) | 1/1 | ✓ Complete | 2026-02-21 |
 | 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
+| 27. Automaton Fleet — Profit Exploration | 0/2 | Planned | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -455,7 +457,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 21-01-PLAN.md -- NixOS config changes: BTRFS disko, impermanence module, initrd rollback, restic path migration, recovery runbook
+- [x] 21-01-PLAN.md -- NixOS config changes: BTRFS disko, impermanence module, initrd rollback, restic path migration, recovery runbook
 - [ ] 21-02-PLAN.md -- Migration execution: backup verification, nixos-anywhere redeploy, state restoration, service verification (human checkpoint)
 
 ### Phase 22: Secret Proxy (Netclode Pattern)
@@ -555,3 +557,22 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 26 to break down)
+
+### Phase 27: Automaton Fleet — Profit Exploration
+
+**Goal:** Deploy 4 sovereign AI agents ([Conway Automaton](https://github.com/Conway-Research/automaton)) on Conway Cloud, each with a distinct seed hypothesis (x402 APIs, human tasks, info speed, meta-tools), funded with $1k USDC total ($250 each). Same visceral preamble (AI explosion thesis + explore/exploit/evolve), different starting direction. Agents have maximum autonomy and no fleet awareness -- survival pressure + constitution are the only guardrails. Kill underperformers after 3 days, relaunch with refined prompts incorporating learnings. Day 30 decision gate: scale ($1-2k more if revenue signal) or sunset.
+**Depends on:** Nothing (independent — Conway Cloud hosted, does not run on neurosys)
+**Requirements:** Conway Cloud account, $1k USDC on Base (chain 8453), BYOK API keys (Anthropic + OpenAI), CDP API keys for x402 mainnet
+**Success Criteria** (what must be TRUE):
+  1. All 4 agents deployed, funded ($250 each), and running autonomously on Conway Cloud
+  2. Agents use Claude Sonnet 4.6 as primary model with GPT-5-mini fallback
+  3. Genesis prompts contain shared preamble + unique seed hypothesis, no fleet awareness
+  4. Treasury policies enforce $50/day inference cap and $50 minimum reserve
+  5. Terminal dashboard on neurosys shows per-agent P&L (balance, revenue, burn, tier)
+  6. At least one agent generates non-zero revenue within the first 2 weeks
+  7. Day 30 decision gate reached with clear data-driven next step (scale/pivot/sunset)
+**Plans:** 2 plans
+
+Plans:
+- [ ] 27-01-PLAN.md — Conway setup, USDC funding, 4 agents with seed hypothesis genesis prompts, treasury policies, BYOK keys
+- [ ] 27-02-PLAN.md — Terminal monitoring dashboard (scripts/fleet-status.sh) + operator intervention protocol (3-day kill, relaunch, Day 30 gate)
