@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 25 COMPLETE -- deploy-rs magic rollback integrated into deployment pipeline.
+**Current focus:** Phase 21 in progress -- BTRFS impermanence ephemeral root configuration.
 
 ## Current Position
 
-Phase: 25 (Deploy Safety with deploy-rs)
-Plan: 1 of 1 -- COMPLETE
-Status: Phase 25 executed. deploy-rs magic rollback wired into flake + deploy.sh + recovery runbook with full flake/schema validation.
-Last activity: 2026-02-21 - Completed 25-01 with deploy-rs node config, deploy.sh migration, and rollback runbook appendix
+Phase: 21 (Impermanence Ephemeral Root)
+Plan: 1 of 2 -- COMPLETE
+Status: Plan 21-01 executed. BTRFS disko layout, impermanence module, initrd rollback, restic migration, runbook update. Plan 21-02 (deploy) pending.
+Last activity: 2026-02-22 - Completed 21-01 with BTRFS subvolumes, impermanence persistence, initrd rollback, /persist backup
 
-Progress: Phase 25 complete (1/1 plans).
+Progress: Phase 21 in progress (1/2 plans).
 
 ## Performance Metrics
 
@@ -43,10 +43,11 @@ Progress: Phase 25 complete (1/1 plans).
 | 19 | 1/1 | ~18min | ~18min |
 | 20 | 1/1 | ~24min | ~24min |
 | 25 | 1/1 | ~32min | ~32min |
+| 21 | 1/2 | ~10min | ~10min |
 
 **Recent Trend:**
-- Last 4 plans: 25-01 (~32min), 20-01 (~24min), 19-01 (~18min), 17-04 (~20min)
-- Trend: Execution remains stable; validation-heavy plans trend slightly longer due full `nix flake check` runs.
+- Last 4 plans: 21-01 (~10min), 25-01 (~32min), 20-01 (~24min), 19-01 (~18min)
+- Trend: Execution remains stable; 21-01 was fast due to well-defined plan with exact code blocks.
 
 *Updated after each plan completion*
 
@@ -124,6 +125,11 @@ Recent decisions affecting current work:
 - [25-01]: Deploy activation moved from `nixos-rebuild` to pinned `nix run .#deploy-rs` with flake-level `deploy.nodes.neurosys`
 - [25-01]: Magic rollback enabled by default with `confirmTimeout = 120`; explicit `--first-deploy` and `--no-magic-rollback` bypass flags added
 - [25-01]: Existing local+remote deploy locking and post-deploy container health polling retained around deploy-rs
+- [21-01]: IMP-01: BTRFS subvolume rollback (not tmpfs) -- server workloads need disk-backed root
+- [21-01]: IMP-02: Docker on own @docker subvolume (not impermanence bind-mount) -- avoids overlay2 nested mount conflicts
+- [21-01]: IMP-03: Persist whole /home/dangirsh (not per-file) -- simpler for server, covers Syncthing data + config
+- [21-01]: IMP-04: /var/lib/private covers DynamicUser services (ESPHome, future services)
+- [21-01]: RESTIC-05 updated: Back up /persist subvolume instead of blanket / with --one-file-system
 
 ### Completed Phases
 
@@ -214,6 +220,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-21
-Stopped at: Phase 25 complete — deploy-rs safety rollout verified, summary/roadmap/state updated
+Last session: 2026-02-22
+Stopped at: Completed 21-01-PLAN.md -- impermanence config ready, Plan 21-02 (deploy) pending
 Resume file: None
