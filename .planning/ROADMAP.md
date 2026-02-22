@@ -487,17 +487,18 @@ Plans:
   1. Tailnet Key Authority enabled (`tailscale lock init`) — all existing nodes signed
   2. New nodes cannot join the tailnet without explicit TKA signing (coordination server compromise cannot inject rogue nodes)
   3. ACLs reviewed and tightened: principle of least privilege for each device/service (neurosys, laptops, phones)
-  4. Device auto-approval disabled — new devices require explicit admin approval
+  4. New devices cannot join without cryptographic TKA signing (TKA replaces device approval — they are mutually exclusive)
   5. Auth key rotation policy documented and implemented (no long-lived pre-auth keys)
   6. MagicDNS configuration reviewed for information leakage
   7. Tailscale node key expiry policy configured (force periodic re-authentication)
   8. SSH via Tailscale verified hardened (no fallback to public IP possible)
   9. `nix flake check` passes with any Tailscale module changes
 **Effort:** Low-Medium — mostly operational (CLI commands + ACL policy), small NixOS config changes.
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 23 to break down)
+- [ ] 23-01-PLAN.md -- Restore port 22 firewall hardening + TKA operational runbook in recovery docs
+- [ ] 23-02-PLAN.md -- Execute TKA initialization + ACL hardening + verification (human checkpoints)
 
 ### Phase 24: Server Hardening and DX
 
