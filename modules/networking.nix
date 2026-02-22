@@ -25,10 +25,13 @@ in {
       assertion = exposed == [];
       message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain Tailscale-only (trustedInterfaces).";
     }
-    {
-      assertion = !builtins.elem 22 config.networking.firewall.allowedTCPPorts;
-      message = "SECURITY: Port 22 must NOT be in allowedTCPPorts. SSH is Tailscale-only (trustedInterfaces). Deploy uses root@neurosys which resolves via Tailscale MagicDNS.";
-    }
+    # TEMPORARY: port 22 assertion disabled for impermanence migration
+    # Safety net while Tailscale bootstraps on fresh install
+    # Will be re-enabled after deploy-rs magic rollback confirms Tailscale works
+    # {
+    #   assertion = !builtins.elem 22 config.networking.firewall.allowedTCPPorts;
+    #   message = "SECURITY: Port 22 must NOT be in allowedTCPPorts. SSH is Tailscale-only (trustedInterfaces). Deploy uses root@neurosys which resolves via Tailscale MagicDNS.";
+    # }
   ];
 
   programs.mosh.enable = true;
@@ -49,7 +52,8 @@ in {
   networking.firewall = {
     enable = true;
     allowPing = true;
-    allowedTCPPorts = [ 80 443 22000 ];
+    # TEMPORARY: port 22 added for impermanence migration safety net
+    allowedTCPPorts = [ 22 80 443 22000 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
     trustedInterfaces = [ "tailscale0" ];
   };
