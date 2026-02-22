@@ -12,5 +12,7 @@
     "sd_mod"
   ];
 
+  boot.initrd.supportedFilesystems = [ "btrfs" ];
+
   boot.kernelModules = [ ];
 }

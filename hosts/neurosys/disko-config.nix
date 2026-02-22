@@ -24,13 +24,37 @@
           root = {
             size = "100%";
             content = {
-              type = "filesystem";
-              format = "ext4";
-              mountpoint = "/";
+              type = "btrfs";
+              extraArgs = [ "-f" ];
+              subvolumes = {
+                "/root" = {
+                  mountpoint = "/";
+                  mountOptions = [ "compress=zstd" "noatime" ];
+                };
+                "/nix" = {
+                  mountpoint = "/nix";
+                  mountOptions = [ "compress=zstd" "noatime" ];
+                };
+                "/persist" = {
+                  mountpoint = "/persist";
+                  mountOptions = [ "compress=zstd" "noatime" ];
+                };
+                "/log" = {
+                  mountpoint = "/var/log";
+                  mountOptions = [ "compress=zstd" "noatime" ];
+                };
+                "/docker" = {
+                  mountpoint = "/var/lib/docker";
+                  mountOptions = [ "compress=zstd" "noatime" ];
+                };
+              };
             };
           };
         };
       };
     };
   };
+
+  fileSystems."/persist".neededForBoot = true;
+  fileSystems."/var/log".neededForBoot = true;
 }

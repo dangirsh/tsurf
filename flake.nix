@@ -31,14 +31,18 @@
       url = "github:serokell/deploy-rs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    impermanence = {
+      url = "github:nix-community/impermanence";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, deploy-rs, ... } @ inputs: {
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, deploy-rs, impermanence, ... } @ inputs: {
     nixosConfigurations.neurosys = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
       modules = [
         disko.nixosModules.disko
+        impermanence.nixosModules.impermanence
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
         inputs.parts.nixosModules.default
