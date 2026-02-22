@@ -1,6 +1,6 @@
 # Disaster Recovery Runbook -- neurosys VPS
 
-> **Last verified: 2026-02-22.** Review after any changes to backup paths, services, or secrets.
+> **Last verified: 2026-02-22.** Review after any changes to backup paths, services, or secrets. TKA appendix added 2026-02-22.
 
 ## 1. Overview
 
@@ -637,3 +637,103 @@ ls -la /var/lib/          # What's visible (includes bind-mounts + ephemeral)
 ```
 
 **Fix:** Add the missing path to `modules/impermanence.nix` and redeploy. Existing data on the ephemeral root will be lost on the next reboot -- copy it to `/persist/<path>` first if needed.
+
+---
+
+## 13. Appendix -- Tailnet Key Authority (TKA)
+
+### 13.1 Overview
+
+Tailnet Key Authority (TKA) ensures that the Tailscale coordination server cannot inject rogue nodes into the tailnet. With TKA enabled, every device must be cryptographically signed by a self-custodied signing key before it can join. This protects against coordination server compromise -- even if Tailscale's servers are breached, attackers cannot add unauthorized devices.
+
+**Signing nodes:** At least 2 devices must be designated as signing nodes (e.g., neurosys + a laptop). Only signing nodes can approve new devices joining the tailnet.
+
+**State location:** TKA state is stored in `/var/lib/tailscale` on each node. On neurosys, this is persisted via impermanence (bind-mounted from `/persist/var/lib/tailscale`). See Section 12 for the impermanence architecture.
+
+### 13.2 Initialization procedure
+
+> **Reference only.** The actual execution is documented in Phase 23 Plan 02.
+
+```bash
+# Pre-checks
+tailscale version      # Must be >= 1.90.8 (TS-2025-008 fix)
+tailscale lock status   # Should show "disabled" before init
+tailscale status        # Verify all nodes online
+
+# Initialize (on a signing node)
+tailscale lock init
+# -> Generates 10 disablement secrets -- SAVE THESE IMMEDIATELY
+
+# Verify
+tailscale lock status   # All nodes should show as signed
+```
+
+### 13.3 Signing new devices
+
+After TKA is enabled, new devices cannot join the tailnet until signed by an existing signing node.
+
+```bash
+# On an existing signing node, sign a new device:
+tailscale lock sign nodekey:<key> tlpub:<key>
+
+# Or pre-sign an auth key (for automated deployments):
+tailscale lock sign tskey-auth-XXXXCTRL-NNNNNN
+```
+
+### 13.4 Disablement secret storage
+
+TKA initialization generates 10 disablement secrets. **Only 1 is needed to disable TKA** (emergency recovery).
+
+**Storage locations (minimum 2):**
+
+1. **Password manager** (primary) -- store all 10 secrets
+2. **Offline backup** (secondary) -- printed copy or separate encrypted file
+3. **Tailscale support backup** (optional) -- enable during `tailscale lock init` if desired
+
+**Critical warning:** Loss of ALL disablement secrets with support backup disabled = permanent TKA lock-in. If all signing nodes are also lost, the tailnet cannot be recovered.
+
+### 13.5 Auth key rotation policy
+
+The `tailscale-authkey` in sops-nix is only used for initial setup or state loss (disaster recovery re-deploy via `nixos-anywhere`).
+
+**After TKA is enabled:**
+
+- Auth keys **must be pre-signed** before use: `tailscale lock sign tskey-auth-XXXXCTRL-NNNNNN`
+- Without pre-signing, a new node using the auth key will fail to join the tailnet
+
+**Rotation triggers:**
+
+- Current key expires (check expiry in admin console)
+- Key is suspected compromised
+
+**Rotation procedure:**
+
+1. Generate a new auth key in the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys) -- **one-time**, **tagged** with `tag:server`
+2. Pre-sign the key from a signing node: `tailscale lock sign tskey-auth-XXXXCTRL-NNNNNN`
+3. Update sops-nix secret: `sops secrets/neurosys.yaml` (replace `tailscale-authkey` value)
+4. Deploy: `scripts/deploy.sh`
+5. Verify: `ssh root@neurosys cat /run/secrets/tailscale-authkey | head -c 20`
+
+**Node key expiry policy:**
+
+- Personal devices (laptops, phones): 180 days (default) -- forces periodic re-authentication
+- Servers with `tag:server`: key expiry auto-disabled (tagged machines don't expire by default)
+
+### 13.6 TKA disaster recovery implications
+
+**If `/var/lib/tailscale` is lost on neurosys:**
+
+1. The node loses its TKA signing state and device identity
+2. Re-authenticate via the Tailscale admin console (see Phase 3, Step 3.1 in this runbook)
+3. Re-sign the node from another signing node: `tailscale lock sign nodekey:<key> tlpub:<key>`
+
+**If ALL signing nodes are lost:**
+
+1. Use a disablement secret to disable TKA: `tailscale lock disable <secret>`
+2. Re-initialize TKA with new signing nodes: `tailscale lock init`
+3. Re-sign all existing devices
+
+**If ALL signing nodes AND all disablement secrets are lost:**
+
+- TKA cannot be disabled. The tailnet is permanently locked.
+- Prevention: always maintain disablement secrets in 2+ independent locations (see Section 13.4)
