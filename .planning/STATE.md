@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 21 in progress -- BTRFS impermanence ephemeral root configuration.
+**Current focus:** Phase 23 in progress -- Tailscale security and self-sovereignty.
 
 ## Current Position
 
-Phase: 21 (Impermanence Ephemeral Root)
+Phase: 23 (Tailscale Security & Self-Sovereignty)
 Plan: 1 of 2 -- COMPLETE
-Status: Plan 21-01 executed. BTRFS disko layout, impermanence module, initrd rollback, restic migration, runbook update. Plan 21-02 (deploy) pending.
-Last activity: 2026-02-22 - Completed 21-01 with BTRFS subvolumes, impermanence persistence, initrd rollback, /persist backup
+Status: Plan 23-01 executed. Port 22 hardening verified, TKA runbook appendix added. Plan 23-02 (TKA init + ACL hardening) pending -- requires human checkpoints.
+Last activity: 2026-02-22 - Completed 23-01: port 22 assertion verified, TKA appendix in recovery runbook
 
-Progress: Phase 21 in progress (1/2 plans).
+Progress: Phase 23 in progress (1/2 plans).
 
 ## Performance Metrics
 

@@ -217,7 +217,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 20. Deep Ecosystem Research | 1/1 | ✓ Complete | 2026-02-20 |
 | 21. Impermanence (Ephemeral Root) | 1/2 | In progress | - |
 | 22. Secret Proxy (Netclode Pattern) | 0/TBD | Not started | - |
-| 23. Tailscale Security & Self-Sovereignty | 0/TBD | Not started | - |
+| 23. Tailscale Security & Self-Sovereignty | 1/2 | In progress | - |
 | 24. Server Hardening + DX | 0/TBD | Not started | - |
 | 25. Deploy Safety (deploy-rs) | 1/1 | ✓ Complete | 2026-02-21 |
 | 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
@@ -497,7 +497,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 23-01-PLAN.md -- Restore port 22 firewall hardening + TKA operational runbook in recovery docs
+- [x] 23-01-PLAN.md -- Restore port 22 firewall hardening + TKA operational runbook in recovery docs
 - [ ] 23-02-PLAN.md -- Execute TKA initialization + ACL hardening + verification (human checkpoints)
 
 ### Phase 24: Server Hardening and DX
