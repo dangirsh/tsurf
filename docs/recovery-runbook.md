@@ -1,6 +1,6 @@
 # Disaster Recovery Runbook -- neurosys VPS
 
-> **Last verified: 2026-02-19.** Review after any changes to backup paths, services, or secrets.
+> **Last verified: 2026-02-22.** Review after any changes to backup paths, services, or secrets.
 
 ## 1. Overview
 
@@ -98,22 +98,25 @@ The new VPS may have a different IP than the old one (`161.97.74.121`). Record t
 
 ## 3. What's Where
 
-**Backup approach:** Blanket `/` with `--one-file-system` and exclusions. All stateful paths on the root filesystem are backed up automatically -- no manual path additions needed when services are added. See `modules/restic.nix` for the exclusion list. To opt out a directory, place a `.nobackup` file in it.
+**Backup approach:** Back up the `/persist` BTRFS subvolume, which contains all stateful data via impermanence bind-mounts. The ephemeral root (`/`), `/nix` store, and Docker subvolume are excluded by design -- they are reproducible or on separate subvolumes. See `modules/restic.nix` for the exclusion list. To opt out a directory, place a `.nobackup` file in it.
+
+**Impermanence note:** All stateful data lives under `/persist`. The impermanence module bind-mounts paths like `/persist/etc/ssh` to `/etc/ssh`, `/persist/home/dangirsh` to `/home/dangirsh`, etc. Restoring to `/persist` automatically wires data to the correct locations on next boot. See Appendix 12 for the full architecture.
 
 | Data | Source | Recovery Method |
 |------|--------|----------------|
 | NixOS configuration | Git repo | `nix flake check` validates, `nixos-anywhere` deploys |
-| SSH host ed25519 key | B2 backup | `restic restore` then `--extra-files` to nixos-anywhere |
-| Docker bind mount data (claw-swap, parts) | B2 backup | `restic restore` to `/var/lib/claw-swap/`, `/var/lib/parts/` |
-| PostgreSQL logical dump | B2 backup | Inside `/var/lib/claw-swap/pgdata/backup.sql` (from pre-backup hook) |
-| Tailscale device state | B2 backup | `restic restore` to `/var/lib/tailscale/` |
-| Home Assistant state | B2 backup | `restic restore` to `/var/lib/hass/` |
-| User home + Syncthing | B2 backup | `restic restore` to `/home/dangirsh/` |
+| SSH host ed25519 key | B2 backup | `restic restore` extracts `/persist/etc/ssh/`, then `--extra-files` to nixos-anywhere |
+| Docker bind mount data (claw-swap, parts) | B2 backup | `restic restore` to `/persist/var/lib/claw-swap/`, `/persist/var/lib/parts/` |
+| PostgreSQL logical dump | B2 backup | Inside `/persist/var/lib/claw-swap/pgdata/backup.sql` (from pre-backup hook) |
+| Tailscale device state | B2 backup | `restic restore` to `/persist/var/lib/tailscale/` |
+| Home Assistant state | B2 backup | `restic restore` to `/persist/var/lib/hass/` |
+| User home + Syncthing | B2 backup | `restic restore` to `/persist/home/dangirsh/` |
 | Code repos | B2 backup + git remotes | B2 has latest uncommitted work; git has committed history |
-| All other `/var/lib/*` state | B2 backup | Auto-included by blanket backup (Syncthing certs, NixOS UID maps, fail2ban, etc.) |
+| All other stateful paths | B2 backup | Auto-included under `/persist/` (NixOS UID maps, fail2ban, systemd timers, etc.) |
+| Docker images + layers | Not backed up | On separate @docker subvolume; rebuilt by NixOS activation from OCI declarations |
 | sops-nix secrets | Git repo (encrypted) | Decrypted automatically once SSH host key is restored |
-| Tailscale auth | Manual re-auth | Only if `/var/lib/tailscale/` restore is stale |
-| Home Assistant device pairing | Manual re-setup | Only if `/var/lib/hass/` restore fails |
+| Tailscale auth | Manual re-auth | Only if `/persist/var/lib/tailscale/` restore is stale |
+| Home Assistant device pairing | Manual re-setup | Only if `/persist/var/lib/hass/` restore fails |
 
 ---
 
@@ -269,22 +272,24 @@ systemctl stop tailscaled.service
 
 **Option A -- Full restore (recommended):**
 
-The blanket backup includes everything on the root filesystem except ephemeral/reproducible paths. Restore it all at once:
+The backup contains the entire `/persist` subvolume. Restore it to `/` so that `/persist/*` paths land in the correct locations. Impermanence bind-mounts will wire them to the expected system paths on next boot.
 
 ```bash
 restic restore latest --target /
 ```
 
+This restores `/persist/etc/ssh`, `/persist/home/dangirsh`, `/persist/var/lib/*`, `/persist/data/`, etc. Docker images are NOT in the backup -- they live on the separate @docker subvolume and are rebuilt by NixOS activation from OCI declarations.
+
 **Option B -- Selective restore (if you only need specific paths):**
 
 ```bash
 restic restore latest --target / \
-  --include /var/lib/claw-swap \
-  --include /var/lib/parts \
-  --include /var/lib/tailscale \
-  --include /var/lib/hass \
-  --include /data/projects \
-  --include /home/dangirsh
+  --include /persist/var/lib/claw-swap \
+  --include /persist/var/lib/parts \
+  --include /persist/var/lib/tailscale \
+  --include /persist/var/lib/hass \
+  --include /persist/data \
+  --include /persist/home/dangirsh
 ```
 
 ### Step 2.8: Fix ownership
@@ -426,17 +431,20 @@ If any check fails, refer to the relevant Phase above to debug. Common issues:
 
 ## 9. Appendix -- Excluded from Backup
 
-Restic backs up the entire root filesystem (`/`) with `--one-file-system` (skips /proc, /sys, /dev, /run, /tmp automatically). The following paths are explicitly excluded in `modules/restic.nix`:
+Restic backs up `/persist` (the BTRFS subvolume containing all stateful data). The following are **not backed up by design**:
 
-| Path | Why Excluded | Impact of Loss |
+| Path/Subvolume | Why Excluded | Impact of Loss |
 |------|-------------|----------------|
-| `/nix` | Fully reproducible from `flake.lock` (50-200 GB) | Rebuilt automatically during `nixos-anywhere` deploy |
-| `/var/lib/docker/overlay2` | Docker image layers, rebuilt from images (potentially huge) | `docker compose up` or NixOS activation rebuilds them |
-| `/var/lib/docker/tmp` | Docker temp files | None |
-| `/var/lib/docker/buildkit` | BuildKit cache | None |
-| `/var/cache` | System package caches | Rebuilt automatically |
+| `/` (ephemeral root) | Wiped on every boot by initrd rollback; contains only NixOS-generated files | Rebuilt automatically on boot |
+| `/nix` (@nix subvolume) | Fully reproducible from `flake.lock` (50-200 GB) | Rebuilt automatically during `nixos-anywhere` deploy |
+| `/var/lib/docker` (@docker subvolume) | Docker images/layers rebuilt from OCI declarations; bind-mount data is under `/persist` | NixOS activation pulls images; bind mounts restore from `/persist` |
+| `/var/log` (@log subvolume) | Journal logs -- useful but not critical; accepted loss | Fresh logs start after rebuild |
+
+The following paths within `/persist` are explicitly excluded in `modules/restic.nix`:
+
+| Pattern | Why Excluded | Impact of Loss |
+|---------|-------------|----------------|
 | `**/.cache` | User cache directories | Rebuilt automatically |
-| `/var/lib/prometheus` | Metrics rebuilt from scratch | Lose historical graphs (accepted -- monitoring restarts clean) |
 | `.git/objects` | Fetched from git remotes | `git fetch` restores them |
 | `.git/config` | May contain credential tokens | Recreated by `git clone` |
 | `node_modules`, `__pycache__`, `.direnv`, `result` | Language/build artifacts | Rebuilt from lockfiles |
@@ -549,3 +557,83 @@ Use:
 ```
 
 Re-enable the default behavior on the next deploy.
+
+---
+
+## 12. Appendix -- Impermanence Architecture
+
+### 12.1 BTRFS subvolume layout
+
+The disk (`/dev/sda`) uses GPT with a single BTRFS partition containing 5 subvolumes:
+
+| Subvolume | Mountpoint | Survives Reboot | Backed Up | Purpose |
+|-----------|------------|-----------------|-----------|---------|
+| `@root` | `/` | No (wiped on boot) | No | Ephemeral root -- NixOS regenerates on activation |
+| `@nix` | `/nix` | Yes | No | Nix store -- reproducible from `flake.lock` |
+| `@persist` | `/persist` | Yes | Yes | All stateful data (see `modules/impermanence.nix`) |
+| `@log` | `/var/log` | Yes | No | Journal logs -- useful but accepted loss |
+| `@docker` | `/var/lib/docker` | Yes | No | Docker images/layers -- rebuilt from OCI declarations |
+
+### 12.2 Initrd rollback mechanism
+
+On every boot, before the root filesystem is mounted at `/`, the initrd runs a rollback script (`modules/boot.nix`, `boot.initrd.postResumeCommands`):
+
+1. Mount the BTRFS partition to a temporary mountpoint
+2. Move the current `@root` subvolume to `old_roots/<timestamp>`
+3. Delete old roots older than 30 days (handles nested subvolumes from systemd)
+4. Create a fresh empty `@root` subvolume
+5. Unmount
+
+This ensures every boot starts with a clean root filesystem. NixOS activation populates `/etc`, `/run`, system users, etc. from the Nix store.
+
+### 12.3 What survives reboot
+
+| Path | Source | Mechanism |
+|------|--------|-----------|
+| `/persist/*` | @persist subvolume | Direct mount; bind-mounts wire paths to expected locations |
+| `/nix/*` | @nix subvolume | Direct mount; contains all packages and system config |
+| `/var/log/*` | @log subvolume | Direct mount; journal continuity |
+| `/var/lib/docker/*` | @docker subvolume | Direct mount; container images and layers |
+| Everything else | NixOS activation | Generated from Nix store derivations on each boot |
+
+### 12.4 How to add a new stateful path
+
+When a new service or file needs to persist across reboots:
+
+1. Edit `modules/impermanence.nix`
+2. Add the path to `directories` (for dirs) or `files` (for individual files) under `environment.persistence."/persist"`
+3. Run `nix flake check` to validate
+4. Deploy -- impermanence creates the bind-mount automatically
+
+Example: to persist a new service's data at `/var/lib/myservice`:
+
+```nix
+directories = [
+  # ... existing entries ...
+  "/var/lib/myservice"   # MyService database
+];
+```
+
+After deploy, `/var/lib/myservice` is bind-mounted from `/persist/var/lib/myservice`. The service writes to `/var/lib/myservice` as usual and data survives reboots.
+
+### 12.5 Debugging missing state after reboot
+
+If a service loses data across reboots, the path is not in the persistence declarations.
+
+**Quick diagnosis:**
+
+```bash
+# Check if a path is persisted (bind-mounted from /persist)
+findmnt /var/lib/suspicious-path
+# If no output: path is on ephemeral root, data will be lost on reboot
+
+# List all impermanence bind-mounts
+findmnt | grep /persist
+
+# Compare running system against a blank root
+# After reboot, check what's on the ephemeral root vs /persist
+ls -la /persist/var/lib/  # What's persisted
+ls -la /var/lib/          # What's visible (includes bind-mounts + ephemeral)
+```
+
+**Fix:** Add the missing path to `modules/impermanence.nix` and redeploy. Existing data on the ephemeral root will be lost on the next reboot -- copy it to `/persist/<path>` first if needed.
