@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 23 in progress -- Tailscale security and self-sovereignty.
+**Current focus:** Phase 24 complete -- server hardening + DX baseline landed (srvos + sandbox namespace isolation + formatter/devShell).
 
 ## Current Position
 
-Phase: 23 (Tailscale Security & Self-Sovereignty)
-Plan: 1 of 2 -- COMPLETE
-Status: Plan 23-01 executed. Port 22 hardening verified, TKA runbook appendix added. Plan 23-02 (TKA init + ACL hardening) pending -- requires human checkpoints.
-Last activity: 2026-02-22 - Completed 23-01: port 22 assertion verified, TKA appendix in recovery runbook
+Phase: 24 (Server Hardening + DX)
+Plan: 1 of 1 -- COMPLETE
+Status: Plan 24-01 executed. srvos server profile imported with explicit host overrides, bubblewrap PID/cgroup namespaces added, treefmt formatter + devShell tooling integrated.
+Last activity: 2026-02-23 - Completed 24-01: srvos hardening baseline, sandbox PID/cgroup isolation, treefmt/devShell outputs
 
-Progress: Phase 23 in progress (1/2 plans).
+Progress: Phase 24 complete (1/1 plans). Deferred 23-02 human checkpoints still pending by design.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: ~18.2min
-- Total execution time: ~310 min
+- Total plans completed: 18
+- Average duration: ~18.1min
+- Total execution time: ~326 min
 
 **By Phase:**
 
@@ -46,8 +46,8 @@ Progress: Phase 23 in progress (1/2 plans).
 | 21 | 1/2 | ~10min | ~10min |
 
 **Recent Trend:**
-- Last 4 plans: 21-01 (~10min), 25-01 (~32min), 20-01 (~24min), 19-01 (~18min)
-- Trend: Execution remains stable; 21-01 was fast due to well-defined plan with exact code blocks.
+- Last 4 plans: 24-01 (~16min), 21-01 (~10min), 25-01 (~32min), 20-01 (~24min)
+- Trend: Execution remains stable with fast, bounded phase execution.
 
 *Updated after each plan completion*
 
@@ -130,6 +130,9 @@ Recent decisions affecting current work:
 - [21-01]: IMP-03: Persist whole /home/dangirsh (not per-file) -- simpler for server, covers Syncthing data + config
 - [21-01]: IMP-04: /var/lib/private covers DynamicUser services (ESPHome, future services)
 - [21-01]: RESTIC-05 updated: Back up /persist subvolume instead of blanket / with --one-file-system
+- [24-01]: srvos server module imported first; host overrides force `networking.useNetworkd = false` and `boot.initrd.systemd.enable = false`, with docs + command-not-found enabled.
+- [24-01]: agent-spawn bubblewrap now unshares PID and cgroup namespaces to hide host process/cgroup visibility from sandboxes.
+- [24-01]: treefmt-nix formatter and devShell tooling added; formatting enforcement in `checks` deferred to avoid large unrelated repo-wide churn this phase.
 
 ### Completed Phases
 
@@ -164,6 +167,8 @@ Recent decisions affecting current work:
   - 19-01: Comprehensive README.md with all modules, services, security, deployment, operations, decisions, risks
 - **Phase 20: Deep Ecosystem Research** (1 plan, completed 2026-02-20)
   - 20-01: 10 parallel research agents → unified adoption report covering srvos, sandbox hardening, gVisor, deploy-rs, impermanence, secret proxy, microvm.nix, multi-node scaling, messaging, reference configs
+- **Phase 24: Server Hardening + DX** (1 plan, completed 2026-02-23)
+  - 24-01: srvos hardening baseline + PID/cgroup sandbox isolation + treefmt formatter/devShell integration
 - **Phase 25: Deploy Safety (deploy-rs)** (1 plan, completed 2026-02-21)
   - 25-01: deploy-rs input + deploy node + deployChecks, deploy.sh migration with rollback flags, recovery runbook Appendix 11
 
@@ -185,6 +190,7 @@ Recent decisions affecting current work:
 - Phase 24 added: Server Hardening + DX — srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix (from ecosystem research items 1, 2, 3 + reference patterns)
 - Phase 25 added: Deploy Safety (deploy-rs) — magic rollback via inotify canary, evolve deploy.sh into wrapper (from ecosystem research item 5)
 - Phase 26 added: Agent Notifications (Telegram Bot) — Bot API integration, 2 sops secrets, agent reach-back mechanism (from ecosystem research item 4)
+- Phase 24 executed: srvos server defaults adopted with explicit host overrides, agent sandbox PID/cgroup isolation enabled, treefmt formatter + devShell shipped
 - Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
 
 ### Blockers/Concerns
@@ -220,6 +226,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Completed 21-01-PLAN.md -- impermanence config ready, Plan 21-02 (deploy) pending
+Last session: 2026-02-23
+Stopped at: Completed 24-01-PLAN.md -- srvos hardening, sandbox PID/cgroup isolation, and treefmt/devShell integration landed
 Resume file: None
