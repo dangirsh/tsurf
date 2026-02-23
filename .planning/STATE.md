@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 27 in progress -- OVH production migration started; Plan 27-01 (recon + sops bootstrap) completed.
+**Current focus:** Phase 27 in progress -- multi-host flake baseline complete after Plan 27-02; preparing OVH bootstrap/cutover steps.
 
 ## Current Position
 
 Phase: 27 (OVH VPS Production Migration)
-Plan: 1 of 5 -- COMPLETE
-Status: Plan 27-01 executed. OVH VPS recon captured disk/NIC/network/boot facts, `host_ovh` age key added, `secrets/ovh.yaml` encrypted, and nixos-anywhere extra-files host key staged.
-Last activity: 2026-02-23 - Completed 27-01: OVH recon + sops bootstrap + host key staging
+Plan: 2 of 5 -- COMPLETE
+Status: Plan 27-02 executed. Flake now defines `nixosConfigurations.{neurosys,ovh}` and `deploy.nodes.{neurosys,ovh}` with host-specific overrides for sops/grub/NAT/homepage and OVH host files added.
+Last activity: 2026-02-23 - Completed 27-02: multi-host flake + deploy script `--node` support
 
-Progress: Phase 27 started (1/5 plans complete). Phase 24 remains complete; deferred 23-02 human checkpoints still pending by design.
+Progress: Phase 27 in progress (2/5 plans complete). Phase 24 remains complete; deferred 23-02 human checkpoints still pending by design.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
-- Average duration: ~17.6min
-- Total execution time: ~335 min
+- Total plans completed: 20
+- Average duration: ~17.1min
+- Total execution time: ~342 min
 
 **By Phase:**
 
@@ -44,10 +44,10 @@ Progress: Phase 27 started (1/5 plans complete). Phase 24 remains complete; defe
 | 20 | 1/1 | ~24min | ~24min |
 | 25 | 1/1 | ~32min | ~32min |
 | 21 | 1/2 | ~10min | ~10min |
-| 27 | 1/5 | ~9min | ~9min |
+| 27 | 2/5 | ~16min | ~8min |
 
 **Recent Trend:**
-- Last 4 plans: 27-01 (~9min), 24-01 (~16min), 21-01 (~10min), 25-01 (~32min)
+- Last 4 plans: 27-02 (~7min), 27-01 (~9min), 24-01 (~16min), 21-01 (~10min)
 - Trend: Execution remains stable with short, bounded plan delivery.
 
 *Updated after each plan completion*
@@ -139,6 +139,10 @@ Recent decisions affecting current work:
 - [27-01]: `.sops.yaml` now has per-host creation rules for both `secrets/neurosys.yaml` and `secrets/ovh.yaml` with `admin + host` recipient scoping.
 - [27-01]: `secrets/ovh.yaml` mirrors neurosys secret schema; `tailscale-authkey` is intentionally a replace-before-deploy placeholder.
 - [27-01]: Prepared `tmp/ovh-host-keys/persist/etc/ssh/ssh_host_ed25519_key` for nixos-anywhere `--extra-files` injection into impermanence-backed `/persist/etc/ssh`.
+- [27-02]: Added `mkHost` + `commonModules` in `flake.nix` and split host evaluation to `nixosConfigurations.neurosys` and `nixosConfigurations.ovh` without double-importing `./modules`.
+- [27-02]: Added `deploy.nodes.ovh` (`hostname = neurosys-prod`) alongside existing neurosys node for deploy-rs multi-target activation.
+- [27-02]: Moved host-specific values out of shared modules (`sops.defaultSopsFile`, NAT external interface, GRUB device, homepage host identity) into host defaults.
+- [27-02]: `scripts/deploy.sh` now supports `--node` (`neurosys` default, `ovh` optional) with node-aware default SSH target/lock paths and flake selector (`$FLAKE_DIR#$NODE`).
 
 ### Completed Phases
 
@@ -199,7 +203,7 @@ Recent decisions affecting current work:
 - Phase 27 added: OVH VPS Production Migration — multi-host refactor, OVH bootstrap, staged service migration, production cutover
 - Phase 24 executed: srvos server defaults adopted with explicit host overrides, agent sandbox PID/cgroup isolation enabled, treefmt formatter + devShell shipped
 - Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
-- Phase 27 started: 27-01 executed with OVH recon + host key/sops bootstrap artifacts committed
+- Phase 27 progressing: 27-01 recon/secrets bootstrap and 27-02 multi-host flake + deploy node refactor executed
 
 ### Blockers/Concerns
 
@@ -209,7 +213,7 @@ Recent decisions affecting current work:
 - [RESOLVED]: Phase 2.1 scope creep — absorbed into Phase 9 after re-evaluation
 - [NOTE]: Syncthing device IDs are placeholders — user must replace before deploy
 - [NOTE]: home-manager ssh/git options show deprecation warnings (renamed options) — cosmetic, not blocking
-- [NOTE]: OVH root SSH password auth failed during 27-01; recon succeeded via `ubuntu` after forced password-expiry rotation. Confirm preferred admin login path before 27-02/27-03 deploy steps.
+- [NOTE]: OVH root SSH password auth failed during 27-01; recon succeeded via `ubuntu` after forced password-expiry rotation. Confirm preferred admin login path before 27-03 deploy steps.
 
 ### Quick Tasks Completed
 
@@ -236,5 +240,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 24-01-PLAN.md -- srvos hardening, sandbox PID/cgroup isolation, and treefmt/devShell integration landed
-Resume file: None
+Stopped at: Completed 27-02-PLAN.md -- dual-host flake/deploy-rs topology and deploy.sh `--node` support landed
+Resume file: .planning/phases/27-ovh-vps-production-migration/27-03-PLAN.md
