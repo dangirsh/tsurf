@@ -323,7 +323,8 @@
         "llm-agents": "llm-agents",
         "nixpkgs": "nixpkgs_2",
         "parts": "parts",
-        "sops-nix": "sops-nix"
+        "sops-nix": "sops-nix",
+        "srvos": "srvos"
       }
     },
     "sops-nix": {
@@ -343,6 +344,26 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
+        "type": "github"
+      }
+    },
+    "srvos": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1771812348,
+        "narHash": "sha256-d8LL7nSpFueYtZhK29t7j3JiaKLA4lqW8neJv/uZGQc=",
+        "owner": "nix-community",
+        "repo": "srvos",
+        "rev": "ffc8fceb1e3cad06b5074cda30f88132b4fb4869",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "srvos",
         "type": "github"
       }
     },
