@@ -62,18 +62,16 @@ in {
   services.openssh = {
     enable = true;
     openFirewall = false;
+    # @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
+    hostKeys = [
+      { type = "ed25519"; path = "/etc/ssh/ssh_host_ed25519_key"; }
+    ];
     settings = {
       # TEMPORARY: password auth enabled for migration debugging via VNC
       PasswordAuthentication = true;
       KbdInteractiveAuthentication = true;
       PermitRootLogin = "yes";  # TEMPORARY: allow password login for migration
     };
-  };
-
-  # Ensure sshd starts after impermanence bind-mounts /etc/ssh host keys
-  systemd.services.sshd = {
-    after = [ "etc-ssh.mount" ];
-    requires = [ "etc-ssh.mount" ];
   };
 
   # --- Tailscale VPN ---

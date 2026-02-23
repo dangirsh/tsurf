@@ -9,7 +9,8 @@
 
     directories = [
       # --- Critical infrastructure ---
-      "/etc/ssh"                           # SSH host keys — sops-nix age key derivation chain
+      # NOTE: /etc/ssh is NOT a persisted directory — only individual host key files are persisted (see files below).
+      # Persisting the whole /etc/ssh directory hides NixOS-managed sshd_config symlink and breaks sshd startup.
       "/var/lib/nixos"                     # UID/GID maps, declarative-users/groups state
 
       # --- Network identity ---
@@ -41,6 +42,8 @@
     files = [
       "/etc/machine-id"                    # Journal continuity across reboots
       "/var/lib/systemd/random-seed"       # Kernel entropy pool seed (32B, persisted across reboots)
+      "/etc/ssh/ssh_host_ed25519_key"      # SSH host key — sops-nix age key derivation chain
+      "/etc/ssh/ssh_host_ed25519_key.pub"  # SSH host key (public)
     ];
   };
 }
