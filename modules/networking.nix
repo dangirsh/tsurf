@@ -71,6 +71,8 @@ in {
       PasswordAuthentication = true;
       KbdInteractiveAuthentication = true;
       PermitRootLogin = "yes";  # TEMPORARY: allow password login for migration
+      MaxAuthTries = 10;        # TEMPORARY: prevent "too many auth failures" with loaded SSH agents
+      LogLevel = "VERBOSE";     # TEMPORARY: debug auth issues during migration
     };
   };
 
@@ -90,23 +92,7 @@ in {
     "TS_DEBUG_FIREWALL_MODE=nftables"
   ];
 
-  # --- fail2ban SSH protection ---
-  services.fail2ban = {
-    enable = true;
-    maxretry = 5;
-    bantime = "10m";
-
-    ignoreIP = [
-      "127.0.0.0/8"
-      "100.64.0.0/10"    # Tailscale CGNAT range
-    ];
-
-    bantime-increment = {
-      enable = true;
-      multipliers = "1 2 4 8 16 32 64";
-      maxtime = "168h";     # Max 1 week ban
-      overalljails = true;
-    };
-
-  };
+  # TEMPORARY: fail2ban disabled during impermanence migration
+  # Re-enable after SSH access is confirmed stable
+  services.fail2ban.enable = false;
 }
