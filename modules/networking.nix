@@ -86,11 +86,6 @@ in {
     ];
   };
 
-  # Force tailscaled to use native nftables (avoid iptables-compat issues)
-  # See: https://github.com/NixOS/nixpkgs/issues/285676
-  systemd.services.tailscaled.serviceConfig.Environment = [
-    "TS_DEBUG_FIREWALL_MODE=nftables"
-  ];
 
   # TEMPORARY: fail2ban disabled during impermanence migration
   # Re-enable after SSH access is confirmed stable
