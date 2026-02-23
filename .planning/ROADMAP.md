@@ -37,6 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, devShell, treefmt-nix.
 - [x] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
 - [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
+- [ ] **Phase 27: OVH VPS Production Migration** - Deploy neurosys to new OVH VPS as production server. Multi-host NixOS config, nixos-anywhere deployment, Tailscale setup, deploy script updates, Contabo repurposed as staging.
 
 ## Phase Details
 
@@ -221,6 +222,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 24. Server Hardening + DX | 1/1 | ✓ Complete | 2026-02-23 |
 | 25. Deploy Safety (deploy-rs) | 1/1 | ✓ Complete | 2026-02-21 |
 | 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
+| 27. OVH VPS Production Migration | 0/5 | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -554,3 +556,16 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 26 to break down)
+
+### Phase 27: OVH VPS Production Migration
+
+**Goal:** Deploy neurosys NixOS config to a new OVH VPS (135.125.196.143) as the production server. Refactor from single-host to multi-host NixOS configuration (neurosys-prod on OVH, neurosys-staging on Contabo). nixos-anywhere deployment, Tailscale join, deploy-rs multi-node support, secrets bootstrap, service migration, and DNS/role cutover. Contabo becomes a staging/testing target for rapid iteration.
+**Depends on:** Phase 25 (deploy-rs), Phase 3 (Tailscale + secrets infrastructure)
+**Plans:** 5 plans
+
+Plans:
+- [ ] 27-01-PLAN.md -- Pre-deploy recon of OVH VPS + SSH host key generation + sops secrets bootstrap
+- [ ] 27-02-PLAN.md -- Multi-host flake refactor (mkHost helper, hosts/ovh/, parameterize modules, deploy.sh --node)
+- [ ] 27-03-PLAN.md -- nixos-anywhere deployment to OVH VPS (human checkpoint: destructive operation)
+- [ ] 27-04-PLAN.md -- Post-deploy verification: Tailscale join, service validation, deploy-rs test, recovery runbook update
+- [ ] 27-05-PLAN.md -- Service migration (Docker state rsync), DNS cutover, Contabo staging repurpose
