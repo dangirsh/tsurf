@@ -49,11 +49,8 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
       treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
-    in {
-    nixosConfigurations.neurosys = nixpkgs.lib.nixosSystem {
-      inherit system;
-      specialArgs = { inherit inputs; };
-      modules = [
+
+      commonModules = [
         srvos.nixosModules.server
         disko.nixosModules.disko
         impermanence.nixosModules.impermanence
@@ -64,7 +61,6 @@
         {
           nixpkgs.overlays = [ llm-agents.overlays.default ];
         }
-        ./hosts/neurosys
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
@@ -72,36 +68,56 @@
           home-manager.users.dangirsh = import ./home;
         }
       ];
-    };
 
-    deploy.nodes.neurosys = {
-      hostname = "neurosys";
-      sshUser = "root";
-      magicRollback = true;
-      autoRollback = true;
-      confirmTimeout = 120;
-      profiles.system = {
-        user = "root";
-        path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.neurosys;
+      mkHost = hostDir: nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; };
+        modules = commonModules ++ [ hostDir ];
       };
+    in {
+      nixosConfigurations.neurosys = mkHost ./hosts/neurosys;
+      nixosConfigurations.ovh = mkHost ./hosts/ovh;
+
+      deploy.nodes.neurosys = {
+        hostname = "neurosys";
+        sshUser = "root";
+        magicRollback = true;
+        autoRollback = true;
+        confirmTimeout = 120;
+        profiles.system = {
+          user = "root";
+          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.neurosys;
+        };
+      };
+
+      deploy.nodes.ovh = {
+        hostname = "neurosys-prod";
+        sshUser = "root";
+        magicRollback = true;
+        autoRollback = true;
+        confirmTimeout = 120;
+        profiles.system = {
+          user = "root";
+          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.ovh;
+        };
+      };
+
+      packages.${system}.deploy-rs = deploy-rs.packages.${system}.default;
+
+      formatter.${system} = treefmtEval.config.build.wrapper;
+
+      devShells.${system}.default = pkgs.mkShell {
+        packages = [
+          pkgs.sops
+          pkgs.age
+          pkgs.nixfmt
+          pkgs.shellcheck
+          deploy-rs.packages.${system}.default
+        ];
+      };
+
+      checks = builtins.mapAttrs
+        (system: deployLib: deployLib.deployChecks self.deploy)
+        deploy-rs.lib;
     };
-
-    packages.${system}.deploy-rs = deploy-rs.packages.${system}.default;
-
-    formatter.${system} = treefmtEval.config.build.wrapper;
-
-    devShells.${system}.default = pkgs.mkShell {
-      packages = [
-        pkgs.sops
-        pkgs.age
-        pkgs.nixfmt
-        pkgs.shellcheck
-        deploy-rs.packages.${system}.default
-      ];
-    };
-
-    checks = builtins.mapAttrs
-      (system: deployLib: deployLib.deployChecks self.deploy)
-      deploy-rs.lib;
-  };
 }
