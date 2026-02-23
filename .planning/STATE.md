@@ -218,8 +218,12 @@ Recent decisions affecting current work:
 | MCP-NixOS evaluate | Add to `.mcp.json`, test in sessions, remove if context-polluting | Minutes |
 | Tailnet Key Authority | Run `tailscale lock init` + sign nodes | Minutes |
 
+## Deferred Work
+
+- **fail2ban**: Removed from networking.nix during impermanence migration (Feb 2026). Re-enable when ready: restore services.fail2ban block with maxretry=5, bantime=10m, bantime-increment multipliers, ignoreIP for Tailscale CGNAT range. See NET-05 decision.
+
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Completed 21-01-PLAN.md -- impermanence config ready, Plan 21-02 (deploy) pending
+Last session: 2026-02-23
+Stopped at: Impermanence deployed and verified. Cleaned up migration safety nets (port 22 closed, SSH hardening restored). Tailscale hostname pending propagation (server is neurosys-1, needs to become neurosys).
 Resume file: None
