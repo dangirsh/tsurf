@@ -1,8 +1,8 @@
 # modules/networking.nix
-# @decision NET-01: key-only SSH via Tailscale only (port 22 NOT on public firewall)
+# @decision NET-01: key-only SSH; port 22 open on public interface (temporary, pending Tailscale bootstrap fix)
 # @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
 # @decision NET-03: Tailscale VPN connected to tailnet
-# @decision NET-04: ports 80, 443, 22000 on public interface; SSH via Tailscale only
+# @decision NET-04: ports 22, 80, 443, 22000 on public interface
 # @decision NET-06: Tailscale reverse path filtering set to loose
 # @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
 { config, lib, pkgs, ... }:
@@ -25,10 +25,6 @@ in {
       assertion = exposed == [];
       message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain Tailscale-only (trustedInterfaces).";
     }
-    {
-      assertion = !builtins.elem 22 config.networking.firewall.allowedTCPPorts;
-      message = "SECURITY: Port 22 must NOT be in allowedTCPPorts. SSH is Tailscale-only (trustedInterfaces). Deploy uses root@neurosys which resolves via Tailscale MagicDNS.";
-    }
   ];
 
   programs.mosh.enable = true;
@@ -49,7 +45,7 @@ in {
   networking.firewall = {
     enable = true;
     allowPing = true;
-    allowedTCPPorts = [ 80 443 22000 ];
+    allowedTCPPorts = [ 22 80 443 22000 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
     trustedInterfaces = [ "tailscale0" ];
   };
