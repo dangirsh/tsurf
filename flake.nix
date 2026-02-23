@@ -38,11 +38,20 @@
       url = "github:nix-community/srvos";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, deploy-rs, impermanence, srvos, ... } @ inputs: {
-    nixosConfigurations.neurosys = nixpkgs.lib.nixosSystem {
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
+    let
       system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+      treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+    in {
+    nixosConfigurations.neurosys = nixpkgs.lib.nixosSystem {
+      inherit system;
       specialArgs = { inherit inputs; };
       modules = [
         srvos.nixosModules.server
@@ -73,11 +82,23 @@
       confirmTimeout = 120;
       profiles.system = {
         user = "root";
-        path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.neurosys;
+        path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.neurosys;
       };
     };
 
-    packages.x86_64-linux.deploy-rs = deploy-rs.packages.x86_64-linux.default;
+    packages.${system}.deploy-rs = deploy-rs.packages.${system}.default;
+
+    formatter.${system} = treefmtEval.config.build.wrapper;
+
+    devShells.${system}.default = pkgs.mkShell {
+      packages = [
+        pkgs.sops
+        pkgs.age
+        pkgs.nixfmt
+        pkgs.shellcheck
+        deploy-rs.packages.${system}.default
+      ];
+    };
 
     checks = builtins.mapAttrs
       (system: deployLib: deployLib.deployChecks self.deploy)
