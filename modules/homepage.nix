@@ -67,10 +67,17 @@
           {
             "claw-swap" = {
               href = "https://claw-swap.com";
-              description = "Trading platform — Caddy + Node.js + PostgreSQL.";
+              description = "Trading platform — nginx + Node.js + PostgreSQL.";
               server = "local";
               container = "claw-swap-app";
-              icon = "caddy";
+              icon = "nginx";
+            };
+          }
+          {
+            "dangirsh.org" = {
+              href = "https://dangirsh.org";
+              description = "Personal website — Hakyll static site served by nginx.";
+              icon = "nginx";
             };
           }
           {

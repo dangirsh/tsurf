@@ -27,7 +27,8 @@
       "/var/lib/private"                   # DynamicUser services: ESPHome (/var/lib/private/esphome)
       "/var/lib/prometheus2"               # 90-day metrics history
       "/var/lib/prometheus-node-exporter"  # Textfile collector .prom files (restic timestamp)
-      "/var/lib/claw-swap"                 # PostgreSQL data, Caddy TLS state
+      "/var/lib/acme"                      # Let's Encrypt ACME certs + account keys (rate limit protection)
+      "/var/lib/claw-swap"                 # PostgreSQL data
       "/var/lib/parts"                     # Session logs, runtime data
 
       # --- User data ---

@@ -8,6 +8,7 @@
         "dangirsh/parts"
         "dangirsh/claw-swap"
         "dangirsh/global-agent-conf"
+        "dangirsh/dangirsh.org"
       )
       CLONE_DIR="/data/projects"
       GH_TOKEN="$(cat ${config.sops.secrets."github-pat".path} 2>/dev/null || true)"

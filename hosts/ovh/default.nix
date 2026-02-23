@@ -22,7 +22,7 @@
   # @decision OVH-01: Port 22 open on public interface for bootstrap and deploy access.
   # OVH VPS has no Tailscale pre-installed; SSH must be public until Tailscale is up.
   # fail2ban provides brute-force protection. Key-only auth enforced by networking.nix.
-  services.openssh.openFirewall = true;
+  services.openssh.openFirewall = lib.mkForce true;
 
   # --- srvos overrides ---
   networking.useNetworkd = lib.mkForce false;
