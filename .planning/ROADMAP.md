@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 21: Impermanence (Ephemeral Root)** - Wipe root on every boot via nix-community/impermanence. BTRFS subvolumes + initrd rollback. Explicit /persist state manifest. Drift-proof, smaller backups, simpler DR.
 - [ ] **Phase 22: Secret Proxy (Netclode Pattern)** - Two-tier proxy so real API keys never enter agent sandboxes. Header-only injection, per-session allowlisting, reflection prevention.
 - [ ] **Phase 23: Tailscale Security & Self-Sovereignty** - TKA (Tailnet Key Authority), ACL hardening, device approval, auth key rotation, node key expiry. Self-custodied signing keys.
-- [ ] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix.
+- [ ] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, devShell, treefmt-nix.
 - [x] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
 - [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
 
@@ -218,7 +218,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 21. Impermanence (Ephemeral Root) | 1/2 | In progress | - |
 | 22. Secret Proxy (Netclode Pattern) | 0/TBD | Not started | - |
 | 23. Tailscale Security & Self-Sovereignty | 1/2 | In progress | - |
-| 24. Server Hardening + DX | 0/TBD | Not started | - |
+| 24. Server Hardening + DX | 0/1 | Not started | - |
 | 25. Deploy Safety (deploy-rs) | 1/1 | ✓ Complete | 2026-02-21 |
 | 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
 
@@ -502,23 +502,21 @@ Plans:
 
 ### Phase 24: Server Hardening and DX
 
-**Goal:** Adopt [srvos](https://github.com/nix-community/srvos) server profile for ~20 battle-tested hardening defaults (watchdog, OOM priority, auto-GC, LLMNR off, emergency mode off, etc.). Add `--unshare-pid` and `--unshare-cgroup` to agent-spawn bubblewrap flags so agents can't see host processes or cgroup hierarchy. Add [gVisor](https://gvisor.dev/) (runsc) with systrap platform as Docker OCI runtime for security-sensitive containers. Improve DX: flake check that builds toplevel, devShell with sops+age+deploy tooling, treefmt-nix (nixfmt + shellcheck), `self` reference pattern. From ecosystem research items 1, 2, 3 + reference config patterns.
-**Depends on:** Nothing (independent hardening — can run anytime)
+**Goal:** Adopt srvos server profile for ~40 battle-tested hardening defaults (watchdog, OOM priority, auto-GC, LLMNR off, emergency mode off, etc.). Add `--unshare-pid` and `--unshare-cgroup` to agent-spawn bubblewrap flags so agents can't see host processes or cgroup hierarchy. Improve DX: devShell with sops+age+deploy tooling, treefmt-nix (nixfmt + shellcheck). gVisor, flake check toplevel, and systemd initrd are explicitly out of scope (deferred per CONTEXT.md).
+**Depends on:** Nothing (independent hardening -- can run anytime)
 **Requirements:** None (hardening + DX improvements)
 **Success Criteria** (what must be TRUE):
-  1. srvos flake input added and `srvos.nixosModules.server` imported — redundant manual settings removed
-  2. `networking.useNetworkd` tested with Contabo static IP (override with `mkForce false` if incompatible)
-  3. `--unshare-pid` and `--unshare-cgroup` added to agent-spawn bwrap flags — agents can't see host `/proc` or cgroups
-  4. gVisor (runsc) registered as Docker OCI runtime with `--platform=systrap` — security-sensitive containers can use `--runtime=runsc`
-  5. `checks.x86_64-linux.nixos-neurosys = self.nixosConfigurations.neurosys.config.system.build.toplevel` in flake.nix
-  6. DevShell includes sops, age, and deploy tooling
-  7. treefmt-nix configured with nixfmt + shellcheck
-  8. `nix flake check` passes with all changes
-**Effort:** Low-Medium — srvos is the bulk, rest are small additions.
-**Plans:** 0 plans
+  1. srvos flake input added and `srvos.nixosModules.server` imported -- redundant manual settings removed
+  2. `networking.useNetworkd` overridden to `false` with `mkForce` (Contabo static IP uses scripted networking)
+  3. `--unshare-pid` and `--unshare-cgroup` added to agent-spawn bwrap flags -- agents can't see host `/proc` or cgroups
+  4. DevShell includes sops, age, deploy-rs CLI, nixfmt, shellcheck
+  5. treefmt-nix configured with nixfmt + shellcheck
+  6. `nix flake check` passes with all changes
+**Effort:** Low-Medium -- srvos is the bulk, rest are small additions.
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 24 to break down)
+- [ ] 24-01-PLAN.md -- srvos adoption + host overrides, devShell + treefmt-nix, sandbox PID+cgroup isolation
 
 ### Phase 25: Deploy Safety with deploy-rs
 
