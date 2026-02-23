@@ -1,17 +1,13 @@
 # modules/homepage.nix
 # @decision HP-01: Use NixOS-native homepage-dashboard service; listen on 0.0.0.0 for Tailscale reachability.
-{ config, pkgs, ... }:
-let
-  tailscaleIP = "100.127.245.9";
-in
-{
+{ config, ... }: {
   services.homepage-dashboard = {
     enable = true;
     listenPort = 8082;
-    allowedHosts = "${tailscaleIP}:8082,${tailscaleIP},neurosys,localhost";
+    allowedHosts = "*";
 
     settings = {
-      title = "neurosys";
+      title = config.networking.hostName;
       theme = "dark";
       color = "slate";
       headerStyle = "clean";
@@ -23,7 +19,7 @@ in
     };
 
     widgets = [
-      { openmeteo = { label = "neurosys"; timezone = "Europe/Berlin"; }; }
+      { openmeteo = { label = config.networking.hostName; timezone = "Europe/Berlin"; }; }
       { greeting = { text = "All services are Tailscale-only"; }; }
     ];
 
@@ -99,7 +95,7 @@ in
         "Home" = [
           {
             "Home Assistant" = {
-              href = "http://${tailscaleIP}:8123";
+              href = "http://${config.networking.hostName}:8123";
               siteMonitor = "http://localhost:8123";
               description = "Home automation — native NixOS service. ESPHome on port 6052.";
               icon = "home-assistant";

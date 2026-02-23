@@ -21,6 +21,11 @@
   };
   networking.nameservers = [ "213.136.95.10" "213.136.95.11" ];
 
+  # --- Host-specific shared module settings ---
+  boot.loader.grub.device = "/dev/sda";
+  networking.nat.externalInterface = "eth0";
+  sops.defaultSopsFile = ../../secrets/neurosys.yaml;
+
   # --- srvos overrides ---
   # Contabo VPS uses scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;
