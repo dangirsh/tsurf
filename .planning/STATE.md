@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 27 in progress -- multi-host flake baseline complete after Plan 27-02; preparing OVH bootstrap/cutover steps.
+**Current focus:** Phase 28 in progress -- Plan 28-01 complete with dangirsh-site flake output ready for neurosys consumption; preparing neurosys-side integration in Plan 28-02.
 
 ## Current Position
 
-Phase: 27 (OVH VPS Production Migration)
-Plan: 2 of 5 -- COMPLETE
-Status: Plan 27-02 executed. Flake now defines `nixosConfigurations.{neurosys,ovh}` and `deploy.nodes.{neurosys,ovh}` with host-specific overrides for sops/grub/NAT/homepage and OVH host files added.
-Last activity: 2026-02-23 - Completed 27-02: multi-host flake + deploy script `--node` support
+Phase: 28 (dangirsh.org Static Site on Neurosys)
+Plan: 1 of 4 -- COMPLETE
+Status: Plan 28-01 executed. External repo `dangirsh-site` now ships `flake.nix` + `flake.lock` exposing `packages.x86_64-linux.default`, with `pandoc` bounds updated for nixos-25.11 compatibility.
+Last activity: 2026-02-23 - Completed 28-01: flake-based static site build pushed to `github:dangirsh/dangirsh.org` (`c309419`)
 
-Progress: Phase 27 in progress (2/5 plans complete). Phase 24 remains complete; deferred 23-02 human checkpoints still pending by design.
+Progress: Phase 28 in progress (1/4 plans complete). Phase 27 remains in progress (2/5 complete); deferred 23-02 human checkpoints still pending by design.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
-- Average duration: ~17.1min
-- Total execution time: ~342 min
+- Total plans completed: 21
+- Average duration: ~16.6min
+- Total execution time: ~348 min
 
 **By Phase:**
 
@@ -45,9 +45,10 @@ Progress: Phase 27 in progress (2/5 plans complete). Phase 24 remains complete; 
 | 25 | 1/1 | ~32min | ~32min |
 | 21 | 1/2 | ~10min | ~10min |
 | 27 | 2/5 | ~16min | ~8min |
+| 28 | 1/4 | ~6min | ~6min |
 
 **Recent Trend:**
-- Last 4 plans: 27-02 (~7min), 27-01 (~9min), 24-01 (~16min), 21-01 (~10min)
+- Last 4 plans: 28-01 (~6min), 27-02 (~7min), 27-01 (~9min), 24-01 (~16min)
 - Trend: Execution remains stable with short, bounded plan delivery.
 
 *Updated after each plan completion*
@@ -143,6 +144,9 @@ Recent decisions affecting current work:
 - [27-02]: Added `deploy.nodes.ovh` (`hostname = neurosys-prod`) alongside existing neurosys node for deploy-rs multi-target activation.
 - [27-02]: Moved host-specific values out of shared modules (`sops.defaultSopsFile`, NAT external interface, GRUB device, homepage host identity) into host defaults.
 - [27-02]: `scripts/deploy.sh` now supports `--node` (`neurosys` default, `ovh` optional) with node-aware default SSH target/lock paths and flake selector (`$FLAKE_DIR#$NODE`).
+- [28-01]: External `dangirsh-site` migrated from pinned `default.nix` (`nixpkgs-20.03`) to flake pinned to `nixos-25.11`, exposing `packages.x86_64-linux.default` for neurosys nginx root consumption.
+- [28-01]: `generator/site.cabal` `pandoc` bound widened from `< 3.6` to `< 3.8` to match nixos-25.11 `haskellPackages.pandoc` (`3.7.0.2`) while keeping `hakyll` bound unchanged (`4.16.x` compatible).
+- [28-01]: Verified `nix build` output includes full `_site` artifact set (`index.html`, `css/`, `posts/`, static directories) and pushed upstream as `dangirsh/dangirsh.org@c309419`.
 
 ### Completed Phases
 
@@ -201,9 +205,11 @@ Recent decisions affecting current work:
 - Phase 25 added: Deploy Safety (deploy-rs) — magic rollback via inotify canary, evolve deploy.sh into wrapper (from ecosystem research item 5)
 - Phase 26 added: Agent Notifications (Telegram Bot) — Bot API integration, 2 sops secrets, agent reach-back mechanism (from ecosystem research item 4)
 - Phase 27 added: OVH VPS Production Migration — multi-host refactor, OVH bootstrap, staged service migration, production cutover
+- Phase 28 added: dangirsh.org Static Site on Neurosys — migrate dangling legacy Hakyll build to flake output and wire neurosys nginx to Nix store artifact
 - Phase 24 executed: srvos server defaults adopted with explicit host overrides, agent sandbox PID/cgroup isolation enabled, treefmt formatter + devShell shipped
 - Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
 - Phase 27 progressing: 27-01 recon/secrets bootstrap and 27-02 multi-host flake + deploy node refactor executed
+- Phase 28 progressing: 28-01 external dangirsh-site flake migration executed and pushed; ready for neurosys-side consumption steps.
 
 ### Blockers/Concerns
 
@@ -240,5 +246,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 27-02-PLAN.md -- dual-host flake/deploy-rs topology and deploy.sh `--node` support landed
-Resume file: .planning/phases/27-ovh-vps-production-migration/27-03-PLAN.md
+Stopped at: Completed 28-01-PLAN.md -- dangirsh-site flake output (`packages.x86_64-linux.default`) shipped and pushed
+Resume file: .planning/phases/28-dangirsh-org-static-site-on-neurosys/28-02-PLAN.md
