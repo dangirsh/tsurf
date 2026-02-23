@@ -4,6 +4,17 @@
 # @decision IMP-03: Persist whole /home/dangirsh (not per-file) — simpler for server, covers Syncthing data + config
 # @decision IMP-04: /var/lib/private covers DynamicUser services (ESPHome, future services)
 { config, lib, ... }: {
+  # @decision IMP-05: Fix /etc permissions for sshd strict mode checks.
+  # Impermanence file bind-mounts create parent dirs as 775 (group-writable).
+  # sshd rejects authorized_keys if any parent dir in the path is group-writable.
+  # This activation script runs after /etc is populated but before services start.
+  system.activationScripts.fixEtcPermissions = {
+    text = ''
+      chmod 755 /etc /etc/ssh 2>/dev/null || true
+    '';
+    deps = [ "etc" ];
+  };
+
   environment.persistence."/persist" = {
     hideMounts = true;
 
