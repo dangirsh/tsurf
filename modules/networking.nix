@@ -3,8 +3,8 @@
 # @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
 # @decision NET-03: Tailscale VPN connected to tailnet
 # @decision NET-04: ports 80, 443, 22000 on public interface; SSH via Tailscale only
-# @decision NET-05: fail2ban SSH protection with progressive banning
 # @decision NET-06: Tailscale reverse path filtering set to loose
+# @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
 { config, lib, pkgs, ... }:
 let
   # Ports that must NEVER appear in allowedTCPPorts (internal services).
@@ -25,13 +25,10 @@ in {
       assertion = exposed == [];
       message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain Tailscale-only (trustedInterfaces).";
     }
-    # TEMPORARY: port 22 assertion disabled for impermanence migration
-    # Safety net while Tailscale bootstraps on fresh install
-    # Will be re-enabled after deploy-rs magic rollback confirms Tailscale works
-    # {
-    #   assertion = !builtins.elem 22 config.networking.firewall.allowedTCPPorts;
-    #   message = "SECURITY: Port 22 must NOT be in allowedTCPPorts. SSH is Tailscale-only (trustedInterfaces). Deploy uses root@neurosys which resolves via Tailscale MagicDNS.";
-    # }
+    {
+      assertion = !builtins.elem 22 config.networking.firewall.allowedTCPPorts;
+      message = "SECURITY: Port 22 must NOT be in allowedTCPPorts. SSH is Tailscale-only (trustedInterfaces). Deploy uses root@neurosys which resolves via Tailscale MagicDNS.";
+    }
   ];
 
   programs.mosh.enable = true;
@@ -52,8 +49,7 @@ in {
   networking.firewall = {
     enable = true;
     allowPing = true;
-    # TEMPORARY: port 22 added for impermanence migration safety net
-    allowedTCPPorts = [ 22 80 443 22000 ];
+    allowedTCPPorts = [ 80 443 22000 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
     trustedInterfaces = [ "tailscale0" ];
   };
@@ -62,17 +58,13 @@ in {
   services.openssh = {
     enable = true;
     openFirewall = false;
-    # @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
     hostKeys = [
       { type = "ed25519"; path = "/etc/ssh/ssh_host_ed25519_key"; }
     ];
     settings = {
-      # TEMPORARY: password auth enabled for migration debugging via VNC
-      PasswordAuthentication = true;
-      KbdInteractiveAuthentication = true;
-      PermitRootLogin = "yes";  # TEMPORARY: allow password login for migration
-      MaxAuthTries = 10;        # TEMPORARY: prevent "too many auth failures" with loaded SSH agents
-      LogLevel = "VERBOSE";     # TEMPORARY: debug auth issues during migration
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      PermitRootLogin = "prohibit-password";  # key-only root access for deploy pipeline
     };
   };
 
@@ -85,9 +77,4 @@ in {
       "--accept-routes"
     ];
   };
-
-
-  # TEMPORARY: fail2ban disabled during impermanence migration
-  # Re-enable after SSH access is confirmed stable
-  services.fail2ban.enable = false;
 }
