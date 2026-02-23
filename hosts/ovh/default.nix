@@ -3,6 +3,7 @@
     ./hardware.nix
     ./disko-config.nix
     ../../modules
+    ../../modules/nginx.nix
   ];
 
   networking.hostName = "neurosys-prod";
