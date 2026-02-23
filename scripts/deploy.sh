@@ -30,7 +30,7 @@ NO_MAGIC_ROLLBACK=false
 SKIP_UPDATE=false
 SECONDS=0
 
-CONTAINERS=("parts-tools" "parts-agent" "claw-swap-db" "claw-swap-app" "claw-swap-caddy")
+CONTAINERS=("parts-tools" "parts-agent" "claw-swap-db" "claw-swap-app")
 mkdir -p "$FLAKE_DIR/tmp"
 
 # @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
