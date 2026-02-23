@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 28 in progress -- Plan 28-01 complete with dangirsh-site flake output ready for neurosys consumption; preparing neurosys-side integration in Plan 28-02.
+**Current focus:** Phase 28 in progress -- Plan 28-02 complete with OVH nginx unified edge deployed in config and claw-swap Caddy removed; preparing DNS cutover in Plan 28-03.
 
 ## Current Position
 
 Phase: 28 (dangirsh.org Static Site on Neurosys)
-Plan: 1 of 4 -- COMPLETE
-Status: Plan 28-01 executed. External repo `dangirsh-site` now ships `flake.nix` + `flake.lock` exposing `packages.x86_64-linux.default`, with `pandoc` bounds updated for nixos-25.11 compatibility.
-Last activity: 2026-02-23 - Completed 28-01: flake-based static site build pushed to `github:dangirsh/dangirsh.org` (`c309419`)
+Plan: 2 of 4 -- COMPLETE
+Status: Plan 28-02 executed. OVH now has host-native nginx + ACME virtualHosts for `dangirsh.org`, `www.dangirsh.org`, and `claw-swap.com`; claw-swap Docker Caddy and CF origin cert/key secrets were removed.
+Last activity: 2026-02-23 - Completed 28-02: unified nginx reverse proxy + ACME + claw-swap Caddy removal (`24fbb8f`, `5d8fc6d`, `1ffe9ea`, `9f3b962`; external `claw-swap@e3289f4`)
 
-Progress: Phase 28 in progress (1/4 plans complete). Phase 27 remains in progress (2/5 complete); deferred 23-02 human checkpoints still pending by design.
+Progress: Phase 28 in progress (2/4 plans complete). Phase 27 remains in progress (2/5 complete); deferred 23-02 human checkpoints still pending by design.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: ~16.6min
-- Total execution time: ~348 min
+- Total plans completed: 22
+- Average duration: ~16.5min
+- Total execution time: ~364 min
 
 **By Phase:**
 
@@ -45,10 +45,10 @@ Progress: Phase 28 in progress (1/4 plans complete). Phase 27 remains in progres
 | 25 | 1/1 | ~32min | ~32min |
 | 21 | 1/2 | ~10min | ~10min |
 | 27 | 2/5 | ~16min | ~8min |
-| 28 | 1/4 | ~6min | ~6min |
+| 28 | 2/4 | ~22min | ~11min |
 
 **Recent Trend:**
-- Last 4 plans: 28-01 (~6min), 27-02 (~7min), 27-01 (~9min), 24-01 (~16min)
+- Last 4 plans: 28-02 (~16min), 28-01 (~6min), 27-02 (~7min), 27-01 (~9min)
 - Trend: Execution remains stable with short, bounded plan delivery.
 
 *Updated after each plan completion*
@@ -147,6 +147,11 @@ Recent decisions affecting current work:
 - [28-01]: External `dangirsh-site` migrated from pinned `default.nix` (`nixpkgs-20.03`) to flake pinned to `nixos-25.11`, exposing `packages.x86_64-linux.default` for neurosys nginx root consumption.
 - [28-01]: `generator/site.cabal` `pandoc` bound widened from `< 3.6` to `< 3.8` to match nixos-25.11 `haskellPackages.pandoc` (`3.7.0.2`) while keeping `hakyll` bound unchanged (`4.16.x` compatible).
 - [28-01]: Verified `nix build` output includes full `_site` artifact set (`index.html`, `css/`, `posts/`, static directories) and pushed upstream as `dangirsh/dangirsh.org@c309419`.
+- [28-02]: Added `dangirsh-site` input to neurosys flake and introduced `modules/nginx.nix` with ACME-backed virtualHosts for `dangirsh.org`, `www.dangirsh.org`, and `claw-swap.com`.
+- [28-02]: Enforced HOST-01 by importing nginx only in `hosts/ovh/default.nix`; verified `services.nginx.enable` evaluates `true` for OVH and `false` for neurosys.
+- [28-02]: Removed Docker Caddy from `claw-swap` module and secrets; `claw-swap-app` now binds `127.0.0.1:3000:3000` for host nginx proxying (pushed `claw-swap@e3289f4`).
+- [28-02]: Persisted `/var/lib/acme` for impermanence, updated homepage metadata (`nginx` + `dangirsh.org`), and added `dangirsh/dangirsh.org` to repo bootstrap list.
+- [28-02]: [Rule 3 - Blocking] Resolved existing OVH `services.openssh.openFirewall` conflict by using `lib.mkForce true`, unblocking `nix flake check`.
 
 ### Completed Phases
 
@@ -209,7 +214,7 @@ Recent decisions affecting current work:
 - Phase 24 executed: srvos server defaults adopted with explicit host overrides, agent sandbox PID/cgroup isolation enabled, treefmt formatter + devShell shipped
 - Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
 - Phase 27 progressing: 27-01 recon/secrets bootstrap and 27-02 multi-host flake + deploy node refactor executed
-- Phase 28 progressing: 28-01 external dangirsh-site flake migration executed and pushed; ready for neurosys-side consumption steps.
+- Phase 28 progressing: 28-01 flake migration + 28-02 OVH nginx integration completed; ready for 28-03 DNS cutover and live certificate issuance.
 
 ### Blockers/Concerns
 
@@ -246,5 +251,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 28-01-PLAN.md -- dangirsh-site flake output (`packages.x86_64-linux.default`) shipped and pushed
-Resume file: .planning/phases/28-dangirsh-org-static-site-on-neurosys/28-02-PLAN.md
+Stopped at: Completed 28-02-PLAN.md -- OVH nginx unified edge configured and claw-swap Caddy removed
+Resume file: .planning/phases/28-dangirsh-org-static-site-on-neurosys/28-03-PLAN.md
