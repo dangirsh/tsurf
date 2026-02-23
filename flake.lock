@@ -62,6 +62,26 @@
         "type": "github"
       }
     },
+    "dangirsh-site": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1771878860,
+        "narHash": "sha256-uW9Rm10hzqrfnuoNLfT/DLL1aQYCkUEFZsvUyImHu4U=",
+        "owner": "dangirsh",
+        "repo": "dangirsh.org",
+        "rev": "c309419b1caf35d7508341393de759e69593f194",
+        "type": "github"
+      },
+      "original": {
+        "owner": "dangirsh",
+        "repo": "dangirsh.org",
+        "type": "github"
+      }
+    },
     "deploy-rs": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -316,6 +336,7 @@
     "root": {
       "inputs": {
         "claw-swap": "claw-swap",
+        "dangirsh-site": "dangirsh-site",
         "deploy-rs": "deploy-rs",
         "disko": "disko",
         "home-manager": "home-manager",

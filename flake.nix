@@ -23,6 +23,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.sops-nix.follows = "sops-nix";
     };
+    dangirsh-site = {
+      url = "github:dangirsh/dangirsh.org";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -44,7 +48,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, dangirsh-site, llm-agents, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
