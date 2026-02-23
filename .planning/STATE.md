@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 24 complete -- server hardening + DX baseline landed (srvos + sandbox namespace isolation + formatter/devShell).
+**Current focus:** Phase 27 in progress -- OVH production migration started; Plan 27-01 (recon + sops bootstrap) completed.
 
 ## Current Position
 
-Phase: 24 (Server Hardening + DX)
-Plan: 1 of 1 -- COMPLETE
-Status: Plan 24-01 executed. srvos server profile imported with explicit host overrides, bubblewrap PID/cgroup namespaces added, treefmt formatter + devShell tooling integrated.
-Last activity: 2026-02-23 - Completed 24-01: srvos hardening baseline, sandbox PID/cgroup isolation, treefmt/devShell outputs
+Phase: 27 (OVH VPS Production Migration)
+Plan: 1 of 5 -- COMPLETE
+Status: Plan 27-01 executed. OVH VPS recon captured disk/NIC/network/boot facts, `host_ovh` age key added, `secrets/ovh.yaml` encrypted, and nixos-anywhere extra-files host key staged.
+Last activity: 2026-02-23 - Completed 27-01: OVH recon + sops bootstrap + host key staging
 
-Progress: Phase 24 complete (1/1 plans). Deferred 23-02 human checkpoints still pending by design.
+Progress: Phase 27 started (1/5 plans complete). Phase 24 remains complete; deferred 23-02 human checkpoints still pending by design.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
-- Average duration: ~18.1min
-- Total execution time: ~326 min
+- Total plans completed: 19
+- Average duration: ~17.6min
+- Total execution time: ~335 min
 
 **By Phase:**
 
@@ -44,10 +44,11 @@ Progress: Phase 24 complete (1/1 plans). Deferred 23-02 human checkpoints still 
 | 20 | 1/1 | ~24min | ~24min |
 | 25 | 1/1 | ~32min | ~32min |
 | 21 | 1/2 | ~10min | ~10min |
+| 27 | 1/5 | ~9min | ~9min |
 
 **Recent Trend:**
-- Last 4 plans: 24-01 (~16min), 21-01 (~10min), 25-01 (~32min), 20-01 (~24min)
-- Trend: Execution remains stable with fast, bounded phase execution.
+- Last 4 plans: 27-01 (~9min), 24-01 (~16min), 21-01 (~10min), 25-01 (~32min)
+- Trend: Execution remains stable with short, bounded plan delivery.
 
 *Updated after each plan completion*
 
@@ -133,6 +134,11 @@ Recent decisions affecting current work:
 - [24-01]: srvos server module imported first; host overrides force `networking.useNetworkd = false` and `boot.initrd.systemd.enable = false`, with docs + command-not-found enabled.
 - [24-01]: agent-spawn bubblewrap now unshares PID and cgroup namespaces to hide host process/cgroup visibility from sandboxes.
 - [24-01]: treefmt-nix formatter and devShell tooling added; formatting enforcement in `checks` deferred to avoid large unrelated repo-wide churn this phase.
+- [27-01]: OVH recon confirmed `/dev/sda`, `ens3`, DHCP `/32` (`135.125.196.143/32`) with gateway `135.125.196.1`, and BIOS boot mode.
+- [27-01]: Generated pre-deploy OVH SSH host key and derived `host_ovh` age recipient (`age1rkve23z2ywug6ugwdcrtcpemq7j9y2980azveanhx0x6w3etp9eqn50l9g`) for sops-nix bootstrap.
+- [27-01]: `.sops.yaml` now has per-host creation rules for both `secrets/neurosys.yaml` and `secrets/ovh.yaml` with `admin + host` recipient scoping.
+- [27-01]: `secrets/ovh.yaml` mirrors neurosys secret schema; `tailscale-authkey` is intentionally a replace-before-deploy placeholder.
+- [27-01]: Prepared `tmp/ovh-host-keys/persist/etc/ssh/ssh_host_ed25519_key` for nixos-anywhere `--extra-files` injection into impermanence-backed `/persist/etc/ssh`.
 
 ### Completed Phases
 
@@ -190,8 +196,10 @@ Recent decisions affecting current work:
 - Phase 24 added: Server Hardening + DX — srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix (from ecosystem research items 1, 2, 3 + reference patterns)
 - Phase 25 added: Deploy Safety (deploy-rs) — magic rollback via inotify canary, evolve deploy.sh into wrapper (from ecosystem research item 5)
 - Phase 26 added: Agent Notifications (Telegram Bot) — Bot API integration, 2 sops secrets, agent reach-back mechanism (from ecosystem research item 4)
+- Phase 27 added: OVH VPS Production Migration — multi-host refactor, OVH bootstrap, staged service migration, production cutover
 - Phase 24 executed: srvos server defaults adopted with explicit host overrides, agent sandbox PID/cgroup isolation enabled, treefmt formatter + devShell shipped
 - Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
+- Phase 27 started: 27-01 executed with OVH recon + host key/sops bootstrap artifacts committed
 
 ### Blockers/Concerns
 
@@ -201,6 +209,7 @@ Recent decisions affecting current work:
 - [RESOLVED]: Phase 2.1 scope creep — absorbed into Phase 9 after re-evaluation
 - [NOTE]: Syncthing device IDs are placeholders — user must replace before deploy
 - [NOTE]: home-manager ssh/git options show deprecation warnings (renamed options) — cosmetic, not blocking
+- [NOTE]: OVH root SSH password auth failed during 27-01; recon succeeded via `ubuntu` after forced password-expiry rotation. Confirm preferred admin login path before 27-02/27-03 deploy steps.
 
 ### Quick Tasks Completed
 
