@@ -38,6 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
 - [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
 - [ ] **Phase 27: OVH VPS Production Migration** - Deploy neurosys to new OVH VPS as production server. Multi-host NixOS config, nixos-anywhere deployment, Tailscale setup, deploy script updates, Contabo repurposed as staging.
+- [ ] **Phase 28: dangirsh.org Static Site on Neurosys** - Move dangirsh.org from NearlyFreeSpeech to OVH host. Hakyll site as Nix flake package. nginx unified reverse proxy (replaces Docker Caddy). ACME TLS. DNS cutover.
 
 ## Phase Details
 
@@ -223,6 +224,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 25. Deploy Safety (deploy-rs) | 1/1 | ✓ Complete | 2026-02-21 |
 | 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
 | 27. OVH VPS Production Migration | 0/5 | Not started | - |
+| 28. dangirsh.org Static Site on Neurosys | 0/4 | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -569,3 +571,15 @@ Plans:
 - [ ] 27-03-PLAN.md -- nixos-anywhere deployment to OVH VPS (human checkpoint: destructive operation)
 - [ ] 27-04-PLAN.md -- Post-deploy verification: Tailscale join, service validation, deploy-rs test, recovery runbook update
 - [ ] 27-05-PLAN.md -- Service migration (Docker state rsync), DNS cutover, Contabo staging repurpose
+
+### Phase 28: dangirsh.org Static Site on Neurosys
+
+**Goal:** Move dangirsh.org from NearlyFreeSpeech (NFS) to the OVH production host. Hakyll static site built as a Nix flake package (`github:dangirsh/dangirsh.org`). NixOS nginx becomes the unified reverse proxy for all web traffic (replaces Docker Caddy in claw-swap). ACME (Let's Encrypt) handles TLS for dangirsh.org and claw-swap.com. Manual update workflow: push to GitHub + `nix flake update dangirsh-site` + deploy.
+**Depends on:** Phase 27 (OVH VPS deployed and operational)
+**Plans:** 4 plans
+
+Plans:
+- [ ] 28-01-PLAN.md -- Modernize dangirsh-site Hakyll build (add flake.nix to dangirsh/dangirsh.org repo, nixpkgs-25.11 compatible)
+- [ ] 28-02-PLAN.md -- nginx unified reverse proxy + ACME + claw-swap Caddy removal + impermanence + deploy (wave 1, parallel with 28-01)
+- [ ] 28-03-PLAN.md -- Deploy to OVH + DNS cutover from NFS (human checkpoint: DNS change)
+- [ ] 28-04-PLAN.md -- Post-cutover cleanup: validate workflow, confirm NFS decommission, update docs
