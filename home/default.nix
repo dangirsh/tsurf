@@ -10,6 +10,7 @@
     ./ssh.nix
     ./direnv.nix
     ./cass.nix
+    ./beads.nix
     ./agent-config.nix
   ];
 }
