@@ -579,33 +579,41 @@ Plans:
 
 ### Phase 29: Agentic Dev Maxing — Batteries Included
 
-**Goal:** Make neurosys the definitive batteries-included agentic development platform. Install all major CLI coding agents pre-configured and ready to use. Add API keys for every major model provider so any agent can be used without manual setup. Adopt vibe-kanban (BloopAI) as a Docker-based web UI for managing parallel agent sessions on remote instances. Every commonly-used agentic dev tool should work out-of-the-box after a fresh deploy.
+**Goal:** Make neurosys the definitive batteries-included agentic development platform. Install all major CLI coding agents pre-configured and ready to use. Add API keys for every major model provider so any agent can be used without manual setup. Research vibe-kanban (BloopAI) for remote agent session management. Every commonly-used agentic dev tool should work out-of-the-box after a fresh deploy.
 **Depends on:** Phase 5 (agent tooling baseline — claude-code, codex, agent-spawn already in place)
 **Requirements:** None (developer experience improvement)
 
-**Research findings (pre-researched):**
-- **gemini-cli**: `pkgs.gemini-cli` in nixpkgs. Env: `GOOGLE_API_KEY`. MCP-native, TUI. Include.
-- **opencode** (SST): `pkgs.opencode` in nixpkgs. Multi-provider TUI with plan/build agents. Include.
-- **pi** (Mario Zechner's `@mariozechner/pi-coding-agent`): Minimalist 4-tool TS agent; self-extends via plugins. NOT in nixpkgs — needs custom packaging or llm-agents overlay. Research/defer.
-- **aider**: `pkgs.aider-chat` in nixpkgs. Session-based pair programmer with strong git integration. Include (optional).
-- **goose** (Block): No nixpkgs package, Rust build needed. Skip this phase.
-- **vibe-kanban** (BloopAI): Docker image available (`successage/opencode-kanban`). Web UI for parallel agent management with worktree isolation + remote SSH. Include via Docker (Tailscale-only).
+**Research findings (pre-researched via parallel agents):**
 
-**API providers to add:**
+Tools in nixpkgs (ready to add):
+- **opencode** (`pkgs.opencode`): Multi-provider TUI with plan/build agents. Go CLI. Include.
+- **goose-cli** (`pkgs.goose-cli`): Block's extensible agent, 25+ LLM providers, MCP-native. Rust. Include.
+- **aider-chat** (`pkgs.aider-chat`): Session-based pair programmer, strong git integration. Include.
+- **plandex** (`pkgs.plandex`): In nixpkgs but project winding down (Oct 2025) — skip.
+
+Tools needing custom packaging:
+- **gemini-cli** (`@google/gemini-cli` npm): Env: `GOOGLE_API_KEY`. nixpkgs status unclear — `buildNpmPackage` fallback.
+- **pi** (`@mariozechner/pi-coding-agent` npm): Minimalist 4-tool TS agent by Mario Zechner. NOT in nixpkgs — defer.
+- **fabric** (Go, 100+ AI patterns): NOT in nixpkgs — defer.
+
+Agent management UI:
+- **vibe-kanban** (BloopAI, Tauri/Rust): Kanban for parallel agent orchestration with git worktree isolation. NOT in nixpkgs. Tauri app needs WebKitGTK — headless server deployment requires investigation (buildRustPackage + virtual display, or run locally + SSH tunnel). Decide during planning.
+
+**API providers to add** (sops secrets + bash.nix exports):
 - `GOOGLE_API_KEY` — Gemini 2.5, 60 req/min free tier
 - `XAI_API_KEY` — Grok-3/2, fast inference (xai-... format)
 - `OPENROUTER_API_KEY` — unified access to 200+ models (sk-or-... format)
-- `GROQ_API_KEY` — very fast inference on Llama/Mistral (optional)
+- `GROQ_API_KEY` — very fast inference on Llama/Mixtral (optional)
 - `MISTRAL_API_KEY` — Mistral models (optional)
 
 **Success Criteria** (what must be TRUE):
-  1. `gemini-cli`, `opencode`, `aider` available on PATH (nixpkgs packages in agent-compute.nix)
-  2. `GOOGLE_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY` in sops-nix and exported in bash.nix
-  3. Each agent CLI smoke-tested: `gemini -p "hello"`, `opencode --version`, `aider --version`
-  4. vibe-kanban running as Docker container accessible via Tailscale (port in `internalOnlyPorts`)
-  5. `nix flake check` passes with all new packages, secrets, and container additions
-  6. README.md updated with new agent tooling
-**Effort:** Medium — nixpkgs packaging already done for main tools; API key additions + vibe-kanban Docker module is the main work.
+  1. `opencode`, `goose-cli`, `aider-chat` available on PATH (nixpkgs packages in agent-compute.nix)
+  2. `gemini-cli` packaged and available (nixpkgs or buildNpmPackage)
+  3. `GOOGLE_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY` in sops-nix and exported in bash.nix
+  4. Each agent CLI smoke-tested on the live server
+  5. vibe-kanban deployment decision made with rationale (headless Rust package vs local + tunnel vs defer)
+  6. `nix flake check` passes with all new packages and secrets
+**Effort:** Medium — nixpkgs coverage is solid for main tools; gemini-cli packaging + API key additions + vibe-kanban investigation is the main work.
 **Plans:** TBD (run /gsd:plan-phase 29 to break down)
 
 Plans:
