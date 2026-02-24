@@ -57,6 +57,7 @@ let
             pass
 
 
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
     with socketserver.ThreadingTCPServer(("127.0.0.1", PORT), Handler) as s:
         s.serve_forever()
   '';
