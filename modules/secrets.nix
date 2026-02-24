@@ -13,6 +13,8 @@
     secrets."openai-api-key" = { owner = "dangirsh"; };
     secrets."github-pat" = { owner = "dangirsh"; };
 
+    secrets."cloudflare-dns-token" = { owner = "acme"; };
+
     templates."restic-b2-env" = {
       content = ''
         AWS_ACCESS_KEY_ID=${config.sops.placeholder."b2-account-id"}

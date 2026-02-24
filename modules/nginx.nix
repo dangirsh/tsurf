@@ -11,10 +11,18 @@
 let
   siteRoot = inputs.dangirsh-site.packages."x86_64-linux".default;
 in {
+  # @decision WEB-07: ACME uses DNS-01 challenge via Cloudflare API.
+  # @rationale: DNS-01 allows cert issuance before DNS points to this server,
+  # solving the chicken-and-egg problem for new host deployments (e.g. OVH).
   security.acme = {
     acceptTerms = true;
-    defaults.email = "dan@dangirsh.org";
-    # defaults.server = "https://acme-staging-v02.api.letsencrypt.org/directory";
+    defaults = {
+      email = "dan@dangirsh.org";
+      dnsProvider = "cloudflare";
+      credentialFiles = {
+        "CF_DNS_API_TOKEN_FILE" = config.sops.secrets."cloudflare-dns-token".path;
+      };
+    };
   };
 
   services.nginx = {
