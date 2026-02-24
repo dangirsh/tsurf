@@ -106,12 +106,21 @@ while true; do
     break
   fi
 
-  # Try ubuntu@ with BatchMode — if key works, great; if not (PAM expiry), we'll handle it.
-  if ssh "${SSH_OPTS[@]}" "ubuntu@${VPS_IP}" "exit 0" 2>/dev/null; then
+  # Try ubuntu@ — capture output to detect PAM expiry even when command fails.
+  # OVH images use pam_unix with expired passwords; key auth succeeds but PAM blocks
+  # the command with "Password change required but no TTY available" (exit 1).
+  # We must NOT use 2>/dev/null here so we can detect that message.
+  UBUNTU_OUT=$(ssh "${SSH_OPTS[@]}" "ubuntu@${VPS_IP}" "exit 0" 2>&1) && {
     UBUNTU_SSH_OK=1
     echo "  ubuntu@ SSH is up (key auth works)!"
     break
-  fi
+  } || {
+    if echo "$UBUNTU_OUT" | grep -qi "password\|expired\|TTY"; then
+      UBUNTU_SSH_OK=1
+      echo "  ubuntu@ is up (PAM expiry detected — will handle in Phase 1b)"
+      break
+    fi
+  }
 
   if (( ATTEMPT % 12 == 0 )); then
     echo "  Still waiting (${ATTEMPT} attempts, $((ATTEMPT * 8))s elapsed)..."
