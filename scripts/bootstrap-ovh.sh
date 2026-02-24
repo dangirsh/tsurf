@@ -134,9 +134,13 @@ echo ""
 if [[ "$UBUNTU_SSH_OK" -eq 1 ]]; then
   echo "==> [Phase 1b] Checking for OVH PAM password expiry on ubuntu@${VPS_IP}..."
 
-  # Prompt for the OVH initial password (shown in OVH reinstall wizard).
-  read -r -s -p "Enter OVH initial ubuntu password (shown in OVH reinstall wizard): " OVH_INIT_PASS
-  echo ""
+  # Prompt for the OVH initial password (or use OVH_INIT_PASS env var if set).
+  if [[ -z "${OVH_INIT_PASS:-}" ]]; then
+    read -r -s -p "Enter OVH initial ubuntu password (shown in OVH reinstall wizard): " OVH_INIT_PASS
+    echo ""
+  else
+    echo "  Using OVH_INIT_PASS from environment."
+  fi
 
   python3 - <<PYEOF
 import sys, os, pexpect
