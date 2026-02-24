@@ -10,6 +10,7 @@
     ./home-assistant.nix
     ./syncthing.nix
     ./agent-compute.nix
+    ./secret-proxy.nix
     ./impermanence.nix
     ./restic.nix
     ./repos.nix

@@ -15,6 +15,7 @@ let
     "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
     "9090" = "prometheus (localhost)";
+    "9091" = "anthropic-secret-proxy";
     "9100" = "node-exporter";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;

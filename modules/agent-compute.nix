@@ -186,7 +186,13 @@ let
       fi
 
       if [ -n "$ANTHROPIC_KEY" ]; then
-        BWRAP_ARGS+=( --setenv ANTHROPIC_API_KEY "$ANTHROPIC_KEY" )
+        if [[ "$PROJECT_DIR" == /data/projects/claw-swap* ]]; then
+          # Secret proxy: real key never enters sandbox; placeholder + proxy base URL used instead.
+          BWRAP_ARGS+=( --setenv ANTHROPIC_API_KEY "sk-ant-api03-proxy0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000AA" )
+          BWRAP_ARGS+=( --setenv ANTHROPIC_BASE_URL "http://127.0.0.1:9091" )
+        else
+          BWRAP_ARGS+=( --setenv ANTHROPIC_API_KEY "$ANTHROPIC_KEY" )
+        fi
       fi
 
       if [ -n "$OPENAI_KEY" ]; then
