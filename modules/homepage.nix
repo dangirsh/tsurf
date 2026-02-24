@@ -82,18 +82,16 @@
           }
           {
             "Parts Tools" = {
-              description = "Telegram bot toolkit — API integrations, data pipelines.";
-              server = "local";
-              container = "parts-tools";
-              icon = "docker";
+              siteMonitor = "http://localhost:8080";
+              description = "Telegram bot gateway — API integrations, data pipelines.";
+              icon = "node-js";
             };
           }
           {
             "Parts Agent" = {
+              siteMonitor = "http://localhost:3000";
               description = "Autonomous agent — runs tasks via Telegram bot.";
-              server = "local";
-              container = "parts-agent";
-              icon = "docker";
+              icon = "node-js";
             };
           }
         ];
