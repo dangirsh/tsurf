@@ -301,11 +301,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1771877792,
-        "narHash": "sha256-i07eRkdKXD0q8gE4dRJidIpvhDNSl9XrZa8Xs6jQb5s=",
+        "lastModified": 1771964325,
+        "narHash": "sha256-rHwc64NlRKsXkhWuj3DYYVbNJovuB6QViS1Gj6l3Uh8=",
         "owner": "dangirsh",
         "repo": "personal-agent-runtime",
-        "rev": "53e5f63803c82e8b3a431515723ef4b9e61b6a8e",
+        "rev": "69fea8238922563e2660acdef48d27bfc867aa1b",
         "type": "github"
       },
       "original": {
