@@ -15,10 +15,10 @@ let
     import socketserver
 
     UPSTREAM = "api.anthropic.com"
-    KEY = os.environ["REAL_ANTHROPIC_API_KEY"]
+    KEY = os.environ["REAL_ANTHROPIC_API_KEY"].strip()
     PORT = int(os.environ.get("SECRET_PROXY_PORT", "9091"))
     SKIP_REQ = ("authorization", "host", "content-length", "transfer-encoding")
-    SKIP_RESP = ("transfer-encoding", "content-length")
+    SKIP_RESP = ("transfer-encoding", "connection")
 
 
     class Handler(http.server.BaseHTTPRequestHandler):
