@@ -89,7 +89,7 @@
           }
           {
             "Parts Agent" = {
-              siteMonitor = "http://localhost:3000";
+              siteMonitor = "http://localhost:3001";
               description = "Autonomous agent — runs tasks via Telegram bot.";
               icon = "node-js";
             };
