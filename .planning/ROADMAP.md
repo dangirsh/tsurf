@@ -32,13 +32,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 18: VPS Consolidation** - Merge acfs dev environment into neurosys. Single VPS for dev, personal services, prod. Component audit, security model, self-deploy ergonomics, state tracking, Parts management interface architecture.
 - [x] **Phase 19: Generate Comprehensive Project README** - Concise, skimmable README.md enumerating all key features, goals, assumptions, constraints, and preferences. Bullets & tables over prose. Deployment quick-start, operating details, design decisions, accepted risks.
 - [ ] **Phase 21: Impermanence (Ephemeral Root)** - Wipe root on every boot via nix-community/impermanence. BTRFS subvolumes + initrd rollback. Explicit /persist state manifest. Drift-proof, smaller backups, simpler DR.
-- [ ] **Phase 22: Secret Proxy (Netclode Pattern)** - Two-tier proxy so real API keys never enter agent sandboxes. Header-only injection, per-session allowlisting, reflection prevention.
+- [x] **Phase 22: Secret Proxy (Netclode Pattern)** - Two-tier proxy so real API keys never enter agent sandboxes. Header-only injection, per-session allowlisting, reflection prevention.
 - [ ] **Phase 23: Tailscale Security & Self-Sovereignty** - TKA (Tailnet Key Authority), ACL hardening, device approval, auth key rotation, node key expiry. Self-custodied signing keys.
 - [x] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, devShell, treefmt-nix.
 - [x] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
 - [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
 - [ ] **Phase 27: OVH VPS Production Migration** - Deploy neurosys to new OVH VPS as production server. Multi-host NixOS config, nixos-anywhere deployment, Tailscale setup, deploy script updates, Contabo repurposed as staging.
 - [ ] **Phase 28: dangirsh.org Static Site on Neurosys** - Move dangirsh.org from NearlyFreeSpeech to OVH host. Hakyll site as Nix flake package. nginx unified reverse proxy (replaces Docker Caddy). ACME TLS. DNS cutover.
+- [ ] **Phase 29: Agentic Dev Maxing — Batteries Included** - All major CLI coding agents (gemini-cli, opencode, aider + more) pre-installed. API keys for all major providers (XAI/Grok, OpenRouter, Gemini, Groq, Mistral). Agent session management tooling researched and adopted.
 
 ## Phase Details
 
@@ -218,7 +219,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 19. Generate Project README | 1/1 | ✓ Complete | 2026-02-20 |
 | 20. Deep Ecosystem Research | 1/1 | ✓ Complete | 2026-02-20 |
 | 21. Impermanence (Ephemeral Root) | 1/2 | In progress | - |
-| 22. Secret Proxy (Netclode Pattern) | 0/TBD | Not started | - |
+| 22. Secret Proxy (Netclode Pattern) | 1/1 | ✓ Complete | 2026-02-24 |
+| 29. Agentic Dev Maxing — Batteries Included | 0/TBD | Not started | - |
 | 23. Tailscale Security & Self-Sovereignty | 1/2 | In progress | - |
 | 24. Server Hardening + DX | 1/1 | ✓ Complete | 2026-02-23 |
 | 25. Deploy Safety (deploy-rs) | 1/1 | ✓ Complete | 2026-02-21 |
@@ -464,23 +466,14 @@ Plans:
 
 ### Phase 22: Secret Proxy (Netclode Pattern)
 
-**Goal:** Two-tier proxy where real API keys never enter agent sandboxes. Inspired by [Netclode](https://github.com/nichochar/netclode) and [Fly's Tokenizer](https://github.com/superfly/tokenizer). Agents see placeholder keys + HTTP_PROXY; the secret-proxy (outside sandbox) validates agent identity, replaces placeholders in HTTP headers only (not body — prevents reflection attacks), and forwards to upstream APIs. Per-session SDK-type allowlisting (Claude → anthropic.com only). From ecosystem research item 7.
-**Depends on:** Phase 11 (agent sandboxing — proxy integrates with sandbox HTTP_PROXY)
+**Goal:** Two-tier proxy where real API keys never enter agent sandboxes. Inspired by [Netclode](https://github.com/nichochar/netclode) and [Fly's Tokenizer](https://github.com/superfly/tokenizer). Agents see placeholder keys + `ANTHROPIC_BASE_URL` pointing at the proxy; the proxy (outside sandbox) injects the real key via the `x-api-key` header on the way out. Real key never enters sandbox env. Scoped to claw-swap projects for initial rollout.
+**Depends on:** Phase 11 (agent sandboxing — proxy integrates with sandbox env injection)
 **Requirements:** None (security hardening — new capability)
-**Success Criteria** (what must be TRUE):
-  1. Secret proxy service runs outside agent sandboxes, listening on localhost
-  2. Agents receive `ANTHROPIC_API_KEY=PLACEHOLDER` and `HTTP_PROXY=localhost:<port>` — real keys never enter sandbox
-  3. Proxy performs header-only token injection (prevents reflection/exfiltration of real keys via response body)
-  4. Per-session allowlisting: Claude agents can only reach anthropic.com, Codex agents only openai.com
-  5. Validation failure blocks the request entirely (placeholder never leaks to upstream)
-  6. Agent identity validated before token injection (session ID or sandbox identity)
-  7. Real API keys sourced from sops-nix secrets, read only by the proxy service
-  8. Existing agent workflows (Claude Code, Codex CLI) work transparently through the proxy
-**Effort:** Medium — small Go/Rust proxy service + NixOS module + agent-spawn integration.
-**Plans:** 0 plans
+**Actual approach:** `ANTHROPIC_BASE_URL=http://127.0.0.1:9091` (simpler than HTTP_PROXY/TLS MITM — SDK makes plain HTTP to proxy, proxy forwards HTTPS upstream). ~60-line Python stdlib proxy via `pkgs.writers.writePython3Bin`. Dedicated `secret-proxy` system user with sops template ownership.
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 22 to break down)
+- [x] 22-01-PLAN.md -- Python stdlib secret proxy NixOS module + agent-spawn claw-swap integration
 
 ### Phase 23: Tailscale Security and Self-Sovereignty
 
@@ -579,7 +572,41 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 28-01-PLAN.md -- Modernize dangirsh-site Hakyll build (add flake.nix to dangirsh/dangirsh.org repo, nixpkgs-25.11 compatible)
-- [ ] 28-02-PLAN.md -- nginx unified reverse proxy + ACME + claw-swap Caddy removal + impermanence + deploy (wave 1, parallel with 28-01)
+- [x] 28-01-PLAN.md -- Modernize dangirsh-site Hakyll build (add flake.nix to dangirsh/dangirsh.org repo, nixpkgs-25.11 compatible)
+- [x] 28-02-PLAN.md -- nginx unified reverse proxy + ACME + claw-swap Caddy removal + impermanence + deploy (wave 1, parallel with 28-01)
 - [ ] 28-03-PLAN.md -- Deploy to OVH + DNS cutover from NFS (human checkpoint: DNS change)
 - [ ] 28-04-PLAN.md -- Post-cutover cleanup: validate workflow, confirm NFS decommission, update docs
+
+### Phase 29: Agentic Dev Maxing — Batteries Included
+
+**Goal:** Make neurosys the definitive batteries-included agentic development platform. Install all major CLI coding agents pre-configured and ready to use. Add API keys for every major model provider so any agent can be used without manual setup. Adopt vibe-kanban (BloopAI) as a Docker-based web UI for managing parallel agent sessions on remote instances. Every commonly-used agentic dev tool should work out-of-the-box after a fresh deploy.
+**Depends on:** Phase 5 (agent tooling baseline — claude-code, codex, agent-spawn already in place)
+**Requirements:** None (developer experience improvement)
+
+**Research findings (pre-researched):**
+- **gemini-cli**: `pkgs.gemini-cli` in nixpkgs. Env: `GOOGLE_API_KEY`. MCP-native, TUI. Include.
+- **opencode** (SST): `pkgs.opencode` in nixpkgs. Multi-provider TUI with plan/build agents. Include.
+- **pi** (Mario Zechner's `@mariozechner/pi-coding-agent`): Minimalist 4-tool TS agent; self-extends via plugins. NOT in nixpkgs — needs custom packaging or llm-agents overlay. Research/defer.
+- **aider**: `pkgs.aider-chat` in nixpkgs. Session-based pair programmer with strong git integration. Include (optional).
+- **goose** (Block): No nixpkgs package, Rust build needed. Skip this phase.
+- **vibe-kanban** (BloopAI): Docker image available (`successage/opencode-kanban`). Web UI for parallel agent management with worktree isolation + remote SSH. Include via Docker (Tailscale-only).
+
+**API providers to add:**
+- `GOOGLE_API_KEY` — Gemini 2.5, 60 req/min free tier
+- `XAI_API_KEY` — Grok-3/2, fast inference (xai-... format)
+- `OPENROUTER_API_KEY` — unified access to 200+ models (sk-or-... format)
+- `GROQ_API_KEY` — very fast inference on Llama/Mistral (optional)
+- `MISTRAL_API_KEY` — Mistral models (optional)
+
+**Success Criteria** (what must be TRUE):
+  1. `gemini-cli`, `opencode`, `aider` available on PATH (nixpkgs packages in agent-compute.nix)
+  2. `GOOGLE_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY` in sops-nix and exported in bash.nix
+  3. Each agent CLI smoke-tested: `gemini -p "hello"`, `opencode --version`, `aider --version`
+  4. vibe-kanban running as Docker container accessible via Tailscale (port in `internalOnlyPorts`)
+  5. `nix flake check` passes with all new packages, secrets, and container additions
+  6. README.md updated with new agent tooling
+**Effort:** Medium — nixpkgs packaging already done for main tools; API key additions + vibe-kanban Docker module is the main work.
+**Plans:** TBD (run /gsd:plan-phase 29 to break down)
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 29 to break down)

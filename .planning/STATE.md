@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 28 in progress -- Plan 28-02 complete with OVH nginx unified edge deployed in config and claw-swap Caddy removed; preparing DNS cutover in Plan 28-03. Phase 21 (Impermanence) also complete — neurosys Contabo VPS now running BTRFS impermanence (merged 2026-02-24).
+**Current focus:** Phase 28 in progress -- Plan 28-02 complete with OVH nginx unified edge deployed in config and claw-swap Caddy removed; preparing DNS cutover in Plan 28-03. Phase 22 (Secret Proxy) also complete — anthropic-secret-proxy running on port 9091, claw-swap agents use ANTHROPIC_BASE_URL; Phase 29 (Agentic Dev Maxing) added to roadmap.
 
 ## Current Position
 
 Phase: 28 (dangirsh.org Static Site on Neurosys)
 Plan: 3 of 4 -- PENDING (DNS cutover + live cert issuance)
 Status: Plan 28-02 executed. OVH now has host-native nginx + ACME virtualHosts for `dangirsh.org`, `www.dangirsh.org`, and `claw-swap.com`; claw-swap Docker Caddy and CF origin cert/key secrets were removed.
-Last activity: 2026-02-24 - Completed Phase 21 (impermanence deployment to Contabo neurosys, merged `c4a4e07`); wrote 21-02-SUMMARY.md
+Last activity: 2026-02-24 - Completed Phase 22 (secret proxy deployed, merged); wrote 22-01-SUMMARY.md; deleted stale 22-02/22-03 plans (TLS MITM approach superseded); added Phase 29 to roadmap
 
-Progress: Phase 28 in progress (2/4 plans complete). Phase 27 remains in progress (2/5 complete); Phase 21 complete (2/2 plans, merged).
+Progress: Phase 28 in progress (2/4 plans complete). Phase 27 remains in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
 
 ## Performance Metrics
 
@@ -152,6 +152,12 @@ Recent decisions affecting current work:
 - [28-02]: Removed Docker Caddy from `claw-swap` module and secrets; `claw-swap-app` now binds `127.0.0.1:3000:3000` for host nginx proxying (pushed `claw-swap@e3289f4`).
 - [28-02]: Persisted `/var/lib/acme` for impermanence, updated homepage metadata (`nginx` + `dangirsh.org`), and added `dangirsh/dangirsh.org` to repo bootstrap list.
 - [28-02]: [Rule 3 - Blocking] Resolved existing OVH `services.openssh.openFirewall` conflict by using `lib.mkForce true`, unblocking `nix flake check`.
+- [22-01]: PROXY-22-01: `ANTHROPIC_BASE_URL` approach (not HTTP_PROXY/TLS MITM) — SDK makes plain HTTP to proxy; proxy speaks HTTPS upstream; no cert injection needed
+- [22-01]: PROXY-22-02: `x-api-key` header injection (not `Authorization: Bearer`) — Anthropic API only accepts `sk-ant-api03-*` via `x-api-key`
+- [22-01]: PROXY-22-03: `pkgs.writers.writePython3Bin` runs flake8 with PEP8 enforcement (E501 79-char, E305 2-blank-lines) — Python must be formatted
+- [22-01]: PROXY-22-04: `socketserver.ThreadingTCPServer.allow_reuse_address = True` required to survive NixOS service restart race (EADDRINUSE on deploy)
+- [22-01]: PROXY-22-05: `.strip()` on API key from sops template EnvironmentFile — trailing newlines cause 401
+- [22-01]: PROXY-22-06: Keep `Content-Length` in response pass-through; only strip `Transfer-Encoding` + `Connection` — stripping Content-Length causes HTTP/1.1 clients to hang
 
 ### Completed Phases
 
@@ -193,6 +199,8 @@ Recent decisions affecting current work:
   - 21-02: nixos-anywhere redeploy of Contabo VPS with BTRFS impermanence; resolved sops key rotation (parts, claw-swap), tailnet lock bootstrap, first-boot race conditions; all services running
 - **Phase 25: Deploy Safety (deploy-rs)** (1 plan, completed 2026-02-21)
   - 25-01: deploy-rs input + deploy node + deployChecks, deploy.sh migration with rollback flags, recovery runbook Appendix 11
+- **Phase 22: Secret Proxy (Netclode Pattern)** (1 plan, completed 2026-02-24)
+  - 22-01: Python stdlib proxy via `pkgs.writers.writePython3Bin`; `ANTHROPIC_BASE_URL` approach (no TLS MITM); dedicated `secret-proxy` system user + sops template; claw-swap projects get placeholder key + proxy URL; port 9091 in `internalOnlyPorts`
 
 ### Roadmap Evolution
 
@@ -214,6 +222,8 @@ Recent decisions affecting current work:
 - Phase 26 added: Agent Notifications (Telegram Bot) — Bot API integration, 2 sops secrets, agent reach-back mechanism (from ecosystem research item 4)
 - Phase 27 added: OVH VPS Production Migration — multi-host refactor, OVH bootstrap, staged service migration, production cutover
 - Phase 28 added: dangirsh.org Static Site on Neurosys — migrate dangling legacy Hakyll build to flake output and wire neurosys nginx to Nix store artifact
+- Phase 22 executed: secret proxy deployed — `anthropic-secret-proxy` on port 9091; ANTHROPIC_BASE_URL approach (simpler than TLS MITM); claw-swap agents get placeholder key; real key never enters sandbox env
+- Phase 29 added: Agentic Dev Maxing — batteries-included platform with all major CLI coding agents (gemini-cli, opencode, aider, etc.) and API keys for all major providers (XAI, OpenRouter, Gemini, Groq, Mistral)
 - Phase 24 executed: srvos server defaults adopted with explicit host overrides, agent sandbox PID/cgroup isolation enabled, treefmt formatter + devShell shipped
 - Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
 - Phase 27 progressing: 27-01 recon/secrets bootstrap and 27-02 multi-host flake + deploy node refactor executed
@@ -253,6 +263,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Completed 28-02-PLAN.md -- OVH nginx unified edge configured and claw-swap Caddy removed
+Last session: 2026-02-24
+Stopped at: Phase 22 cleanup — summary written, stale plans deleted, ROADMAP/STATE updated with Phase 22 complete + Phase 29 added
 Resume file: .planning/phases/28-dangirsh-org-static-site-on-neurosys/28-03-PLAN.md
