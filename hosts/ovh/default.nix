@@ -29,7 +29,7 @@
   # /persist/etc/ssh/ over /etc/ssh/, but if sshd starts before the mount completes,
   # it fails with "no such file". By pointing sshd directly at /persist/etc/ssh/,
   # we bypass sshd_config entirely — nixos-anywhere always places the host key there.
-  services.openssh.hostKeys = [
+  services.openssh.hostKeys = lib.mkForce [
     { type = "ed25519"; path = "/persist/etc/ssh/ssh_host_ed25519_key"; }
   ];
 
