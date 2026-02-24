@@ -10,19 +10,26 @@
 { config, inputs, lib, pkgs, ... }:
 let
   siteRoot = inputs.dangirsh-site.packages."x86_64-linux".default;
-in {
   # @decision WEB-07: ACME uses DNS-01 challenge via Cloudflare API.
   # @rationale: DNS-01 allows cert issuance before DNS points to this server,
   # solving the chicken-and-egg problem for new host deployments (e.g. OVH).
+  # Applied per-cert because security.acme.defaults.dnsProvider does not
+  # propagate to the generated lego script in NixOS 25.11.
+  cfDns = {
+    dnsProvider = "cloudflare";
+    webroot = null;  # clear enableACME's default webroot; exactly one challenge type required
+    credentialFiles = {
+      "CF_DNS_API_TOKEN_FILE" = config.sops.secrets."cloudflare-dns-token".path;
+    };
+  };
+in {
   security.acme = {
     acceptTerms = true;
-    defaults = {
-      email = "dan@dangirsh.org";
-      dnsProvider = "cloudflare";
-      credentialFiles = {
-        "CF_DNS_API_TOKEN_FILE" = config.sops.secrets."cloudflare-dns-token".path;
-      };
-    };
+    defaults.email = "dan@dangirsh.org";
+    certs."dangirsh.org"        = cfDns;
+    certs."www.dangirsh.org"    = cfDns;
+    certs."staging.dangirsh.org" = cfDns;
+    certs."claw-swap.com"       = cfDns;
   };
 
   services.nginx = {
