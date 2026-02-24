@@ -11,6 +11,12 @@
     };
   };
 
+  # @decision DOCK-03: Pin oci-containers backend to docker so that claw-swap
+  # containers keep using docker-* unit names even though agent-compute.nix
+  # enables rootless Podman. Without this, NixOS picks podman when both runtimes
+  # are enabled, producing podman-* units that conflict during activation.
+  virtualisation.oci-containers.backend = "docker";
+
   # --- NAT for container outbound internet access ---
   # Required because Docker --iptables=false disables Docker's own NAT/masquerade.
   # Without this, containers cannot reach the internet.
