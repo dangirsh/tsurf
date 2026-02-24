@@ -17,7 +17,8 @@ let
     UPSTREAM = "api.anthropic.com"
     KEY = os.environ["REAL_ANTHROPIC_API_KEY"].strip()
     PORT = int(os.environ.get("SECRET_PROXY_PORT", "9091"))
-    SKIP_REQ = ("authorization", "host", "content-length", "transfer-encoding")
+    SKIP_REQ = ("x-api-key", "authorization", "host",
+                "content-length", "transfer-encoding")
     SKIP_RESP = ("transfer-encoding", "connection")
 
 
@@ -27,7 +28,7 @@ let
             conn = http.client.HTTPSConnection(UPSTREAM, context=ctx)
             hdrs = {k: v for k, v in self.headers.items()
                     if k.lower() not in SKIP_REQ}
-            hdrs["Authorization"] = f"Bearer {KEY}"
+            hdrs["x-api-key"] = KEY
             hdrs["Host"] = UPSTREAM
             body_len = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(body_len) if body_len > 0 else None
