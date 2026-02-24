@@ -48,6 +48,26 @@ in {
       globalRedirect = "dangirsh.org";
     };
 
+    # @decision WEB-06: staging.dangirsh.org served from Contabo neurosys (161.97.74.121).
+    # @rationale: Validates full nginx+Hakyll stack on staging before OVH production cutover.
+    virtualHosts."staging.dangirsh.org" = {
+      enableACME = true;
+      forceSSL = true;
+      root = siteRoot;
+
+      locations."/" = {
+        tryFiles = "$uri $uri/index.html $uri.html =404";
+      };
+
+      locations."~* \\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$" = {
+        root = siteRoot;
+        extraConfig = ''
+          expires 30d;
+          add_header Cache-Control "public, immutable";
+        '';
+      };
+    };
+
     virtualHosts."claw-swap.com" = {
       enableACME = true;
       forceSSL = true;
