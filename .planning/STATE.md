@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 28 in progress -- Plan 28-02 complete with OVH nginx unified edge deployed in config and claw-swap Caddy removed; preparing DNS cutover in Plan 28-03.
+**Current focus:** Phase 28 in progress -- Plan 28-02 complete with OVH nginx unified edge deployed in config and claw-swap Caddy removed; preparing DNS cutover in Plan 28-03. Phase 21 (Impermanence) also complete — neurosys Contabo VPS now running BTRFS impermanence (merged 2026-02-24).
 
 ## Current Position
 
 Phase: 28 (dangirsh.org Static Site on Neurosys)
-Plan: 2 of 4 -- COMPLETE
+Plan: 3 of 4 -- PENDING (DNS cutover + live cert issuance)
 Status: Plan 28-02 executed. OVH now has host-native nginx + ACME virtualHosts for `dangirsh.org`, `www.dangirsh.org`, and `claw-swap.com`; claw-swap Docker Caddy and CF origin cert/key secrets were removed.
-Last activity: 2026-02-23 - Completed 28-02: unified nginx reverse proxy + ACME + claw-swap Caddy removal (`24fbb8f`, `5d8fc6d`, `1ffe9ea`, `9f3b962`; external `claw-swap@e3289f4`)
+Last activity: 2026-02-24 - Completed Phase 21 (impermanence deployment to Contabo neurosys, merged `c4a4e07`); wrote 21-02-SUMMARY.md
 
-Progress: Phase 28 in progress (2/4 plans complete). Phase 27 remains in progress (2/5 complete); deferred 23-02 human checkpoints still pending by design.
+Progress: Phase 28 in progress (2/4 plans complete). Phase 27 remains in progress (2/5 complete); Phase 21 complete (2/2 plans, merged).
 
 ## Performance Metrics
 
@@ -188,6 +188,9 @@ Recent decisions affecting current work:
   - 20-01: 10 parallel research agents → unified adoption report covering srvos, sandbox hardening, gVisor, deploy-rs, impermanence, secret proxy, microvm.nix, multi-node scaling, messaging, reference configs
 - **Phase 24: Server Hardening + DX** (1 plan, completed 2026-02-23)
   - 24-01: srvos hardening baseline + PID/cgroup sandbox isolation + treefmt formatter/devShell integration
+- **Phase 21: Impermanence (Ephemeral Root)** (2 plans, completed 2026-02-24)
+  - 21-01: BTRFS 5-subvolume disko layout, impermanence module (17 dirs + 2 files), initrd rollback, restic /persist targeting, recovery runbook Appendix 12
+  - 21-02: nixos-anywhere redeploy of Contabo VPS with BTRFS impermanence; resolved sops key rotation (parts, claw-swap), tailnet lock bootstrap, first-boot race conditions; all services running
 - **Phase 25: Deploy Safety (deploy-rs)** (1 plan, completed 2026-02-21)
   - 25-01: deploy-rs input + deploy node + deployChecks, deploy.sh migration with rollback flags, recovery runbook Appendix 11
 
