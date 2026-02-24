@@ -1,9 +1,15 @@
 keys:
   - &admin          age1vma7w9nqlg9da8z60a99g8wv53ufakfmzxpkdnnzw39y34grug7qklz3xz
   - &host_neurosys  age1sczx067gq0grjm0kunw6m9z0vgxdtt357ksnzdhw78sh25hkmauqqkxf24
+  - &host_ovh       age1rkve23z2ywug6ugwdcrtcpemq7j9y2980azveanhx0x6w3etp9eqn50l9g
 creation_rules:
   - path_regex: secrets/neurosys\.yaml$
     key_groups:
       - age:
         - *admin
         - *host_neurosys
+  - path_regex: secrets/ovh\.yaml$
+    key_groups:
+      - age:
+        - *admin
+        - *host_ovh

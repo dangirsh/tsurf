@@ -23,6 +23,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.sops-nix.follows = "sops-nix";
     };
+    dangirsh-site = {
+      url = "github:dangirsh/dangirsh.org";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -34,13 +38,24 @@
     impermanence = {
       url = "github:nix-community/impermanence";
     };
+    srvos = {
+      url = "github:nix-community/srvos";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, llm-agents, deploy-rs, impermanence, ... } @ inputs: {
-    nixosConfigurations.neurosys = nixpkgs.lib.nixosSystem {
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, dangirsh-site, llm-agents, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
+    let
       system = "x86_64-linux";
-      specialArgs = { inherit inputs; };
-      modules = [
+      pkgs = nixpkgs.legacyPackages.${system};
+      treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+
+      commonModules = [
+        srvos.nixosModules.server
         disko.nixosModules.disko
         impermanence.nixosModules.impermanence
         sops-nix.nixosModules.sops
@@ -50,7 +65,6 @@
         {
           nixpkgs.overlays = [ llm-agents.overlays.default ];
         }
-        ./hosts/neurosys
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
@@ -58,24 +72,56 @@
           home-manager.users.dangirsh = import ./home;
         }
       ];
-    };
 
-    deploy.nodes.neurosys = {
-      hostname = "neurosys";
-      sshUser = "root";
-      magicRollback = true;
-      autoRollback = true;
-      confirmTimeout = 120;
-      profiles.system = {
-        user = "root";
-        path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.neurosys;
+      mkHost = hostDir: nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; };
+        modules = commonModules ++ [ hostDir ];
       };
+    in {
+      nixosConfigurations.neurosys = mkHost ./hosts/neurosys;
+      nixosConfigurations.ovh = mkHost ./hosts/ovh;
+
+      deploy.nodes.neurosys = {
+        hostname = "neurosys";
+        sshUser = "root";
+        magicRollback = true;
+        autoRollback = true;
+        confirmTimeout = 120;
+        profiles.system = {
+          user = "root";
+          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.neurosys;
+        };
+      };
+
+      deploy.nodes.ovh = {
+        hostname = "neurosys-prod";
+        sshUser = "root";
+        magicRollback = true;
+        autoRollback = true;
+        confirmTimeout = 120;
+        profiles.system = {
+          user = "root";
+          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.ovh;
+        };
+      };
+
+      packages.${system}.deploy-rs = deploy-rs.packages.${system}.default;
+
+      formatter.${system} = treefmtEval.config.build.wrapper;
+
+      devShells.${system}.default = pkgs.mkShell {
+        packages = [
+          pkgs.sops
+          pkgs.age
+          pkgs.nixfmt
+          pkgs.shellcheck
+          deploy-rs.packages.${system}.default
+        ];
+      };
+
+      checks = builtins.mapAttrs
+        (system: deployLib: deployLib.deployChecks self.deploy)
+        deploy-rs.lib;
     };
-
-    packages.x86_64-linux.deploy-rs = deploy-rs.packages.x86_64-linux.default;
-
-    checks = builtins.mapAttrs
-      (system: deployLib: deployLib.deployChecks self.deploy)
-      deploy-rs.lib;
-  };
 }

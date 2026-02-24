@@ -19,7 +19,6 @@
   networking.nat = {
     enable = true;
     internalIPs = [ "172.16.0.0/12" ];
-    externalInterface = "eth0";
   };
 
   # --- Trust Docker bridge for container-to-container traffic ---

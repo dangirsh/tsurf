@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# scripts/deploy.sh — Deploy neurosys NixOS config to neurosys
+# scripts/deploy.sh — Deploy a selected neurosys NixOS flake node
 #
 # Modes:
 #   --mode local   (default) Build locally, deploy remotely via deploy-rs
 #   --mode remote  Build remotely via deploy-rs --remote-build
 #
 # Flags:
-#   --target USER@HOST  Override SSH target (default: root@neurosys)
+#   --node NAME         Flake node to deploy (default: neurosys; choices: neurosys, ovh)
+#   --target USER@HOST  Override SSH target (default depends on --node)
 #   --first-deploy  Disable magic rollback once for migration from nixos-rebuild
 #   --no-magic-rollback  Disable magic rollback for intentional network/SSH changes
 #   --skip-update  Skip 'nix flake update parts' step
@@ -20,19 +21,21 @@
 set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-TARGET="root@neurosys"
+NODE="neurosys"
+TARGET=""
+TARGET_SET=false
 MODE="local"
 FIRST_DEPLOY=false
 NO_MAGIC_ROLLBACK=false
 SKIP_UPDATE=false
 SECONDS=0
 
-CONTAINERS=("parts-tools" "parts-agent" "claw-swap-db" "claw-swap-app" "claw-swap-caddy")
+CONTAINERS=("parts-tools" "parts-agent" "claw-swap-db" "claw-swap-app")
 mkdir -p "$FLAKE_DIR/tmp"
 
 # @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
-LOCAL_LOCK="$FLAKE_DIR/tmp/neurosys-deploy.local.lock"
-REMOTE_LOCK_DIR="/var/lock/neurosys-deploy.lock"
+LOCAL_LOCK=""
+REMOTE_LOCK_DIR=""
 REMOTE_LOCK_HELD=false
 
 cleanup() {
@@ -46,35 +49,43 @@ usage() {
   cat <<USAGE
 Usage: $(basename "$0") [OPTIONS]
 
-Deploy neurosys NixOS config to neurosys server.
+Deploy neurosys NixOS config to the selected deploy node.
 
 Options:
+  --node NAME           Deploy flake node (neurosys|ovh, default: neurosys)
   --mode local          Build locally, deploy remotely (default)
   --mode remote         Build on target host via deploy-rs --remote-build
-  --target U@H    Override SSH target (default: root@neurosys)
+  --target U@H          Override SSH target (default by node)
   --first-deploy        Disable magic rollback for one-time migration
   --no-magic-rollback   Disable magic rollback for this deploy
   --skip-update         Skip 'nix flake update parts' before building
   --help                Show this help
 
 Examples:
-  ./scripts/deploy.sh                              # Deploy with magic rollback (local build)
+  ./scripts/deploy.sh                              # Deploy staging node (neurosys)
+  ./scripts/deploy.sh --node ovh                  # Deploy production node (ovh)
+  ./scripts/deploy.sh --node ovh --mode remote    # Remote-build deploy to ovh
   ./scripts/deploy.sh --first-deploy               # First migration deploy from nixos-rebuild
   ./scripts/deploy.sh --no-magic-rollback          # Intentional networking change deploy
   ./scripts/deploy.sh --skip-update                # Deploy without updating parts input
-  ./scripts/deploy.sh --mode remote                # Build on server instead of locally
+  ./scripts/deploy.sh --target root@1.2.3.4        # Explicit SSH target override
 USAGE
 }
 
 # --- Argument parsing ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --node)
+      NODE="$2"
+      shift 2
+      ;;
     --mode)
       MODE="$2"
       shift 2
       ;;
     --target)
       TARGET="$2"
+      TARGET_SET=true
       shift 2
       ;;
     --first-deploy)
@@ -105,6 +116,22 @@ if [[ "$MODE" != "local" && "$MODE" != "remote" ]]; then
   echo "Error: --mode must be 'local' or 'remote', got '$MODE'"
   exit 1
 fi
+
+if [[ "$NODE" != "neurosys" && "$NODE" != "ovh" ]]; then
+  echo "Error: --node must be 'neurosys' or 'ovh', got '$NODE'"
+  exit 1
+fi
+
+if [[ "$TARGET_SET" == false ]]; then
+  if [[ "$NODE" == "ovh" ]]; then
+    TARGET="root@neurosys-prod"
+  else
+    TARGET="root@neurosys"
+  fi
+fi
+
+LOCAL_LOCK="$FLAKE_DIR/tmp/neurosys-${NODE}-deploy.local.lock"
+REMOTE_LOCK_DIR="/var/lock/neurosys-${NODE}-deploy.lock"
 
 # --- Local lock (prevent concurrent deploys from same machine) ---
 exec 9>"$LOCAL_LOCK"
@@ -149,13 +176,13 @@ PARTS_REV_SHORT="${PARTS_REV:0:7}"
 echo "==> Parts revision: $PARTS_REV_SHORT"
 
 # --- Build + deploy ---
-if [[ "$TARGET" != "root@neurosys" ]]; then
+if [[ "$TARGET_SET" == true ]]; then
   echo "WARNING: --target affects SSH locking/health checks only."
-  echo "         deploy-rs deploy target is flake node 'neurosys' (hostname=neurosys)."
+  echo "         deploy-rs deploy target is flake node '$NODE'."
 fi
 
 DEPLOY_ARGS=(
-  "$FLAKE_DIR#neurosys"
+  "$FLAKE_DIR#$NODE"
   --confirm-timeout 120
 )
 if [[ "$FIRST_DEPLOY" == true || "$NO_MAGIC_ROLLBACK" == true ]]; then
@@ -170,10 +197,10 @@ if [[ "$NO_MAGIC_ROLLBACK" == true ]]; then
 fi
 
 if [[ "$MODE" == "local" ]]; then
-  echo "==> Deploying to $TARGET with deploy-rs (confirm timeout: 120s)..."
+  echo "==> Deploying node '$NODE' to $TARGET with deploy-rs (confirm timeout: 120s)..."
   nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}"
 else
-  echo "==> Deploying via remote build on $TARGET with deploy-rs..."
+  echo "==> Deploying node '$NODE' via remote build on $TARGET with deploy-rs..."
   nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}" --remote-build
 fi
 

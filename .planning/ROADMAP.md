@@ -34,9 +34,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 21: Impermanence (Ephemeral Root)** - Wipe root on every boot via nix-community/impermanence. BTRFS subvolumes + initrd rollback. Explicit /persist state manifest. Drift-proof, smaller backups, simpler DR.
 - [ ] **Phase 22: Secret Proxy (Netclode Pattern)** - Two-tier proxy so real API keys never enter agent sandboxes. Header-only injection, per-session allowlisting, reflection prevention.
 - [ ] **Phase 23: Tailscale Security & Self-Sovereignty** - TKA (Tailnet Key Authority), ACL hardening, device approval, auth key rotation, node key expiry. Self-custodied signing keys.
-- [ ] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix.
+- [x] **Phase 24: Server Hardening + DX** - srvos server profile, sandbox PID+cgroup isolation, devShell, treefmt-nix.
 - [x] **Phase 25: Deploy Safety (deploy-rs)** - Magic rollback via inotify canary. Evolve deploy.sh into deploy-rs wrapper.
 - [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
+- [ ] **Phase 27: OVH VPS Production Migration** - Deploy neurosys to new OVH VPS as production server. Multi-host NixOS config, nixos-anywhere deployment, Tailscale setup, deploy script updates, Contabo repurposed as staging.
+- [ ] **Phase 28: dangirsh.org Static Site on Neurosys** - Move dangirsh.org from NearlyFreeSpeech to OVH host. Hakyll site as Nix flake package. nginx unified reverse proxy (replaces Docker Caddy). ACME TLS. DNS cutover.
 
 ## Phase Details
 
@@ -218,9 +220,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 21. Impermanence (Ephemeral Root) | 1/2 | In progress | - |
 | 22. Secret Proxy (Netclode Pattern) | 0/TBD | Not started | - |
 | 23. Tailscale Security & Self-Sovereignty | 1/2 | In progress | - |
-| 24. Server Hardening + DX | 0/TBD | Not started | - |
+| 24. Server Hardening + DX | 1/1 | ✓ Complete | 2026-02-23 |
 | 25. Deploy Safety (deploy-rs) | 1/1 | ✓ Complete | 2026-02-21 |
 | 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
+| 27. OVH VPS Production Migration | 0/5 | Not started | - |
+| 28. dangirsh.org Static Site on Neurosys | 0/4 | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -502,23 +506,21 @@ Plans:
 
 ### Phase 24: Server Hardening and DX
 
-**Goal:** Adopt [srvos](https://github.com/nix-community/srvos) server profile for ~20 battle-tested hardening defaults (watchdog, OOM priority, auto-GC, LLMNR off, emergency mode off, etc.). Add `--unshare-pid` and `--unshare-cgroup` to agent-spawn bubblewrap flags so agents can't see host processes or cgroup hierarchy. Add [gVisor](https://gvisor.dev/) (runsc) with systrap platform as Docker OCI runtime for security-sensitive containers. Improve DX: flake check that builds toplevel, devShell with sops+age+deploy tooling, treefmt-nix (nixfmt + shellcheck), `self` reference pattern. From ecosystem research items 1, 2, 3 + reference config patterns.
-**Depends on:** Nothing (independent hardening — can run anytime)
+**Goal:** Adopt srvos server profile for ~40 battle-tested hardening defaults (watchdog, OOM priority, auto-GC, LLMNR off, emergency mode off, etc.). Add `--unshare-pid` and `--unshare-cgroup` to agent-spawn bubblewrap flags so agents can't see host processes or cgroup hierarchy. Improve DX: devShell with sops+age+deploy tooling, treefmt-nix (nixfmt + shellcheck). gVisor, flake check toplevel, and systemd initrd are explicitly out of scope (deferred per CONTEXT.md).
+**Depends on:** Nothing (independent hardening -- can run anytime)
 **Requirements:** None (hardening + DX improvements)
 **Success Criteria** (what must be TRUE):
-  1. srvos flake input added and `srvos.nixosModules.server` imported — redundant manual settings removed
-  2. `networking.useNetworkd` tested with Contabo static IP (override with `mkForce false` if incompatible)
-  3. `--unshare-pid` and `--unshare-cgroup` added to agent-spawn bwrap flags — agents can't see host `/proc` or cgroups
-  4. gVisor (runsc) registered as Docker OCI runtime with `--platform=systrap` — security-sensitive containers can use `--runtime=runsc`
-  5. `checks.x86_64-linux.nixos-neurosys = self.nixosConfigurations.neurosys.config.system.build.toplevel` in flake.nix
-  6. DevShell includes sops, age, and deploy tooling
-  7. treefmt-nix configured with nixfmt + shellcheck
-  8. `nix flake check` passes with all changes
-**Effort:** Low-Medium — srvos is the bulk, rest are small additions.
-**Plans:** 0 plans
+  1. srvos flake input added and `srvos.nixosModules.server` imported -- redundant manual settings removed
+  2. `networking.useNetworkd` overridden to `false` with `mkForce` (Contabo static IP uses scripted networking)
+  3. `--unshare-pid` and `--unshare-cgroup` added to agent-spawn bwrap flags -- agents can't see host `/proc` or cgroups
+  4. DevShell includes sops, age, deploy-rs CLI, nixfmt, shellcheck
+  5. treefmt-nix configured with nixfmt + shellcheck
+  6. `nix flake check` passes with all changes
+**Effort:** Low-Medium -- srvos is the bulk, rest are small additions.
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 24 to break down)
+- [ ] 24-01-PLAN.md -- srvos adoption + host overrides, devShell + treefmt-nix, sandbox PID+cgroup isolation
 
 ### Phase 25: Deploy Safety with deploy-rs
 
@@ -556,3 +558,28 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 26 to break down)
+
+### Phase 27: OVH VPS Production Migration
+
+**Goal:** Deploy neurosys NixOS config to a new OVH VPS (135.125.196.143) as the production server. Refactor from single-host to multi-host NixOS configuration (neurosys-prod on OVH, neurosys-staging on Contabo). nixos-anywhere deployment, Tailscale join, deploy-rs multi-node support, secrets bootstrap, service migration, and DNS/role cutover. Contabo becomes a staging/testing target for rapid iteration.
+**Depends on:** Phase 25 (deploy-rs), Phase 3 (Tailscale + secrets infrastructure)
+**Plans:** 5 plans
+
+Plans:
+- [ ] 27-01-PLAN.md -- Pre-deploy recon of OVH VPS + SSH host key generation + sops secrets bootstrap
+- [ ] 27-02-PLAN.md -- Multi-host flake refactor (mkHost helper, hosts/ovh/, parameterize modules, deploy.sh --node)
+- [ ] 27-03-PLAN.md -- nixos-anywhere deployment to OVH VPS (human checkpoint: destructive operation)
+- [ ] 27-04-PLAN.md -- Post-deploy verification: Tailscale join, service validation, deploy-rs test, recovery runbook update
+- [ ] 27-05-PLAN.md -- Service migration (Docker state rsync), DNS cutover, Contabo staging repurpose
+
+### Phase 28: dangirsh.org Static Site on Neurosys
+
+**Goal:** Move dangirsh.org from NearlyFreeSpeech (NFS) to the OVH production host. Hakyll static site built as a Nix flake package (`github:dangirsh/dangirsh.org`). NixOS nginx becomes the unified reverse proxy for all web traffic (replaces Docker Caddy in claw-swap). ACME (Let's Encrypt) handles TLS for dangirsh.org and claw-swap.com. Manual update workflow: push to GitHub + `nix flake update dangirsh-site` + deploy.
+**Depends on:** Phase 27 (OVH VPS deployed and operational)
+**Plans:** 4 plans
+
+Plans:
+- [ ] 28-01-PLAN.md -- Modernize dangirsh-site Hakyll build (add flake.nix to dangirsh/dangirsh.org repo, nixpkgs-25.11 compatible)
+- [ ] 28-02-PLAN.md -- nginx unified reverse proxy + ACME + claw-swap Caddy removal + impermanence + deploy (wave 1, parallel with 28-01)
+- [ ] 28-03-PLAN.md -- Deploy to OVH + DNS cutover from NFS (human checkpoint: DNS change)
+- [ ] 28-04-PLAN.md -- Post-cutover cleanup: validate workflow, confirm NFS decommission, update docs

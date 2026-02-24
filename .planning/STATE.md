@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 23 in progress -- Tailscale security and self-sovereignty.
+**Current focus:** Phase 28 in progress -- Plan 28-02 complete with OVH nginx unified edge deployed in config and claw-swap Caddy removed; preparing DNS cutover in Plan 28-03.
 
 ## Current Position
 
-Phase: 23 (Tailscale Security & Self-Sovereignty)
-Plan: 1 of 2 -- COMPLETE
-Status: Plan 23-01 executed. Port 22 hardening verified, TKA runbook appendix added. Plan 23-02 (TKA init + ACL hardening) pending -- requires human checkpoints.
-Last activity: 2026-02-22 - Completed 23-01: port 22 assertion verified, TKA appendix in recovery runbook
+Phase: 28 (dangirsh.org Static Site on Neurosys)
+Plan: 2 of 4 -- COMPLETE
+Status: Plan 28-02 executed. OVH now has host-native nginx + ACME virtualHosts for `dangirsh.org`, `www.dangirsh.org`, and `claw-swap.com`; claw-swap Docker Caddy and CF origin cert/key secrets were removed.
+Last activity: 2026-02-23 - Completed 28-02: unified nginx reverse proxy + ACME + claw-swap Caddy removal (`24fbb8f`, `5d8fc6d`, `1ffe9ea`, `9f3b962`; external `claw-swap@e3289f4`)
 
-Progress: Phase 23 in progress (1/2 plans).
+Progress: Phase 28 in progress (2/4 plans complete). Phase 27 remains in progress (2/5 complete); deferred 23-02 human checkpoints still pending by design.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: ~18.2min
-- Total execution time: ~310 min
+- Total plans completed: 22
+- Average duration: ~16.5min
+- Total execution time: ~364 min
 
 **By Phase:**
 
@@ -44,10 +44,12 @@ Progress: Phase 23 in progress (1/2 plans).
 | 20 | 1/1 | ~24min | ~24min |
 | 25 | 1/1 | ~32min | ~32min |
 | 21 | 1/2 | ~10min | ~10min |
+| 27 | 2/5 | ~16min | ~8min |
+| 28 | 2/4 | ~22min | ~11min |
 
 **Recent Trend:**
-- Last 4 plans: 21-01 (~10min), 25-01 (~32min), 20-01 (~24min), 19-01 (~18min)
-- Trend: Execution remains stable; 21-01 was fast due to well-defined plan with exact code blocks.
+- Last 4 plans: 28-02 (~16min), 28-01 (~6min), 27-02 (~7min), 27-01 (~9min)
+- Trend: Execution remains stable with short, bounded plan delivery.
 
 *Updated after each plan completion*
 
@@ -130,6 +132,26 @@ Recent decisions affecting current work:
 - [21-01]: IMP-03: Persist whole /home/dangirsh (not per-file) -- simpler for server, covers Syncthing data + config
 - [21-01]: IMP-04: /var/lib/private covers DynamicUser services (ESPHome, future services)
 - [21-01]: RESTIC-05 updated: Back up /persist subvolume instead of blanket / with --one-file-system
+- [24-01]: srvos server module imported first; host overrides force `networking.useNetworkd = false` and `boot.initrd.systemd.enable = false`, with docs + command-not-found enabled.
+- [24-01]: agent-spawn bubblewrap now unshares PID and cgroup namespaces to hide host process/cgroup visibility from sandboxes.
+- [24-01]: treefmt-nix formatter and devShell tooling added; formatting enforcement in `checks` deferred to avoid large unrelated repo-wide churn this phase.
+- [27-01]: OVH recon confirmed `/dev/sda`, `ens3`, DHCP `/32` (`135.125.196.143/32`) with gateway `135.125.196.1`, and BIOS boot mode.
+- [27-01]: Generated pre-deploy OVH SSH host key and derived `host_ovh` age recipient (`age1rkve23z2ywug6ugwdcrtcpemq7j9y2980azveanhx0x6w3etp9eqn50l9g`) for sops-nix bootstrap.
+- [27-01]: `.sops.yaml` now has per-host creation rules for both `secrets/neurosys.yaml` and `secrets/ovh.yaml` with `admin + host` recipient scoping.
+- [27-01]: `secrets/ovh.yaml` mirrors neurosys secret schema; `tailscale-authkey` is intentionally a replace-before-deploy placeholder.
+- [27-01]: Prepared `tmp/ovh-host-keys/persist/etc/ssh/ssh_host_ed25519_key` for nixos-anywhere `--extra-files` injection into impermanence-backed `/persist/etc/ssh`.
+- [27-02]: Added `mkHost` + `commonModules` in `flake.nix` and split host evaluation to `nixosConfigurations.neurosys` and `nixosConfigurations.ovh` without double-importing `./modules`.
+- [27-02]: Added `deploy.nodes.ovh` (`hostname = neurosys-prod`) alongside existing neurosys node for deploy-rs multi-target activation.
+- [27-02]: Moved host-specific values out of shared modules (`sops.defaultSopsFile`, NAT external interface, GRUB device, homepage host identity) into host defaults.
+- [27-02]: `scripts/deploy.sh` now supports `--node` (`neurosys` default, `ovh` optional) with node-aware default SSH target/lock paths and flake selector (`$FLAKE_DIR#$NODE`).
+- [28-01]: External `dangirsh-site` migrated from pinned `default.nix` (`nixpkgs-20.03`) to flake pinned to `nixos-25.11`, exposing `packages.x86_64-linux.default` for neurosys nginx root consumption.
+- [28-01]: `generator/site.cabal` `pandoc` bound widened from `< 3.6` to `< 3.8` to match nixos-25.11 `haskellPackages.pandoc` (`3.7.0.2`) while keeping `hakyll` bound unchanged (`4.16.x` compatible).
+- [28-01]: Verified `nix build` output includes full `_site` artifact set (`index.html`, `css/`, `posts/`, static directories) and pushed upstream as `dangirsh/dangirsh.org@c309419`.
+- [28-02]: Added `dangirsh-site` input to neurosys flake and introduced `modules/nginx.nix` with ACME-backed virtualHosts for `dangirsh.org`, `www.dangirsh.org`, and `claw-swap.com`.
+- [28-02]: Enforced HOST-01 by importing nginx only in `hosts/ovh/default.nix`; verified `services.nginx.enable` evaluates `true` for OVH and `false` for neurosys.
+- [28-02]: Removed Docker Caddy from `claw-swap` module and secrets; `claw-swap-app` now binds `127.0.0.1:3000:3000` for host nginx proxying (pushed `claw-swap@e3289f4`).
+- [28-02]: Persisted `/var/lib/acme` for impermanence, updated homepage metadata (`nginx` + `dangirsh.org`), and added `dangirsh/dangirsh.org` to repo bootstrap list.
+- [28-02]: [Rule 3 - Blocking] Resolved existing OVH `services.openssh.openFirewall` conflict by using `lib.mkForce true`, unblocking `nix flake check`.
 
 ### Completed Phases
 
@@ -164,6 +186,8 @@ Recent decisions affecting current work:
   - 19-01: Comprehensive README.md with all modules, services, security, deployment, operations, decisions, risks
 - **Phase 20: Deep Ecosystem Research** (1 plan, completed 2026-02-20)
   - 20-01: 10 parallel research agents → unified adoption report covering srvos, sandbox hardening, gVisor, deploy-rs, impermanence, secret proxy, microvm.nix, multi-node scaling, messaging, reference configs
+- **Phase 24: Server Hardening + DX** (1 plan, completed 2026-02-23)
+  - 24-01: srvos hardening baseline + PID/cgroup sandbox isolation + treefmt formatter/devShell integration
 - **Phase 25: Deploy Safety (deploy-rs)** (1 plan, completed 2026-02-21)
   - 25-01: deploy-rs input + deploy node + deployChecks, deploy.sh migration with rollback flags, recovery runbook Appendix 11
 
@@ -185,7 +209,12 @@ Recent decisions affecting current work:
 - Phase 24 added: Server Hardening + DX — srvos server profile, sandbox PID+cgroup isolation, gVisor Docker runtime, flake check toplevel, devShell, treefmt-nix (from ecosystem research items 1, 2, 3 + reference patterns)
 - Phase 25 added: Deploy Safety (deploy-rs) — magic rollback via inotify canary, evolve deploy.sh into wrapper (from ecosystem research item 5)
 - Phase 26 added: Agent Notifications (Telegram Bot) — Bot API integration, 2 sops secrets, agent reach-back mechanism (from ecosystem research item 4)
+- Phase 27 added: OVH VPS Production Migration — multi-host refactor, OVH bootstrap, staged service migration, production cutover
+- Phase 28 added: dangirsh.org Static Site on Neurosys — migrate dangling legacy Hakyll build to flake output and wire neurosys nginx to Nix store artifact
+- Phase 24 executed: srvos server defaults adopted with explicit host overrides, agent sandbox PID/cgroup isolation enabled, treefmt formatter + devShell shipped
 - Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
+- Phase 27 progressing: 27-01 recon/secrets bootstrap and 27-02 multi-host flake + deploy node refactor executed
+- Phase 28 progressing: 28-01 flake migration + 28-02 OVH nginx integration completed; ready for 28-03 DNS cutover and live certificate issuance.
 
 ### Blockers/Concerns
 
@@ -195,6 +224,7 @@ Recent decisions affecting current work:
 - [RESOLVED]: Phase 2.1 scope creep — absorbed into Phase 9 after re-evaluation
 - [NOTE]: Syncthing device IDs are placeholders — user must replace before deploy
 - [NOTE]: home-manager ssh/git options show deprecation warnings (renamed options) — cosmetic, not blocking
+- [NOTE]: OVH root SSH password auth failed during 27-01; recon succeeded via `ubuntu` after forced password-expiry rotation. Confirm preferred admin login path before 27-03 deploy steps.
 
 ### Quick Tasks Completed
 
@@ -218,12 +248,8 @@ Recent decisions affecting current work:
 | MCP-NixOS evaluate | Add to `.mcp.json`, test in sessions, remove if context-polluting | Minutes |
 | Tailnet Key Authority | Run `tailscale lock init` + sign nodes | Minutes |
 
-## Deferred Work
-
-- **fail2ban**: Removed from networking.nix during impermanence migration (Feb 2026). Re-enable when ready: restore services.fail2ban block with maxretry=5, bantime=10m, bantime-increment multipliers, ignoreIP for Tailscale CGNAT range. See NET-05 decision.
-
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Impermanence deployed and verified. Cleaned up migration safety nets (port 22 closed, SSH hardening restored). Tailscale hostname pending propagation (server is neurosys-1, needs to become neurosys).
-Resume file: None
+Stopped at: Completed 28-02-PLAN.md -- OVH nginx unified edge configured and claw-swap Caddy removed
+Resume file: .planning/phases/28-dangirsh-org-static-site-on-neurosys/28-03-PLAN.md

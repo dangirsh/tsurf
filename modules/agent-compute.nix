@@ -93,6 +93,7 @@ let
       Visible (ro): /nix/store, /run/current-system, /etc (selected), /data/projects (siblings)
       Visible (rw): $PROJECT_DIR, /home/dangirsh/.local/share/containers, /run/user/$(id -u)/containers
       Hidden: /run/secrets, /home/dangirsh/.ssh, /var/run/docker.sock
+      Namespaces: PID (isolated /proc), cgroup (isolated), user, IPC, UTS
       Limits: systemd slice=agent.slice CPUWeight=100 TasksMax=4096, /tmp tmpfs=4GiB
       Podman: enabled (rootless, docker->podman via sandbox PATH shim)
       Default mode: sandbox on (use --no-sandbox to bypass)
@@ -114,6 +115,8 @@ let
         --unshare-user --uid "$RUNTIME_UID" --gid "$RUNTIME_GID"
         --unshare-ipc
         --unshare-uts
+        --unshare-pid
+        --unshare-cgroup
         --disable-userns
         --hostname "sandbox-$NAME"
         --die-with-parent

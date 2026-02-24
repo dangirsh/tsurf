@@ -1,9 +1,8 @@
-{ config, lib, pkgs, ... }: {
+{ lib, ... }: {
   boot.loader.grub = {
     enable = true;
     efiSupport = true;
     efiInstallAsRemovable = true;
-    device = "/dev/sda";
     configurationLimit = 10;
   };
 
