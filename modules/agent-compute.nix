@@ -23,7 +23,7 @@ let
 
       usage() {
         cat <<'EOF'
-      Usage: agent-spawn <name> <project-dir> [claude|codex] [--no-sandbox] [--show-policy]
+      Usage: agent-spawn <name> <project-dir> [claude|codex|opencode|gemini|pi] [--no-sandbox] [--show-policy]
       EOF
       }
 
@@ -49,7 +49,7 @@ let
           --show-policy)
             SHOW_POLICY=1
             ;;
-          claude|codex)
+          claude|codex|opencode|gemini|pi)
             if [ "$AGENT_SET" -eq 1 ]; then
               echo "Error: Agent type specified multiple times" >&2
               usage >&2
@@ -80,8 +80,17 @@ let
         codex)
           CMD="codex"
           ;;
+        opencode)
+          CMD="opencode"
+          ;;
+        gemini)
+          CMD="gemini"
+          ;;
+        pi)
+          CMD="pi"
+          ;;
         *)
-          echo "Unknown agent: $AGENT (expected: claude, codex)" >&2
+          echo "Unknown agent: $AGENT (expected: claude, codex, opencode, gemini, pi)" >&2
           exit 1
           ;;
       esac
@@ -105,6 +114,9 @@ let
       ANTHROPIC_KEY="$(cat /run/secrets/anthropic-api-key 2>/dev/null || true)"
       OPENAI_KEY="$(cat /run/secrets/openai-api-key 2>/dev/null || true)"
       GITHUB_TOKEN="$(cat /run/secrets/github-pat 2>/dev/null || true)"
+      GOOGLE_KEY="$(cat /run/secrets/google-api-key 2>/dev/null || true)"
+      XAI_KEY="$(cat /run/secrets/xai-api-key 2>/dev/null || true)"
+      OPENROUTER_KEY="$(cat /run/secrets/openrouter-api-key 2>/dev/null || true)"
 
       RUNTIME_UID="$(id -u)"
       RUNTIME_GID="$(id -g)"
@@ -159,6 +171,10 @@ let
         --ro-bind-try /home/dangirsh/.npmrc /home/dangirsh/.npmrc
         --ro-bind-try /home/dangirsh/.claude /home/dangirsh/.claude
         --ro-bind-try /home/dangirsh/.codex /home/dangirsh/.codex
+        --ro-bind-try /home/dangirsh/.config/opencode /home/dangirsh/.config/opencode
+        --bind-try /home/dangirsh/.local/share/opencode /home/dangirsh/.local/share/opencode
+        --bind-try /home/dangirsh/.pi/agent /home/dangirsh/.pi/agent
+        --bind-try /home/dangirsh/.gemini /home/dangirsh/.gemini
         --ro-bind-try /home/dangirsh/.config/git /home/dangirsh/.config/git
         --bind-try /home/dangirsh/.local/share/containers /home/dangirsh/.local/share/containers
 
@@ -204,6 +220,17 @@ let
         BWRAP_ARGS+=( --setenv GH_TOKEN "$GITHUB_TOKEN" )
       fi
 
+      if [ -n "$GOOGLE_KEY" ]; then
+        BWRAP_ARGS+=( --setenv GEMINI_API_KEY "$GOOGLE_KEY" )
+        BWRAP_ARGS+=( --setenv GOOGLE_API_KEY "$GOOGLE_KEY" )
+      fi
+      if [ -n "$XAI_KEY" ]; then
+        BWRAP_ARGS+=( --setenv XAI_API_KEY "$XAI_KEY" )
+      fi
+      if [ -n "$OPENROUTER_KEY" ]; then
+        BWRAP_ARGS+=( --setenv OPENROUTER_API_KEY "$OPENROUTER_KEY" )
+      fi
+
       AUDIT_DIR="/data/projects/.agent-audit"
       mkdir -p "$AUDIT_DIR"
       SANDBOX_STATE="on"
@@ -238,6 +265,9 @@ in
   environment.systemPackages = [
     pkgs.claude-code
     pkgs.codex
+    pkgs.opencode
+    pkgs.gemini-cli
+    pkgs.pi
     zmx
     agent-spawn
   ];
