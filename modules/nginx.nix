@@ -22,86 +22,68 @@ let
       "CF_DNS_API_TOKEN_FILE" = config.sops.secrets."cloudflare-dns-token".path;
     };
   };
-in lib.mkMerge [
-  {
-    security.acme = {
-      acceptTerms = true;
-      defaults.email = "dan@dangirsh.org";
-      certs."dangirsh.org"        = cfDns;
-      certs."www.dangirsh.org"    = cfDns;
-      certs."staging.dangirsh.org" = cfDns;
-      certs."claw-swap.com"       = cfDns;
+in {
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "dan@dangirsh.org";
+    certs."dangirsh.org"        = cfDns;
+    certs."www.dangirsh.org"    = cfDns;
+    certs."staging.dangirsh.org" = cfDns;
+    certs."claw-swap.com"       = cfDns;
+  };
+
+  services.nginx = {
+    enable = true;
+    recommendedTlsSettings = true;
+    recommendedOptimisation = true;
+    recommendedGzipSettings = true;
+    recommendedProxySettings = true;
+
+    virtualHosts."dangirsh.org" = {
+      enableACME = true;
+      forceSSL = true;
+      root = siteRoot;
+
+      locations."/" = {
+        tryFiles = "$uri $uri/index.html $uri.html =404";
+      };
+
+      locations."~* \\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$" = {
+        root = siteRoot;
+        extraConfig = ''
+          expires 30d;
+          add_header Cache-Control "public, immutable";
+        '';
+      };
     };
 
-    services.nginx = {
-      enable = true;
-      recommendedTlsSettings = true;
-      recommendedOptimisation = true;
-      recommendedGzipSettings = true;
-      recommendedProxySettings = true;
+    virtualHosts."www.dangirsh.org" = {
+      enableACME = true;
+      forceSSL = true;
+      globalRedirect = "dangirsh.org";
+    };
 
-      virtualHosts."dangirsh.org" = {
-        enableACME = true;
-        forceSSL = true;
+    # @decision WEB-06: staging.dangirsh.org served from Contabo neurosys (161.97.74.121).
+    # @rationale: Validates full nginx+Hakyll stack on staging before OVH production cutover.
+    virtualHosts."staging.dangirsh.org" = {
+      enableACME = true;
+      forceSSL = true;
+      root = siteRoot;
+
+      locations."/" = {
+        tryFiles = "$uri $uri/index.html $uri.html =404";
+      };
+
+      locations."~* \\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$" = {
         root = siteRoot;
-
-        locations."/" = {
-          tryFiles = "$uri $uri/index.html $uri.html =404";
-        };
-
-        locations."~* \\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$" = {
-          root = siteRoot;
-          extraConfig = ''
-            expires 30d;
-            add_header Cache-Control "public, immutable";
-          '';
-        };
-      };
-
-      virtualHosts."www.dangirsh.org" = {
-        enableACME = true;
-        forceSSL = true;
-        globalRedirect = "dangirsh.org";
-      };
-
-      # @decision WEB-06: staging.dangirsh.org served from Contabo neurosys (161.97.74.121).
-      # @rationale: Validates full nginx+Hakyll stack on staging before OVH production cutover.
-      virtualHosts."staging.dangirsh.org" = {
-        enableACME = true;
-        forceSSL = true;
-        root = siteRoot;
-
-        locations."/" = {
-          tryFiles = "$uri $uri/index.html $uri.html =404";
-        };
-
-        locations."~* \\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$" = {
-          root = siteRoot;
-          extraConfig = ''
-            expires 30d;
-            add_header Cache-Control "public, immutable";
-          '';
-        };
-      };
-
-      virtualHosts."claw-swap.com" = {
-        enableACME = true;
-        forceSSL = true;
-        locations."/" = {
-          proxyPass = "http://127.0.0.1:3000";
-          proxyWebsockets = true;
-        };
+        extraConfig = ''
+          expires 30d;
+          add_header Cache-Control "public, immutable";
+        '';
       };
     };
-  }
 
-  # @decision WEB-08: api.clawswap.org uses HTTP-01 ACME (Dynadot DNS, not Cloudflare-managed).
-  # @rationale: DNS-01 requires a Cloudflare API token; Dynadot does not support it.
-  #   DNS prerequisite: add A record api.clawswap.org → 135.125.196.143 at the registrar.
-  #   OVH-only: HTTP-01 requires the A record to point at this host. Contabo does not serve
-  #   this domain, so the vhost is guarded by hostname to prevent ACME failures on Contabo.
-  (lib.mkIf (config.networking.hostName == "neurosys-prod") {
-    services.nginx.virtualHosts."api.clawswap.org" = {
+    virtualHosts."claw-swap.com" = {
       enableACME = true;
       forceSSL = true;
       locations."/" = {
@@ -109,5 +91,5 @@ in lib.mkMerge [
         proxyWebsockets = true;
       };
     };
-  })
-]
+  };
+}
