@@ -91,5 +91,17 @@ in {
         proxyWebsockets = true;
       };
     };
+
+    # @decision WEB-08: api.clawswap.org uses HTTP-01 ACME (Dynadot DNS, not Cloudflare-managed).
+    # @rationale: DNS-01 requires a Cloudflare API token; Dynadot does not support it.
+    #   DNS prerequisite: add A record api.clawswap.org → 135.125.196.143 at the registrar.
+    virtualHosts."api.clawswap.org" = {
+      enableACME = true;
+      forceSSL = true;
+      locations."/" = {
+        proxyPass = "http://127.0.0.1:3000";
+        proxyWebsockets = true;
+      };
+    };
   };
 }
