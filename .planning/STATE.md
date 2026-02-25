@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 28 in progress -- Plan 28-02 complete with OVH nginx unified edge deployed in config and claw-swap Caddy removed; preparing DNS cutover in Plan 28-03. Phase 22 (Secret Proxy) also complete — anthropic-secret-proxy running on port 9091, claw-swap agents use ANTHROPIC_BASE_URL; Phase 29 (Agentic Dev Maxing) added to roadmap.
+**Current focus:** Phase 31 in progress — Conway Automaton single-agent MVP. Phase 28 paused (DNS cutover pending). Phase 31 added to roadmap; fleet-status.sh written and ready. Next: complete human-interactive Conway Cloud setup and agent deployment (Task 2+3 in 31-01-PLAN.md).
 
 ## Current Position
 
-Phase: 28 (dangirsh.org Static Site on Neurosys)
-Plan: 3 of 4 -- PENDING (DNS cutover + live cert issuance)
-Status: Plan 28-02 executed. OVH now has host-native nginx + ACME virtualHosts for `dangirsh.org`, `www.dangirsh.org`, and `claw-swap.com`; claw-swap Docker Caddy and CF origin cert/key secrets were removed.
-Last activity: 2026-02-24 - Completed Phase 22 (secret proxy deployed, merged); wrote 22-01-SUMMARY.md; deleted stale 22-02/22-03 plans (TLS MITM approach superseded); added Phase 29 to roadmap
+Phase: 31 (Conway Automaton — Single Agent MVP)
+Plan: 1 of 1 -- IN PROGRESS (Task 1 complete: fleet-status.sh written; Tasks 2-4: human-interactive Conway Cloud setup + agent deployment)
+Status: scripts/fleet-status.sh written and syntax-verified. Phase 31 added to ROADMAP.md. Awaiting operator to complete Conway Cloud account setup, credit purchase, USDC funding, and interactive agent deployment wizard.
+Last activity: 2026-02-24 - Restored Automaton Fleet phase as Phase 31 (reduced from 4 agents to 1); wrote fleet-status.sh; added to ROADMAP.md
 
-Progress: Phase 28 in progress (2/4 plans complete). Phase 27 remains in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
+Progress: Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
 
 ## Performance Metrics
 
@@ -228,6 +228,8 @@ Recent decisions affecting current work:
 - Phase 25 executed: deploy-rs integrated with 120s confirm timeout, version-pinned CLI passthrough, deployChecks, and recovery runbook rollback procedures
 - Phase 27 progressing: 27-01 recon/secrets bootstrap and 27-02 multi-host flake + deploy node refactor executed
 - Phase 28 progressing: 28-01 flake migration + 28-02 OVH nginx integration completed; ready for 28-03 DNS cutover and live certificate issuance.
+- Phase 30 added: Claw-Swap Native NixOS Service — replace Docker containers with services.postgresql + systemd service for Node.js app; remove oci-containers/custom bridge; native sops-nix secret injection; Docker stays for parts
+- Phase 31 added: Conway Automaton — Single Agent MVP — restored from removed Phase 27 Automaton Fleet; reduced from 4 agents to 1; seed hypothesis #1 (x402 APIs); fleet-status.sh monitoring script
 
 ### Blockers/Concerns
 
@@ -264,5 +266,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 22 cleanup — summary written, stale plans deleted, ROADMAP/STATE updated with Phase 22 complete + Phase 29 added
-Resume file: .planning/phases/28-dangirsh-org-static-site-on-neurosys/28-03-PLAN.md
+Stopped at: Phase 31 setup — fleet-status.sh written, ROADMAP/STATE updated with Phase 31 added; awaiting human Conway Cloud setup (Tasks 2-4 of 31-01-PLAN.md)
+Resume file: .planning/phases/31-conway-automaton-single-agent-mvp/31-01-PLAN.md

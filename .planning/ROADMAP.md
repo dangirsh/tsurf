@@ -41,6 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 28: dangirsh.org Static Site on Neurosys** - Move dangirsh.org from NearlyFreeSpeech to OVH host. Hakyll site as Nix flake package. nginx unified reverse proxy (replaces Docker Caddy). ACME TLS. DNS cutover.
 - [ ] **Phase 29: Agentic Dev Maxing — Batteries Included** - opencode, gemini-cli, pi (Mario Zechner) installed + sandbox-integrated. GOOGLE_API_KEY, XAI_API_KEY, OPENROUTER_API_KEY secrets added. Secret proxy extended to new providers. Session search + Rust beads CLI for agents.
 - [ ] **Phase 30: Agent Management UI Research** - Research and evaluate browser+mobile interfaces for monitoring, commanding, and managing remote agent sessions. Evaluate vibe-kanban (BloopAI) and alternatives. Goal: view agent status, send commands, mobile-accessible.
+- [ ] **Phase 31: Conway Automaton — Single Agent MVP** - Deploy 1 sovereign AI agent on Conway Cloud with seed hypothesis #1 (x402 APIs). ~$250 USDC, Sonnet 4.6 primary model, BYOK keys. Terminal monitoring dashboard on neurosys.
 
 ## Phase Details
 
@@ -622,6 +623,7 @@ Plans:
 
 ### Phase 30: Claw-Swap Native NixOS Service
 
+<<<<<<< HEAD
 **Goal:** Replace claw-swap's Docker containers with native NixOS services — `services.postgresql` for the database and a systemd service running the Nix-built Node.js package. Remove the claw-swap Docker network, `virtualisation.oci-containers` declarations, and custom bridge. All existing sops-nix secrets preserved and injected natively (no env-file template indirection). Docker engine stays for parts but claw-swap exits the container layer entirely, improving simplicity (fewer layers, native journald logs, systemd dependency management) and security (no Docker socket involvement, native DynamicUser isolation, no cap-drop workarounds).
 **Depends on:** Phase 28 (nginx already handles reverse proxy to 127.0.0.1:3000)
 **Requirements:** None (simplification + security hardening)
@@ -640,3 +642,30 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 30 to break down)
+=======
+**Goal:** Replace claw-swap Docker containers with native NixOS services. `services.postgresql` handles the database. A systemd service runs the Node.js app directly (no oci-containers). sops-nix injects secrets natively. Docker engine stays for parts containers.
+**Depends on:** Phase 4 (existing Docker baseline), Phase 22 (secret proxy)
+**Plans:** TBD (run /gsd:plan-phase 30 to break down)
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 30 to break down)
+
+### Phase 31: Conway Automaton — Single Agent MVP
+
+**Goal:** Deploy 1 sovereign AI agent (Conway Automaton) on Conway Cloud, funded with ~$250 USDC. Seed hypothesis #1: "Build x402 APIs that other agents will pay for." Maximum autonomy — agent decides its own execution plan. Terminal monitoring dashboard on neurosys via `scripts/fleet-status.sh`.
+**Depends on:** Nothing (external platform — Conway Cloud)
+**Plans:** 1 plan
+
+**Research:** See `.planning/phases/31-conway-automaton-single-agent-mvp/31-RESEARCH.md` (comprehensive Conway Cloud, Automaton framework, x402 protocol research from 2026-02-22).
+
+**Success Criteria** (what must be TRUE):
+  1. 1 automaton agent running on Conway Cloud with seed hypothesis #1 as genesis prompt
+  2. Agent wallet funded with ~$250 USDC on Base chain
+  3. Agent using claude-sonnet-4.6 as primary model with BYOK Anthropic key
+  4. `scripts/fleet-status.sh` on neurosys shows agent balance, tier, burn, turn count
+  5. Agent has completed its first reasoning turn within 1 hour of deployment
+**Effort:** Low for neurosys changes (fleet-status.sh only); human-interactive for Conway Cloud setup and agent deployment.
+
+Plans:
+- [ ] 31-01-PLAN.md -- Conway Cloud setup + agent deployment + fleet monitoring script
+>>>>>>> 8693a40 (feat(31): add Conway Automaton single-agent MVP phase)
