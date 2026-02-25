@@ -68,8 +68,7 @@
             "claw-swap" = {
               href = "https://claw-swap.com";
               description = "Trading platform — nginx + Node.js + PostgreSQL.";
-              server = "local";
-              container = "claw-swap-app";
+              siteMonitor = "http://localhost:3000";
               icon = "nginx";
             };
           }
