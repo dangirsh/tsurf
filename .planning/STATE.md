@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 30 in progress — Claw-Swap Native NixOS Service. Plan 30-01 (code rewrite + validation) completed; Plan 30-02 (human deployment checkpoint) pending. Phase 31 remains in progress (Conway Automaton single-agent MVP). Phase 28 remains paused (DNS cutover pending).
+**Current focus:** Phase 30 COMPLETE — claw-swap running as native NixOS postgresql + systemd service in production. Docker containers removed. Phase 31 remains in progress (Conway Automaton single-agent MVP). Phase 28 remains paused (DNS cutover pending). DNS prerequisite outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
 
 ## Current Position
 
 Phase: 30 (Claw-Swap Native NixOS Service)
-Plan: 1 of 2 -- 30-01 COMPLETED (module rewrite + flake validation); 30-02 pending human deployment checkpoint
-Status: Claw-swap now runs as native NixOS services (postgresql + systemd app service), support modules are aligned, and `nix flake check` passes in both claw-swap and neurosys repos.
-Last activity: 2026-02-25 - Completed Plan 30-01 execution and validation
+Plan: 2 of 2 -- COMPLETE (30-01: module rewrite + flake validation; 30-02: deployed to production OVH)
+Status: Deployed 2026-02-25. claw-swap-app + postgresql active. https://claw-swap.com responding. Docker claw-swap-* containers fully removed. api.clawswap.org nginx vhost added (HTTP-01 ACME pending DNS A record).
+Last activity: 2026-02-25 - Phase 30 fully deployed to production
 
-Progress: Phase 30 in progress (1/2 plans complete). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
+Progress: Phase 30 COMPLETE (2/2 plans). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
 
 ## Performance Metrics
 

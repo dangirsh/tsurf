@@ -3,3 +3,5 @@ tmp/
 !.claude/skills/
 !.claude/CLAUDE.md
 .worktrees/
+result
+*.png
