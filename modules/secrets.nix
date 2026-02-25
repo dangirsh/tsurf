@@ -11,6 +11,9 @@
     secrets."restic-password" = {};
     secrets."anthropic-api-key" = { owner = "dangirsh"; };
     secrets."openai-api-key" = { owner = "dangirsh"; };
+    secrets."google-api-key" = { owner = "dangirsh"; };
+    secrets."xai-api-key" = { owner = "dangirsh"; };
+    secrets."openrouter-api-key" = { owner = "dangirsh"; };
     secrets."github-pat" = { owner = "dangirsh"; };
 
     secrets."cloudflare-dns-token" = { owner = "acme"; };
