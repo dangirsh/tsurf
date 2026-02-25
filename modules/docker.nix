@@ -11,7 +11,7 @@
     };
   };
 
-  # @decision DOCK-03: Pin oci-containers backend to docker so that claw-swap
+  # @decision DOCK-03: Pin oci-containers backend to docker so that parts
   # containers keep using docker-* unit names even though agent-compute.nix
   # enables rootless Podman. Without this, NixOS picks podman when both runtimes
   # are enabled, producing podman-* units that conflict during activation.
