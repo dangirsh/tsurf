@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 30 COMPLETE — claw-swap running as native NixOS postgresql + systemd service in production. Docker containers removed. Phase 31 remains in progress (Conway Automaton single-agent MVP). Phase 28 remains paused (DNS cutover pending). DNS prerequisite outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
+**Current focus:** Phase 29 Plan 01 implementation complete (Tasks 1-7) — awaiting Task 8 human deploy/smoke-test on neurosys. Phase 30 remains complete in production; Phase 31 remains in progress (Conway Automaton single-agent MVP). Phase 28 remains paused (DNS cutover pending). DNS prerequisite outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
 
 ## Current Position
 
-Phase: 30 (Claw-Swap Native NixOS Service)
-Plan: 2 of 2 -- COMPLETE (30-01: module rewrite + flake validation; 30-02: deployed to production OVH)
-Status: Deployed 2026-02-25. claw-swap-app + postgresql active. https://claw-swap.com responding. Docker claw-swap-* containers fully removed. api.clawswap.org nginx vhost added (HTTP-01 ACME pending DNS A record).
-Last activity: 2026-02-25 - Phase 30 fully deployed to production
+Phase: 29 (Agentic Dev Maxing Batteries-Included)
+Plan: 1 of 1 -- IMPLEMENTATION COMPLETE (29-01 Tasks 1-7 complete; Task 8 deploy/smoke-test pending)
+Status: Code merged 2026-02-25. Added GOOGLE/GEMINI/XAI/OPENROUTER exports, extended `agent-spawn` for opencode|gemini|pi, and validated with `nix flake check` pass.
+Last activity: 2026-02-25 - Completed 29-01 implementation and validation; awaiting Task 8 deploy
 
-Progress: Phase 30 COMPLETE (2/2 plans). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
+Progress: Phase 29 implementation complete (1/1 plans code-complete, deploy pending Task 8). Phase 30 COMPLETE (2/2 plans, production). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
 
 ## Performance Metrics
 
