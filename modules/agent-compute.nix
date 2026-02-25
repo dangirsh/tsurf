@@ -267,7 +267,7 @@ in
     pkgs.codex
     pkgs.opencode
     pkgs.gemini-cli
-    pkgs.pi
+    pkgs.llm-agents.pi
     zmx
     agent-spawn
   ];
