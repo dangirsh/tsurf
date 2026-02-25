@@ -18,8 +18,6 @@
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIac0b7Yb2yCJrPiWf+KJQJ1c7gwH7SgHTiadSSUH0tM dan@worldcoin.org"
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqNVObi1HflLIV/FkO/rAz/ABdTvADidl5tuIulS3WE parts-agent@vm"
     ];
-    # TEMPORARY: console password for VNC debugging during migration
-    initialPassword = "nixos";
   };
 
   # Passwordless sudo for wheel — no interactive password was set for dangirsh.
