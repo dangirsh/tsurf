@@ -269,5 +269,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 30 plan 30-01 complete (native claw-swap service rewrite + flake checks green in both repos). Awaiting deployment checkpoint in 30-02.
-Resume file: .planning/phases/30-claw-swap-native-nixos-service/30-02-PLAN.md
+Stopped at: Phase 30 fully complete. OVH (prod) and Contabo (staging) both running native postgresql + claw-swap-app systemd service. Docker claw-swap containers removed. ACME fix: api.clawswap.org vhost guarded to OVH-only via lib.mkIf hostname (was causing Contabo magic rollback). DNS outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
+Next: Phase 31 (Conway Automaton single-agent MVP) or Phase 29 (Agentic Dev Maxing).

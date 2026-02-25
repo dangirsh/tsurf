@@ -40,7 +40,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 27: OVH VPS Production Migration** - Deploy neurosys to new OVH VPS as production server. Multi-host NixOS config, nixos-anywhere deployment, Tailscale setup, deploy script updates, Contabo repurposed as staging.
 - [ ] **Phase 28: dangirsh.org Static Site on Neurosys** - Move dangirsh.org from NearlyFreeSpeech to OVH host. Hakyll site as Nix flake package. nginx unified reverse proxy (replaces Docker Caddy). ACME TLS. DNS cutover.
 - [ ] **Phase 29: Agentic Dev Maxing — Batteries Included** - opencode, gemini-cli, pi (Mario Zechner) installed + sandbox-integrated. GOOGLE_API_KEY, XAI_API_KEY, OPENROUTER_API_KEY secrets added. Secret proxy extended to new providers. Session search + Rust beads CLI for agents.
-- [ ] **Phase 30: Agent Management UI Research** - Research and evaluate browser+mobile interfaces for monitoring, commanding, and managing remote agent sessions. Evaluate vibe-kanban (BloopAI) and alternatives. Goal: view agent status, send commands, mobile-accessible.
+- [x] **Phase 30: Claw-Swap Native NixOS Service** - Replace Docker containers with native services.postgresql + systemd service. Unix socket trust auth. Docker stays for parts only.
 - [ ] **Phase 31: Conway Automaton — Single Agent MVP** - Deploy 1 sovereign AI agent on Conway Cloud with seed hypothesis #1 (x402 APIs). ~$250 USDC, Sonnet 4.6 primary model, BYOK keys. Terminal monitoring dashboard on neurosys.
 
 ## Phase Details
