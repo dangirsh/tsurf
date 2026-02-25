@@ -39,7 +39,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 26: Agent Notifications (Telegram Bot)** - Telegram Bot API for agent reach-back. 2 sops secrets, outbound HTTPS only. Later: MCP server wrapper.
 - [ ] **Phase 27: OVH VPS Production Migration** - Deploy neurosys to new OVH VPS as production server. Multi-host NixOS config, nixos-anywhere deployment, Tailscale setup, deploy script updates, Contabo repurposed as staging.
 - [ ] **Phase 28: dangirsh.org Static Site on Neurosys** - Move dangirsh.org from NearlyFreeSpeech to OVH host. Hakyll site as Nix flake package. nginx unified reverse proxy (replaces Docker Caddy). ACME TLS. DNS cutover.
-- [ ] **Phase 29: Agentic Dev Maxing — Batteries Included** - All major CLI coding agents (gemini-cli, opencode, aider + more) pre-installed. API keys for all major providers (XAI/Grok, OpenRouter, Gemini, Groq, Mistral). Agent session management tooling researched and adopted.
+- [ ] **Phase 29: Agentic Dev Maxing — Batteries Included** - opencode, gemini-cli, pi (Mario Zechner) installed + sandbox-integrated. GOOGLE_API_KEY, XAI_API_KEY, OPENROUTER_API_KEY secrets added. Secret proxy extended to new providers. Session search + Rust beads CLI for agents.
+- [ ] **Phase 30: Agent Management UI Research** - Research and evaluate browser+mobile interfaces for monitoring, commanding, and managing remote agent sessions. Evaluate vibe-kanban (BloopAI) and alternatives. Goal: view agent status, send commands, mobile-accessible.
 
 ## Phase Details
 
@@ -618,3 +619,24 @@ Agent management UI:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 29 to break down)
+
+### Phase 30: Claw-Swap Native NixOS Service
+
+**Goal:** Replace claw-swap's Docker containers with native NixOS services — `services.postgresql` for the database and a systemd service running the Nix-built Node.js package. Remove the claw-swap Docker network, `virtualisation.oci-containers` declarations, and custom bridge. All existing sops-nix secrets preserved and injected natively (no env-file template indirection). Docker engine stays for parts but claw-swap exits the container layer entirely, improving simplicity (fewer layers, native journald logs, systemd dependency management) and security (no Docker socket involvement, native DynamicUser isolation, no cap-drop workarounds).
+**Depends on:** Phase 28 (nginx already handles reverse proxy to 127.0.0.1:3000)
+**Requirements:** None (simplification + security hardening)
+**Success Criteria** (what must be TRUE):
+  1. `services.postgresql` running with `claw_swap` database and `claw` role
+  2. `claw-swap-app` systemd service running the Nix-built package (nix/claw-swap-app.nix) on port 3000
+  3. All existing sops secrets injected natively (DB password, R2 keys, World ID app ID)
+  4. nginx still proxies `claw-swap.com` → `127.0.0.1:3000` unchanged
+  5. `virtualisation.oci-containers.containers.claw-swap-*` removed from module.nix
+  6. Docker network `claw-swap-net` and its systemd unit removed
+  7. Docker engine and parts containers unaffected (no regressions)
+  8. `nix flake check` passes
+  9. Live smoke test: `curl https://claw-swap.com` returns 200
+**Effort:** Medium — PostgreSQL NixOS service is trivial; Node.js systemd service needs Nix package wiring + secrets injection pattern.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 30 to break down)
