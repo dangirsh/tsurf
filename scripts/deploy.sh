@@ -16,7 +16,7 @@
 # @decision Manual deploy only — no CI/CD. NixOS handles incrementality.
 # @decision Full deploy-rs system activation every deploy — no partial/container-only.
 # @decision Magic rollback enabled by default with 120s confirm timeout.
-# @decision Service health polling (30s) — systemd for parts, Docker for claw-swap.
+# @decision Service health polling (30s) — systemd for parts, postgresql, claw-swap-app.
 # @decision No auto-commit of flake.lock — print reminder instead.
 set -euo pipefail
 
@@ -30,8 +30,8 @@ NO_MAGIC_ROLLBACK=false
 SKIP_UPDATE=false
 SECONDS=0
 
-SYSTEMD_SERVICES=("parts-tools" "parts-agent")
-DOCKER_CONTAINERS=("claw-swap-db" "claw-swap-app")
+SYSTEMD_SERVICES=("parts-tools" "parts-agent" "postgresql" "claw-swap-app")
+DOCKER_CONTAINERS=()
 mkdir -p "$FLAKE_DIR/tmp"
 
 # @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
@@ -220,13 +220,6 @@ for attempt in $(seq 1 15); do
     fi
   done
 
-  # Check Docker containers (claw-swap)
-  for c in "${DOCKER_CONTAINERS[@]}"; do
-    if ! ssh "$TARGET" "docker ps --filter name=^${c}\$ --filter status=running -q" 2>/dev/null | grep -q .; then
-      ALL_RUNNING=false
-      FAILED=1
-    fi
-  done
   if [[ "$ALL_RUNNING" == true ]]; then
     break
   fi
@@ -248,9 +241,6 @@ if [[ "$FAILED" -eq 0 ]]; then
     echo "  ${s}: ${STATUS}"
   done
   echo ""
-  echo "Container status:"
-  ssh "$TARGET" "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E '(NAMES|claw-swap-)'"
-  echo ""
   if [[ "$SKIP_UPDATE" == false ]]; then
     echo "NOTE: flake.lock was updated. Remember to commit when ready:"
     echo "  git add flake.lock && git commit -m \"chore: update parts input to $PARTS_REV_SHORT\""
@@ -264,21 +254,11 @@ else
     fi
   done
   echo ""
-  echo "Containers not running after 30s:"
-  for c in "${DOCKER_CONTAINERS[@]}"; do
-    if ! ssh "$TARGET" "docker ps --filter name=^${c}\$ --filter status=running -q" 2>/dev/null | grep -q .; then
-      echo "  - $c"
-    fi
-  done
-  echo ""
   echo "All service status:"
   for s in "${SYSTEMD_SERVICES[@]}"; do
     STATUS=$(ssh "$TARGET" "systemctl is-active ${s}.service" 2>/dev/null || echo "unknown")
     echo "  ${s}: ${STATUS}"
   done
-  echo ""
-  echo "All container status:"
-  ssh "$TARGET" "docker ps -a --format 'table {{.Names}}\t{{.Status}}' | grep -E '(NAMES|claw-swap-)'" || true
   echo ""
   echo "Connectivity failures auto-rollback with deploy-rs magic rollback."
   echo "For non-connectivity issues (for example containers failing after deploy), use manual rollback:"
