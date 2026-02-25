@@ -42,6 +42,7 @@
       "/var/lib/acme"                      # Let's Encrypt ACME certs + account keys (rate limit protection)
       "/var/lib/postgresql"                # PostgreSQL data (claw-swap DB)
       "/var/lib/parts"                     # Session logs, runtime data
+      "/var/lib/spacebot"                  # Spacebot: config.toml, SQLite DB, LanceDB embeddings
 
       # --- User data ---
       "/home/dangirsh"                     # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh

@@ -15,5 +15,6 @@
     ./restic.nix
     ./repos.nix
     ./homepage.nix
+    ./spacebot.nix
   ];
 }

@@ -93,6 +93,15 @@
               icon = "node-js";
             };
           }
+          {
+            "Spacebot" = {
+              href = "http://${config.networking.hostName}:19898";
+              siteMonitor = "http://localhost:19898/api/health";
+              description = "AI agent framework — multi-user, concurrent, memory-backed. Discord/Telegram/Slack.";
+              server = "local";
+              container = "spacebot";
+            };
+          }
         ];
       }
       {
