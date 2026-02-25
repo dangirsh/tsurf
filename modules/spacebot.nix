@@ -47,5 +47,12 @@
     ports = [ "127.0.0.1:19898:19898" ];
 
     environmentFiles = [ config.sops.templates."spacebot-env".path ];
+
+    # Override default model names — upstream defaults to "claude-sonnet-4" which is 404.
+    # Use the current API identifiers from Anthropic.
+    environment = {
+      SPACEBOT_CHANNEL_MODEL = "claude-sonnet-4-6";
+      SPACEBOT_WORKER_MODEL = "claude-haiku-4-5-20251001";
+    };
   };
 }
