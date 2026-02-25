@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 31 in progress — Conway Automaton single-agent MVP. Phase 28 paused (DNS cutover pending). Phase 31 added to roadmap; fleet-status.sh written and ready. Next: complete human-interactive Conway Cloud setup and agent deployment (Task 2+3 in 31-01-PLAN.md).
+**Current focus:** Phase 30 in progress — Claw-Swap Native NixOS Service. Plan 30-01 (code rewrite + validation) completed; Plan 30-02 (human deployment checkpoint) pending. Phase 31 remains in progress (Conway Automaton single-agent MVP). Phase 28 remains paused (DNS cutover pending).
 
 ## Current Position
 
-Phase: 31 (Conway Automaton — Single Agent MVP)
-Plan: 1 of 1 -- IN PROGRESS (Task 1 complete: fleet-status.sh written; Tasks 2-4: human-interactive Conway Cloud setup + agent deployment)
-Status: scripts/fleet-status.sh written and syntax-verified. Phase 31 added to ROADMAP.md. Awaiting operator to complete Conway Cloud account setup, credit purchase, USDC funding, and interactive agent deployment wizard.
-Last activity: 2026-02-24 - Restored Automaton Fleet phase as Phase 31 (reduced from 4 agents to 1); wrote fleet-status.sh; added to ROADMAP.md
+Phase: 30 (Claw-Swap Native NixOS Service)
+Plan: 1 of 2 -- 30-01 COMPLETED (module rewrite + flake validation); 30-02 pending human deployment checkpoint
+Status: Claw-swap now runs as native NixOS services (postgresql + systemd app service), support modules are aligned, and `nix flake check` passes in both claw-swap and neurosys repos.
+Last activity: 2026-02-25 - Completed Plan 30-01 execution and validation
 
-Progress: Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
+Progress: Phase 30 in progress (1/2 plans complete). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
 
 ## Performance Metrics
 
@@ -158,6 +158,9 @@ Recent decisions affecting current work:
 - [22-01]: PROXY-22-04: `socketserver.ThreadingTCPServer.allow_reuse_address = True` required to survive NixOS service restart race (EADDRINUSE on deploy)
 - [22-01]: PROXY-22-05: `.strip()` on API key from sops template EnvironmentFile — trailing newlines cause 401
 - [22-01]: PROXY-22-06: Keep `Content-Length` in response pass-through; only strip `Transfer-Encoding` + `Connection` — stripping Content-Length causes HTTP/1.1 clients to hang
+- [30-01]: Claw-swap runtime migrated from oci-containers to native services (`services.postgresql` + `systemd.services.claw-swap-app`) with sops `EnvironmentFile` injection.
+- [30-01]: PostgreSQL auth for claw-swap uses Unix socket trust (`local claw_swap claw trust`) because OS user `claw-swap` and DB role `claw` do not satisfy peer auth username matching.
+- [30-01]: Added encrypted placeholder `google-api-key` and `xai-api-key` entries in both `secrets/neurosys.yaml` and `secrets/ovh.yaml` to satisfy sops manifest validation during `nix flake check`.
 
 ### Completed Phases
 
@@ -265,6 +268,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-24
-Stopped at: Phase 31 setup — fleet-status.sh written, ROADMAP/STATE updated with Phase 31 added; awaiting human Conway Cloud setup (Tasks 2-4 of 31-01-PLAN.md)
-Resume file: .planning/phases/31-conway-automaton-single-agent-mvp/31-01-PLAN.md
+Last session: 2026-02-25
+Stopped at: Phase 30 plan 30-01 complete (native claw-swap service rewrite + flake checks green in both repos). Awaiting deployment checkpoint in 30-02.
+Resume file: .planning/phases/30-claw-swap-native-nixos-service/30-02-PLAN.md
