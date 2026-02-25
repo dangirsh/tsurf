@@ -11,6 +11,7 @@ let
   # Services bind to localhost or are Tailscale-only — never on the public interface.
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
   internalOnlyPorts = {
+    "3000" = "claw-swap app (localhost, nginx-proxied)";
     "8082" = "homepage-dashboard";
     "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
