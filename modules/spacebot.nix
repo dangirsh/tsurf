@@ -48,10 +48,11 @@
 
     environmentFiles = [ config.sops.templates."spacebot-env".path ];
 
-    # Override default model names — upstream defaults to "claude-sonnet-4" which is 404.
-    # Use the current API identifiers from Anthropic.
+    # Override model names — upstream defaults to "claude-sonnet-4" which is 404.
+    # SPACEBOT_MODEL sets all process types (channel, branch, worker, compactor, cortex).
+    # SPACEBOT_WORKER_MODEL then narrows workers to Haiku for cheaper task execution.
     environment = {
-      SPACEBOT_CHANNEL_MODEL = "claude-sonnet-4-6";
+      SPACEBOT_MODEL = "claude-sonnet-4-6";
       SPACEBOT_WORKER_MODEL = "claude-haiku-4-5-20251001";
     };
   };
