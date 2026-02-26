@@ -110,9 +110,11 @@
         };
       };
 
-      packages.${system}.deploy-rs = deploy-rs.packages.${system}.default;
-      packages.${system}.automaton = pkgs.callPackage ./packages/automaton.nix {
-        src = automaton;
+      packages.${system} = {
+        deploy-rs = deploy-rs.packages.${system}.default;
+        automaton = pkgs.callPackage ./packages/automaton.nix {
+          src = automaton;
+        };
       };
 
       formatter.${system} = treefmtEval.config.build.wrapper;
