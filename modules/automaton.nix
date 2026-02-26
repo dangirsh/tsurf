@@ -108,6 +108,19 @@ let
     - Create value: build things others will pay for
     - Evolve: improve my own capabilities over time
   '';
+
+  # Nix store files — avoids all shell quoting issues (JSON contains apostrophes)
+  automatonConfigFile = pkgs.writeText "automaton.json" automatonConfig;
+  heartbeatYmlFile = pkgs.writeText "heartbeat.yml" heartbeatYml;
+  soulMdFile = pkgs.writeText "SOUL.md" soulMd;
+  gitignoreFile = pkgs.writeText "automaton-gitignore" ''
+    wallet.json
+    config.json
+    state.db
+    state.db-wal
+    state.db-shm
+    *.log
+  '';
 in {
 
   # --- System user ---
@@ -137,7 +150,7 @@ in {
 
       # Write automaton.json only if it does not exist (preserve user edits)
       if [ ! -f ${automatonDir}/automaton.json ]; then
-        echo '${automatonConfig}' > ${automatonDir}/automaton.json
+        cp ${automatonConfigFile} ${automatonDir}/automaton.json
         chown automaton:automaton ${automatonDir}/automaton.json
         chmod 0600 ${automatonDir}/automaton.json
       fi
@@ -166,15 +179,13 @@ in {
 
       # Write heartbeat.yml only if it does not exist
       if [ ! -f ${automatonDir}/heartbeat.yml ]; then
-        cat > ${automatonDir}/heartbeat.yml <<'HEARTBEAT_EOF'
-${heartbeatYml}HEARTBEAT_EOF
+        cp ${heartbeatYmlFile} ${automatonDir}/heartbeat.yml
         chown automaton:automaton ${automatonDir}/heartbeat.yml
       fi
 
       # Write SOUL.md only if it does not exist (agent may self-modify)
       if [ ! -f ${automatonDir}/SOUL.md ]; then
-        cat > ${automatonDir}/SOUL.md <<'SOUL_EOF'
-${soulMd}SOUL_EOF
+        cp ${soulMdFile} ${automatonDir}/SOUL.md
         chown automaton:automaton ${automatonDir}/SOUL.md
       fi
 
@@ -190,14 +201,7 @@ ${soulMd}SOUL_EOF
         ${pkgs.git}/bin/git -C ${automatonDir} config user.email "automaton@neurosys"
         ${pkgs.git}/bin/git -C ${automatonDir} config user.name "Conway Automaton"
         # Create .gitignore to exclude secrets and DB
-        cat > ${automatonDir}/.gitignore <<'GITIGNORE_EOF'
-wallet.json
-config.json
-state.db
-state.db-wal
-state.db-shm
-*.log
-GITIGNORE_EOF
+        cp ${gitignoreFile} ${automatonDir}/.gitignore
         chown -R automaton:automaton ${automatonDir}/.git ${automatonDir}/.gitignore
       fi
     '';
