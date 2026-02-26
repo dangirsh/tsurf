@@ -2,11 +2,12 @@
 # @decision SPB-01: Run via Docker slim image (ghcr.io/spacedriveapp/spacebot:slim) rather than
 #   building from source — avoids 30+ min Rust + React build on every nixos-rebuild.
 #   Upstream publishes signed images on each release. Switch to flake input for native build.
-# @decision SPB-02: Port 19898 bound to localhost only; Tailscale-only access enforced by
-#   internalOnlyPorts assertion in networking.nix.
+# @decision SPB-02: Port 19898 bound to 0.0.0.0 so Tailscale (tailscale0) can reach it.
+#   NixOS nftables trustedInterfaces = ["tailscale0"] restricts access to Tailscale peers.
+#   Public internet cannot reach it: 19898 is in internalOnlyPorts (networking.nix assertion).
 # @decision SPB-03: Reuses existing anthropic-api-key sops secret — no duplicate key needed.
 #   LLM key injected via env template so it never appears in config.toml or the Nix store.
-# @decision SPB-04: openFirewall = false (Docker port binding enforces localhost-only).
+# @decision SPB-04: openFirewall = false; Tailscale trust enforced by nftables trustedInterfaces.
 # @decision SPB-05: Model routing set in config.toml [agents.routing], not via env vars.
 #   SPACEBOT_MODEL env var does not override per-agent routing when config.toml is present.
 #   The config.toml on the volume is the source of truth for model selection.
@@ -48,8 +49,9 @@
     # /data is SPACEBOT_DIR inside the container
     volumes = [ "/var/lib/spacebot:/data" ];
 
-    # Bind to localhost only — access via Tailscale at http://neurosys:19898
-    ports = [ "127.0.0.1:19898:19898" ];
+    # Bind to all interfaces — Tailscale access at http://neurosys:19898
+    # nftables trustedInterfaces = ["tailscale0"] limits this to Tailscale peers.
+    ports = [ "19898:19898" ];
 
     environmentFiles = [ config.sops.templates."spacebot-env".path ];
   };
