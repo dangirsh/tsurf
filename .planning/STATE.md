@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 29 Plan 01 implementation complete (Tasks 1-7) — awaiting Task 8 human deploy/smoke-test on neurosys. Phase 30 remains complete in production; Phase 31 remains in progress (Conway Automaton single-agent MVP). Phase 28 remains paused (DNS cutover pending). DNS prerequisite outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
+**Current focus:** Phase 32 Plan 01 complete (Conway Automaton packaged as Nix derivation). Next: Phase 32 Plan 02 service module wiring and runtime activation. Phase 30 remains complete in production; Phase 31 remains in progress (single-agent MVP). Phase 28 remains paused (DNS cutover pending). DNS prerequisite outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
 
 ## Current Position
 
-Phase: 29 (Agentic Dev Maxing Batteries-Included)
-Plan: 1 of 1 -- IMPLEMENTATION COMPLETE (29-01 Tasks 1-7 complete; Task 8 deploy/smoke-test pending)
-Status: Code merged 2026-02-25. Added GOOGLE/GEMINI/XAI/OPENROUTER exports, extended `agent-spawn` for opencode|gemini|pi, and validated with `nix flake check` pass.
-Last activity: 2026-02-25 - Completed 29-01 implementation and validation; awaiting Task 8 deploy
+Phase: 32 (Self-Hosted Conway Automaton on Neurosys)
+Plan: 1 of 2 -- COMPLETE (32-01 packaged and validated)
+Status: Added flake input + `packages.x86_64-linux.automaton`, created `packages/automaton.nix` with `buildNpmPackage`, patched Anthropic base URL env behavior, and verified `nix build .#automaton` + `nix flake check`.
+Last activity: 2026-02-26 - Completed 32-01 packaging derivation and validation
 
-Progress: Phase 29 implementation complete (1/1 plans code-complete, deploy pending Task 8). Phase 30 COMPLETE (2/2 plans, production). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
+Progress: Phase 32 in progress (1/2 plans complete). Phase 30 COMPLETE (2/2 plans, production). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 29 implementation complete (1/1 plans code-complete, deploy pending Task 8). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
 
 ## Performance Metrics
 
@@ -161,6 +161,9 @@ Recent decisions affecting current work:
 - [30-01]: Claw-swap runtime migrated from oci-containers to native services (`services.postgresql` + `systemd.services.claw-swap-app`) with sops `EnvironmentFile` injection.
 - [30-01]: PostgreSQL auth for claw-swap uses Unix socket trust (`local claw_swap claw trust`) because OS user `claw-swap` and DB role `claw` do not satisfy peer auth username matching.
 - [30-01]: Added encrypted placeholder `google-api-key` and `xai-api-key` entries in both `secrets/neurosys.yaml` and `secrets/ovh.yaml` to satisfy sops manifest validation during `nix flake check`.
+- [32-01]: Added non-flake `automaton` input (`github:Conway-Research/automaton`) and exported `packages.x86_64-linux.automaton` from repo `flake.nix`.
+- [32-01]: Packaged Conway Automaton with `buildNpmPackage` + vendored converted lockfile (`packages/automaton-package-lock.json`) and fixed `npmDepsHash`.
+- [32-01]: Patched `src/conway/inference.ts` endpoint to use `ANTHROPIC_BASE_URL` and forced native `better-sqlite3` compile via `npm rebuild better-sqlite3`.
 
 ### Completed Phases
 
@@ -233,6 +236,7 @@ Recent decisions affecting current work:
 - Phase 28 progressing: 28-01 flake migration + 28-02 OVH nginx integration completed; ready for 28-03 DNS cutover and live certificate issuance.
 - Phase 30 added: Claw-Swap Native NixOS Service — replace Docker containers with services.postgresql + systemd service for Node.js app; remove oci-containers/custom bridge; native sops-nix secret injection; Docker stays for parts
 - Phase 31 added: Conway Automaton — Single Agent MVP — restored from removed Phase 27 Automaton Fleet; reduced from 4 agents to 1; seed hypothesis #1 (x402 APIs); fleet-status.sh monitoring script
+- Phase 32 added: Self-Hosted Conway Automaton on Neurosys — package automaton as a Nix derivation first (32-01 complete), then wire the systemd service module (32-02 pending)
 
 ### Blockers/Concerns
 
