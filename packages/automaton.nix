@@ -45,10 +45,8 @@ buildNpmPackage rec {
     cp constitution.md $out/lib/node_modules/@conway/automaton/
 
     mkdir -p $out/bin
-    cat > $out/bin/automaton <<WRAPPER
-    #!/bin/sh
-    exec ${nodejs_22}/bin/node $out/lib/node_modules/@conway/automaton/dist/index.js "$@"
-    WRAPPER
+    echo '#!/bin/sh' > $out/bin/automaton
+    echo "exec ${nodejs_22}/bin/node $out/lib/node_modules/@conway/automaton/dist/index.js \"\$@\"" >> $out/bin/automaton
     chmod +x $out/bin/automaton
 
     runHook postInstall
