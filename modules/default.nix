@@ -16,5 +16,6 @@
     ./repos.nix
     ./homepage.nix
     ./spacebot.nix
+    ./automaton.nix
   ];
 }
