@@ -195,14 +195,11 @@ in {
       chown automaton:automaton ${automatonDir}/constitution.md
       chmod 0444 ${automatonDir}/constitution.md
 
-      # Initialize git repo for state versioning if not present
-      if [ ! -d ${automatonDir}/.git ]; then
-        ${pkgs.git}/bin/git -C ${automatonDir} init
-        ${pkgs.git}/bin/git -C ${automatonDir} config user.email "automaton@neurosys"
-        ${pkgs.git}/bin/git -C ${automatonDir} config user.name "Conway Automaton"
-        # Create .gitignore to exclude secrets and DB
+      # Write .gitignore only if it does not exist
+      # (git init is left to the agent itself — root cannot git-init dirs owned by automaton)
+      if [ ! -f ${automatonDir}/.gitignore ]; then
         cp ${gitignoreFile} ${automatonDir}/.gitignore
-        chown -R automaton:automaton ${automatonDir}/.git ${automatonDir}/.gitignore
+        chown automaton:automaton ${automatonDir}/.gitignore
       fi
     '';
     deps = [ "setupSecrets" ];
