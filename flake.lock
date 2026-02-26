@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "automaton": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772028698,
+        "narHash": "sha256-xsMJ/+foJRhc1jZuzpDffe8FDphwIAa/jLgGdTKP8VU=",
+        "owner": "Conway-Research",
+        "repo": "automaton",
+        "rev": "823ad70bc0274a360d95eeaafe440a2d8be839a6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Conway-Research",
+        "repo": "automaton",
+        "type": "github"
+      }
+    },
     "blueprint": {
       "inputs": {
         "nixpkgs": [
@@ -335,6 +351,7 @@
     },
     "root": {
       "inputs": {
+        "automaton": "automaton",
         "claw-swap": "claw-swap",
         "dangirsh-site": "dangirsh-site",
         "deploy-rs": "deploy-rs",
