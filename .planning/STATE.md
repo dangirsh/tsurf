@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 32 Plan 01 complete (Conway Automaton packaged as Nix derivation). Next: Phase 32 Plan 02 service module wiring and runtime activation. Phase 30 remains complete in production; Phase 31 remains in progress (single-agent MVP). Phase 28 remains paused (DNS cutover pending). DNS prerequisite outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
+**Current focus:** Phase 32 COMPLETE — both plans merged. Conway Automaton packaged (32-01) and NixOS service module wired (32-02). Deployment checkpoint pending: user must add real Conway API key, deploy, and start `conway-automaton` service. Phase 33 next (spacebot security research). DNS prerequisite outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
 
 ## Current Position
 
-Phase: 32 (Self-Hosted Conway Automaton on Neurosys)
-Plan: 1 of 2 -- COMPLETE (32-01 packaged and validated)
-Status: Added flake input + `packages.x86_64-linux.automaton`, created `packages/automaton.nix` with `buildNpmPackage`, patched Anthropic base URL env behavior, and verified `nix build .#automaton` + `nix flake check`.
-Last activity: 2026-02-26 - Completed 32-01 packaging derivation and validation
+Phase: 32 (Self-Hosted Conway Automaton on Neurosys) — CODE COMPLETE, AWAITING DEPLOYMENT
+Plan: 2 of 2 -- COMPLETE (32-02 service module merged, nix flake check passed)
+Status: `modules/automaton.nix` created with `conway-automaton` systemd service, sops secrets wired, activation pre-seeding script. `conway-api-key` placeholder added to secrets/neurosys.yaml. Deployment checkpoint: user must run `sops secrets/neurosys.yaml` to add real Conway API key, then `./scripts/deploy.sh --node neurosys`, then `systemctl start conway-automaton`.
+Last activity: 2026-02-26 - Completed 32-02 service module, merged to main (5512fd2)
 
-Progress: Phase 32 in progress (1/2 plans complete). Phase 30 COMPLETE (2/2 plans, production). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 29 implementation complete (1/1 plans code-complete, deploy pending Task 8). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
+Progress: Phase 32 code-complete (2/2 plans merged). Phase 30 COMPLETE (2/2 plans, production). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 29 implementation complete (1/1 plans code-complete, deploy pending Task 8). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
 
 ## Performance Metrics
 
@@ -164,6 +164,9 @@ Recent decisions affecting current work:
 - [32-01]: Added non-flake `automaton` input (`github:Conway-Research/automaton`) and exported `packages.x86_64-linux.automaton` from repo `flake.nix`.
 - [32-01]: Packaged Conway Automaton with `buildNpmPackage` + vendored converted lockfile (`packages/automaton-package-lock.json`) and fixed `npmDepsHash`.
 - [32-01]: Patched `src/conway/inference.ts` endpoint to use `ANTHROPIC_BASE_URL` and forced native `better-sqlite3` compile via `npm rebuild better-sqlite3`.
+- [32-02]: Created `modules/automaton.nix` with dedicated `automaton` system user, activation pre-seeding (automaton.json, wallet, heartbeat.yml, SOUL.md, constitution.md, git init), `conway-automaton` systemd service (NOT wantedBy — user must enable manually after API key provisioning).
+- [32-02]: `sops.secrets."conway-api-key"` with explicit `sopsFile = ../secrets/neurosys.yaml` (avoids OVH eval failure); `sops.templates."automaton-env"` for BYOK proxy env vars.
+- [32-02]: Service configured with `ProtectSystem = strict`, `ReadWritePaths = ["/var/lib/automaton"]`, `ANTHROPIC_BASE_URL=http://127.0.0.1:9091` for existing secret proxy on port 9091.
 
 ### Completed Phases
 
@@ -273,6 +276,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Phase 30 fully complete. OVH (prod) and Contabo (staging) both running native postgresql + claw-swap-app systemd service. Docker claw-swap containers removed. ACME fix: api.clawswap.org vhost guarded to OVH-only via lib.mkIf hostname (was causing Contabo magic rollback). DNS outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
-Next: Phase 31 (Conway Automaton single-agent MVP) or Phase 29 (Agentic Dev Maxing).
+Last session: 2026-02-26
+Stopped at: Phase 32 code-complete. Both plans merged to main (5512fd2). Checkpoint: deploy + Conway API key provisioning + service start is pending user action.
+Next: Deploy Phase 32 (./scripts/deploy.sh --node neurosys, then provision Conway API key, then systemctl start conway-automaton). After that: Phase 33 (spacebot security research).
