@@ -237,6 +237,7 @@ Recent decisions affecting current work:
 - Phase 30 added: Claw-Swap Native NixOS Service — replace Docker containers with services.postgresql + systemd service for Node.js app; remove oci-containers/custom bridge; native sops-nix secret injection; Docker stays for parts
 - Phase 31 added: Conway Automaton — Single Agent MVP — restored from removed Phase 27 Automaton Fleet; reduced from 4 agents to 1; seed hypothesis #1 (x402 APIs); fleet-status.sh monitoring script
 - Phase 32 added: Self-Hosted Conway Automaton on Neurosys — package automaton as a Nix derivation first (32-01 complete), then wire the systemd service module (32-02 pending)
+- Phase 33 added: Research spacebot security: prompt injection defenses + ironclaw integration feasibility — investigate how spacebot guards against prompt injection (sandboxing, input validation, context isolation, published threat model) and how hard it would be to wire ironclaw as the LLM backend/agent executor behind spacebot's UI layer
 
 ### Blockers/Concerns
 

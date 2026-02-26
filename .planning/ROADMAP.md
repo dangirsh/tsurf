@@ -679,4 +679,14 @@ Plans:
 **Plans:** TBD (run /gsd:plan-phase 32 to break down)
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 32 to break down)
+- [x] 32-01: Package Conway Automaton as NixOS derivation (complete)
+- [ ] 32-02: NixOS service module + secrets + deployment (pending)
+
+### Phase 33: Research spacebot security: prompt injection defenses + ironclaw integration feasibility
+
+**Goal:** [To be planned]
+**Depends on:** Phase 32
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 33 to break down)
