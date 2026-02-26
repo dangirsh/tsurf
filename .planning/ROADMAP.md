@@ -42,6 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 29: Agentic Dev Maxing — Batteries Included** - opencode, gemini-cli, pi (Mario Zechner) installed + sandbox-integrated. GOOGLE_API_KEY, XAI_API_KEY, OPENROUTER_API_KEY secrets added. Secret proxy extended to new providers. Session search + Rust beads CLI for agents.
 - [x] **Phase 30: Claw-Swap Native NixOS Service** - Replace Docker containers with native services.postgresql + systemd service. Unix socket trust auth. Docker stays for parts only.
 - [ ] **Phase 31: Conway Automaton — Single Agent MVP** - Deploy 1 sovereign AI agent on Conway Cloud with seed hypothesis #1 (x402 APIs). ~$250 USDC, Sonnet 4.6 primary model, BYOK keys. Terminal monitoring dashboard on neurosys.
+- [ ] **Phase 32: Self-Hosted Conway Automaton on Neurosys** - Run Conway Automaton framework as NixOS systemd service on neurosys, eliminating Conway Cloud compute costs for agent runtime. BYOK inference via secret proxy. State persisted locally.
 
 ## Phase Details
 
@@ -623,7 +624,6 @@ Plans:
 
 ### Phase 30: Claw-Swap Native NixOS Service
 
-<<<<<<< HEAD
 **Goal:** Replace claw-swap's Docker containers with native NixOS services — `services.postgresql` for the database and a systemd service running the Nix-built Node.js package. Remove the claw-swap Docker network, `virtualisation.oci-containers` declarations, and custom bridge. All existing sops-nix secrets preserved and injected natively (no env-file template indirection). Docker engine stays for parts but claw-swap exits the container layer entirely, improving simplicity (fewer layers, native journald logs, systemd dependency management) and security (no Docker socket involvement, native DynamicUser isolation, no cap-drop workarounds).
 **Depends on:** Phase 28 (nginx already handles reverse proxy to 127.0.0.1:3000)
 **Requirements:** None (simplification + security hardening)
@@ -638,17 +638,11 @@ Plans:
   8. `nix flake check` passes
   9. Live smoke test: `curl https://claw-swap.com` returns 200
 **Effort:** Medium — PostgreSQL NixOS service is trivial; Node.js systemd service needs Nix package wiring + secrets injection pattern.
-**Plans:** 0 plans
+**Plans:** 2 plans complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 30 to break down)
-=======
-**Goal:** Replace claw-swap Docker containers with native NixOS services. `services.postgresql` handles the database. A systemd service runs the Node.js app directly (no oci-containers). sops-nix injects secrets natively. Docker engine stays for parts containers.
-**Depends on:** Phase 4 (existing Docker baseline), Phase 22 (secret proxy)
-**Plans:** TBD (run /gsd:plan-phase 30 to break down)
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 30 to break down)
+- [x] 30-01-PLAN.md -- module rewrite + flake validation
+- [x] 30-02-PLAN.md -- deploy to production OVH
 
 ### Phase 31: Conway Automaton — Single Agent MVP
 
@@ -668,4 +662,21 @@ Plans:
 
 Plans:
 - [ ] 31-01-PLAN.md -- Conway Cloud setup + agent deployment + fleet monitoring script
->>>>>>> 8693a40 (feat(31): add Conway Automaton single-agent MVP phase)
+
+### Phase 32: Self-Hosted Conway Automaton on Neurosys
+
+**Goal:** Run the Conway Automaton framework directly on neurosys as a NixOS service instead of paying Conway Cloud for agent compute. Agents execute as persistent systemd services on neurosys hardware (no external cloud sandbox fees), use BYOK Anthropic key through the existing secret proxy, and persist state to `/var/lib/automaton/`. Conway Cloud tools remain available to agents for external workloads (spinning up sandboxes, buying domains, exposing ports) but the agent runtime itself runs free on owned hardware.
+**Depends on:** Phase 22 (secret proxy for BYOK Anthropic key), Phase 31 (understanding of automaton config + genesis prompts)
+**Requirements:** None
+**Success Criteria** (what must be TRUE):
+  1. `automaton` systemd service running on neurosys, agent loop active
+  2. Agent uses BYOK Anthropic key via secret proxy (no Conway Compute billing for inference)
+  3. Agent state persisted at `/var/lib/automaton/` (SQLite + git-versioned)
+  4. Agent can reach Conway Cloud tools (for external sandboxes, domains, payments) if needed
+  5. `nix flake check` passes with new automaton module
+  6. Agent completes at least one reasoning turn without errors
+**Effort:** Medium — TypeScript/Node.js NixOS packaging + sops secret wiring + automaton config tuning
+**Plans:** TBD (run /gsd:plan-phase 32 to break down)
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 32 to break down)
