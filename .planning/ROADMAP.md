@@ -43,6 +43,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 30: Claw-Swap Native NixOS Service** - Replace Docker containers with native services.postgresql + systemd service. Unix socket trust auth. Docker stays for parts only.
 - [ ] **Phase 31: Conway Automaton — Single Agent MVP** - Deploy 1 sovereign AI agent on Conway Cloud with seed hypothesis #1 (x402 APIs). ~$250 USDC, Sonnet 4.6 primary model, BYOK keys. Terminal monitoring dashboard on neurosys.
 - [ ] **Phase 32: Self-Hosted Conway Automaton on Neurosys** - Run Conway Automaton framework as NixOS systemd service on neurosys, eliminating Conway Cloud compute costs for agent runtime. BYOK inference via secret proxy. State persisted locally.
+- [ ] **Phase 37: Open Source Prep** - Privacy audit, public/private repo split, lean README. Remove personal identifiers; extract personal config to private flake overlay; publish infrastructure patterns.
 
 ## Phase Details
 
@@ -742,3 +743,40 @@ Plans:
 - [ ] 35-01: Conduit homeserver + mautrix-telegram (prove architecture, lowest risk first)
 - [ ] 35-02: mautrix-whatsapp + mautrix-signal bridges (add remaining platforms, document WA ban risk)
 - [ ] 35-03: AI read bot + historical ingest pipeline (Matrix CS API bot → Spacebot LanceDB; one-time import scripts)
+
+### Phase 36: Research stereOS ecosystem (stereOS, masterblaster, stereosd, agentd) — study all repos comprehensively and generate a report on what we can learn/steal for neurosys, plus a recommendation on whether to switch from NixOS to stereOS
+
+**Goal:** [To be planned]
+**Depends on:** Phase 35
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 36 to break down)
+
+### Phase 37: Open Source Prep
+
+**Goal**: Prepare the neurosys NixOS configuration for public open source release with three outputs: (1) privacy-audited public repo with personal identifiers removed, (2) private flake overlay repo adding personal config on top, (3) lean public README.
+
+**Depends on:** Phase 32
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 37 to break down)
+
+### Phase 38: Dual-host role separation: Contabo as services host, OVH as dev-agent host
+
+**Goal:** [To be planned]
+**Depends on:** Phase 37
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 38 to break down)
+
+### Phase 39: Conway Automaton monitoring dashboard
+
+**Goal:** Lightweight web UI (Tailscale-only) showing live agent status. Reads from journald + automaton SQLite state.db. Displays: agent state (running/sleeping/thinking), Conway credits balance, total turns, current goal + task progress, recent tool calls, spend rate ($/hr). Served on an internal port with no public exposure. Linked from the main neurosys homepage dashboard as a new service entry.
+**Depends on:** Phase 32
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 39 to break down)

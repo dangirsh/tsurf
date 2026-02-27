@@ -72,5 +72,5 @@ Prepare the neurosys NixOS configuration for public open source release. Three d
 
 ---
 
-*Phase: 32-open-source-prep*
+*Phase: 37-open-source-prep**
 *Context gathered: 2026-02-27*
