@@ -3,6 +3,8 @@
     ./hardware.nix
     ./disko-config.nix
     ../../modules
+    # OVH-only services
+    ../../modules/repos.nix
     # nginx module moved to private overlay
   ];
 
