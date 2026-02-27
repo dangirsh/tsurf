@@ -9,19 +9,14 @@
     secrets."b2-account-id" = {};
     secrets."b2-account-key" = {};
     secrets."restic-password" = {};
-    secrets."anthropic-api-key" = { owner = "dangirsh"; };
-    secrets."openai-api-key" = { owner = "dangirsh"; };
-    secrets."google-api-key" = { owner = "dangirsh"; };
-    secrets."xai-api-key" = { owner = "dangirsh"; };
-    secrets."openrouter-api-key" = { owner = "dangirsh"; };
-    secrets."github-pat" = { owner = "dangirsh"; };
+    secrets."anthropic-api-key" = { owner = "myuser"; };
+    secrets."openai-api-key" = { owner = "myuser"; };
+    secrets."google-api-key" = { owner = "myuser"; };
+    secrets."xai-api-key" = { owner = "myuser"; };
+    secrets."openrouter-api-key" = { owner = "myuser"; };
+    secrets."github-pat" = { owner = "myuser"; };
 
-    secrets."cloudflare-dns-token" = { owner = "acme"; };
-    secrets."conway-api-key" = {
-      sopsFile = ../secrets/neurosys.yaml;
-      owner = "automaton";
-      group = "automaton";
-    };
+    secrets."cloudflare-dns-token" = { owner = "myuser"; };
 
     secrets."openclaw-mark-gateway-token"    = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
     secrets."openclaw-lou-gateway-token"     = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
@@ -41,12 +36,5 @@
       '';
     };
 
-    templates."automaton-env" = {
-      owner = "automaton";
-      content = ''
-        ANTHROPIC_BASE_URL=http://127.0.0.1:9091
-        ANTHROPIC_API_KEY=placeholder-for-secret-proxy
-      '';
-    };
   };
 }

@@ -3,7 +3,7 @@
     ./hardware.nix
     ./disko-config.nix
     ../../modules
-    ../../modules/nginx.nix
+    # nginx module moved to private overlay
   ];
 
   networking.hostName = "neurosys-prod";

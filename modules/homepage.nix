@@ -19,7 +19,11 @@
     };
 
     widgets = [
-      { openmeteo = { label = config.networking.hostName; timezone = "Europe/Berlin"; }; }
+      { openmeteo = {
+          label = config.networking.hostName;
+          # timezone = "Europe/Berlin"; # set timezone to your locale
+        };
+      }
       { greeting = { text = "All services are Tailscale-only"; }; }
     ];
 
@@ -62,100 +66,7 @@
           }
         ];
       }
-      {
-        "Applications" = [
-          {
-            "claw-swap" = {
-              href = "https://claw-swap.com";
-              description = "Trading platform — nginx + Node.js + PostgreSQL.";
-              siteMonitor = "http://localhost:3000";
-              icon = "nginx";
-            };
-          }
-          {
-            "dangirsh.org" = {
-              href = "https://dangirsh.org";
-              description = "Personal website — Hakyll static site served by nginx.";
-              icon = "nginx";
-            };
-          }
-          {
-            "Parts Tools" = {
-              siteMonitor = "http://localhost:8080";
-              description = "Telegram bot gateway — API integrations, data pipelines.";
-              icon = "node-js";
-            };
-          }
-          {
-            "Parts Agent" = {
-              siteMonitor = "http://localhost:3001";
-              description = "Autonomous agent — runs tasks via Telegram bot.";
-              icon = "node-js";
-            };
-          }
-          {
-            "Spacebot" = {
-              href = "http://${config.networking.hostName}:19898";
-              siteMonitor = "http://localhost:19898/api/health";
-              description = "AI agent framework — multi-user, concurrent, memory-backed. Discord/Telegram/Slack.";
-              server = "local";
-              container = "spacebot";
-            };
-          }
-        ];
-      }
-      {
-        "Home" = [
-          {
-            "Home Assistant" = {
-              href = "http://${config.networking.hostName}:8123";
-              siteMonitor = "http://localhost:8123";
-              description = "Home automation — native NixOS service. ESPHome on port 6052.";
-              icon = "home-assistant";
-            };
-          }
-        ];
-      }
-      {
-        "OpenClaw" = [
-          {
-            "OpenClaw (mark)" = {
-              href = "https://mark.openclaw.dangirsh.org";
-              siteMonitor = "http://localhost:18789";
-              description = "AI assistant gateway for mark — public HTTPS.";
-              server = "local";
-              container = "openclaw-mark";
-            };
-          }
-          {
-            "OpenClaw (lou)" = {
-              href = "http://${config.networking.hostName}:18790";
-              siteMonitor = "http://localhost:18790";
-              description = "AI assistant gateway for lou — Tailscale-only.";
-              server = "local";
-              container = "openclaw-lou";
-            };
-          }
-          {
-            "OpenClaw (alexia)" = {
-              href = "http://${config.networking.hostName}:18791";
-              siteMonitor = "http://localhost:18791";
-              description = "AI assistant gateway for alexia — Tailscale-only.";
-              server = "local";
-              container = "openclaw-alexia";
-            };
-          }
-          {
-            "OpenClaw (ari)" = {
-              href = "https://ari.openclaw.dangirsh.org";
-              siteMonitor = "http://localhost:18792";
-              description = "AI assistant gateway for ari — public HTTPS.";
-              server = "local";
-              container = "openclaw-ari";
-            };
-          }
-        ];
-      }
+      # Add your services here — see private overlay for examples.
     ];
   };
 }

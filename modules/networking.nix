@@ -10,24 +10,13 @@ let
   # Ports that must NEVER appear in allowedTCPPorts (internal services).
   # Services bind to localhost or are Tailscale-only — never on the public interface.
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
+  # Add private service ports in your private overlay.
   internalOnlyPorts = {
-    "3000" = "claw-swap app (localhost, nginx-proxied)";
-    "6167" = "matrix-conduit";
     "8082" = "homepage-dashboard";
-    "8123" = "home-assistant";
-    "8443" = "openclaw-mark nginx HTTPS (Tailscale-only, self-signed cert)";
     "8384" = "syncthing-gui (localhost)";
     "9090" = "prometheus (localhost)";
     "9091" = "anthropic-secret-proxy";
     "9100" = "node-exporter";
-    "18789" = "openclaw-mark (Tailscale-only)";
-    "18790" = "openclaw-lou (Tailscale-only)";
-    "18791" = "openclaw-alexia (Tailscale-only)";
-    "18792" = "openclaw-ari (Tailscale-only)";
-    "19898" = "spacebot api/web";
-    "29317" = "mautrix-telegram";
-    "29318" = "mautrix-whatsapp";
-    "29328" = "mautrix-signal";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;

@@ -20,6 +20,9 @@
   };
 
   # Passwordless sudo for wheel — no interactive password was set for myuser.
+  # Public template: allows eval without shipping real SSH keys/password hashes.
+  # Replace placeholder keys above for real deployments.
+  users.allowNoPasswordLogin = true;
   security.sudo.wheelNeedsPassword = false;
   security.sudo.execWheelOnly = true;
 }
