@@ -15,6 +15,7 @@ let
     "6167" = "matrix-conduit";
     "8082" = "homepage-dashboard";
     "8123" = "home-assistant";
+    "8443" = "openclaw-mark nginx HTTPS (Tailscale-only, self-signed cert)";
     "8384" = "syncthing-gui (localhost)";
     "9090" = "prometheus (localhost)";
     "9091" = "anthropic-secret-proxy";

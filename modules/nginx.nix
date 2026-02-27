@@ -110,7 +110,9 @@ in {
     # ssl_stapling is disabled because self-signed certs have no OCSP responder.
     virtualHosts."${tailscaleIp}" = {
       onlySSL = true;
-      listen = [{ addr = tailscaleIp; port = 443; ssl = true; }];
+      # Port 443 is owned by Tailscale Serve (Home Assistant proxy).
+      # 8443 is unused on the Tailscale interface; browser secure context allows any HTTPS port.
+      listen = [{ addr = tailscaleIp; port = 8443; ssl = true; }];
       sslCertificate = "/persist/var/lib/openclaw-nginx-ssl/cert.pem";
       sslCertificateKey = "/persist/var/lib/openclaw-nginx-ssl/key.pem";
       extraConfig = ''
