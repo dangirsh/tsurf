@@ -783,9 +783,78 @@ Plans:
 
 ### Phase 40: agentd Integration — Supervised Agent Lifecycle
 
-**Goal:** Replace one-shot `agent-spawn` with agentd for supervised agent lifecycle management. Add reconciliation-loop daemon with restart policy (on-failure/always), HTTP API for agent status monitoring, and jcard.toml declarative config. Keep bubblewrap sandbox. Wire agentd secret dir to sops-nix `/run/secrets/`.
+**Goal:** Research whether agentd is the right supervision model for neurosys agents, then adopt it. Validate against alternatives (pure systemd supervision, s6/runit, supervisord) before building. If validated: replace one-shot `agent-spawn` with agentd — reconciliation-loop daemon, restart policy (on-failure/always), HTTP API for live agent status. Keep bubblewrap sandbox via agentd `custom` harness. Wire sops-nix secret dir. jcard.toml declarative config per agent.
 **Depends on:** Phase 38 (dual-host separation — agentd should live on the OVH dev-agent host)
+**Requirements:** None (robustness + dev ergonomics improvement)
+**Success Criteria** (what must be TRUE):
+  1. Research confirms agentd is the right choice vs. alternatives — or recommends a better option with rationale
+  2. agentd running as NixOS systemd service with correct tmux socket ownership (`DynamicUser=false`, group `admin`)
+  3. `GET /v1/agents` returns live agent status (running, restarts, session)
+  4. Agent crashes trigger automatic restart within configured policy — verified by killing agent process and observing recovery
+  5. jcard.toml for claude-code harness committed to repo; `agent-spawn` replaced or deprecated
+  6. bubblewrap sandbox preserved — agentd launches via `custom` harness wrapping existing bwrap invocation
+  7. `nix flake check` passes
+**Effort:** Medium — research first, then 1-2 implementation plans
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 40 to break down)
+- [ ] 40-01: Research — validate agentd vs. alternatives (systemd, s6, supervisord); assess current maturity; evaluate jcard.toml schema fit
+- [ ] 40-02: Implementation — NixOS module, sops-nix wiring, jcard.toml, bwrap harness, Prometheus integration
+
+### Phase 41: Agent User Isolation — Curated PATH + Sudo Denial
+
+**Goal:** Research whether a dedicated `agent` system user with curated `buildEnv` PATH and explicit sudo denial fills a meaningful security gap beyond the existing bubblewrap namespace isolation, then implement if validated. Inspired by stereOS's `stereos-agent-shell` pattern. Defense-in-depth: bwrap provides namespace isolation; agent user limits what a bwrap-escaped agent can do on the host. If research shows bwrap's user namespace already covers this, skip.
+**Depends on:** Phase 40 (agentd introduces the agent user concept — coordinate user design)
+**Requirements:** None (security hardening)
+**Success Criteria** (what must be TRUE):
+  1. Research documents the concrete threat model gap between bwrap alone vs. bwrap + dedicated agent user
+  2. If adopted: dedicated `agent` system user in `users.nix`, curated `buildEnv` in `agent-compute.nix`
+  3. Agent cannot execute `nix build`, `nix-env`, `sudo`, or binaries outside the curated set — verified by attempting each from an agent session
+  4. Existing bubblewrap sandbox remains functional — no regression in agent DX
+  5. `nix flake check` passes
+**Effort:** Low-Medium — research is the bulk; implementation is ~30 lines of Nix
+**Plans:** 0 plans
+
+Plans:
+- [ ] 41-01: Research — threat model analysis (what bwrap misses, what agent user adds); audit current agent binary requirements; evaluate whether buildEnv + sudo denial is worth the operational friction
+- [ ] 41-02: Implementation — if validated: `agent` user, buildEnv, sudo denial, session wiring
+
+### Phase 42: masterblaster — VM-Based Agent Isolation
+
+**Goal:** Research whether OVH VPS has KVM, whether masterblaster is mature enough to adopt, and whether VM-level isolation provides meaningful security improvement over the bwrap + agent-user stack for neurosys's agent threat model. If validated: adopt masterblaster on the OVH dev-agent host — `mb up` per agent session, stereOS mixtape images, QCOW2 overlays, agentd inside VMs. This is the highest security ceiling available: kernel boundary vs. namespace boundary.
+**Depends on:** Phase 38 (dual-host — masterblaster runs on OVH), Phase 41 (agent user isolation baseline established)
+**Requirements:** KVM available on OVH VPS (verify in research phase — hard blocker if absent)
+**Success Criteria** (what must be TRUE):
+  1. OVH KVM availability confirmed: `grep -c vmx /proc/cpuinfo` on neurosys-prod returns > 0
+  2. Research evaluates alternatives: Firecracker (AWS, production-grade), Kata Containers (OCI-compatible), cloud-hypervisor — recommends masterblaster or an alternative with rationale
+  3. masterblaster current release maturity assessed — if still pre-release single-developer, document acceptance criteria for adoption vs. further deferral
+  4. If adopted: `mb up` launches a stereOS VM on OVH; agent runs inside VM with agentd supervision
+  5. VM agent cannot read host filesystem, host `/run/secrets`, or host Docker sockets — verified
+  6. `mb destroy` cleanly terminates VM; disk overlay removed
+  7. Startup latency measured and documented (acceptable: <10s for interactive use)
+**Effort:** High — KVM verification + significant research + complex NixOS integration
+**Plans:** 0 plans
+
+Plans:
+- [ ] 42-01: Research — OVH KVM check; masterblaster current maturity; Firecracker/Kata/cloud-hypervisor comparison; threat model analysis; go/no-go recommendation
+- [ ] 42-02: Implementation — masterblaster NixOS service, mixtape build, sops-nix host secrets, jcard.toml per agent (if research gives go)
+
+### Phase 43: tapes — Agent Session Telemetry
+
+**Goal:** Research whether tapes fills a real observability gap for neurosys's agent workloads vs. existing tools (Spacebot LanceDB, Prometheus), and whether it's mature enough to operate. tapes is a transparent proxy that records agent↔LLM conversations with content-addressable storage, semantic search (via Ollama embeddings), and session replay. If validated: deploy on neurosys as a proxy layer, all agent sessions recorded and searchable.
+**Depends on:** Phase 40 (agentd — agents route through tapes proxy; coordinates with agentd session model)
+**Requirements:** None (dev ergonomics improvement)
+**Success Criteria** (what must be TRUE):
+  1. Research documents what Spacebot already captures and where the gap is — no adoption if Spacebot covers it
+  2. Research evaluates production-grade alternatives: LangFuse (OSS, self-hosted), Helicone, Weave (W&B) — recommends tapes or an alternative
+  3. Privacy model documented: what is stored, where, retention policy, whether prompt content is acceptable to record
+  4. If adopted: tapes proxy running on neurosys; `ANTHROPIC_BASE_URL` set to tapes proxy (chains with existing secret proxy)
+  5. `tapes search "query"` returns relevant past sessions within 2s
+  6. No measurable latency regression on agent inference (p99 < 200ms overhead)
+  7. Ollama infrastructure cost assessed — if embeddings require running Ollama full-time, document the resource cost
+**Effort:** Medium — research is substantial; proxy deployment is straightforward if validated
+**Plans:** 0 plans
+
+Plans:
+- [ ] 43-01: Research — gap analysis vs. Spacebot; LangFuse/Helicone/Weave comparison; tapes current maturity; privacy model; Ollama infrastructure cost
+- [ ] 43-02: Implementation — tapes NixOS service, proxy chaining with secret-proxy, session retention config (if research validates)
