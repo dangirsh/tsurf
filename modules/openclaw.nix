@@ -67,6 +67,7 @@ let
   openclawConfigLou     = pkgs.writeText "openclaw-lou.json"     (mkOpenclawConfig "lou");
   openclawConfigAlexia  = pkgs.writeText "openclaw-alexia.json"  (mkOpenclawConfig "alexia");
   openclawConfigAri     = pkgs.writeText "openclaw-ari.json"     (mkOpenclawConfig "ari");
+  openclawConfigJordanClaw  = pkgs.writeText "openclaw-jordan-claw.json"  (mkOpenclawConfig "jordan-claw");
 in {
 
   # --- Sops templates: env files with secrets (one per instance) ---
@@ -107,6 +108,16 @@ in {
     mode = "0400";
   };
 
+  sops.templates."openclaw-jordan-claw-env" = {
+    content = ''
+      OPENCLAW_GATEWAY_TOKEN=${config.sops.placeholder."openclaw-jordan-claw-gateway-token"}
+      ANTHROPIC_API_KEY=${config.sops.placeholder."anthropic-api-key"}
+      ANTHROPIC_DEFAULT_MODEL=claude-sonnet-4-6
+    '';
+    owner = "root";
+    mode = "0400";
+  };
+
   # --- State directories with permissions for container UID 1000 ---
 
   systemd.tmpfiles.rules = [
@@ -114,6 +125,7 @@ in {
     "d /var/lib/openclaw-lou     0750 1000 1000 -"
     "d /var/lib/openclaw-alexia  0750 1000 1000 -"
     "d /var/lib/openclaw-ari     0750 1000 1000 -"
+    "d /var/lib/openclaw-jordan-claw  0750 1000 1000 -"
   ];
 
   # --- Activation script: seed openclaw.json for each instance ---
@@ -122,7 +134,7 @@ in {
     text = ''
       # Seed or fix openclaw.json for each instance.
       # Seeds if absent; replaces if config has known-invalid keys (model, user).
-      for pair in "mark:${openclawConfigMark}" "lou:${openclawConfigLou}" "alexia:${openclawConfigAlexia}" "ari:${openclawConfigAri}"; do
+      for pair in "mark:${openclawConfigMark}" "lou:${openclawConfigLou}" "alexia:${openclawConfigAlexia}" "ari:${openclawConfigAri}" "jordan-claw:${openclawConfigJordanClaw}"; do
         user="''${pair%%:*}"
         config_file="''${pair#*:}"
         state_dir="/var/lib/openclaw-''${user}"
@@ -175,6 +187,16 @@ in {
     volumes = [ "/var/lib/openclaw-ari:/home/node/.openclaw" ];
     ports = [ "18792:18789" ];
     environmentFiles = [ config.sops.templates."openclaw-ari-env".path ];
+    cmd = [ "node" "openclaw.mjs" "gateway" "--allow-unconfigured" ];
+  };
+
+  # @decision OCL-10: jordan-claw — public HTTPS via nginx+ACME (same as mark/ari); one-time cert bypass on first visit.
+  # @rationale: Same visibility tier as mark. ANTHROPIC_DEFAULT_MODEL=claude-sonnet-4-6 sets default model via env.
+  virtualisation.oci-containers.containers.openclaw-jordan-claw = {
+    image = "ghcr.io/openclaw/openclaw:latest";
+    volumes = [ "/var/lib/openclaw-jordan-claw:/home/node/.openclaw" ];
+    ports = [ "18793:18789" ];
+    environmentFiles = [ config.sops.templates."openclaw-jordan-claw-env".path ];
     cmd = [ "node" "openclaw.mjs" "gateway" "--allow-unconfigured" ];
   };
 }
