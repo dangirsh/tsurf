@@ -7,13 +7,9 @@
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
-    # @decision CACHE-01: dan-testing.cachix.org as personal binary cache to speed up remote builds.
-    # @rationale: Avoids recompiling custom derivations (dangirsh-site, parts, claw-swap) that are
-    #   absent from cache.nixos.org. Push via `cachix push dan-testing` after local builds.
-    substituters = [ "https://dan-testing.cachix.org" ];
-    trusted-public-keys = [
-      "dan-testing.cachix.org-1:3o+6K+4nP7KTTZobTF+bhC25LPIG4mDjd5wXegRIdQ4="
-    ];
+    # Private overlay: add your personal binary cache here to speed up private derivation builds.
+    # substituters = [ "https://your-cache.cachix.org" ];
+    # trusted-public-keys = [ "your-cache.cachix.org-1:..." ];
   };
 
   nix.gc = {
