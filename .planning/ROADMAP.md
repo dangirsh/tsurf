@@ -760,10 +760,12 @@ Plans:
 **Goal**: Prepare the neurosys NixOS configuration for public open source release with three outputs: (1) privacy-audited public repo with personal identifiers removed, (2) private flake overlay repo adding personal config on top, (3) lean public README.
 
 **Depends on:** Phase 32
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 37 to break down)
+- [x] 37-01-SUMMARY.md -- Full privacy/security audit for public release (PII scrub, private input/module removal, nix flake check pass)
+- [ ] 37-02-PLAN.md -- Split private overlay patterns and write principles for composing private services on top of the public flake
+- [ ] 37-03-PLAN.md -- Write lean public README focused on reusable infrastructure patterns and private-overlay onboarding
 
 ### Phase 38: Dual-host role separation: Contabo as services host, OVH as dev-agent host
 

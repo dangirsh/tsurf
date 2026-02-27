@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 39 IN PROGRESS — Conway dashboard repo split-out complete (39-01). Next: wire as neurosys flake input + service module (39-02). Phase 35 still at checkpoint (35-02-E, human deploy/account-link required).
+**Current focus:** Phase 37 IN PROGRESS — Plan 37-01 privacy audit complete. Next: Plans 37-02 (private overlay guide) and 37-03 (lean README). Phase 39 plan 39-01 also complete (conway-dashboard repo created); 39-02 pending.
 
 ## Current Position
 
-Phase: 39 (Conway Automaton Monitoring Dashboard) — IN PROGRESS
-Plan: 1 of 2 — 39-01 COMPLETE
-Status: Created and pushed private `dangirsh/conway-dashboard` repo with stdlib Python server (`/`, `/api/status`) and auto-refresh dashboard UI. Ready for 39-02 neurosys wiring.
-Last activity: 2026-02-27 - Completed 39-01; created https://github.com/dangirsh/conway-dashboard (PRIVATE), committed `server.py` + `dashboard.html`, verified GitHub contents and Python compile.
+Phase: 37 (Open Source Prep) — IN PROGRESS
+Plan: 1 of 3 — 37-01 COMPLETE
+Status: Privacy audit finished. Personal identifiers and private repo/service wiring removed from public module set; `nix flake check` passes after decoupling private assumptions.
+Last activity: 2026-02-27 - Completed Phase 37 Plan 01 (privacy audit); also completed Phase 39-01 (conway-dashboard repo creation, ready for 39-02 wiring).
 
-Progress: Phase 39 plan 39-01 is complete; plan 39-02 remains. Phase 35 plan 35-02 is still checkpoint-ready (4/5 tasks complete, awaiting human deploy/account-link action).
+Progress: Phase 37 now at 1/3 plans complete (37-01 done; 37-02 and 37-03 pending). Phase 39 at 1/2 (39-01 done; 39-02 pending). Phase 35 plan 35-02 remains checkpoint-ready (human deploy/account-link action).
 
 ## Performance Metrics
 
@@ -49,8 +49,8 @@ Progress: Phase 39 plan 39-01 is complete; plan 39-02 remains. Phase 35 plan 35-
 | 39 | 1/2 | ~20min | ~20min |
 
 **Recent Trend:**
-- Last 4 plans: 39-01 (~20min), 36-01 (~22min), 35-02 (~38min), 35-01 (~21min)
-- Trend: Execution remains stable; recent work has shifted toward medium-duration integration and planning tasks.
+- Last 4 plans: 37-01 (~11min), 39-01 (~20min), 36-01 (~22min), 35-02 (~38min)
+- Trend: Execution remains stable; recent work mixes research, planning, and short execution plans.
 
 *Updated after each plan completion*
 
@@ -60,6 +60,10 @@ Progress: Phase 39 plan 39-01 is complete; plan 39-02 remains. Phase 35 plan 35-
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+- [37-01]: Public flake now exports `nixosModules.default` and removes private inputs/services from default imports.
+- [37-01]: Username, SSH keys, and git identity are sanitized to template-safe placeholders (`myuser`, placeholder key comments, generic name/email).
+- [37-01]: Private service bindings moved behind private overlay boundaries; public config passes `nix flake check` without private-module assumptions.
 
 - [06-01]: Syncthing GUI binds 0.0.0.0:8384, restricted via trustedInterfaces (not IP binding)
 - [06-01]: allowUnfreePredicate for claude-code added to base.nix (pre-existing Phase 5 issue)
