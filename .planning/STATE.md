@@ -285,6 +285,7 @@ Recent decisions affecting current work:
 - Phase 38 added: Dual-host role separation — Contabo = services host (HA, Spacebot, Matrix, monitoring, claw-swap), OVH = dev-agent host (agent-compute, Claude/Codex, sandbox, agent-spawn). Audit current module allocation, migrate misplaced services/modules, ensure deploy.sh covers both targets, verify Tailscale MagicDNS reachability for both.
 - Phase 39 added: Conway Automaton monitoring dashboard — lightweight Tailscale-only web UI showing live agent status (state, credits, turns, goal progress, tool calls, spend rate), linked from homepage dashboard.
 - Phase 39 progressing: 39-01 completed — private `dangirsh/conway-dashboard` repo created with `server.py` and `dashboard.html`; ready for 39-02 neurosys integration.
+- Phase 45 added: Interrogate design principles and rewrite README principles section — discussion-first phase to nail down exact principles (agents-first, secure defaults, minimal untracked state, headless/long-running), then rewrite README Design Principles section to reflect them accurately.
 
 ### Blockers/Concerns
 

@@ -879,3 +879,12 @@ Plans:
 
 Plans:
 - [ ] 44-01-PLAN.md -- CO2 alert automation: threshold trigger + cooldown + recovery notification in automations.yaml (tasks A/B complete; task C checkpoint pending)
+
+### Phase 45: Interrogate design principles and rewrite README principles section
+
+**Goal:** [To be planned]
+**Depends on:** Phase 44
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 45 to break down)
