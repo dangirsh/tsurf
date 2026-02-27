@@ -1,3 +1,4 @@
+# Shared modules imported by all hosts. Host-specific modules added in hosts/*/default.nix.
 {
   imports = [
     ./base.nix
@@ -11,7 +12,5 @@
     ./agent-compute.nix
     ./secret-proxy.nix
     ./impermanence.nix
-    ./restic.nix
-    ./homepage.nix
   ];
 }
