@@ -101,6 +101,11 @@
   #   /var/lib/tailscale), but a systemd wrapper ensures the config is
   #   applied on every deploy and follows NixOS declarative convention.
   #   Oneshot + RemainAfterExit = runs once, stays "active".
+  #   Restart=on-failure handles boot-time races (tailscale not yet authed).
+  # @decision HA-06: ExecStartPre uses tailscale status exit-code (no jq).
+  # @rationale: jq + complex quoting inside systemd single-quoted ExecStartPre
+  #   causes systemd to mangle \" escapes, producing invalid jq syntax. Using
+  #   "tailscale status" exit-code avoids quoting entirely and is equivalent.
   systemd.services.tailscale-serve-ha = {
     description = "Tailscale Serve: HTTPS proxy to Home Assistant MCP";
     after = [ "tailscaled.service" ];
@@ -110,9 +115,12 @@
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
+      Restart = "on-failure";
+      RestartSec = "30";
       # Wait for Tailscale to be fully authenticated before configuring serve.
       # tailscaled.service may report ready before auth completes.
-      ExecStartPre = "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 30); do ${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null | ${pkgs.jq}/bin/jq -e \".BackendState == \\\"Running\\\"\" >/dev/null 2>&1 && exit 0; sleep 2; done; echo \"tailscale not ready after 60s\"; exit 1'";
+      # "tailscale status" exits 0 when connected, non-zero otherwise.
+      ExecStartPre = "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 30); do ${pkgs.tailscale}/bin/tailscale status >/dev/null 2>&1 && exit 0; sleep 2; done; echo tailscale-not-ready; exit 1'";
       ExecStart = "${pkgs.tailscale}/bin/tailscale serve --bg --https=443 http://127.0.0.1:8123";
       ExecStop = "${pkgs.tailscale}/bin/tailscale serve off";
     };

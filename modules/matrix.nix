@@ -33,8 +33,16 @@ lib.mkIf isNeurosys
       allow_federation = false;
       allow_encryption = true;
       trusted_servers = [ ];
+      # Register mautrix-telegram appservice with Conduit.
+      app_service_registration_files = [
+        "/var/lib/mautrix-telegram/telegram-registration.yaml"
+      ];
     };
   };
+
+  # Conduit is a DynamicUser service; grant read access to mautrix-telegram's
+  # registration file by adding the mautrix-telegram supplementary group.
+  systemd.services.conduit.serviceConfig.SupplementaryGroups = [ "mautrix-telegram" ];
 
   # --- mautrix-telegram bridge ---
   services.mautrix-telegram = {
