@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 37 COMPLETE — all 3 plans executed (privacy audit, private overlay guide, lean README). Repo is open-source ready. Phase 39 at 39-01 complete; 39-02 pending (neurosys wiring).
+**Current focus:** Phase 44 execution in progress. Plan 44-01 tasks A/B are complete (CO2 automations committed/pushed in `home-assistant-config`); task C is a human-action checkpoint (server pull + automation reload + live verification).
 
 ## Current Position
 
-Phase: 37 (Open Source Prep) — COMPLETE
-Plan: 3 of 3 — ALL COMPLETE
-Status: Privacy audit + private overlay guide + lean README all shipped. Repo sanitized of personal identifiers; nixosModules.default exported; docs/private-overlay.md shows overlay pattern; README rewritten for public audience.
-Last activity: 2026-02-27 - Completed all 3 plans of Phase 37 (open source prep). LICENSE added.
+Phase: 44 (Android CO2 Alert) — IN PROGRESS
+Plan: 44-01 — Tasks A/B COMPLETE, task C pending (`checkpoint:human-action`)
+Status: Added two HA automations in `dangirsh/home-assistant-config` (`co2_alert_high`, `co2_alert_recovery`) with threshold/hysteresis and shared `tag: co2-alert`; committed and pushed to `main` as `4c3679a`.
+Last activity: 2026-02-27 - Executed 44-01 task A/B, YAML parse check passed, wrote neurosys `.claude/.test-status`, and updated planning artifacts.
 
-Progress: Phase 37 complete (3/3 plans). Phase 39 at 1/2 (39-01 done; 39-02 pending). Phase 35 plan 35-02 remains checkpoint-ready (human deploy/account-link action).
+Progress: Phase 44 is at deployment checkpoint (task C). Phase 39 remains complete; phase-39-02 neurosys wiring stays deferred to private overlay per phase-37 architecture.
 
 ## Performance Metrics
 
@@ -187,6 +187,8 @@ Recent decisions affecting current work:
 - [39-01]: Dashboard server uses Python stdlib only on port 9093; `/api/status` aggregates SQLite state (`kv`, `turns`, `inference_costs`, `goals`, `task_graph`, `tool_calls`, `identity`) with graceful per-query degradation.
 - [39-01]: Dashboard UI is a single self-contained HTML file polling `/api/status` every 5 seconds with status-color mapping, financial/activity panels, recent tool calls, and journald log view.
 - [44]: Phase 44 added — Android CO2 alert via HA automation in home-assistant-config. Trigger: `sensor.apollo_air_1_5221b0_co2 > 1000 ppm`, notify Pixel 10 Pro, 30min cooldown, recovery notification on drop below 900 ppm. Single plan (44-01).
+- [44-01]: Task A complete — appended `co2_alert_high` and `co2_alert_recovery` to `/data/projects/home-assistant-config/automations.yaml` and validated syntax with `python3 -c "import yaml; yaml.safe_load(open('automations.yaml'))"`.
+- [44-01]: Task B complete — pushed `home-assistant-config` commit `4c3679a` to `origin/main`; updated `.claude/.test-status` to `pass|0|<epoch>` for neurosys no-Nix-change gate.
 
 ### Completed Phases
 
@@ -316,5 +318,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 37 COMPLETE (all 3 plans: privacy audit + private overlay guide + lean README). Phase 39 at 39-01 complete; 39-02 pending. Phase 35 remains at 35-02-E checkpoint.
-Next: Execute plan 39-02 (wire `conway-dashboard` input into neurosys modules + networking + homepage + repos), then continue checkpointed human action for 35-02-E.
+Stopped at: Phase 44 plan 44-01 tasks A/B complete. Task C is pending human checkpoint action on the HA server (pull + reload + entity verification + live notification test).
+Next: Run 44-01-C checkpoint commands on `neurosys` server, confirm both automation entities are `on`, and verify notification delivery on Pixel 10 Pro.
