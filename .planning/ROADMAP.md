@@ -690,3 +690,55 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 33 to break down)
+
+### Phase 34: Voice MCP — Claude Android app tools via Home Assistant
+
+**Goal:** Enable Claude Android voice mode to control lights, query CO2 levels, and read other Home Assistant sensors via a remote MCP server on neurosys. Say "turn off the lights" or "what's the CO2 level?" and have it actually work.
+**Depends on:** Phase 3 (Home Assistant operational, Tailscale infrastructure)
+**Plans:** 0 plans
+
+**Approach:**
+- **MCP server**: Home Assistant has a native MCP integration (added in HA 2024.11). Enable it — it auto-exposes all HA entities as MCP tools (lights, sensors, switches). No separate service to write or maintain.
+- **Access layer**: Claude Android app needs HTTPS. Use Tailscale Serve to provision a TLS endpoint at `https://neurosys.<tailnet>.ts.net` without public internet exposure. Keeps MCP server Tailscale-only (same security posture as all other internal services); Tailscale Serve handles Let's Encrypt certs automatically.
+- **CO2 data**: Assumed to come from a HA sensor (ESPHome device or Hue sensor). If not yet in HA, note that the CO2 sensor must be paired first before MCP can surface it.
+
+**Deliverables:**
+1. `modules/home-assistant.nix` — enable `mcp_server` integration, HA long-lived access token via sops secret
+2. `modules/networking.nix` — add any new ports to `internalOnlyPorts`
+3. Tailscale Serve config in NixOS to proxy HA MCP endpoint over HTTPS
+4. `secrets/neurosys.yaml` — add HA long-lived token (sops-encrypted)
+5. Manual verification: Claude Android app connects and can toggle a light + read a sensor via voice
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 34 to break down)
+
+### Phase 35: Unified Messaging Bridge — Signal + WhatsApp + Telegram → AI
+
+**Goal:** Self-hosted Matrix hub (Conduit) with mautrix bridges for Telegram, WhatsApp, and Signal, giving AI read access to all DMs. All packages are in nixpkgs — no Docker needed.
+
+**Architecture:**
+- Conduit (Rust, ~32MB RAM) as Matrix homeserver — `services.matrix-conduit`, federation disabled
+- mautrix-telegram — official MTProto API, highest stability, no account ban risk
+- mautrix-whatsapp — unofficial WA Web protocol, `services.mautrix-whatsapp`, medium ban risk (documented)
+- mautrix-signal — signal-cli backend, `services.mautrix-signal`, medium stability
+- AI read access: dedicated Matrix bot user + Client-Server API (`/sync`, `/messages`) — no admin privilege needed
+- All services Tailscale-only; ports in `internalOnlyPorts`
+
+**Historical data strategy** (bridges only sync forward — history goes to Spacebot LanceDB):
+- Telegram: official JSON export → one-time ingest script
+- Signal: Android `.backup` → `signalbackup-tools` decrypt → one-time ingest
+- WhatsApp: `.zip` export (.txt) → one-time ingest
+
+**Security notes:**
+- E2E encryption breaks at bridge by design (messages decrypted on server) — self-hosted mitigates trust concern
+- sops-nix for all bridge credentials (Telegram API id/hash, Signal registration, WA pairing code)
+- mautrix-signal: `MemoryDenyWriteExecute=false` required for libsignal JIT (systemd hardening caveat)
+- WA account detection/disconnection risk: documented as accepted risk
+
+**Depends on:** Phase 34
+**Plans:** 3 plans
+
+Plans:
+- [ ] 35-01: Conduit homeserver + mautrix-telegram (prove architecture, lowest risk first)
+- [ ] 35-02: mautrix-whatsapp + mautrix-signal bridges (add remaining platforms, document WA ban risk)
+- [ ] 35-03: AI read bot + historical ingest pipeline (Matrix CS API bot → Spacebot LanceDB; one-time import scripts)
