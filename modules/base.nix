@@ -47,6 +47,7 @@
     fd
     btop
     nodejs
+    cachix
   ];
 
   programs.ssh.startAgent = true;

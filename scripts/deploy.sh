@@ -258,6 +258,21 @@ if [[ "$FAILED" -eq 0 ]]; then
     echo "  ${s}: ${STATUS}"
   done
   echo ""
+
+  # --- Push system closure to Cachix ---
+  echo "==> Pushing system closure to dan-testing.cachix.org..."
+  if ssh "${SSH_OPTS[@]}" "$TARGET" 'command -v cachix &>/dev/null' 2>/dev/null; then
+    ssh "${SSH_OPTS[@]}" "$TARGET" \
+      'CACHIX_AUTH_TOKEN=$(cat /run/secrets/cachix-auth-token) \
+       nix path-info --recursive /nix/var/nix/profiles/system \
+       | cachix push dan-testing' \
+      && echo "==> Cachix push complete." \
+      || echo "WARNING: Cachix push failed (non-fatal)."
+  else
+    echo "  cachix not yet in PATH — will push on next deploy after this one installs it."
+  fi
+  echo ""
+
   if [[ "$SKIP_UPDATE" == false ]]; then
     echo "NOTE: flake.lock was updated. Remember to commit when ready:"
     echo "  git add flake.lock && git commit -m \"chore: update parts input to $PARTS_REV_SHORT\""

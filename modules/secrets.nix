@@ -29,6 +29,9 @@
       sopsFile = lib.mkForce ../secrets/neurosys.yaml;
     };
 
+    # Cachix auth token — used by deploy.sh to push system closure after each deploy
+    secrets."cachix-auth-token" = {};
+
     templates."restic-b2-env" = {
       content = ''
         AWS_ACCESS_KEY_ID=${config.sops.placeholder."b2-account-id"}
