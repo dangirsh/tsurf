@@ -1,6 +1,6 @@
 # @decision: Package names are `claude-code` and `codex` from llm-agents overlay
 #   (not `llm-agents-claude-code` — the overlay adds packages directly to pkgs namespace)
-# @decision: Using `systemd-run --user --scope` for agent-spawn so dangirsh can run
+# @decision: Using `systemd-run --user --scope` for agent-spawn so myuser can run
 #   without root. Requires linger (set below) for persistent user systemd instance.
 # @decision SANDBOX-11-01: agent-spawn runs in bubblewrap by default; --no-sandbox is explicit opt-out.
 # @decision SANDBOX-11-01: Podman is enabled rootless; dockerCompat=false (conflicts with Docker)
@@ -100,8 +100,8 @@ let
       Sandbox policy for agent '$NAME'
       Project (rw): $PROJECT_DIR
       Visible (ro): /nix/store, /run/current-system, /etc (selected), /data/projects (siblings)
-      Visible (rw): $PROJECT_DIR, /home/dangirsh/.local/share/containers, /run/user/$(id -u)/containers
-      Hidden: /run/secrets, /home/dangirsh/.ssh, /var/run/docker.sock
+      Visible (rw): $PROJECT_DIR, /home/myuser/.local/share/containers, /run/user/$(id -u)/containers
+      Hidden: /run/secrets, /home/myuser/.ssh, /var/run/docker.sock
       Namespaces: PID (isolated /proc), cgroup (isolated), user, IPC, UTS
       Limits: systemd slice=agent.slice CPUWeight=100 TasksMax=4096, /tmp tmpfs=4GiB
       Podman: enabled (rootless, docker->podman via sandbox PATH shim)
@@ -140,8 +140,8 @@ let
         --ro-bind /nix/var/nix/gcroots /nix/var/nix/gcroots
 
         --ro-bind /run/current-system /run/current-system
-        --ro-bind-try /etc/profiles/per-user/dangirsh /etc/profiles/per-user/dangirsh
-        --ro-bind-try /home/dangirsh/.nix-profile /home/dangirsh/.nix-profile
+        --ro-bind-try /etc/profiles/per-user/myuser /etc/profiles/per-user/myuser
+        --ro-bind-try /home/myuser/.nix-profile /home/myuser/.nix-profile
 
         --ro-bind /etc/resolv.conf /etc/resolv.conf
         --ro-bind /etc/passwd /etc/passwd
@@ -163,20 +163,20 @@ let
         --ro-bind /data/projects /data/projects
         --bind "$PROJECT_DIR" "$PROJECT_DIR"
 
-        --dir /home/dangirsh
-        --dir /home/dangirsh/.config
-        --dir /home/dangirsh/.local
-        --dir /home/dangirsh/.local/share
-        --ro-bind-try /home/dangirsh/.gitconfig /home/dangirsh/.gitconfig
-        --ro-bind-try /home/dangirsh/.npmrc /home/dangirsh/.npmrc
-        --ro-bind-try /home/dangirsh/.claude /home/dangirsh/.claude
-        --ro-bind-try /home/dangirsh/.codex /home/dangirsh/.codex
-        --ro-bind-try /home/dangirsh/.config/opencode /home/dangirsh/.config/opencode
-        --bind-try /home/dangirsh/.local/share/opencode /home/dangirsh/.local/share/opencode
-        --bind-try /home/dangirsh/.pi/agent /home/dangirsh/.pi/agent
-        --bind-try /home/dangirsh/.gemini /home/dangirsh/.gemini
-        --ro-bind-try /home/dangirsh/.config/git /home/dangirsh/.config/git
-        --bind-try /home/dangirsh/.local/share/containers /home/dangirsh/.local/share/containers
+        --dir /home/myuser
+        --dir /home/myuser/.config
+        --dir /home/myuser/.local
+        --dir /home/myuser/.local/share
+        --ro-bind-try /home/myuser/.gitconfig /home/myuser/.gitconfig
+        --ro-bind-try /home/myuser/.npmrc /home/myuser/.npmrc
+        --ro-bind-try /home/myuser/.claude /home/myuser/.claude
+        --ro-bind-try /home/myuser/.codex /home/myuser/.codex
+        --ro-bind-try /home/myuser/.config/opencode /home/myuser/.config/opencode
+        --bind-try /home/myuser/.local/share/opencode /home/myuser/.local/share/opencode
+        --bind-try /home/myuser/.pi/agent /home/myuser/.pi/agent
+        --bind-try /home/myuser/.gemini /home/myuser/.gemini
+        --ro-bind-try /home/myuser/.config/git /home/myuser/.config/git
+        --bind-try /home/myuser/.local/share/containers /home/myuser/.local/share/containers
 
         --dir /run/user
         --dir "$RUNTIME_DIR"
@@ -184,12 +184,12 @@ let
         --ro-bind-try "$RUNTIME_DIR/podman" "$RUNTIME_DIR/podman"
 
         --clearenv
-        --setenv HOME /home/dangirsh
-        --setenv USER dangirsh
+        --setenv HOME /home/myuser
+        --setenv USER myuser
         --setenv SHELL /bin/bash
         --setenv TERM "$TERM_VALUE"
         --setenv LANG C.UTF-8
-        --setenv PATH ${sandbox-docker-compat}/bin:${zmx}/bin:/run/current-system/sw/bin:/etc/profiles/per-user/dangirsh/bin:/home/dangirsh/.nix-profile/bin:/nix/var/nix/profiles/default/bin
+        --setenv PATH ${sandbox-docker-compat}/bin:${zmx}/bin:/run/current-system/sw/bin:/etc/profiles/per-user/myuser/bin:/home/myuser/.nix-profile/bin:/nix/var/nix/profiles/default/bin
         --setenv SANDBOX 1
         --setenv SANDBOX_NAME "$NAME"
         --setenv SANDBOX_PROJECT "$PROJECT_DIR"
@@ -202,13 +202,11 @@ let
       fi
 
       if [ -n "$ANTHROPIC_KEY" ]; then
-        if [[ "$PROJECT_DIR" == /data/projects/claw-swap* ]]; then
-          # Secret proxy: real key never enters sandbox; placeholder + proxy base URL used instead.
-          BWRAP_ARGS+=( --setenv ANTHROPIC_API_KEY "sk-ant-api03-proxy0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000AA" )
-          BWRAP_ARGS+=( --setenv ANTHROPIC_BASE_URL "http://127.0.0.1:9091" )
-        else
-          BWRAP_ARGS+=( --setenv ANTHROPIC_API_KEY "$ANTHROPIC_KEY" )
-        fi
+        # Private overlay: wire ANTHROPIC_BASE_URL for projects using the secret proxy.
+        # Example: if [[ "$PROJECT_DIR" == /data/projects/my-project* ]]; then
+        #   BWRAP_ARGS+=( --setenv ANTHROPIC_BASE_URL "http://127.0.0.1:9091" )
+        # fi
+        BWRAP_ARGS+=( --setenv ANTHROPIC_API_KEY "$ANTHROPIC_KEY" )
       fi
 
       if [ -n "$OPENAI_KEY" ]; then
@@ -303,14 +301,14 @@ in
   };
 
   # Pre-create audit log directory for agent-spawn.
-  # NOTE (SEC-17-04): spawn.log is writable by dangirsh -- a compromised agent
+  # NOTE (SEC-17-04): spawn.log is writable by myuser -- a compromised agent
   # could tamper with it. For forensic-grade audit integrity, forward spawn events
   # to journald (systemd-cat) in a future hardening pass. Current risk: LOW
   # (operational log, not security boundary).
   systemd.tmpfiles.rules = [
-    "d /data/projects/.agent-audit 0750 dangirsh users -"
+    "d /data/projects/.agent-audit 0750 myuser users -"
   ];
 
   # User linger for persistent systemd user instance (needed for systemd-run --user)
-  users.users.dangirsh.linger = true;
+  users.users.myuser.linger = true;
 }

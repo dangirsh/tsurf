@@ -1,5 +1,5 @@
 # modules/syncthing.nix
-# @decision SVC-02: Syncthing runs as user dangirsh with fully declarative devices/folders.
+# @decision SVC-02: Syncthing runs as user myuser with fully declarative devices/folders.
 # @decision SVC-03: GUI/API binds 0.0.0.0 — NixOS firewall restricts access to Docker bridges and Tailscale.
 { ... }: {
   systemd.services.syncthing.environment = {
@@ -7,15 +7,15 @@
   };
 
   systemd.tmpfiles.rules = [
-    "d /home/dangirsh/Sync 0755 dangirsh users -"
+    "d /home/myuser/Sync 0755 myuser users -"
   ];
 
   services.syncthing = {
     enable = true;
-    user = "dangirsh";
+    user = "myuser";
     group = "users";
-    dataDir = "/home/dangirsh";
-    configDir = "/home/dangirsh/.config/syncthing";
+    dataDir = "/home/myuser";
+    configDir = "/home/myuser/.config/syncthing";
     openDefaultPorts = true;
     guiAddress = "0.0.0.0:8384";
     overrideDevices = true;
@@ -23,11 +23,11 @@
 
     settings = {
       devices = {
-        "MacBook-Pro.local" = {
-          id = "LYQPMIK-QXAB6PL-T64O22N-GRNCANW-JYFZJJX-J5WGGR5-R2MQ5ZO-V23ZLQU";
+        "my-laptop" = {
+          id = "REPLACE-WITH-YOUR-DEVICE-ID-A";
         };
-        "Pixel 10 Pro" = {
-          id = "YBHZJDE-2XWYQN2-LOONB2Z-UICZJAC-VNHP56V-LU4BPFW-KRCCPWX-AH5BXQY";
+        "my-phone" = {
+          id = "REPLACE-WITH-YOUR-DEVICE-ID-B";
         };
       };
 
@@ -35,10 +35,10 @@
         "sync" = {
           id = "sync";
           label = "Sync";
-          path = "/home/dangirsh/Sync";
+          path = "/home/myuser/Sync";
           devices = [
-            "MacBook-Pro.local"
-            "Pixel 10 Pro"
+            "my-laptop"
+            "my-phone"
           ];
           type = "sendreceive";
           rescanIntervalS = 60;

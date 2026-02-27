@@ -1,7 +1,7 @@
 # modules/home-assistant.nix
 # @decision HA-01: Native NixOS service, not Docker container
 # @decision HA-02: GUI accessible via Tailscale only (same pattern as Syncthing)
-# @decision HA-03: Automations managed in dangirsh/home-assistant-config (GitHub, private)
+# @decision HA-03: Automations managed in example-user/home-assistant-config (GitHub, private)
 #   and cloned to /var/lib/hass/config-repo on activation. Wired via config.automation
 #   using HA's built-in !include YAML tag (supported by the NixOS module's renderYAMLFile
 #   sed post-processor which unquotes '!tag arg' strings).
@@ -56,7 +56,7 @@
     openFirewall = false;
   };
 
-  # Clone dangirsh/home-assistant-config into /var/lib/hass/config-repo.
+  # Clone example-user/home-assistant-config into /var/lib/hass/config-repo.
   # Uses the same github-pat credential pattern as repos.nix (store-file, no token in args).
   # On clone failure, a placeholder automations.yaml is written so HA starts cleanly.
   # The placeholder is replaced on the next successful activation.
@@ -75,7 +75,7 @@
           printf 'https://x-access-token:%s@github.com\n' "$GH_TOKEN" > "$CRED_FILE"
           GIT_TERMINAL_PROMPT=0 ${pkgs.git}/bin/git \
             -c credential.helper="store --file=$CRED_FILE" \
-            clone "https://github.com/dangirsh/home-assistant-config.git" \
+            clone "https://github.com/example-user/home-assistant-config.git" \
             "$HA_REPO_DIR" \
             || echo "WARNING: Failed to clone home-assistant-config (will retry on next activation)"
           rm -f "$CRED_FILE"
