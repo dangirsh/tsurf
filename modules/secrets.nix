@@ -29,12 +29,7 @@
     secrets."openclaw-ari-gateway-token"     = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
 
     # --- Matrix / messaging bridge secrets ---
-    secrets."telegram-api-id" = {
-      sopsFile = lib.mkForce ../secrets/neurosys.yaml;
-    };
-    secrets."telegram-api-hash" = {
-      sopsFile = lib.mkForce ../secrets/neurosys.yaml;
-    };
+    # telegram-api-id and telegram-api-hash managed by parts module (parts.yaml)
     secrets."matrix-registration-token" = {
       sopsFile = lib.mkForce ../secrets/neurosys.yaml;
     };
