@@ -150,7 +150,7 @@ in {
         chown root:nginx "$key_file"
         chmod 640 "$key_file"
         chmod 644 "$cert_file"
-        chmod 750 "$cert_dir"
+        chmod 755 "$cert_dir"
         echo "openclaw-mark-tls-cert: generated self-signed cert for ${tailscaleIp}"
       fi
     '';

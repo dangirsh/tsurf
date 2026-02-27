@@ -78,8 +78,14 @@ lib.mkIf isNeurosys
   };
 
   # --- mautrix-whatsapp bridge ---
+  # @decision MTX-04: Disabled pending legacy config migration.
+  # @rationale: /persist/var/lib/mautrix-whatsapp/config.yaml is in old Python bridge JSON format.
+  #   The Go v3 bridge (v26.01) detects it as legacy and exits with:
+  #   "Legacy bridge config detected, but hacky network config migrator is not set"
+  #   Fix: move/remove the old config, re-register the appservice in Conduit with new tokens.
+  #   See: https://github.com/mautrix/whatsapp/blob/main/CHANGELOG.md (v0.10.0 migration notes)
   services.mautrix-whatsapp = {
-    enable = true;
+    enable = false;
     serviceDependencies = [ "conduit.service" ];
     settings = {
       homeserver = {
@@ -105,8 +111,11 @@ lib.mkIf isNeurosys
   };
 
   # --- mautrix-signal bridge ---
+  # @decision MTX-05: Disabled pending legacy config migration.
+  # @rationale: Same as MTX-04 — /persist/var/lib/mautrix-signal/config.yaml is old JSON format.
+  #   Must migrate or regenerate config (preserving appservice tokens) before re-enabling.
   services.mautrix-signal = {
-    enable = true;
+    enable = false;
     serviceDependencies = [ "conduit.service" ];
     settings = {
       homeserver = {
