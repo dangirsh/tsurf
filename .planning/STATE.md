@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 37 IN PROGRESS — Plan 37-01 privacy audit complete. Next: Plans 37-02 (private overlay guide) and 37-03 (lean README). Phase 39 plan 39-01 also complete (conway-dashboard repo created); 39-02 pending.
+**Current focus:** Phase 37 COMPLETE — all 3 plans executed (privacy audit, private overlay guide, lean README). Repo is open-source ready. Phase 39 at 39-01 complete; 39-02 pending (neurosys wiring).
 
 ## Current Position
 
-Phase: 37 (Open Source Prep) — IN PROGRESS
-Plan: 1 of 3 — 37-01 COMPLETE
-Status: Privacy audit finished. Personal identifiers and private repo/service wiring removed from public module set; `nix flake check` passes after decoupling private assumptions.
-Last activity: 2026-02-27 - Completed Phase 37 Plan 01 (privacy audit); also completed Phase 39-01 (conway-dashboard repo creation, ready for 39-02 wiring).
+Phase: 37 (Open Source Prep) — COMPLETE
+Plan: 3 of 3 — ALL COMPLETE
+Status: Privacy audit + private overlay guide + lean README all shipped. Repo sanitized of personal identifiers; nixosModules.default exported; docs/private-overlay.md shows overlay pattern; README rewritten for public audience.
+Last activity: 2026-02-27 - Completed all 3 plans of Phase 37 (open source prep). LICENSE added.
 
-Progress: Phase 37 now at 1/3 plans complete (37-01 done; 37-02 and 37-03 pending). Phase 39 at 1/2 (39-01 done; 39-02 pending). Phase 35 plan 35-02 remains checkpoint-ready (human deploy/account-link action).
+Progress: Phase 37 complete (3/3 plans). Phase 39 at 1/2 (39-01 done; 39-02 pending). Phase 35 plan 35-02 remains checkpoint-ready (human deploy/account-link action).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: ~16.7min
-- Total execution time: ~384 min
+- Total plans completed: 26
+- Average duration: ~16.0min
+- Total execution time: ~406 min
 
 **By Phase:**
 
@@ -46,11 +46,12 @@ Progress: Phase 37 now at 1/3 plans complete (37-01 done; 37-02 and 37-03 pendin
 | 21 | 1/2 | ~10min | ~10min |
 | 27 | 2/5 | ~16min | ~8min |
 | 28 | 2/4 | ~22min | ~11min |
+| 37 | 3/3 | ~21min | ~7min |
 | 39 | 1/2 | ~20min | ~20min |
 
 **Recent Trend:**
-- Last 4 plans: 37-01 (~11min), 39-01 (~20min), 36-01 (~22min), 35-02 (~38min)
-- Trend: Execution remains stable; recent work mixes research, planning, and short execution plans.
+- Last 4 plans: 37-03 (~5min), 37-02 (~5min), 37-01 (~11min), 39-01 (~20min)
+- Trend: Execution stable; Phase 37 open-source prep completed in ~21min total across 3 plans.
 
 *Updated after each plan completion*
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - [37-01]: Public flake now exports `nixosModules.default` and removes private inputs/services from default imports.
 - [37-01]: Username, SSH keys, and git identity are sanitized to template-safe placeholders (`myuser`, placeholder key comments, generic name/email).
 - [37-01]: Private service bindings moved behind private overlay boundaries; public config passes `nix flake check` without private-module assumptions.
+- [37-02]: Private overlay pattern documented in docs/private-overlay.md — complete flake.nix skeleton using nixosModules.default as base layer with follows pins.
+- [37-03]: README rewritten from 391→98 lines; agent tooling is primary differentiator; all personal identifiers removed.
 
 - [06-01]: Syncthing GUI binds 0.0.0.0:8384, restricted via trustedInterfaces (not IP binding)
 - [06-01]: allowUnfreePredicate for claude-code added to base.nix (pre-existing Phase 5 issue)
@@ -187,6 +190,11 @@ Recent decisions affecting current work:
 
 ### Completed Phases
 
+- **Phase 37: Open Source Prep** (3 plans, completed 2026-02-27)
+  - 37-01: Privacy audit — personal identifiers, private inputs, private service bindings removed; `nix flake check` passes
+  - 37-02: Private overlay guide — docs/private-overlay.md with complete annotated flake skeleton
+  - 37-03: README rewrite — 391→98 lines; principle-first; agent tooling as primary differentiator; zero personal identifiers
+
 - **Phase 36: Research stereOS Ecosystem** (1 plan, completed 2026-02-27)
   - 36-01: Source-level analysis of all 6 papercomputeco repos (agentd, masterblaster, stereosd, stereOS, tapes, flake-skills). Recommendation: **Partial Adoption** (KVM blocks full stereOS on Contabo; sops-nix superior for persistent VPS). Top actions: adopt agentd as NixOS service (→ Phase 40), steal Harness interface + jcard.toml config schema. agentd reconciliation-loop daemon replaces one-shot agent-spawn.
 
@@ -308,5 +316,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 39 plan 39-01 complete; phase 39-02 pending. Phase 35 remains at 35-02-E checkpoint (human deploy/account linking required).
+Stopped at: Phase 37 COMPLETE (all 3 plans: privacy audit + private overlay guide + lean README). Phase 39 at 39-01 complete; 39-02 pending. Phase 35 remains at 35-02-E checkpoint.
 Next: Execute plan 39-02 (wire `conway-dashboard` input into neurosys modules + networking + homepage + repos), then continue checkpointed human action for 35-02-E.
