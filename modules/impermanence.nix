@@ -50,7 +50,6 @@
       "/var/lib/openclaw-lou"                # OpenClaw gateway state — lou instance
       "/var/lib/openclaw-alexia"             # OpenClaw gateway state — alexia instance
       "/var/lib/openclaw-ari"                # OpenClaw gateway state — ari instance
-      "/var/lib/openclaw-nginx-ssl"          # Self-signed TLS cert for mark's Tailscale HTTPS proxy
 
       # --- User data ---
       "/home/dangirsh"                     # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh

@@ -111,8 +111,8 @@ in {
     virtualHosts."${tailscaleIp}" = {
       onlySSL = true;
       listen = [{ addr = tailscaleIp; port = 443; ssl = true; }];
-      sslCertificate = "/var/lib/openclaw-nginx-ssl/cert.pem";
-      sslCertificateKey = "/var/lib/openclaw-nginx-ssl/key.pem";
+      sslCertificate = "/persist/var/lib/openclaw-nginx-ssl/cert.pem";
+      sslCertificateKey = "/persist/var/lib/openclaw-nginx-ssl/key.pem";
       extraConfig = ''
         ssl_stapling off;
         ssl_stapling_verify off;
@@ -125,13 +125,14 @@ in {
 
   };
 
-  # Generate the self-signed cert once; persist across reboots (see impermanence.nix).
+  # Generate the self-signed cert once; persist across reboots.
   # Regenerates only if the cert file is absent — fingerprint stays stable after first deploy.
   #
-  # @decision WEB-12: Write cert to /persist/var/lib/openclaw-nginx-ssl (not /var/...).
-  # @rationale: NixOS activation scripts run before impermanence bind-mounts are activated
-  #   by systemd. Writing directly to /persist means the cert exists in the bind-mount
-  #   source dir, so nginx can read it at /var/lib/openclaw-nginx-ssl/cert.pem at boot.
+  # @decision WEB-12: Store cert directly in /persist/var/lib/openclaw-nginx-ssl (no bind-mount).
+  # @rationale: An impermanence bind-mount was tried first, but NixOS activation restarts
+  #   nginx before systemd activates the new mount unit — so nginx can't find the cert.
+  #   /persist is a BTRFS subvolume mounted at early boot (before any services), so nginx
+  #   can always read /persist/var/lib/... without any mount ordering dependency.
   system.activationScripts.openclaw-mark-tls-cert = {
     text = ''
       cert_dir=/persist/var/lib/openclaw-nginx-ssl
@@ -153,4 +154,5 @@ in {
     '';
     deps = [ "users" ];
   };
+
 }
