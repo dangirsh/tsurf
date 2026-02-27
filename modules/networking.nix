@@ -19,8 +19,10 @@ let
     "9090" = "prometheus (localhost)";
     "9091" = "anthropic-secret-proxy";
     "9100" = "node-exporter";
+    "18789" = "openclaw-mark (Tailscale-only)";
     "18790" = "openclaw-lou (Tailscale-only)";
     "18791" = "openclaw-alexia (Tailscale-only)";
+    "18792" = "openclaw-ari (Tailscale-only)";
     "19898" = "spacebot api/web";
     "29317" = "mautrix-telegram";
     "29318" = "mautrix-whatsapp";

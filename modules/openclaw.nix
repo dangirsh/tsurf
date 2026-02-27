@@ -1,6 +1,6 @@
 # modules/openclaw.nix
 # OpenClaw — self-hosted AI assistant with WhatsApp/messaging integrations
-# Four isolated instances: mark (public), lou (Tailscale), alexia (Tailscale), ari (public)
+# Four isolated instances: mark (Tailscale), lou (Tailscale), alexia (Tailscale), ari (Tailscale)
 #
 # @decision OCL-01: Explicit per-instance declarations rather than parametric function.
 # @rationale: Exactly 4 instances with distinct visibility rules (nginx vs Tailscale).
@@ -23,9 +23,9 @@
 # @rationale: Config written only if absent — preserves user edits across rebuilds.
 #   gateway.mode must be "local" for self-hosted operation.
 #
-# @decision OCL-06: State dirs use 0777 tmpfiles permissions.
-# @rationale: Container runs as UID 1000 (node user). No host user maps to UID 1000.
-#   World-writable dir is simplest working approach. Document as known limitation.
+# @decision OCL-06: State dirs use 0750 tmpfiles permissions, owned by UID/GID 1000.
+# @rationale: Container runs as UID 1000 (node user). Setting owner to 1000:1000
+#   lets the container write while preventing other host processes from reading/writing.
 
 { config, pkgs, ... }:
 
@@ -46,10 +46,17 @@ let
       mode = "local";
       port = 18789;
       bind = "lan";
-      # @decision OCL-09: dangerouslyAllowHostHeaderOriginFallback required for nginx proxy.
-      # @rationale: When bind="lan", OpenClaw requires either explicit allowedOrigins or
-      #   this flag. Since nginx proxies with correct Host headers, the Host-header
-      #   fallback is safe here. Explicit origins would require per-domain config.
+      # @decision OCL-09: dangerouslyAllowHostHeaderOriginFallback used for Tailscale access.
+      # @rationale: All instances are Tailscale-only (direct IP, no proxy). The Host header
+      #   reflects the Tailscale IP/hostname the user connected to. For personal single-operator
+      #   use on a private VPN, Host-header origin fallback is acceptable.
+      auth = {
+        rateLimit = {
+          maxAttempts = 10;
+          windowMs = 60000;
+          lockoutMs = 300000;
+        };
+      };
       controlUi = {
         dangerouslyAllowHostHeaderOriginFallback = true;
       };
@@ -103,10 +110,10 @@ in {
   # --- State directories with permissions for container UID 1000 ---
 
   systemd.tmpfiles.rules = [
-    "d /var/lib/openclaw-mark    0777 root root -"
-    "d /var/lib/openclaw-lou     0777 root root -"
-    "d /var/lib/openclaw-alexia  0777 root root -"
-    "d /var/lib/openclaw-ari     0777 root root -"
+    "d /var/lib/openclaw-mark    0750 1000 1000 -"
+    "d /var/lib/openclaw-lou     0750 1000 1000 -"
+    "d /var/lib/openclaw-alexia  0750 1000 1000 -"
+    "d /var/lib/openclaw-ari     0750 1000 1000 -"
   ];
 
   # --- Activation script: seed openclaw.json for each instance ---
@@ -121,10 +128,11 @@ in {
         state_dir="/var/lib/openclaw-''${user}"
         mkdir -p "''${state_dir}"
         target="''${state_dir}/openclaw.json"
-        # Replace if absent OR if config has invalid keys from an old seed
-        if [ ! -f "''${target}" ] || grep -q '"model":\|"user":' "''${target}" 2>/dev/null; then
+        # Replace if: absent, has invalid keys from old seed, or has nginx-era trustedProxies (172.17.0.1)
+        if [ ! -f "''${target}" ] || grep -q '"model":\|"user":\|172\.17\.0\.1' "''${target}" 2>/dev/null; then
           cp "''${config_file}" "''${target}"
-          chmod 0666 "''${target}"
+          chown 1000:1000 "''${target}"
+          chmod 0640 "''${target}"
           echo "openclaw: seeded/fixed openclaw.json for ''${user}"
         fi
       done
@@ -134,11 +142,11 @@ in {
 
   # --- Container declarations ---
 
-  # mark: public HTTPS via nginx (bind to loopback)
+  # mark: Tailscale-only (bind to all interfaces; nftables internalOnlyPorts restricts public access)
   virtualisation.oci-containers.containers.openclaw-mark = {
     image = "ghcr.io/openclaw/openclaw:latest";
     volumes = [ "/var/lib/openclaw-mark:/home/node/.openclaw" ];
-    ports = [ "127.0.0.1:18789:18789" ];
+    ports = [ "18789:18789" ];
     environmentFiles = [ config.sops.templates."openclaw-mark-env".path ];
     cmd = [ "node" "openclaw.mjs" "gateway" "--allow-unconfigured" ];
   };
@@ -161,11 +169,11 @@ in {
     cmd = [ "node" "openclaw.mjs" "gateway" "--allow-unconfigured" ];
   };
 
-  # ari: public HTTPS via nginx (bind to loopback)
+  # ari: Tailscale-only (bind to all interfaces; nftables internalOnlyPorts restricts public access)
   virtualisation.oci-containers.containers.openclaw-ari = {
     image = "ghcr.io/openclaw/openclaw:latest";
     volumes = [ "/var/lib/openclaw-ari:/home/node/.openclaw" ];
-    ports = [ "127.0.0.1:18792:18789" ];
+    ports = [ "18792:18789" ];
     environmentFiles = [ config.sops.templates."openclaw-ari-env".path ];
     cmd = [ "node" "openclaw.mjs" "gateway" "--allow-unconfigured" ];
   };
