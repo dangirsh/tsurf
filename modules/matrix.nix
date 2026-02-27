@@ -78,10 +78,8 @@ lib.mkIf isNeurosys
   };
 
   # --- mautrix-whatsapp bridge ---
-  # TODO(phase-35): v26.01 NixOS module generates legacy JSON config that bridge rejects.
-  # Disabled until config format is fixed upstream or patched locally.
   services.mautrix-whatsapp = {
-    enable = false;
+    enable = true;
     serviceDependencies = [ "conduit.service" ];
     settings = {
       homeserver = {
@@ -107,10 +105,8 @@ lib.mkIf isNeurosys
   };
 
   # --- mautrix-signal bridge ---
-  # TODO(phase-35): v26.01 NixOS module generates legacy JSON config that bridge rejects.
-  # Disabled until config format is fixed upstream or patched locally.
   services.mautrix-signal = {
-    enable = false;
+    enable = true;
     serviceDependencies = [ "conduit.service" ];
     settings = {
       homeserver = {
