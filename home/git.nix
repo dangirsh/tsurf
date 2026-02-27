@@ -1,8 +1,8 @@
 { config, pkgs, ... }: {
   programs.git = {
     enable = true;
-    userName = "Dan Girshovich";
-    userEmail = "dan.girshovich@gmail.com";
+    userName = "Your Name";
+    userEmail = "your@email.com";
   };
 
   programs.gh = {

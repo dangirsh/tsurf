@@ -10,17 +10,8 @@
   time.timeZone = "Europe/Berlin";
   i18n.defaultLocale = "C.UTF-8";
 
-  # --- Static IP (Contabo VPS does not use DHCP) ---
+  # Static IP config is host-specific — set in your private overlay or directly here.
   networking.useDHCP = false;
-  networking.interfaces.eth0.ipv4.addresses = [{
-    address = "161.97.74.121";
-    prefixLength = 18;
-  }];
-  networking.defaultGateway = {
-    address = "161.97.64.1";
-    interface = "eth0";
-  };
-  networking.nameservers = [ "213.136.95.10" "213.136.95.11" ];
 
   # --- Host-specific shared module settings ---
   boot.loader.grub.device = "/dev/sda";
