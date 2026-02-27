@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 44 execution in progress. Plan 44-01 tasks A/B are complete (CO2 automations committed/pushed in `home-assistant-config`); task C is a human-action checkpoint (server pull + automation reload + live verification).
+**Current focus:** Phase 38 execution complete. Plan 38-01 established dual-host role separation (shared module base + per-host imports) and fixed node-aware deploy health checks.
 
 ## Current Position
 
-Phase: 44 (Android CO2 Alert) — IN PROGRESS
-Plan: 44-01 — Tasks A/B COMPLETE, task C pending (`checkpoint:human-action`)
-Status: Added two HA automations in `dangirsh/home-assistant-config` (`co2_alert_high`, `co2_alert_recovery`) with threshold/hysteresis and shared `tag: co2-alert`; committed and pushed to `main` as `4c3679a`.
-Last activity: 2026-02-27 - Executed 44-01 task A/B, YAML parse check passed, wrote neurosys `.claude/.test-status`, and updated planning artifacts.
+Phase: 38 (Dual-Host Role Separation) — COMPLETE
+Plan: 38-01 — COMPLETE
+Status: Shared module set reduced to 11 modules; `homepage`/`restic` moved to `hosts/neurosys`; `repos` moved to `hosts/ovh`; `deploy.sh` health checks now depend on `--node`; parts/cachix reporting guarded to neurosys-only deploys.
+Last activity: 2026-02-27 - Executed 38-01 end-to-end, resolved a stale shared secret declaration blocker, and passed `nix flake check` for both hosts.
 
-Progress: Phase 44 is at deployment checkpoint (task C). Phase 39 remains complete; phase-39-02 neurosys wiring stays deferred to private overlay per phase-37 architecture.
+Progress: Phase 38 is complete and ready for follow-on deploy execution. Phase 44 remains pending at task C (`checkpoint:human-action`) in its own workflow.
 
 ## Performance Metrics
 
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - [37-01]: Private service bindings moved behind private overlay boundaries; public config passes `nix flake check` without private-module assumptions.
 - [37-02]: Private overlay pattern documented in docs/private-overlay.md — complete flake.nix skeleton using nixosModules.default as base layer with follows pins.
 - [37-03]: README rewritten from 391→98 lines; agent tooling is primary differentiator; all personal identifiers removed.
+- [38-01]: `modules/default.nix` now exports only shared modules; host-specific `homepage`/`restic` and `repos` imports moved to `hosts/*/default.nix`.
+- [38-01]: `scripts/deploy.sh` service health checks are node-conditional (`neurosys`: parts/postgresql/claw-swap; `ovh`: prometheus/syncthing/tailscaled).
+- [38-01]: Parts update/revision and Cachix push paths are guarded for neurosys-only deploys; OVH deploys no longer touch parts-specific logic.
 
 - [06-01]: Syncthing GUI binds 0.0.0.0:8384, restricted via trustedInterfaces (not IP binding)
 - [06-01]: allowUnfreePredicate for claude-code added to base.nix (pre-existing Phase 5 issue)
