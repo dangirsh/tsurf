@@ -744,14 +744,14 @@ Plans:
 - [ ] 35-02: mautrix-whatsapp + mautrix-signal bridges (add remaining platforms, document WA ban risk)
 - [ ] 35-03: AI read bot + historical ingest pipeline (Matrix CS API bot → Spacebot LanceDB; one-time import scripts)
 
-### Phase 36: Research stereOS ecosystem (stereOS, masterblaster, stereosd, agentd) — study all repos comprehensively and generate a report on what we can learn/steal for neurosys, plus a recommendation on whether to switch from NixOS to stereOS
+### [x] Phase 36: Research stereOS ecosystem (stereOS, masterblaster, stereosd, agentd)
 
-**Goal:** [To be planned]
-**Depends on:** Phase 35
-**Plans:** 0 plans
+**Goal:** Comprehensive source-level study of stereOS ecosystem (agentd, masterblaster, stereosd, stereOS, tapes, flake-skills) — adoption table, switch recommendation, action items for neurosys roadmap
+**Depends on:** None (standalone research, no Phase 35 dependency)
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 36 to break down)
+- [x] 36-01: Clone repos, deep-read source, write research report with adoption table and switch recommendation (complete)
 
 ### Phase 37: Open Source Prep
 
@@ -780,3 +780,12 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 39 to break down)
+
+### Phase 40: agentd Integration — Supervised Agent Lifecycle
+
+**Goal:** Replace one-shot `agent-spawn` with agentd for supervised agent lifecycle management. Add reconciliation-loop daemon with restart policy (on-failure/always), HTTP API for agent status monitoring, and jcard.toml declarative config. Keep bubblewrap sandbox. Wire agentd secret dir to sops-nix `/run/secrets/`.
+**Depends on:** Phase 38 (dual-host separation — agentd should live on the OVH dev-agent host)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 40 to break down)
