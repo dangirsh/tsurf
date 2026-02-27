@@ -12,6 +12,7 @@ let
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
   internalOnlyPorts = {
     "3000" = "claw-swap app (localhost, nginx-proxied)";
+    "6167" = "matrix-conduit";
     "8082" = "homepage-dashboard";
     "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
@@ -19,6 +20,9 @@ let
     "9091" = "anthropic-secret-proxy";
     "9100" = "node-exporter";
     "19898" = "spacebot api/web";
+    "29317" = "mautrix-telegram";
+    "29318" = "mautrix-whatsapp";
+    "29328" = "mautrix-signal";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;

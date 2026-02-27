@@ -37,6 +37,7 @@
       "/var/lib/fail2ban"                  # Ban database (nice-to-have; regenerated if lost)
       "/var/lib/hass"                      # Home Assistant state, automations, history DB
       "/var/lib/private"                   # DynamicUser services: ESPHome (/var/lib/private/esphome)
+      "/var/lib/mautrix-telegram"          # mautrix-telegram bridge state + registration.yaml
       "/var/lib/prometheus2"               # 90-day metrics history
       "/var/lib/prometheus-node-exporter"  # Textfile collector .prom files (restic timestamp)
       "/var/lib/acme"                      # Let's Encrypt ACME certs + account keys (rate limit protection)

@@ -17,5 +17,6 @@
     ./homepage.nix
     ./spacebot.nix
     ./automaton.nix
+    ./matrix.nix
   ];
 }

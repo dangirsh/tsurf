@@ -1,4 +1,4 @@
-{ config, ... }: {
+{ config, lib, ... }: {
   sops = {
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
@@ -21,6 +21,17 @@
       sopsFile = ../secrets/neurosys.yaml;
       owner = "automaton";
       group = "automaton";
+    };
+
+    # --- Matrix / messaging bridge secrets ---
+    secrets."telegram-api-id" = {
+      sopsFile = lib.mkForce ../secrets/neurosys.yaml;
+    };
+    secrets."telegram-api-hash" = {
+      sopsFile = lib.mkForce ../secrets/neurosys.yaml;
+    };
+    secrets."matrix-registration-token" = {
+      sopsFile = lib.mkForce ../secrets/neurosys.yaml;
     };
 
     templates."restic-b2-env" = {
