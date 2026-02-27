@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 36 COMPLETE — stereOS ecosystem research done. Partial adoption recommended: adopt agentd (Phase 40). Phase 35 still at checkpoint (35-02-E, human deploy/account-link required).
+**Current focus:** Phase 39 IN PROGRESS — Conway dashboard repo split-out complete (39-01). Next: wire as neurosys flake input + service module (39-02). Phase 35 still at checkpoint (35-02-E, human deploy/account-link required).
 
 ## Current Position
 
-Phase: 36 (Research: stereOS Ecosystem) — COMPLETE
-Plan: 1 of 1 — COMPLETE
-Status: Research complete. Partial adoption recommended. KVM blocks full stereOS on Contabo. agentd integration proposed as Phase 40. Phase 35 (mautrix bridges) still at human-action checkpoint 35-02-E.
-Last activity: 2026-02-27 - Completed Phase 36 research; wrote 36-REPORT.md with adoption table, switch recommendation, and Phase 40 proposal
+Phase: 39 (Conway Automaton Monitoring Dashboard) — IN PROGRESS
+Plan: 1 of 2 — 39-01 COMPLETE
+Status: Created and pushed private `dangirsh/conway-dashboard` repo with stdlib Python server (`/`, `/api/status`) and auto-refresh dashboard UI. Ready for 39-02 neurosys wiring.
+Last activity: 2026-02-27 - Completed 39-01; created https://github.com/dangirsh/conway-dashboard (PRIVATE), committed `server.py` + `dashboard.html`, verified GitHub contents and Python compile.
 
-Progress: Phase 35 plan 35-02 is checkpoint-ready (4/5 tasks complete, awaiting human deploy/account-link action). Phase 34 plan 34-01 remains checkpoint-ready with pending human deploy/UI tasks.
+Progress: Phase 39 plan 39-01 is complete; plan 39-02 remains. Phase 35 plan 35-02 is still checkpoint-ready (4/5 tasks complete, awaiting human deploy/account-link action).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
-- Average duration: ~16.5min
-- Total execution time: ~364 min
+- Total plans completed: 23
+- Average duration: ~16.7min
+- Total execution time: ~384 min
 
 **By Phase:**
 
@@ -46,10 +46,11 @@ Progress: Phase 35 plan 35-02 is checkpoint-ready (4/5 tasks complete, awaiting 
 | 21 | 1/2 | ~10min | ~10min |
 | 27 | 2/5 | ~16min | ~8min |
 | 28 | 2/4 | ~22min | ~11min |
+| 39 | 1/2 | ~20min | ~20min |
 
 **Recent Trend:**
-- Last 4 plans: 28-02 (~16min), 28-01 (~6min), 27-02 (~7min), 27-01 (~9min)
-- Trend: Execution remains stable with short, bounded plan delivery.
+- Last 4 plans: 39-01 (~20min), 36-01 (~22min), 35-02 (~38min), 35-01 (~21min)
+- Trend: Execution remains stable; recent work has shifted toward medium-duration integration and planning tasks.
 
 *Updated after each plan completion*
 
@@ -175,6 +176,9 @@ Recent decisions affecting current work:
 - [35-02]: Enabled `services.mautrix-whatsapp` (Go bridge, WA Web protocol) on appservice port `29318` with sqlite URI `sqlite:////var/lib/mautrix-whatsapp/mautrix-whatsapp.db`.
 - [35-02]: Enabled `services.mautrix-signal` (Go bridge, signal-cli backend) on appservice port `29328` with sqlite URI `sqlite:////var/lib/mautrix-signal/mautrix-signal.db`; set `MemoryDenyWriteExecute = false` for libsignal JIT.
 - [35-02]: Added MTX-03/MTX-04/MTX-05 decision annotations and persisted `/var/lib/mautrix-whatsapp` + `/var/lib/mautrix-signal` in impermanence.
+- [39-01]: DASH-08/09/10 implemented by creating standalone private repo `dangirsh/conway-dashboard` (`flake = false` target) for Conway dashboard app code.
+- [39-01]: Dashboard server uses Python stdlib only on port 9093; `/api/status` aggregates SQLite state (`kv`, `turns`, `inference_costs`, `goals`, `task_graph`, `tool_calls`, `identity`) with graceful per-query degradation.
+- [39-01]: Dashboard UI is a single self-contained HTML file polling `/api/status` every 5 seconds with status-color mapping, financial/activity panels, recent tool calls, and journald log view.
 
 ### Completed Phases
 
@@ -262,6 +266,7 @@ Recent decisions affecting current work:
 - Phase 43 added: tapes agent session telemetry — research-first (gap vs. Spacebot LanceDB + LangFuse/Helicone alternatives + privacy model); semantic search of agent conversations.
 - Phase 38 added: Dual-host role separation — Contabo = services host (HA, Spacebot, Matrix, monitoring, claw-swap), OVH = dev-agent host (agent-compute, Claude/Codex, sandbox, agent-spawn). Audit current module allocation, migrate misplaced services/modules, ensure deploy.sh covers both targets, verify Tailscale MagicDNS reachability for both.
 - Phase 39 added: Conway Automaton monitoring dashboard — lightweight Tailscale-only web UI showing live agent status (state, credits, turns, goal progress, tool calls, spend rate), linked from homepage dashboard.
+- Phase 39 progressing: 39-01 completed — private `dangirsh/conway-dashboard` repo created with `server.py` and `dashboard.html`; ready for 39-02 neurosys integration.
 
 ### Blockers/Concerns
 
@@ -298,5 +303,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 36 complete. Phase 35 still at 35-02-E checkpoint (human deploy required).
-Next: Two parallel threads — (1) Human runs Task 35-02-E: deploy neurosys, register mautrix bridges, complete WA QR + Signal device linking. (2) Plan Phase 40: agentd integration (adopt agentd as NixOS service, wire to sops-nix secrets, replace agent-spawn).
+Stopped at: Phase 39 plan 39-01 complete; phase 39-02 pending. Phase 35 remains at 35-02-E checkpoint (human deploy/account linking required).
+Next: Execute plan 39-02 (wire `conway-dashboard` input into neurosys modules + networking + homepage + repos), then continue checkpointed human action for 35-02-E.
