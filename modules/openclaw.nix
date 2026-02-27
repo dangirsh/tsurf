@@ -32,19 +32,34 @@
 let
   # Default openclaw.json configuration — seeded on first activation only.
   # Users can edit the file on the server; it will not be overwritten on rebuild.
-  mkOpenclawConfig = user: model: builtins.toJSON {
+  #
+  # @decision OCL-07: gateway.bind = "lan" required for Docker port-forwarding.
+  # @rationale: OpenClaw defaults to loopback binding inside the container, which
+  #   prevents Docker from forwarding host traffic to the container port. "lan"
+  #   binds to all interfaces (0.0.0.0) so Docker port mapping works correctly.
+  #
+  # @decision OCL-08: model and user are not valid openclaw.json keys (schema error).
+  # @rationale: OpenClaw config schema only accepts gateway.* keys. Model is set
+  #   via the ANTHROPIC_API_KEY env; user identity is gateway-level auth (token).
+  mkOpenclawConfig = _user: builtins.toJSON {
     gateway = {
       mode = "local";
       port = 18789;
+      bind = "lan";
+      # @decision OCL-09: dangerouslyAllowHostHeaderOriginFallback required for nginx proxy.
+      # @rationale: When bind="lan", OpenClaw requires either explicit allowedOrigins or
+      #   this flag. Since nginx proxies with correct Host headers, the Host-header
+      #   fallback is safe here. Explicit origins would require per-domain config.
+      controlUi = {
+        dangerouslyAllowHostHeaderOriginFallback = true;
+      };
     };
-    model = model;
-    user = user;
   };
 
-  openclawConfigMark    = pkgs.writeText "openclaw-mark.json"    (mkOpenclawConfig "mark" "anthropic/claude-opus-4-6");
-  openclawConfigLou     = pkgs.writeText "openclaw-lou.json"     (mkOpenclawConfig "lou" "anthropic/claude-opus-4-6");
-  openclawConfigAlexia  = pkgs.writeText "openclaw-alexia.json"  (mkOpenclawConfig "alexia" "anthropic/claude-opus-4-6");
-  openclawConfigAri     = pkgs.writeText "openclaw-ari.json"     (mkOpenclawConfig "ari" "anthropic/claude-opus-4-6");
+  openclawConfigMark    = pkgs.writeText "openclaw-mark.json"    (mkOpenclawConfig "mark");
+  openclawConfigLou     = pkgs.writeText "openclaw-lou.json"     (mkOpenclawConfig "lou");
+  openclawConfigAlexia  = pkgs.writeText "openclaw-alexia.json"  (mkOpenclawConfig "alexia");
+  openclawConfigAri     = pkgs.writeText "openclaw-ari.json"     (mkOpenclawConfig "ari");
 in {
 
   # --- Sops templates: env files with secrets (one per instance) ---
@@ -98,16 +113,19 @@ in {
 
   system.activationScripts.openclaw-state = {
     text = ''
-      # Seed openclaw.json for each instance (only if absent — preserves user edits)
+      # Seed or fix openclaw.json for each instance.
+      # Seeds if absent; replaces if config has known-invalid keys (model, user).
       for pair in "mark:${openclawConfigMark}" "lou:${openclawConfigLou}" "alexia:${openclawConfigAlexia}" "ari:${openclawConfigAri}"; do
         user="''${pair%%:*}"
         config_file="''${pair#*:}"
         state_dir="/var/lib/openclaw-''${user}"
         mkdir -p "''${state_dir}"
-        if [ ! -f "''${state_dir}/openclaw.json" ]; then
-          cp "''${config_file}" "''${state_dir}/openclaw.json"
-          chmod 0666 "''${state_dir}/openclaw.json"
-          echo "openclaw: seeded openclaw.json for ''${user}"
+        target="''${state_dir}/openclaw.json"
+        # Replace if absent OR if config has invalid keys from an old seed
+        if [ ! -f "''${target}" ] || grep -q '"model":\|"user":' "''${target}" 2>/dev/null; then
+          cp "''${config_file}" "''${target}"
+          chmod 0666 "''${target}"
+          echo "openclaw: seeded/fixed openclaw.json for ''${user}"
         fi
       done
     '';
