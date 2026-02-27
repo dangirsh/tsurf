@@ -1,13 +1,13 @@
-NixOS server config for an agentic development platform — declarative, batteries-included, Tailscale-only networking.
+NixOS server config for an agentic development platform. Declarative, batteries-included, Tailscale-only.
 
 ## Design Principles
 
-- **Declarative everything** — no imperative setup steps after initial deploy
-- **Tailscale-only internal networking** — all services Tailscale-gated by default; public firewall minimal
-- **Agents as first-class workloads** — bubblewrap sandboxing, cgroup isolation, multi-provider key injection
-- **Secrets never in the Nix store** — sops-nix age-encrypted, decrypted at activation
-- **Impermanent root** — BTRFS ephemeral `/` subvolume, explicit `/persist` state manifest
-- **Private config via overlay** — personal services and secrets stay in a separate private flake repo (see [docs/private-overlay.md](docs/private-overlay.md))
+- **Declarative everything**: no imperative setup steps after initial deploy
+- **Tailscale-only internal networking**: all services Tailscale-gated by default; public firewall minimal
+- **Agents as first-class workloads**: bubblewrap sandboxing, cgroup isolation, multi-provider key injection
+- **Secrets never in the Nix store**: sops-nix age-encrypted, decrypted at activation
+- **Impermanent root**: BTRFS ephemeral `/` subvolume, explicit `/persist` state manifest
+- **Private config via overlay**: personal services and secrets in a separate private flake repo (see [docs/private-overlay.md](docs/private-overlay.md))
 
 ## Modules
 
@@ -55,7 +55,7 @@ API keys (Anthropic, OpenAI, GitHub, Google, XAI, OpenRouter) are read from `/ru
 
 ## Secret Proxy
 
-Port 9091 listens on localhost. Specific projects route via `ANTHROPIC_BASE_URL=http://127.0.0.1:9091` instead of using the real key directly — the proxy forwards requests upstream with the real key injected server-side. The real key never enters the sandbox environment for proxy-routed projects. Wire project-specific routing in your private overlay (see `agent-compute.nix` placeholder comment).
+Port 9091 listens on localhost. Specific projects route via `ANTHROPIC_BASE_URL=http://127.0.0.1:9091` instead of using the real key directly; the proxy forwards requests upstream with the real key injected server-side. The real key never reaches the sandbox for proxy-routed projects. Wire project-specific routing in your private overlay (see `agent-compute.nix` placeholder comment).
 
 ## Networking
 
