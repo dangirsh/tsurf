@@ -2,15 +2,16 @@
 # scripts/deploy.sh — Deploy a selected neurosys NixOS flake node
 #
 # Modes:
-#   --mode local   (default) Build locally, deploy remotely via deploy-rs
-#   --mode remote  Build remotely via deploy-rs --remote-build
+#   --mode remote  (default) Build on target host via deploy-rs --remote-build
+#   --mode local   Build locally, deploy remotely via deploy-rs
 #
 # Flags:
 #   --node NAME         Flake node to deploy (default: neurosys; choices: neurosys, ovh)
 #   --target USER@HOST  Override SSH target (default depends on --node)
 #   --first-deploy  Disable magic rollback once for migration from nixos-rebuild
 #   --no-magic-rollback  Disable magic rollback for intentional network/SSH changes
-#   --skip-update  Skip 'nix flake update parts' step
+#   --skip-update  (no-op; parts update is skipped by default — use --update-parts to pull)
+#   --update-parts  Pull latest parts flake input before building
 #   --help         Print usage
 #
 # @decision Manual deploy only — no CI/CD. NixOS handles incrementality.
@@ -18,16 +19,18 @@
 # @decision Magic rollback enabled by default with 120s confirm timeout.
 # @decision Service health polling (30s) — systemd for parts, postgresql, claw-swap-app.
 # @decision No auto-commit of flake.lock — print reminder instead.
+# @decision Remote build default (DEPLOY-01): neurosys has 18 vCPU / 96 GB RAM — faster than
+#   local build + closure upload. Use --mode local for first deploys or when server is unreachable.
 set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 NODE="neurosys"
 TARGET=""
 TARGET_SET=false
-MODE="local"
+MODE="remote"
 FIRST_DEPLOY=false
 NO_MAGIC_ROLLBACK=false
-SKIP_UPDATE=false
+SKIP_UPDATE=true
 SECONDS=0
 
 SYSTEMD_SERVICES=("parts-tools" "parts-agent" "postgresql" "claw-swap-app")
@@ -39,9 +42,18 @@ LOCAL_LOCK=""
 REMOTE_LOCK_DIR=""
 REMOTE_LOCK_HELD=false
 
+# SSH multiplexing: reuse a single connection for all locking/health-check calls.
+# ControlPersist=60s keeps the master alive 60s after the last client exits.
+SSH_CTL="$FLAKE_DIR/tmp/deploy-ssh-%r@%h:%p"
+SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$SSH_CTL" -o "ControlPersist=60s")
+
 cleanup() {
   if [[ "$REMOTE_LOCK_HELD" == true ]]; then
-    ssh "$TARGET" "rm -rf '$REMOTE_LOCK_DIR'" 2>/dev/null || true
+    ssh "${SSH_OPTS[@]}" "$TARGET" "rm -rf '$REMOTE_LOCK_DIR'" 2>/dev/null || true
+  fi
+  # Close the SSH control master socket if one was opened.
+  if [[ -n "${TARGET:-}" ]]; then
+    ssh "${SSH_OPTS[@]}" -O exit "$TARGET" 2>/dev/null || true
   fi
 }
 trap cleanup EXIT
@@ -54,21 +66,22 @@ Deploy neurosys NixOS config to the selected deploy node.
 
 Options:
   --node NAME           Deploy flake node (neurosys|ovh, default: neurosys)
-  --mode local          Build locally, deploy remotely (default)
-  --mode remote         Build on target host via deploy-rs --remote-build
+  --mode remote         Build on target host via deploy-rs --remote-build (default)
+  --mode local          Build locally, deploy remotely
   --target U@H          Override SSH target (default by node)
   --first-deploy        Disable magic rollback for one-time migration
   --no-magic-rollback   Disable magic rollback for this deploy
-  --skip-update         Skip 'nix flake update parts' before building
+  --update-parts        Pull latest parts flake input before building
+  --skip-update         No-op (skipping parts update is now the default)
   --help                Show this help
 
 Examples:
-  ./scripts/deploy.sh                              # Deploy staging node (neurosys)
+  ./scripts/deploy.sh                              # Deploy neurosys (remote build, skip parts update)
+  ./scripts/deploy.sh --update-parts               # Deploy and pull latest parts first
   ./scripts/deploy.sh --node ovh                  # Deploy production node (ovh)
-  ./scripts/deploy.sh --node ovh --mode remote    # Remote-build deploy to ovh
+  ./scripts/deploy.sh --mode local                # Local build (fallback if server unreachable)
   ./scripts/deploy.sh --first-deploy               # First migration deploy from nixos-rebuild
   ./scripts/deploy.sh --no-magic-rollback          # Intentional networking change deploy
-  ./scripts/deploy.sh --skip-update                # Deploy without updating parts input
   ./scripts/deploy.sh --target root@1.2.3.4        # Explicit SSH target override
 USAGE
 }
@@ -97,8 +110,12 @@ while [[ $# -gt 0 ]]; do
       NO_MAGIC_ROLLBACK=true
       shift
       ;;
+    --update-parts)
+      SKIP_UPDATE=false
+      shift
+      ;;
     --skip-update)
-      SKIP_UPDATE=true
+      # no-op: parts update is skipped by default; use --update-parts to enable
       shift
       ;;
     --help)
@@ -152,18 +169,18 @@ pid=$$
 timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 sha=$GIT_SHA"
 
-if ! ssh "$TARGET" "mkdir '$REMOTE_LOCK_DIR' 2>/dev/null"; then
+if ! ssh "${SSH_OPTS[@]}" "$TARGET" "mkdir '$REMOTE_LOCK_DIR' 2>/dev/null"; then
   echo "ERROR: Deploy already in progress on the remote server."
   echo ""
   echo "Lock info:"
-  ssh "$TARGET" "cat '$REMOTE_LOCK_DIR/info.txt' 2>/dev/null" || echo "  (could not read lock metadata)"
+  ssh "${SSH_OPTS[@]}" "$TARGET" "cat '$REMOTE_LOCK_DIR/info.txt' 2>/dev/null" || echo "  (could not read lock metadata)"
   echo ""
   echo "If the previous deploy crashed, remove the lock manually:"
   echo "  ssh $TARGET rm -rf $REMOTE_LOCK_DIR"
   exit 1
 fi
 REMOTE_LOCK_HELD=true
-printf '%s\n' "$LOCK_INFO" | ssh "$TARGET" "cat > '$REMOTE_LOCK_DIR/info.txt'" 2>/dev/null || true
+printf '%s\n' "$LOCK_INFO" | ssh "${SSH_OPTS[@]}" "$TARGET" "cat > '$REMOTE_LOCK_DIR/info.txt'" 2>/dev/null || true
 
 # --- Update parts input ---
 if [[ "$SKIP_UPDATE" == false ]]; then
@@ -214,7 +231,7 @@ for attempt in $(seq 1 15); do
 
   # Check systemd services (parts-tools, parts-agent)
   for s in "${SYSTEMD_SERVICES[@]}"; do
-    if ! ssh "$TARGET" "systemctl is-active --quiet ${s}.service" 2>/dev/null; then
+    if ! ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl is-active --quiet ${s}.service" 2>/dev/null; then
       ALL_RUNNING=false
       FAILED=1
     fi
@@ -237,7 +254,7 @@ if [[ "$FAILED" -eq 0 ]]; then
   echo ""
   echo "Service status:"
   for s in "${SYSTEMD_SERVICES[@]}"; do
-    STATUS=$(ssh "$TARGET" "systemctl is-active ${s}.service" 2>/dev/null || echo "unknown")
+    STATUS=$(ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl is-active ${s}.service" 2>/dev/null || echo "unknown")
     echo "  ${s}: ${STATUS}"
   done
   echo ""
@@ -249,14 +266,14 @@ else
   echo "=== Deploy FAILED ==="
   echo "Services not active after 30s:"
   for s in "${SYSTEMD_SERVICES[@]}"; do
-    if ! ssh "$TARGET" "systemctl is-active --quiet ${s}.service" 2>/dev/null; then
+    if ! ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl is-active --quiet ${s}.service" 2>/dev/null; then
       echo "  - ${s}.service"
     fi
   done
   echo ""
   echo "All service status:"
   for s in "${SYSTEMD_SERVICES[@]}"; do
-    STATUS=$(ssh "$TARGET" "systemctl is-active ${s}.service" 2>/dev/null || echo "unknown")
+    STATUS=$(ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl is-active ${s}.service" 2>/dev/null || echo "unknown")
     echo "  ${s}: ${STATUS}"
   done
   echo ""
