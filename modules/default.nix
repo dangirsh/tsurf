@@ -7,17 +7,11 @@
     ./secrets.nix
     ./docker.nix
     ./monitoring.nix
-    ./home-assistant.nix
     ./syncthing.nix
     ./agent-compute.nix
     ./secret-proxy.nix
     ./impermanence.nix
     ./restic.nix
-    ./repos.nix
     ./homepage.nix
-    ./spacebot.nix
-    ./automaton.nix
-    ./matrix.nix
-    ./openclaw.nix
   ];
 }

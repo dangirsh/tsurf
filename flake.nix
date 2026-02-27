@@ -13,24 +13,6 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    parts = {
-      url = "github:dangirsh/personal-agent-runtime";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.sops-nix.follows = "sops-nix";
-    };
-    claw-swap = {
-      url = "github:dangirsh/claw-swap";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.sops-nix.follows = "sops-nix";
-    };
-    dangirsh-site = {
-      url = "github:dangirsh/dangirsh.org";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    automaton = {
-      url = "github:Conway-Research/automaton";
-      flake = false;
-    };
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -52,7 +34,8 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, parts, claw-swap, dangirsh-site, automaton, llm-agents, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
+  # Private overlay: add your private inputs (parts, personal services, etc.) in a separate private flake that imports this one.
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, llm-agents, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -64,8 +47,6 @@
         impermanence.nixosModules.impermanence
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
-        inputs.parts.nixosModules.default
-        inputs.claw-swap.nixosModules.default
         {
           nixpkgs.overlays = [ llm-agents.overlays.default ];
         }
@@ -73,7 +54,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.extraSpecialArgs = { inherit inputs; };
-          home-manager.users.dangirsh = import ./home;
+          home-manager.users.myuser = import ./home;
         }
       ];
 
@@ -83,6 +64,8 @@
         modules = commonModules ++ [ hostDir ];
       };
     in {
+      nixosModules.default = import ./modules;
+
       nixosConfigurations.neurosys = mkHost ./hosts/neurosys;
       nixosConfigurations.ovh = mkHost ./hosts/ovh;
 
@@ -112,9 +95,6 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
-        automaton = pkgs.callPackage ./packages/automaton.nix {
-          src = automaton;
-        };
       };
 
       formatter.${system} = treefmtEval.config.build.wrapper;

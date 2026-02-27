@@ -1,4 +1,7 @@
 tmp/
+.planning/
+secrets/
+.sops.yaml
 .claude/*
 !.claude/skills/
 !.claude/CLAUDE.md
