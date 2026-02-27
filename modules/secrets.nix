@@ -23,10 +23,10 @@
       group = "automaton";
     };
 
-    secrets."openclaw-mark-gateway-token"    = {};
-    secrets."openclaw-lou-gateway-token"     = {};
-    secrets."openclaw-alexia-gateway-token"  = {};
-    secrets."openclaw-ari-gateway-token"     = {};
+    secrets."openclaw-mark-gateway-token"    = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-lou-gateway-token"     = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-alexia-gateway-token"  = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-ari-gateway-token"     = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
 
     # --- Matrix / messaging bridge secrets ---
     secrets."telegram-api-id" = {
