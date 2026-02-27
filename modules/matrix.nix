@@ -136,7 +136,11 @@ lib.mkIf isNeurosys
   };
 
   # libsignal JIT requires W+X memory pages (see MTX-03)
-  systemd.services.mautrix-signal.serviceConfig.MemoryDenyWriteExecute = false;
+  # Guard with mkIf: when enable=false, omit the override entirely so no bare unit is generated.
+  # A bare unit (only MemoryDenyWriteExecute, no ExecStart) causes systemd to refuse activation.
+  systemd.services.mautrix-signal = lib.mkIf config.services.mautrix-signal.enable {
+    serviceConfig.MemoryDenyWriteExecute = false;
+  };
 
   # --- Sops templates for runtime secrets ---
   sops.templates."matrix-conduit-env" = {
