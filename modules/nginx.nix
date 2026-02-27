@@ -40,6 +40,9 @@ in {
     recommendedOptimisation = true;
     recommendedGzipSettings = true;
     recommendedProxySettings = true;
+    # @decision WEB-09: nginx binds to public IP only (not 0.0.0.0) so that
+    # Tailscale Serve can bind port 443 on the Tailscale interface without conflict.
+    defaultListenAddresses = [ "161.97.74.121" ];
 
     virtualHosts."dangirsh.org" = {
       enableACME = true;

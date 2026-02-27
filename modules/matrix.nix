@@ -90,7 +90,7 @@ lib.mkIf isNeurosys
         address = "http://localhost:29318";
         hostname = "127.0.0.1";
         port = 29318;
-        database = "sqlite:////var/lib/mautrix-whatsapp/mautrix-whatsapp.db";
+        # No appservice.database — bridgev2 uses top-level `database` key (set by module)
       };
       bridge = {
         permissions = {
@@ -117,7 +117,7 @@ lib.mkIf isNeurosys
         address = "http://localhost:29328";
         hostname = "127.0.0.1";
         port = 29328;
-        database = "sqlite:////var/lib/mautrix-signal/mautrix-signal.db";
+        # No appservice.database — bridgev2 uses top-level `database` key (set by module)
       };
       bridge.permissions = {
         "*" = "relay";
