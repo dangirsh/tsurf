@@ -30,6 +30,8 @@ in {
     certs."www.dangirsh.org"    = cfDns;
     certs."staging.dangirsh.org" = cfDns;
     certs."claw-swap.com"       = cfDns;
+    certs."mark.openclaw.dangirsh.org" = cfDns;
+    certs."ari.openclaw.dangirsh.org"  = cfDns;
   };
 
   services.nginx = {
@@ -88,6 +90,27 @@ in {
       forceSSL = true;
       locations."/" = {
         proxyPass = "http://127.0.0.1:3000";
+        proxyWebsockets = true;
+      };
+    };
+
+    # @decision WEB-08: OpenClaw mark and ari proxied via nginx with WebSocket support.
+    # @rationale: Gateway uses WebSocket for real-time communication. Token auth is
+    #   handled by OpenClaw itself (64-char hex gateway token); nginx just proxies.
+    virtualHosts."mark.openclaw.dangirsh.org" = {
+      enableACME = true;
+      forceSSL = true;
+      locations."/" = {
+        proxyPass = "http://127.0.0.1:18789";
+        proxyWebsockets = true;
+      };
+    };
+
+    virtualHosts."ari.openclaw.dangirsh.org" = {
+      enableACME = true;
+      forceSSL = true;
+      locations."/" = {
+        proxyPass = "http://127.0.0.1:18792";
         proxyWebsockets = true;
       };
     };

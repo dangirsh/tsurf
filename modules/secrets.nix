@@ -23,6 +23,11 @@
       group = "automaton";
     };
 
+    secrets."openclaw-mark-gateway-token"    = {};
+    secrets."openclaw-lou-gateway-token"     = {};
+    secrets."openclaw-alexia-gateway-token"  = {};
+    secrets."openclaw-ari-gateway-token"     = {};
+
     # --- Matrix / messaging bridge secrets ---
     secrets."telegram-api-id" = {
       sopsFile = lib.mkForce ../secrets/neurosys.yaml;

@@ -116,6 +116,46 @@
           }
         ];
       }
+      {
+        "OpenClaw" = [
+          {
+            "OpenClaw (mark)" = {
+              href = "https://mark.openclaw.dangirsh.org";
+              siteMonitor = "http://localhost:18789";
+              description = "AI assistant gateway for mark — public HTTPS.";
+              server = "local";
+              container = "openclaw-mark";
+            };
+          }
+          {
+            "OpenClaw (lou)" = {
+              href = "http://${config.networking.hostName}:18790";
+              siteMonitor = "http://localhost:18790";
+              description = "AI assistant gateway for lou — Tailscale-only.";
+              server = "local";
+              container = "openclaw-lou";
+            };
+          }
+          {
+            "OpenClaw (alexia)" = {
+              href = "http://${config.networking.hostName}:18791";
+              siteMonitor = "http://localhost:18791";
+              description = "AI assistant gateway for alexia — Tailscale-only.";
+              server = "local";
+              container = "openclaw-alexia";
+            };
+          }
+          {
+            "OpenClaw (ari)" = {
+              href = "https://ari.openclaw.dangirsh.org";
+              siteMonitor = "http://localhost:18792";
+              description = "AI assistant gateway for ari — public HTTPS.";
+              server = "local";
+              container = "openclaw-ari";
+            };
+          }
+        ];
+      }
     ];
   };
 }

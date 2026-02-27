@@ -44,6 +44,10 @@
       "/var/lib/postgresql"                # PostgreSQL data (claw-swap DB)
       "/var/lib/parts"                     # Session logs, runtime data
       "/var/lib/spacebot"                  # Spacebot: config.toml, SQLite DB, LanceDB embeddings
+      "/var/lib/openclaw-mark"               # OpenClaw gateway state — mark instance
+      "/var/lib/openclaw-lou"                # OpenClaw gateway state — lou instance
+      "/var/lib/openclaw-alexia"             # OpenClaw gateway state — alexia instance
+      "/var/lib/openclaw-ari"                # OpenClaw gateway state — ari instance
 
       # --- User data ---
       "/home/dangirsh"                     # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh

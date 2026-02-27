@@ -18,5 +18,6 @@
     ./spacebot.nix
     ./automaton.nix
     ./matrix.nix
+    ./openclaw.nix
   ];
 }
