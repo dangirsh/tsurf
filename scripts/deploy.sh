@@ -33,7 +33,7 @@ NO_MAGIC_ROLLBACK=false
 SKIP_UPDATE=true
 SECONDS=0
 
-SYSTEMD_SERVICES=("parts-tools" "parts-agent" "postgresql" "claw-swap-app")
+SYSTEMD_SERVICES=()
 DOCKER_CONTAINERS=()
 mkdir -p "$FLAKE_DIR/tmp"
 
@@ -148,6 +148,13 @@ if [[ "$TARGET_SET" == false ]]; then
   fi
 fi
 
+# --- Node-specific service health checks ---
+if [[ "$NODE" == "neurosys" ]]; then  # parts-tools parts-agent postgresql claw-swap-app
+  SYSTEMD_SERVICES=("parts-tools" "parts-agent" "postgresql" "claw-swap-app")
+elif [[ "$NODE" == "ovh" ]]; then  # prometheus syncthing tailscaled
+  SYSTEMD_SERVICES=("prometheus" "syncthing" "tailscaled")
+fi
+
 LOCAL_LOCK="$FLAKE_DIR/tmp/neurosys-${NODE}-deploy.local.lock"
 REMOTE_LOCK_DIR="/var/lock/neurosys-${NODE}-deploy.lock"
 
@@ -183,15 +190,19 @@ REMOTE_LOCK_HELD=true
 printf '%s\n' "$LOCK_INFO" | ssh "${SSH_OPTS[@]}" "$TARGET" "cat > '$REMOTE_LOCK_DIR/info.txt'" 2>/dev/null || true
 
 # --- Update parts input ---
-if [[ "$SKIP_UPDATE" == false ]]; then
+if [[ "$SKIP_UPDATE" == false && "$NODE" == "neurosys" ]]; then
   echo "==> Updating parts flake input..."
   nix flake update parts --flake "$FLAKE_DIR"
+elif [[ "$SKIP_UPDATE" == false ]]; then
+  echo "==> Skipping parts update for node '$NODE' (Contabo-only)."
 fi
 
-PARTS_REV=$(nix flake metadata "$FLAKE_DIR" --json 2>/dev/null | jq -r '.locks.nodes.parts.locked.rev // "unknown"')
-PARTS_REV_SHORT="${PARTS_REV:0:7}"
-
-echo "==> Parts revision: $PARTS_REV_SHORT"
+PARTS_REV_SHORT=""
+if [[ "$NODE" == "neurosys" ]]; then
+  PARTS_REV=$(nix flake metadata "$FLAKE_DIR" --json 2>/dev/null | jq -r '.locks.nodes.parts.locked.rev // "unknown"')
+  PARTS_REV_SHORT="${PARTS_REV:0:7}"
+  echo "==> Parts revision: $PARTS_REV_SHORT"
+fi
 
 # --- Build + deploy ---
 if [[ "$TARGET_SET" == true ]]; then
@@ -249,7 +260,9 @@ echo ""
 
 if [[ "$FAILED" -eq 0 ]]; then
   echo "=== Deploy SUCCESS ==="
-  echo "Parts revision: $PARTS_REV_SHORT"
+  if [[ -n "${PARTS_REV_SHORT:-}" ]]; then
+    echo "Parts revision: $PARTS_REV_SHORT"
+  fi
   echo "Duration: $((DURATION / 60))m $((DURATION % 60))s"
   echo ""
   echo "Service status:"
@@ -259,21 +272,23 @@ if [[ "$FAILED" -eq 0 ]]; then
   done
   echo ""
 
-  # --- Push system closure to Cachix ---
-  echo "==> Pushing system closure to dan-testing.cachix.org..."
-  if ssh "${SSH_OPTS[@]}" "$TARGET" 'command -v cachix &>/dev/null' 2>/dev/null; then
-    ssh "${SSH_OPTS[@]}" "$TARGET" \
-      'CACHIX_AUTH_TOKEN=$(cat /run/secrets/cachix-auth-token) \
-       nix path-info --recursive /nix/var/nix/profiles/system \
-       | cachix push dan-testing' \
-      && echo "==> Cachix push complete." \
-      || echo "WARNING: Cachix push failed (non-fatal)."
-  else
-    echo "  cachix not yet in PATH — will push on next deploy after this one installs it."
+  # --- Push system closure to Cachix (Contabo-only) ---
+  if [[ "$NODE" == "neurosys" ]]; then
+    echo "==> Pushing system closure to dan-testing.cachix.org..."
+    if ssh "${SSH_OPTS[@]}" "$TARGET" 'command -v cachix &>/dev/null' 2>/dev/null; then
+      ssh "${SSH_OPTS[@]}" "$TARGET" \
+        'CACHIX_AUTH_TOKEN=$(cat /run/secrets/cachix-auth-token) \
+         nix path-info --recursive /nix/var/nix/profiles/system \
+         | cachix push dan-testing' \
+        && echo "==> Cachix push complete." \
+        || echo "WARNING: Cachix push failed (non-fatal)."
+    else
+      echo "  cachix not yet in PATH — will push on next deploy after this one installs it."
+    fi
+    echo ""
   fi
-  echo ""
 
-  if [[ "$SKIP_UPDATE" == false ]]; then
+  if [[ "$SKIP_UPDATE" == false && -n "${PARTS_REV_SHORT:-}" ]]; then
     echo "NOTE: flake.lock was updated. Remember to commit when ready:"
     echo "  git add flake.lock && git commit -m \"chore: update parts input to $PARTS_REV_SHORT\""
   fi
