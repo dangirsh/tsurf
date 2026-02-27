@@ -122,6 +122,16 @@ in {
       locations."/" = {
         proxyPass = "http://127.0.0.1:18789";
         proxyWebsockets = true;
+        # Hardcode Host with port so openclaw's dangerouslyAllowHostHeaderOriginFallback
+        # builds expected origin https://100.113.239.14:8443, matching the browser's Origin header.
+        # Literal value (not $http_host) avoids gixy host-spoofing lint failure.
+        # Setting any proxy_set_header here clears recommendedProxySettings inheritance — re-set all.
+        extraConfig = ''
+          proxy_set_header Host              "${tailscaleIp}:8443";
+          proxy_set_header X-Real-IP         $remote_addr;
+          proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        '';
       };
     };
 
