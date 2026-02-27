@@ -31,7 +31,7 @@ completed: 2026-02-27
 
 ## Task Commits
 1. **Task A: append CO2 automations and validate YAML** - `4c3679a` (feat)
-2. **Task B: commit/push automation rollout tracking + checkpoint metadata** - `PENDING` (chore)
+2. **Task B: commit/push automation rollout tracking + checkpoint metadata** - `4b77e34` (chore)
 
 ## Files Created/Modified
 - `/data/projects/home-assistant-config/automations.yaml` - Added `co2_alert_high` and `co2_alert_recovery` automations.
