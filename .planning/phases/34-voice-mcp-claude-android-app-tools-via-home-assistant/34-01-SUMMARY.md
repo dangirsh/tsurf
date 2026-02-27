@@ -34,7 +34,7 @@ completed: 2026-02-27
 ## Task Commits
 
 1. **Task A+B: HA MCP config + tailscale-serve-ha service** - `cf65e1c` (feat, pre-existing on `main`)
-2. **Plan metadata** - `pending docs commit in this execution` (docs)
+2. **Plan metadata** - `ecd881c` (docs)
 
 ## Files Created/Modified
 
