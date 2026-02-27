@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 32 COMPLETE — both plans merged. Conway Automaton packaged (32-01) and NixOS service module wired (32-02). Deployment checkpoint pending: user must add real Conway API key, deploy, and start `conway-automaton` service. Phase 33 next (spacebot security research). DNS prerequisite outstanding: add A record api.clawswap.org → 135.125.196.143 at Dynadot.
+**Current focus:** Phase 35 Plan 01 COMPLETE — Conduit + mautrix-telegram declarative modules merged. Deployment/bootstrap checkpoint pending: user must add real Telegram API credentials, deploy to neurosys, and complete Matrix/bridge manual registration steps.
 
 ## Current Position
 
-Phase: 32 (Self-Hosted Conway Automaton on Neurosys) — CODE COMPLETE, AWAITING DEPLOYMENT
-Plan: 2 of 2 -- COMPLETE (32-02 service module merged, nix flake check passed)
-Status: `modules/automaton.nix` created with `conway-automaton` systemd service, sops secrets wired, activation pre-seeding script. `conway-api-key` placeholder added to secrets/neurosys.yaml. Deployment checkpoint: user must run `sops secrets/neurosys.yaml` to add real Conway API key, then `./scripts/deploy.sh --node neurosys`, then `systemctl start conway-automaton`.
-Last activity: 2026-02-26 - Completed 32-02 service module, merged to main (5512fd2)
+Phase: 35 (Unified Messaging Bridge: Signal + WhatsApp + Telegram -> AI) — PLAN 01 COMPLETE, AWAITING DEPLOYMENT CHECKPOINT
+Plan: 1 of 3 -- COMPLETE (35-01 Conduit + mautrix-telegram module merged; flake checks passed for neurosys + ovh)
+Status: Added `modules/matrix.nix` (Conduit + mautrix-telegram), imported in module hub, wired Matrix secrets in sops, added Matrix internal-only ports, and persisted `/var/lib/mautrix-telegram`. Deployment checkpoint: user must set real Telegram credentials in `secrets/neurosys.yaml`, run `./scripts/deploy.sh --node neurosys`, then perform Matrix/bridge manual bootstrap.
+Last activity: 2026-02-27 - Completed 35-01 implementation and merged to main (d598be4)
 
-Progress: Phase 32 code-complete (2/2 plans merged). Phase 30 COMPLETE (2/2 plans, production). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 29 implementation complete (1/1 plans code-complete, deploy pending Task 8). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
+Progress: Phase 35 started (1/3 plans complete, deployment checkpoint pending). Phase 32 code-complete (2/2 plans merged, deploy pending manual API key/bootstrap). Phase 30 COMPLETE (2/2 plans, production). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 29 implementation complete (1/1 plans code-complete, deploy pending Task 8). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
 
 ## Performance Metrics
 
@@ -167,6 +167,9 @@ Recent decisions affecting current work:
 - [32-02]: Created `modules/automaton.nix` with dedicated `automaton` system user, activation pre-seeding (automaton.json, wallet, heartbeat.yml, SOUL.md, constitution.md, git init), `conway-automaton` systemd service (NOT wantedBy — user must enable manually after API key provisioning).
 - [32-02]: `sops.secrets."conway-api-key"` with explicit `sopsFile = ../secrets/neurosys.yaml` (avoids OVH eval failure); `sops.templates."automaton-env"` for BYOK proxy env vars.
 - [32-02]: Service configured with `ProtectSystem = strict`, `ReadWritePaths = ["/var/lib/automaton"]`, `ANTHROPIC_BASE_URL=http://127.0.0.1:9091` for existing secret proxy on port 9091.
+- [35-01]: Added `modules/matrix.nix` with Conduit (`services.matrix-conduit`) + mautrix-telegram (`services.mautrix-telegram`) using private `server_name = "neurosys.local"` and federation disabled.
+- [35-01]: Added Matrix secrets (`telegram-api-id`, `telegram-api-hash`, `matrix-registration-token`) with explicit `lib.mkForce sopsFile = ../secrets/neurosys.yaml` to override upstream `parts` secret definitions and avoid OVH eval conflicts.
+- [35-01]: Added internal-only ports `6167`, `29317`, `29318`, `29328`; persisted `/var/lib/mautrix-telegram`; allowlisted `olm-3.2.16` narrowly for neurosys Matrix stack to pass nixpkgs insecure-package gate.
 
 ### Completed Phases
 
@@ -243,6 +246,7 @@ Recent decisions affecting current work:
 - Phase 33 added: Research spacebot security: prompt injection defenses + ironclaw integration feasibility — investigate how spacebot guards against prompt injection (sandboxing, input validation, context isolation, published threat model) and how hard it would be to wire ironclaw as the LLM backend/agent executor behind spacebot's UI layer
 - Phase 34 added: Voice MCP — Claude Android app tools via Home Assistant — enable HA native MCP integration (HA 2024.11+), expose via Tailscale Serve HTTPS, connect Claude Android voice mode to control lights and query CO2/sensors without public internet exposure
 - Phase 35 added: Unified Messaging Bridge — Signal + WhatsApp + Telegram → AI — Conduit homeserver + mautrix bridges (all in nixpkgs); mautrix-telegram most stable (official API), mautrix-whatsapp medium risk (WA ban), mautrix-signal medium stability (signal-cli); AI access via Matrix bot + CS API; historical data ingested one-time to Spacebot LanceDB (bridges only sync forward)
+- Phase 36 added: Research stereOS ecosystem (stereOS, masterblaster, stereosd, agentd) — study all repos, generate a report on what to learn/steal for neurosys, recommend whether to switch from NixOS to stereOS
 
 ### Blockers/Concerns
 
