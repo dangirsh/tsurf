@@ -8,6 +8,24 @@
 # @decision MTX-02: Federation disabled, Tailscale-only access.
 # @rationale: This hub is private and internal. Services bind to local/internal
 #   interfaces and are protected by the internal-only port policy in networking.nix.
+#
+# @decision MTX-03: mautrix-signal MemoryDenyWriteExecute=false (libsignal JIT).
+# @rationale: libsignal v0.62.0+ uses JIT compilation requiring W+X memory pages.
+#   This relaxes one systemd sandbox constraint for mautrix-signal only.
+#   Other hardening (dedicated user, state isolation) remains in place.
+#   Documented upstream requirement, not a neurosys-specific weakness.
+#
+# @decision MTX-04: E2E encryption breaks at bridge boundary (by design).
+# @rationale: mautrix bridges decrypt messages from the source platform and
+#   re-encrypt for Matrix (if E2E is enabled). Messages are briefly plaintext
+#   in bridge memory. Self-hosted on Tailscale-only server mitigates trust
+#   concern. This is inherent to all Matrix bridges, not avoidable.
+#
+# @decision MTX-05: WhatsApp account ban risk accepted.
+# @rationale: mautrix-whatsapp uses unofficial WA Web protocol. Meta may
+#   detect and ban/disconnect the account. Mitigation: keep WhatsApp backup
+#   of chat history. Re-linking is possible if disconnected. Personal
+#   single-user usage has lower detection risk than bot-like behavior.
 { config, lib, ... }:
 let
   # Permanent Matrix server name for this deployment.
@@ -58,6 +76,58 @@ lib.mkIf isNeurosys
       };
     };
   };
+
+  # --- mautrix-whatsapp bridge ---
+  services.mautrix-whatsapp = {
+    enable = true;
+    serviceDependencies = [ "conduit.service" ];
+    settings = {
+      homeserver = {
+        address = "http://localhost:6167";
+        domain = serverName;
+      };
+      appservice = {
+        address = "http://localhost:29318";
+        hostname = "127.0.0.1";
+        port = 29318;
+        database = "sqlite:////var/lib/mautrix-whatsapp/mautrix-whatsapp.db";
+      };
+      bridge = {
+        permissions = {
+          "*" = "relay";
+          "@admin:${serverName}" = "admin";
+        };
+        history_sync = {
+          create_portals = true;
+        };
+      };
+    };
+  };
+
+  # --- mautrix-signal bridge ---
+  services.mautrix-signal = {
+    enable = true;
+    serviceDependencies = [ "conduit.service" ];
+    settings = {
+      homeserver = {
+        address = "http://localhost:6167";
+        domain = serverName;
+      };
+      appservice = {
+        address = "http://localhost:29328";
+        hostname = "127.0.0.1";
+        port = 29328;
+        database = "sqlite:////var/lib/mautrix-signal/mautrix-signal.db";
+      };
+      bridge.permissions = {
+        "*" = "relay";
+        "@admin:${serverName}" = "admin";
+      };
+    };
+  };
+
+  # libsignal JIT requires W+X memory pages (see MTX-03)
+  systemd.services.mautrix-signal.serviceConfig.MemoryDenyWriteExecute = false;
 
   # --- Sops templates for runtime secrets ---
   sops.templates."matrix-conduit-env" = {
