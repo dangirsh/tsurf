@@ -15,6 +15,18 @@
     deps = [ "etc" ];
   };
 
+  # @decision IMP-06: setupSecrets must depend on persist-files.
+  # @rationale: sops-nix derives the age key from /etc/ssh/ssh_host_ed25519_key.
+  #   Impermanence bind-mounts this file via the persist-files activation script.
+  #   Without this ordering, setupSecrets runs before persist-files, the SSH host
+  #   key doesn't exist yet, age key import fails with "0 successful groups required,
+  #   got 0", and all services depending on /run/secrets fail on hard reboot.
+  #   Adding deps here merges with sops-nix's setupSecrets definition (text fields
+  #   concatenate, dep lists append) — no text duplication, just ordering enforcement.
+  system.activationScripts.setupSecrets = {
+    deps = [ "persist-files" ];
+  };
+
   environment.persistence."/persist" = {
     hideMounts = true;
 
