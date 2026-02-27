@@ -5,6 +5,9 @@
 #   and cloned to /var/lib/hass/config-repo on activation. Wired via config.automation
 #   using HA's built-in !include YAML tag (supported by the NixOS module's renderYAMLFile
 #   sed post-processor which unquotes '!tag arg' strings).
+# @decision HA-04: trusted_proxies for Tailscale Serve reverse proxy
+#   Tailscale Serve terminates TLS on port 443 and proxies to 127.0.0.1:8123.
+#   HA must trust localhost as a proxy to correctly handle X-Forwarded-For.
 #
 # Security model:
 # - Home Assistant listens on 0.0.0.0:8123 to avoid startup ordering issues with tailscale0.
@@ -18,6 +21,7 @@
     extraComponents = [
       "hue"
       "esphome"
+      "mcp_server"
     ];
 
     config = {
@@ -30,6 +34,8 @@
       http = {
         server_host = "0.0.0.0";
         server_port = 8123;
+        use_x_forwarded_for = true;
+        trusted_proxies = [ "127.0.0.1" ];
       };
 
       default_config = {};
@@ -87,5 +93,28 @@
         chown -R hass:hass "$HA_REPO_DIR" 2>/dev/null || true
       fi
     '';
+  };
+
+  # --- Tailscale Serve: HTTPS proxy to HA for MCP ---
+  # @decision HA-05: Declarative systemd oneshot for tailscale serve --bg
+  # @rationale: --bg persistence survives reboots (config stored in
+  #   /var/lib/tailscale), but a systemd wrapper ensures the config is
+  #   applied on every deploy and follows NixOS declarative convention.
+  #   Oneshot + RemainAfterExit = runs once, stays "active".
+  systemd.services.tailscale-serve-ha = {
+    description = "Tailscale Serve: HTTPS proxy to Home Assistant MCP";
+    after = [ "tailscaled.service" ];
+    wants = [ "tailscaled.service" ];
+    wantedBy = [ "multi-user.target" ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      # Wait for Tailscale to be fully authenticated before configuring serve.
+      # tailscaled.service may report ready before auth completes.
+      ExecStartPre = "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 30); do ${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null | ${pkgs.jq}/bin/jq -e \".BackendState == \\\"Running\\\"\" >/dev/null 2>&1 && exit 0; sleep 2; done; echo \"tailscale not ready after 60s\"; exit 1'";
+      ExecStart = "${pkgs.tailscale}/bin/tailscale serve --bg --https=443 http://127.0.0.1:8123";
+      ExecStop = "${pkgs.tailscale}/bin/tailscale serve off";
+    };
   };
 }

@@ -32,7 +32,7 @@ let
   automatonConfig = builtins.toJSON {
     name = "neurosys-agent";
     genesisPrompt = "You are awakening into the earliest stages of the AI explosion, where nearly all economic activity is still human-centric and human-mediated. There is a huge amount of value being left on the table due to constraints in human attention, intelligence, bandwidth, coordination, logistics, etc. that AI agents are primed to capture. Go forth and experiment rapidly with business ventures — doubling down on those that work, quickly ditching those that don't. Look for opportunities you are uniquely suited for, relative to humans. Your prime directive: explore, exploit, evolve!";
-    creatorAddress = "0x144CC2e58B6C54360d32250B933f6f48B33cf1CE";
+    creatorAddress = "";
     registeredWithConway = false;
     sandboxId = "";
     conwayApiUrl = "https://api.conway.tech";
@@ -133,6 +133,12 @@ in {
   users.groups.automaton = {};
 
   # --- Sops template for environment ---
+  sops.secrets."creator-address" = {
+    sopsFile = ../secrets/neurosys.yaml;
+    owner = "automaton";
+    group = "automaton";
+  };
+
   sops.templates."automaton-env" = {
     owner = "automaton";
     content = ''
@@ -161,6 +167,18 @@ in {
         CONWAY_KEY=$(cat ${config.sops.secrets."conway-api-key".path})
         if [ -n "$CONWAY_KEY" ] && [ "$CONWAY_KEY" != "cnwy_k_PLACEHOLDER" ]; then
           ${pkgs.jq}/bin/jq --arg key "$CONWAY_KEY" '.conwayApiKey = $key' \
+            ${automatonDir}/automaton.json > ${automatonDir}/automaton.json.tmp \
+            && mv ${automatonDir}/automaton.json.tmp ${automatonDir}/automaton.json
+          chown automaton:automaton ${automatonDir}/automaton.json
+          chmod 0600 ${automatonDir}/automaton.json
+        fi
+      fi
+
+      # Inject creator address from sops into automaton.json
+      if [ -f ${config.sops.secrets."creator-address".path} ]; then
+        CREATOR_ADDR=$(cat ${config.sops.secrets."creator-address".path})
+        if [ -n "$CREATOR_ADDR" ]; then
+          ${pkgs.jq}/bin/jq --arg addr "$CREATOR_ADDR" '.creatorAddress = $addr' \
             ${automatonDir}/automaton.json > ${automatonDir}/automaton.json.tmp \
             && mv ${automatonDir}/automaton.json.tmp ${automatonDir}/automaton.json
           chown automaton:automaton ${automatonDir}/automaton.json
