@@ -179,6 +179,7 @@ Recent decisions affecting current work:
 - [39-01]: DASH-08/09/10 implemented by creating standalone private repo `dangirsh/conway-dashboard` (`flake = false` target) for Conway dashboard app code.
 - [39-01]: Dashboard server uses Python stdlib only on port 9093; `/api/status` aggregates SQLite state (`kv`, `turns`, `inference_costs`, `goals`, `task_graph`, `tool_calls`, `identity`) with graceful per-query degradation.
 - [39-01]: Dashboard UI is a single self-contained HTML file polling `/api/status` every 5 seconds with status-color mapping, financial/activity panels, recent tool calls, and journald log view.
+- [44]: Phase 44 added — Android CO2 alert via HA automation in home-assistant-config. Trigger: `sensor.apollo_air_1_5221b0_co2 > 1000 ppm`, notify Pixel 10 Pro, 30min cooldown, recovery notification on drop below 900 ppm. Single plan (44-01).
 
 ### Completed Phases
 

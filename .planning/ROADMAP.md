@@ -44,6 +44,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 31: Conway Automaton — Single Agent MVP** - Deploy 1 sovereign AI agent on Conway Cloud with seed hypothesis #1 (x402 APIs). ~$250 USDC, Sonnet 4.6 primary model, BYOK keys. Terminal monitoring dashboard on neurosys.
 - [ ] **Phase 32: Self-Hosted Conway Automaton on Neurosys** - Run Conway Automaton framework as NixOS systemd service on neurosys, eliminating Conway Cloud compute costs for agent runtime. BYOK inference via secret proxy. State persisted locally.
 - [ ] **Phase 37: Open Source Prep** - Privacy audit, public/private repo split, lean README. Remove personal identifiers; extract personal config to private flake overlay; publish infrastructure patterns.
+- [ ] **Phase 44: Android CO2 Alert** - Push notification to Pixel 10 Pro when Apollo AIR-1 CO2 exceeds 1000 ppm. HA automation in home-assistant-config, cooldown to prevent spam, recovery notification when CO2 returns to normal.
 
 ## Phase Details
 
@@ -231,6 +232,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 26. Agent Notifications (Telegram Bot) | 0/TBD | Not started | - |
 | 27. OVH VPS Production Migration | 0/5 | Not started | - |
 | 28. dangirsh.org Static Site on Neurosys | 0/4 | Not started | - |
+| 44. Android CO2 Alert | 0/1 | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -858,3 +860,20 @@ Plans:
 Plans:
 - [ ] 43-01: Research — gap analysis vs. Spacebot; LangFuse/Helicone/Weave comparison; tapes current maturity; privacy model; Ollama infrastructure cost
 - [ ] 43-02: Implementation — tapes NixOS service, proxy chaining with secret-proxy, session retention config (if research validates)
+
+### Phase 44: Android CO2 Alert
+
+**Goal:** Send a push notification to the Pixel 10 Pro when the Apollo AIR-1 CO2 sensor exceeds 1000 ppm. Add a Home Assistant automation to `dangirsh/home-assistant-config` that calls `notify.mobile_app_*` with a cooldown so it doesn't spam. Include a recovery notification when CO2 drops back to normal.
+**Depends on:** None (HA companion app already paired; ESPHome sensor already in HA)
+**Requirements:** None (quality-of-life automation)
+**Success Criteria** (what must be TRUE):
+  1. Automation triggers on `sensor.apollo_air_1_5221b0_co2` exceeding 1000 ppm
+  2. Push notification arrives on Pixel 10 Pro with CO2 reading in the message body
+  3. Cooldown of at least 30 minutes between repeat alerts (no spam)
+  4. Recovery notification sent when CO2 drops back below 900 ppm
+  5. Automation committed to `dangirsh/home-assistant-config` and loaded by HA
+**Effort:** Low — single automation YAML file, no NixOS module changes needed
+**Plans:** 1 plan
+
+Plans:
+- [ ] 44-01-PLAN.md -- CO2 alert automation: threshold trigger + cooldown + recovery notification in automations.yaml
