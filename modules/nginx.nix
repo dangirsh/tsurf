@@ -127,9 +127,14 @@ in {
 
   # Generate the self-signed cert once; persist across reboots (see impermanence.nix).
   # Regenerates only if the cert file is absent — fingerprint stays stable after first deploy.
+  #
+  # @decision WEB-12: Write cert to /persist/var/lib/openclaw-nginx-ssl (not /var/...).
+  # @rationale: NixOS activation scripts run before impermanence bind-mounts are activated
+  #   by systemd. Writing directly to /persist means the cert exists in the bind-mount
+  #   source dir, so nginx can read it at /var/lib/openclaw-nginx-ssl/cert.pem at boot.
   system.activationScripts.openclaw-mark-tls-cert = {
     text = ''
-      cert_dir=/var/lib/openclaw-nginx-ssl
+      cert_dir=/persist/var/lib/openclaw-nginx-ssl
       cert_file="$cert_dir/cert.pem"
       key_file="$cert_dir/key.pem"
       if [ ! -f "$cert_file" ]; then
