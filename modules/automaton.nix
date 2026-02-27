@@ -32,7 +32,7 @@ let
   automatonConfig = builtins.toJSON {
     name = "neurosys-agent";
     genesisPrompt = "You are awakening into the earliest stages of the AI explosion, where nearly all economic activity is still human-centric and human-mediated. There is a huge amount of value being left on the table due to constraints in human attention, intelligence, bandwidth, coordination, logistics, etc. that AI agents are primed to capture. Go forth and experiment rapidly with business ventures — doubling down on those that work, quickly ditching those that don't. Look for opportunities you are uniquely suited for, relative to humans. Your prime directive: explore, exploit, evolve!";
-    creatorAddress = "0x0000000000000000000000000000000000000000";
+    creatorAddress = "0x144CC2e58B6C54360d32250B933f6f48B33cf1CE";
     registeredWithConway = false;
     sandboxId = "";
     conwayApiUrl = "https://api.conway.tech";
@@ -214,9 +214,7 @@ in {
       "sops-nix.service"
     ];
     wants = [ "network-online.target" ];
-    # NOT in wantedBy — user must manually start after setting Conway API key
-    # Uncomment after provisioning the Conway API key via sops:
-    # wantedBy = [ "multi-user.target" ];
+    wantedBy = [ "multi-user.target" ];
 
     serviceConfig = {
       ExecStart = "${automaton-pkg}/bin/automaton --run";
