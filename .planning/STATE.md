@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 35 Plan 01 COMPLETE — Conduit + mautrix-telegram declarative modules merged. Deployment/bootstrap checkpoint pending: user must add real Telegram API credentials, deploy to neurosys, and complete Matrix/bridge manual registration steps.
+**Current focus:** Phase 34 Plan 01 code validation complete — Home Assistant MCP + Tailscale Serve config is present and flake-validated. Awaiting human deploy/UI checkpoints (Tasks 34-01-E through 34-01-G).
 
 ## Current Position
 
-Phase: 35 (Unified Messaging Bridge: Signal + WhatsApp + Telegram -> AI) — PLAN 01 COMPLETE, AWAITING DEPLOYMENT CHECKPOINT
-Plan: 1 of 3 -- COMPLETE (35-01 Conduit + mautrix-telegram module merged; flake checks passed for neurosys + ovh)
-Status: Added `modules/matrix.nix` (Conduit + mautrix-telegram), imported in module hub, wired Matrix secrets in sops, added Matrix internal-only ports, and persisted `/var/lib/mautrix-telegram`. Deployment checkpoint: user must set real Telegram credentials in `secrets/neurosys.yaml`, run `./scripts/deploy.sh --node neurosys`, then perform Matrix/bridge manual bootstrap.
-Last activity: 2026-02-27 - Completed 35-01 implementation and merged to main (d598be4)
+Phase: 34 (Voice MCP — Claude Android app tools via Home Assistant) — PLAN 01 READY FOR HUMAN DEPLOY CHECKPOINT
+Plan: 1 of 1 -- CODE VALIDATED (A-D complete; E-G are human-action checkpoints)
+Status: Verified `modules/home-assistant.nix` contains `mcp_server`, `http.use_x_forwarded_for`, `http.trusted_proxies = [ "127.0.0.1" ]`, and `systemd.services.tailscale-serve-ha` oneshot (`after/wants tailscaled`, `wantedBy multi-user.target`). Ran `nix flake check` successfully for neurosys + ovh and wrote `.claude/.test-status`.
+Last activity: 2026-02-27 - Executed 34-01 validation run; ready to pause at Task 34-01-E (deploy verification checkpoint)
 
-Progress: Phase 35 started (1/3 plans complete, deployment checkpoint pending). Phase 32 code-complete (2/2 plans merged, deploy pending manual API key/bootstrap). Phase 30 COMPLETE (2/2 plans, production). Phase 31 in progress (0/1 plans complete, Task 1 of 4 done). Phase 29 implementation complete (1/1 plans code-complete, deploy pending Task 8). Phase 28 paused at Plan 2/4 (DNS cutover). Phase 27 in progress (2/5 complete); Phase 22 complete (1/1 plans, merged).
+Progress: Phase 34 plan 34-01 is checkpoint-ready (4/7 tasks complete, awaiting human deploy/UI actions). Phase 35 plan 35-01 remains complete on main (d598be4) with separate deployment/bootstrap checkpoint pending.
 
 ## Performance Metrics
 
@@ -102,6 +102,8 @@ Recent decisions affecting current work:
 - [quick-005]: MON-05: Alertmanager, ntfy, Grafana removed -- agents query Prometheus /api/v1/alerts directly
 - [quick-005]: fail2ban reverts to default ban action (no ntfy notification)
 - [quick-006]: ESPHome binds 0.0.0.0:6052 with openFirewall=false (Tailscale-only, same pattern as HA and Syncthing)
+- [34-01]: HA-04: Home Assistant trusts localhost proxy headers (`use_x_forwarded_for = true`, `trusted_proxies = [ "127.0.0.1" ]`) for Tailscale Serve reverse proxying.
+- [34-01]: HA-05: `systemd.services.tailscale-serve-ha` declaratively applies `tailscale serve --bg --https=443 http://127.0.0.1:8123` with readiness wait on `BackendState == "Running"`.
 - [17-01]: zmx removed from base module and kept in agent-compute package set; duplicate package declaration eliminated
 - [17-01]: git-lfs and podman-compose removed as unused features/packages
 - [17-01]: stale `parts-agent@vm` SSH key removed from `dangirsh` and `root` authorized keys
@@ -282,6 +284,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Phase 32 code-complete. Both plans merged to main (5512fd2). Checkpoint: deploy + Conway API key provisioning + service start is pending user action.
-Next: Deploy Phase 32 (./scripts/deploy.sh --node neurosys, then provision Conway API key, then systemctl start conway-automaton). After that: Phase 33 (spacebot security research).
+Last session: 2026-02-27
+Stopped at: Phase 34 plan 34-01 execution boundary. Tasks A-D complete (config verified in main + flake check passed). Waiting at Task 34-01-E checkpoint for human deploy/Tailscale Serve verification.
+Next: Human runs Task 34-01-E deploy checks, then Tasks 34-01-F and 34-01-G (HA UI MCP setup + Claude Android connector tests).
