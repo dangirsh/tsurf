@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 34 Plan 01 code validation complete — Home Assistant MCP + Tailscale Serve config is present and flake-validated. Awaiting human deploy/UI checkpoints (Tasks 34-01-E through 34-01-G).
+**Current focus:** Phase 35 Plan 02 code changes complete — mautrix-whatsapp + mautrix-signal are configured and flake-validated. Awaiting human deploy/account-link checkpoint (Task 35-02-E).
 
 ## Current Position
 
-Phase: 34 (Voice MCP — Claude Android app tools via Home Assistant) — PLAN 01 READY FOR HUMAN DEPLOY CHECKPOINT
-Plan: 1 of 1 -- CODE VALIDATED (A-D complete; E-G are human-action checkpoints)
-Status: Verified `modules/home-assistant.nix` contains `mcp_server`, `http.use_x_forwarded_for`, `http.trusted_proxies = [ "127.0.0.1" ]`, and `systemd.services.tailscale-serve-ha` oneshot (`after/wants tailscaled`, `wantedBy multi-user.target`). Ran `nix flake check` successfully for neurosys + ovh and wrote `.claude/.test-status`.
-Last activity: 2026-02-27 - Executed 34-01 validation run; ready to pause at Task 34-01-E (deploy verification checkpoint)
+Phase: 35 (Unified Messaging Bridge — Signal + WhatsApp + Telegram -> AI) — PLAN 02 READY FOR HUMAN DEPLOY CHECKPOINT
+Plan: 2 of 3 -- CODE VALIDATED (A-D complete; E is human-action checkpoint)
+Status: Added `services.mautrix-whatsapp` and `services.mautrix-signal` in `modules/matrix.nix`, set `systemd.services.mautrix-signal.serviceConfig.MemoryDenyWriteExecute = false`, added MTX-03/04/05 annotations, persisted `/var/lib/mautrix-whatsapp` + `/var/lib/mautrix-signal`, ran `nix flake check` successfully for neurosys + ovh, and wrote `.claude/.test-status`.
+Last activity: 2026-02-27 - Executed 35-02 implementation/validation run; ready to pause at Task 35-02-E (deploy + manual account linking checkpoint)
 
-Progress: Phase 34 plan 34-01 is checkpoint-ready (4/7 tasks complete, awaiting human deploy/UI actions). Phase 35 plan 35-01 remains complete on main (d598be4) with separate deployment/bootstrap checkpoint pending.
+Progress: Phase 35 plan 35-02 is checkpoint-ready (4/5 tasks complete, awaiting human deploy/account-link action). Phase 34 plan 34-01 remains checkpoint-ready with pending human deploy/UI tasks.
 
 ## Performance Metrics
 
@@ -172,6 +172,9 @@ Recent decisions affecting current work:
 - [35-01]: Added `modules/matrix.nix` with Conduit (`services.matrix-conduit`) + mautrix-telegram (`services.mautrix-telegram`) using private `server_name = "neurosys.local"` and federation disabled.
 - [35-01]: Added Matrix secrets (`telegram-api-id`, `telegram-api-hash`, `matrix-registration-token`) with explicit `lib.mkForce sopsFile = ../secrets/neurosys.yaml` to override upstream `parts` secret definitions and avoid OVH eval conflicts.
 - [35-01]: Added internal-only ports `6167`, `29317`, `29318`, `29328`; persisted `/var/lib/mautrix-telegram`; allowlisted `olm-3.2.16` narrowly for neurosys Matrix stack to pass nixpkgs insecure-package gate.
+- [35-02]: Enabled `services.mautrix-whatsapp` (Go bridge, WA Web protocol) on appservice port `29318` with sqlite URI `sqlite:////var/lib/mautrix-whatsapp/mautrix-whatsapp.db`.
+- [35-02]: Enabled `services.mautrix-signal` (Go bridge, signal-cli backend) on appservice port `29328` with sqlite URI `sqlite:////var/lib/mautrix-signal/mautrix-signal.db`; set `MemoryDenyWriteExecute = false` for libsignal JIT.
+- [35-02]: Added MTX-03/MTX-04/MTX-05 decision annotations and persisted `/var/lib/mautrix-whatsapp` + `/var/lib/mautrix-signal` in impermanence.
 
 ### Completed Phases
 
@@ -249,6 +252,8 @@ Recent decisions affecting current work:
 - Phase 34 added: Voice MCP — Claude Android app tools via Home Assistant — enable HA native MCP integration (HA 2024.11+), expose via Tailscale Serve HTTPS, connect Claude Android voice mode to control lights and query CO2/sensors without public internet exposure
 - Phase 35 added: Unified Messaging Bridge — Signal + WhatsApp + Telegram → AI — Conduit homeserver + mautrix bridges (all in nixpkgs); mautrix-telegram most stable (official API), mautrix-whatsapp medium risk (WA ban), mautrix-signal medium stability (signal-cli); AI access via Matrix bot + CS API; historical data ingested one-time to Spacebot LanceDB (bridges only sync forward)
 - Phase 36 added: Research stereOS ecosystem (stereOS, masterblaster, stereosd, agentd) — study all repos, generate a report on what to learn/steal for neurosys, recommend whether to switch from NixOS to stereOS
+- Phase 38 added: Dual-host role separation — Contabo = services host (HA, Spacebot, Matrix, monitoring, claw-swap), OVH = dev-agent host (agent-compute, Claude/Codex, sandbox, agent-spawn). Audit current module allocation, migrate misplaced services/modules, ensure deploy.sh covers both targets, verify Tailscale MagicDNS reachability for both.
+- Phase 39 added: Conway Automaton monitoring dashboard — lightweight Tailscale-only web UI showing live agent status (state, credits, turns, goal progress, tool calls, spend rate), linked from homepage dashboard.
 
 ### Blockers/Concerns
 
@@ -285,5 +290,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 34 plan 34-01 execution boundary. Tasks A-D complete (config verified in main + flake check passed). Waiting at Task 34-01-E checkpoint for human deploy/Tailscale Serve verification.
-Next: Human runs Task 34-01-E deploy checks, then Tasks 34-01-F and 34-01-G (HA UI MCP setup + Claude Android connector tests).
+Stopped at: Phase 35 plan 35-02 execution boundary. Tasks A-D complete (bridge config merged + flake check passed). Waiting at Task 35-02-E checkpoint for human deploy and bridge account linking.
+Next: Human runs Task 35-02-E: deploy neurosys, register mautrix-whatsapp and mautrix-signal appservices in Conduit, then complete WhatsApp QR and Signal device linking.
