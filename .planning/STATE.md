@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 35 Plan 02 code changes complete — mautrix-whatsapp + mautrix-signal are configured and flake-validated. Awaiting human deploy/account-link checkpoint (Task 35-02-E).
+**Current focus:** Phase 36 COMPLETE — stereOS ecosystem research done. Partial adoption recommended: adopt agentd (Phase 40). Phase 35 still at checkpoint (35-02-E, human deploy/account-link required).
 
 ## Current Position
 
-Phase: 35 (Unified Messaging Bridge — Signal + WhatsApp + Telegram -> AI) — PLAN 02 READY FOR HUMAN DEPLOY CHECKPOINT
-Plan: 2 of 3 -- CODE VALIDATED (A-D complete; E is human-action checkpoint)
-Status: Added `services.mautrix-whatsapp` and `services.mautrix-signal` in `modules/matrix.nix`, set `systemd.services.mautrix-signal.serviceConfig.MemoryDenyWriteExecute = false`, added MTX-03/04/05 annotations, persisted `/var/lib/mautrix-whatsapp` + `/var/lib/mautrix-signal`, ran `nix flake check` successfully for neurosys + ovh, and wrote `.claude/.test-status`.
-Last activity: 2026-02-27 - Executed 35-02 implementation/validation run; ready to pause at Task 35-02-E (deploy + manual account linking checkpoint)
+Phase: 36 (Research: stereOS Ecosystem) — COMPLETE
+Plan: 1 of 1 — COMPLETE
+Status: Research complete. Partial adoption recommended. KVM blocks full stereOS on Contabo. agentd integration proposed as Phase 40. Phase 35 (mautrix bridges) still at human-action checkpoint 35-02-E.
+Last activity: 2026-02-27 - Completed Phase 36 research; wrote 36-REPORT.md with adoption table, switch recommendation, and Phase 40 proposal
 
 Progress: Phase 35 plan 35-02 is checkpoint-ready (4/5 tasks complete, awaiting human deploy/account-link action). Phase 34 plan 34-01 remains checkpoint-ready with pending human deploy/UI tasks.
 
@@ -178,6 +178,9 @@ Recent decisions affecting current work:
 
 ### Completed Phases
 
+- **Phase 36: Research stereOS Ecosystem** (1 plan, completed 2026-02-27)
+  - 36-01: Source-level analysis of all 6 papercomputeco repos (agentd, masterblaster, stereosd, stereOS, tapes, flake-skills). Recommendation: **Partial Adoption** (KVM blocks full stereOS on Contabo; sops-nix superior for persistent VPS). Top actions: adopt agentd as NixOS service (→ Phase 40), steal Harness interface + jcard.toml config schema. agentd reconciliation-loop daemon replaces one-shot agent-spawn.
+
 - **Phase 1: Flake Scaffolding + Pre-Deploy** (2 plans, completed 2026-02-13)
 - **Phase 2: Bootable Base System** (2/2 plans, completed 2026-02-15)
 - **Phase 2.1: Base System Fixups** — Absorbed into Phase 9
@@ -252,6 +255,7 @@ Recent decisions affecting current work:
 - Phase 34 added: Voice MCP — Claude Android app tools via Home Assistant — enable HA native MCP integration (HA 2024.11+), expose via Tailscale Serve HTTPS, connect Claude Android voice mode to control lights and query CO2/sensors without public internet exposure
 - Phase 35 added: Unified Messaging Bridge — Signal + WhatsApp + Telegram → AI — Conduit homeserver + mautrix bridges (all in nixpkgs); mautrix-telegram most stable (official API), mautrix-whatsapp medium risk (WA ban), mautrix-signal medium stability (signal-cli); AI access via Matrix bot + CS API; historical data ingested one-time to Spacebot LanceDB (bridges only sync forward)
 - Phase 36 added: Research stereOS ecosystem (stereOS, masterblaster, stereosd, agentd) — study all repos, generate a report on what to learn/steal for neurosys, recommend whether to switch from NixOS to stereOS
+- Phase 36 executed: Partial adoption — KVM blocks full stereOS on Contabo. agentd daemon model (reconciliation loop, restart policy, HTTP API) is top adoption. stereosd/masterblaster/VM model not applicable. Phase 40 added: agentd integration to replace agent-spawn.
 - Phase 38 added: Dual-host role separation — Contabo = services host (HA, Spacebot, Matrix, monitoring, claw-swap), OVH = dev-agent host (agent-compute, Claude/Codex, sandbox, agent-spawn). Audit current module allocation, migrate misplaced services/modules, ensure deploy.sh covers both targets, verify Tailscale MagicDNS reachability for both.
 - Phase 39 added: Conway Automaton monitoring dashboard — lightweight Tailscale-only web UI showing live agent status (state, credits, turns, goal progress, tool calls, spend rate), linked from homepage dashboard.
 
@@ -290,5 +294,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 35 plan 35-02 execution boundary. Tasks A-D complete (bridge config merged + flake check passed). Waiting at Task 35-02-E checkpoint for human deploy and bridge account linking.
-Next: Human runs Task 35-02-E: deploy neurosys, register mautrix-whatsapp and mautrix-signal appservices in Conduit, then complete WhatsApp QR and Signal device linking.
+Stopped at: Phase 36 complete. Phase 35 still at 35-02-E checkpoint (human deploy required).
+Next: Two parallel threads — (1) Human runs Task 35-02-E: deploy neurosys, register mautrix bridges, complete WA QR + Signal device linking. (2) Plan Phase 40: agentd integration (adopt agentd as NixOS service, wire to sops-nix secrets, replace agent-spawn).
