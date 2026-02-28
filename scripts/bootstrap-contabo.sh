@@ -97,6 +97,8 @@ while true; do
   if sshpass -p "$CONTABO_PASS" ssh \
       -o StrictHostKeyChecking=no \
       -o UserKnownHostsFile=/dev/null \
+      -o PreferredAuthentications=password \
+      -o PubkeyAuthentication=no \
       -o ConnectTimeout=8 \
       "root@${VPS_IP}" "exit 0" 2>/dev/null; then
     echo "  root@ SSH is up (password auth works)!"
@@ -131,6 +133,8 @@ sshpass -p "$CONTABO_PASS" ssh-copy-id \
   -i "${DEPLOY_KEY}.pub" \
   -o StrictHostKeyChecking=no \
   -o UserKnownHostsFile=/dev/null \
+  -o PreferredAuthentications=password \
+  -o PubkeyAuthentication=no \
   "root@${VPS_IP}"
 
 echo "  Deploy key copied. Verifying key-based SSH access..."
