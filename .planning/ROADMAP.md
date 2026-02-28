@@ -233,6 +233,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 3.1 -> 9 -> 4 -> 5 -> 6 -> 7
 | 27. OVH VPS Production Migration | 0/5 | Not started | - |
 | 28. dangirsh.org Static Site on Neurosys | 0/4 | Not started | - |
 | 44. Android CO2 Alert | 0/1 | In progress (A/B complete; C checkpoint pending) | - |
+| 46. Big Push — Deploy + Integrate + Test | 0/TBD | Not started | - |
 
 ### Phase 8: Review Old Neurosys + Doom.d for Reusable Server Config
 **Goal**: Audit dangirsh/neurosys and dangirsh/.doom.d on GitHub for server-relevant configurations, services, and patterns worth porting into neurosys. Filter out anything laptop/Mac/Emacs-specific — only keep what's useful for a remote NixOS server managing personal services, agents, and projects. Present candidates to user for cherry-picking.
@@ -888,3 +889,21 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 45 to break down)
+
+### Phase 46: Big Push — Deploy, Integrate, and Test All Recent Work
+
+**Goal:** Combine all recent in-progress work into one deployment push. Contabo VPS just had Ubuntu reinstalled — needs full NixOS re-bootstrap via nixos-anywhere. OVH should already be running. Merge unmerged branches, enable disabled modules, deploy both hosts, verify all services green, test MCP connectivity from Claude Android, set up DM bridges (Signal/WhatsApp/Telegram), verify circadian lighting automation, and confirm open-source readiness. This phase absorbs and closes Phases 27, 28, 32, 37, 39, and 44.
+**Depends on:** Phase 38 (dual-host role separation complete)
+**Plans:** TBD
+
+**Success Criteria** (what must be TRUE):
+  1. Both hosts (Contabo + OVH) running NixOS with all services green
+  2. Public neurosys repo is open-source ready (no PII, builds clean, README accurate)
+  3. Claude Android app connects to HA MCP and can control lights + query CO2
+  4. Signal, WhatsApp, and Telegram bridges linked with history imported (OVH), queryable over MCP
+  5. Deployment uses Cachix for speed on both hosts
+  6. Circadian lighting automation active (lights follow the sun)
+  7. All previously in-progress phases (27, 28, 32, 37, 39, 44) resolved
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 46 to break down)
