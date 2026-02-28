@@ -30,9 +30,7 @@
 let
   # Permanent Matrix server name for this deployment.
   serverName = "neurosys.local";
-  isNeurosys = config.networking.hostName == "neurosys";
 in
-lib.mkIf isNeurosys
 {
   # mautrix-telegram currently depends on olm, which is marked insecure in nixpkgs.
   # Keep this allow-list narrow and local to the neurosys Matrix stack.
