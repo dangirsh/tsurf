@@ -1,8 +1,10 @@
 # modules/networking.nix
-# @decision NET-01: key-only SSH; port 22 open on public interface (temporary, pending Tailscale bootstrap fix)
+# @decision NET-01: port 22 open on public interface with key-only auth + fail2ban protection.
+#   Deliberate: Tailscale-preferred deploy, but public SSH enables bootstrap/recovery when
+#   Tailscale is unavailable (e.g., first boot, Tailscale misconfiguration).
 # @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
 # @decision NET-03: Tailscale VPN connected to tailnet
-# @decision NET-04: ports 22, 80, 443, 22000 on public interface
+# @decision NET-04: ports 22, 80, 443, 22000 on public interface; all other services internal
 # @decision NET-06: Tailscale reverse path filtering set to loose
 # @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
 { config, lib, pkgs, ... }:
@@ -11,8 +13,11 @@ let
   # Services bind to localhost or are Tailscale-only — never on the public interface.
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
   # Add private service ports in your private overlay.
+  # Private overlay services add their ports in their own networking override.
   internalOnlyPorts = {
+    "6052" = "esphome";
     "8082" = "homepage-dashboard";
+    "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
     "8400" = "neurosys-mcp";
     "9090" = "prometheus (localhost)";
@@ -33,8 +38,6 @@ in {
     }
   ];
 
-  programs.mosh.enable = true;
-
   # --- nftables backend ---
   networking.nftables.enable = true;
   networking.nftables.tables.agent-metadata-block = {
@@ -51,12 +54,18 @@ in {
   networking.firewall = {
     enable = true;
     allowPing = true;
+    # @decision NET-10: ports 80/443 for nginx (ACME HTTP-01 challenge + TLS reverse proxy)
+    # @decision NET-11: port 22000 for Syncthing BEP (encrypted, certificate-authenticated)
     allowedTCPPorts = [ 22 80 443 22000 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
     trustedInterfaces = [ "tailscale0" ];
   };
 
   # --- SSH hardening ---
+  # @decision NET-12: fail2ban enabled via srvos server profile (automatic, no explicit config needed);
+  #   protects port 22 from brute-force with progressive banning.
+  # @decision NET-13: SSH hardened beyond key-auth — X11 off, MaxAuthTries 3, 30s grace window,
+  #   client keepalive 5min to detect stale connections.
   services.openssh = {
     enable = true;
     openFirewall = false;
@@ -67,6 +76,11 @@ in {
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "prohibit-password";  # key-only root access for deploy pipeline
+      X11Forwarding = false;
+      MaxAuthTries = 3;
+      LoginGraceTime = 30;
+      ClientAliveInterval = 300;
+      ClientAliveCountMax = 3;
     };
   };
 

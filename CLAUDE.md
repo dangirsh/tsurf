@@ -15,7 +15,7 @@ modules/
   default.nix          # Import hub for all modules
   base.nix             # Nix settings, system packages, kernel sysctl hardening
   boot.nix             # GRUB bootloader config
-  networking.nix       # Firewall (nftables), SSH (Tailscale-only), Tailscale, fail2ban
+  networking.nix       # Firewall (nftables), SSH (hardened), Tailscale, fail2ban
   users.nix            # User accounts, sudo, SSH authorized keys
   secrets.nix          # sops-nix secret declarations
   docker.nix           # Docker engine (--iptables=false), NAT
@@ -50,7 +50,7 @@ secrets/
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
 - **Agent tooling**: llm-agents overlay provides claude-code + codex; bubblewrap sandbox via agent-spawn
-- **SSH via Tailscale only**: Port 22 not on public firewall; deploy uses Tailscale MagicDNS
+- **SSH hardened**: Port 22 on public firewall (key-only, fail2ban-protected); deploy prefers Tailscale MagicDNS but public SSH enables bootstrap/recovery when Tailscale is unavailable
 - **Kernel hardening**: sysctl settings restrict dmesg, kptr, BPF, ICMP redirects
 
 ## Testing
