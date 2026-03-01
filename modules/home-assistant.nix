@@ -123,6 +123,9 @@
       ExecStartPre = "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 30); do ${pkgs.tailscale}/bin/tailscale status >/dev/null 2>&1 && exit 0; sleep 2; done; echo tailscale-not-ready; exit 1'";
       ExecStart = "${pkgs.tailscale}/bin/tailscale serve --bg --https=443 http://127.0.0.1:8123";
       ExecStop = "${pkgs.tailscale}/bin/tailscale serve off";
+      ProtectHome = true;
+      PrivateTmp = true;
+      NoNewPrivileges = true;
     };
   };
 }

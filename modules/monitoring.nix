@@ -149,4 +149,30 @@
       }))
     ];
   };
+
+  # @decision SEC47-44-PROM: Harden Prometheus systemd service
+  # @rationale: Prometheus scrapes internal metrics and stores time-series data.
+  #   Compromise could allow metric manipulation or data exfiltration.
+  #   NoNewPrivileges + ProtectHome prevent privilege escalation; PrivateDevices
+  #   restricts raw device access not needed for a metrics server.
+  systemd.services.prometheus.serviceConfig = {
+    NoNewPrivileges = true;
+    ProtectHome = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectControlGroups = true;
+    RestrictSUIDSGID = true;
+    PrivateDevices = true;
+    PrivateTmp = true;
+  };
+
+  # @decision SEC47-44-NODE: Harden node-exporter systemd service
+  # @rationale: node-exporter reads system metrics and exposes them on port 9100.
+  #   Hardening limits what a compromised exporter can do beyond reading metrics.
+  systemd.services."prometheus-node-exporter".serviceConfig = {
+    NoNewPrivileges = true;
+    ProtectHome = true;
+    RestrictSUIDSGID = true;
+    PrivateDevices = true;
+  };
 }

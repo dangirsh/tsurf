@@ -15,7 +15,7 @@ modules/
   default.nix          # Import hub for all modules
   base.nix             # Nix settings, system packages, kernel sysctl hardening
   boot.nix             # GRUB bootloader config
-  networking.nix       # Firewall (nftables), SSH (Tailscale-only), Tailscale, fail2ban
+  networking.nix       # Firewall (nftables), SSH (hardened), Tailscale, fail2ban
   users.nix            # User accounts, sudo, SSH authorized keys
   secrets.nix          # sops-nix secret declarations
   docker.nix           # Docker engine (--iptables=false), NAT
@@ -50,7 +50,7 @@ secrets/
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
 - **Agent tooling**: llm-agents overlay provides claude-code + codex; bubblewrap sandbox via agent-spawn
-- **SSH via Tailscale only**: Port 22 not on public firewall; deploy uses Tailscale MagicDNS
+- **SSH hardened**: Port 22 on public firewall (key-only, fail2ban-protected); deploy prefers Tailscale MagicDNS but public SSH enables bootstrap/recovery when Tailscale is unavailable
 - **Kernel hardening**: sysctl settings restrict dmesg, kptr, BPF, ICMP redirects
 
 ## Testing
@@ -86,11 +86,14 @@ Rules that agents MUST follow when modifying any module:
 
 ### Accepted Risks (documented, not actionable)
 
-- **SEC3:** Docker container hardening (read-only rootfs, cap-drop, no-new-privileges) is deferred -- containers are declared in external repos (parts, claw-swap), changes needed there
+- **SEC3:** Docker container hardening (read-only rootfs, cap-drop, no-new-privileges) — PARTIALLY ADDRESSED in Phase 47-02 (secret-proxy, monitoring hardened). Parts/claw-swap containers remain external.
 - **SEC5:** `--no-sandbox` agents can modify `~/.claude/settings.json` -- mitigated by default sandbox-on and requiring explicit `--no-sandbox` flag
 - **SEC6:** Docker socket mounted in homepage-dashboard -- mitigated by Tailscale-only access (port 8082 in internalOnlyPorts)
-- **SEC9:** Systemd service hardening (ProtectHome, PrivateTmp) is deferred -- NixOS service modules provide baseline defaults, custom overrides risk breaking services
+- **SEC9:** Systemd service hardening — PARTIALLY ADDRESSED in Phase 47-02 (secret-proxy, Prometheus, node-exporter, tailscale-serve-ha hardened). Remaining services use NixOS module defaults.
 - **SEC11:** Pre-built binaries (zmx, cass) lack signature verification -- mitigated by SHA256 hash pinning
+- **SEC47-13:** `--no-sandbox` agent = effective root access — inherent to design. Mitigated by default sandbox-on, audit logging, operator awareness.
+- **SEC47-15:** Sandboxed agents have read-only access to all `/data/projects` — deliberate for cross-project reference. No `.env` files on server (sops-nix handles secrets).
+- **SEC47-16:** `anthropic-api-key` is broadly shared (bash, agentd, openclaw, spacebot) — secret-proxy mitigates for claw-swap agents. Per-consumer key rotation out of scope.
 - **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
 
 ## Simplicity Conventions

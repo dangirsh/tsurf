@@ -81,6 +81,27 @@ in {
       User = "secret-proxy";
       Restart = "on-failure";
       RestartSec = "5s";
+      # @decision SEC47-43: Maximum systemd hardening for secret-proxy
+      # @rationale: This service holds the real Anthropic API key in memory and proxies
+      #   to api.anthropic.com. Compromise = key exfiltration. Minimize blast radius with
+      #   strict filesystem isolation. MemoryDenyWriteExecute intentionally omitted —
+      #   Python interpreter requires W+X pages for bytecode compilation.
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      PrivateTmp = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      RestrictAddressFamilies = [ "AF_INET" "AF_INET6" ];
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
+      RestrictSUIDSGID = true;
+      CapabilityBoundingSet = "";
+      SystemCallArchitectures = "native";
+      LockPersonality = true;
+      PrivateDevices = true;
     };
   };
 }

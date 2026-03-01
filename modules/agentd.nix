@@ -95,6 +95,9 @@ let
         --dev /dev
         --size 4294967296 --tmpfs /tmp
 
+        # @decision SEC47-15: Cross-project read access is deliberate
+        # Agents need to reference sibling repos. Read-only prevents modification.
+        # Risk: compromised agent can read source in all /data/projects subdirs.
         --ro-bind /data/projects /data/projects
         --bind "$PROJECT_DIR" "$PROJECT_DIR"
 
