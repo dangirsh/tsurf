@@ -220,7 +220,7 @@ let
       after = [ "network-online.target" "sops-nix.service" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
-      path = [ wrapper ] ++ (with pkgs; [ tmux sudo bubblewrap coreutils ]);
+      path = [ wrapper ] ++ (with pkgs; [ tmux sudo bubblewrap coreutils nix ]);
       serviceConfig = {
         ExecStart = mkExecStart name agentCfg;
         RuntimeDirectory = "agentd/${name}";
