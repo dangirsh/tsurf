@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 48-01 complete. Test automation infrastructure shipped (20 eval checks + 39 live BATS checks + flake/app wrappers).
+**Current focus:** Phase 48 complete. Deep validation test infrastructure shipped (20 eval checks + 64 live BATS checks + JSON output + CI workflow).
 
 ## Current Position
 
-Phase: 48 (Test Automation Infrastructure) — IN PROGRESS
-Plan: 48-01 — COMPLETE
-Status: Two-layer test architecture implemented and verified. `flake.nix` now exports 20 eval checks under `checks.x86_64-linux`, preserves deploy-rs checks, adds `packages.test-live` + `apps.test-live`, and includes BATS tooling in devShell. Live test suites added for service health, endpoints, security, and secrets (39 tests total).
-Last activity: 2026-03-01 - Executed and committed tasks 48-01-A..I. Verified `nix flake check` pass and `nix build .#test-live --no-link` pass.
+Phase: 48 (Test Automation Infrastructure) — COMPLETE
+Plan: 48-02 — COMPLETE
+Status: Deep validation complete. Added 5 new live BATS suites (agentd, monitoring, impermanence, sandbox, networking), expanded total live coverage to 64 tests, added `scripts/run-tests.sh --json` one-object-per-test output, added `.github/workflows/test.yml` for eval CI, documented private overlay extension pattern, and expanded shellcheck coverage in flake checks.
+Last activity: 2026-03-01 - Executed and committed tasks 48-02-A..I with verification, plus Rule-1 JSON parser fix. Verified `nix flake check` pass and `nix build .#test-live --no-link` pass.
 
-Progress: Phase 48 started with 48-01 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
+Progress: Phase 48 completed (48-01 + 48-02). Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28
-- Average duration: ~20.5min
-- Total execution time: ~573 min
+- Total plans completed: 29
+- Average duration: ~22.6min
+- Total execution time: ~655 min
 
 **By Phase:**
 
@@ -51,8 +51,8 @@ Progress: Phase 48 started with 48-01 complete. Phase 45 deployment checkpoint p
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 40-01 (~72min), 37-03 (~5min), 37-02 (~5min), 37-01 (~11min)
-- Trend: Execution stable; Phase 40 introduced higher complexity (new module + fork patch + evaluation blocker fix).
+- Last 4 plans: 48-02 (~82min), 48-01 (~95min), 40-01 (~72min), 37-03 (~5min)
+- Trend: Higher complexity due comprehensive test infrastructure work and full flake verification loops.
 
 *Updated after each plan completion*
 
@@ -211,11 +211,17 @@ Recent decisions affecting current work:
 - [48-01]: Added 20 eval checks (`tests/eval/config-checks.nix`) wired into `checks.x86_64-linux` with deploy-rs checks preserved.
 - [48-01]: Added flake `packages.test-live` and `apps.test-live` entry point (`nix run .#test-live -- neurosys|ovh`) with BATS runtime deps.
 - [48-01]: Added `scripts/run-tests.sh` for eval/live orchestration and `.claude/.test-status` pass/fail stamping.
+- [48-02]: Added 5 deep live suites (`agentd`, `monitoring`, `impermanence`, `sandbox`, `networking`) for 25 additional host-runtime assertions.
+- [48-02]: `scripts/run-tests.sh --json` emits one JSON object per TAP test (`name`, `status`, `error`) for agent-parseable failure handling.
+- [48-02]: Added `.github/workflows/test.yml` to run `nix flake check` and `nix build .#test-live` on push/PR without SSH live tests.
+- [48-02]: Expanded flake shellcheck check to include `scripts/run-tests.sh` and all live BATS files (BATS lint non-blocking).
+- [48-02]: Documented private overlay test extension pattern in `tests/eval/config-checks.nix` and `CLAUDE.md`.
 
 ### Completed Phases
 
-- **Phase 48: Test Automation Infrastructure** (1/2 plans, 48-01 completed 2026-03-01)
+- **Phase 48: Test Automation Infrastructure** (2/2 plans, completed 2026-03-01)
   - 48-01: Added two-layer validation stack: 20 flake eval checks + 39 BATS live tests, `nix run .#test-live` entry point, and `scripts/run-tests.sh` wrapper.
+  - 48-02: Added 5 deep live suites (+25 tests), `--json` output mode, CI eval workflow, private overlay testing docs, and expanded shellcheck coverage.
 
 - **Phase 47: Comprehensive Security Review** (3 plans, completed 2026-03-01)
   - 47-01: Network hardening — port audit, Mosh removed (1001 UDP ports closed), SSH hardened (X11 off, MaxAuthTries 3, LoginGraceTime 30, keepalive), internalOnlyPorts updated, port 22 documentation contradiction resolved
