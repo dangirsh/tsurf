@@ -1,30 +1,54 @@
 #!/usr/bin/env python3
 # src/neurosys-mcp/server.py
-# @decision MCP-45-01: expose Home Assistant operations as FastMCP tools over streamable HTTP.
-# @decision MCP-45-02: keep MCP server auth disabled; optional HA bearer token is read from env only.
+# @decision MCP-01: Expose Home Assistant + Matrix as FastMCP tools over streamable HTTP.
+# @decision MCP-02: OAuth enabled when MCP_OAUTH_PASSWORD + MCP_PUBLIC_URL are set;
+#   otherwise no auth (local dev / tailnet-only). Auth module in auth.py.
+# @decision MCP-03: Matrix tools degrade gracefully when MATRIX_URL/MATRIX_TOKEN empty.
 
 from __future__ import annotations
 
 import os
+import time as _time
 from typing import Any
 
 import httpx
 from fastmcp import FastMCP
 
+# --- Home Assistant config ---
 HOME_ASSISTANT_URL = os.environ.get("HOME_ASSISTANT_URL", "http://127.0.0.1:8123").rstrip("/")
 HOME_ASSISTANT_TOKEN = os.environ.get("HOME_ASSISTANT_TOKEN", "")
 HOME_ASSISTANT_TIMEOUT_SECONDS = float(os.environ.get("HOME_ASSISTANT_TIMEOUT_SECONDS", "15"))
 
+# --- Matrix/Conduit config ---
+MATRIX_URL = os.environ.get("MATRIX_URL", "").rstrip("/")
+MATRIX_TOKEN = os.environ.get("MATRIX_TOKEN", "")
+
+# --- MCP server config ---
 MCP_BIND_HOST = os.environ.get("NEUROSYS_MCP_HOST", "127.0.0.1")
 MCP_BIND_PORT = int(os.environ.get("NEUROSYS_MCP_PORT", "8400"))
 MCP_PATH = os.environ.get("NEUROSYS_MCP_PATH", "/mcp")
 
+# --- OAuth config (optional) ---
+MCP_OAUTH_PASSWORD = os.environ.get("MCP_OAUTH_PASSWORD", "")
+MCP_PUBLIC_URL = os.environ.get("MCP_PUBLIC_URL", "")
+
+# Build the FastMCP server — with OAuth if credentials are configured
+_auth_provider = None
+if MCP_OAUTH_PASSWORD and MCP_PUBLIC_URL:
+    from auth import create_oauth_provider
+    _auth_provider = create_oauth_provider(
+        password=MCP_OAUTH_PASSWORD,
+        public_url=MCP_PUBLIC_URL,
+    )
+
 mcp = FastMCP(
-    name="neurosys-home-assistant-mcp",
+    name="neurosys",
     instructions=(
-        "Read and control Home Assistant entities via REST API tools. "
-        "Use ha_list_services before calling unknown services."
+        "Control Home Assistant entities and query Matrix/Conduit messages. "
+        "Use ha_list_services before calling unknown services. "
+        "Matrix tools return errors when Matrix is not configured."
     ),
+    auth=_auth_provider,
 )
 
 
@@ -157,6 +181,153 @@ async def ha_search_entities(query: str, limit: int = 25) -> Any:
         "count": len(results),
         "results": results,
     }
+
+
+# ---------------------------------------------------------------------------
+# Matrix / Conduit tools
+# ---------------------------------------------------------------------------
+
+
+def _matrix_headers() -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {MATRIX_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+
+def _matrix_configured() -> bool:
+    return bool(MATRIX_URL and MATRIX_TOKEN)
+
+
+@mcp.tool()
+async def matrix_list_rooms() -> Any:
+    """List all Matrix rooms the bot has joined, with names."""
+    if not _matrix_configured():
+        return {"ok": False, "error": "matrix_not_configured"}
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(
+            f"{MATRIX_URL}/_matrix/client/v3/joined_rooms",
+            headers=_matrix_headers(),
+        )
+        resp.raise_for_status()
+        room_ids = resp.json().get("joined_rooms", [])
+        rooms: list[dict[str, str]] = []
+        for room_id in room_ids:
+            try:
+                state_resp = await client.get(
+                    f"{MATRIX_URL}/_matrix/client/v3/rooms/{room_id}/state/m.room.name",
+                    headers=_matrix_headers(),
+                    timeout=5,
+                )
+                name = (
+                    state_resp.json().get("name", room_id)
+                    if state_resp.status_code == 200
+                    else room_id
+                )
+            except Exception:
+                name = room_id
+            rooms.append({"room_id": room_id, "name": name})
+        return {"ok": True, "rooms": rooms}
+
+
+@mcp.tool()
+async def matrix_get_messages(room_id: str, limit: int = 50) -> Any:
+    """Get recent messages from a Matrix room."""
+    if not _matrix_configured():
+        return {"ok": False, "error": "matrix_not_configured"}
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(
+            f"{MATRIX_URL}/_matrix/client/v3/rooms/{room_id}/messages",
+            headers=_matrix_headers(),
+            params={"dir": "b", "limit": limit},
+        )
+        resp.raise_for_status()
+        events = resp.json().get("chunk", [])
+        messages = [
+            {
+                "sender": e.get("sender"),
+                "body": e.get("content", {}).get("body", ""),
+                "timestamp": e.get("origin_server_ts"),
+                "type": e.get("type"),
+            }
+            for e in events
+            if e.get("type") == "m.room.message"
+        ]
+        return {"ok": True, "messages": messages}
+
+
+@mcp.tool()
+async def matrix_search_rooms(query: str) -> Any:
+    """Search Matrix rooms by name substring."""
+    if not _matrix_configured():
+        return {"ok": False, "error": "matrix_not_configured"}
+    result = await matrix_list_rooms()
+    if not result.get("ok"):
+        return result
+    q = query.lower()
+    matched = [r for r in result["rooms"] if q in r.get("name", "").lower()]
+    return {"ok": True, "rooms": matched}
+
+
+@mcp.tool()
+async def matrix_get_dm_messages(user: str, limit: int = 50) -> Any:
+    """Get recent DM messages with a specific Matrix user.
+
+    Args:
+        user: Matrix user ID (e.g., @admin:neurosys.local) or display name.
+        limit: Maximum number of messages to return.
+    """
+    if not _matrix_configured():
+        return {"ok": False, "error": "matrix_not_configured"}
+    rooms_result = await matrix_list_rooms()
+    if not rooms_result.get("ok"):
+        return rooms_result
+    async with httpx.AsyncClient(timeout=10) as client:
+        for room in rooms_result["rooms"]:
+            try:
+                members_resp = await client.get(
+                    f"{MATRIX_URL}/_matrix/client/v3/rooms/{room['room_id']}/joined_members",
+                    headers=_matrix_headers(),
+                    timeout=5,
+                )
+                if members_resp.status_code != 200:
+                    continue
+                members = members_resp.json().get("joined", {})
+                if len(members) == 2:
+                    member_ids = list(members.keys())
+                    member_names = [
+                        members[m].get("display_name", m) for m in member_ids
+                    ]
+                    if any(
+                        user.lower() in mid.lower()
+                        or user.lower() in mname.lower()
+                        for mid, mname in zip(member_ids, member_names)
+                    ):
+                        return await matrix_get_messages(room["room_id"], limit)
+            except Exception:
+                continue
+    return {"ok": True, "messages": []}
+
+
+@mcp.tool()
+async def matrix_send_message(room_id: str, text: str) -> Any:
+    """Send a text message to a Matrix room."""
+    if not _matrix_configured():
+        return {"ok": False, "error": "matrix_not_configured"}
+    txn_id = str(int(_time.time() * 1000))
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.put(
+            f"{MATRIX_URL}/_matrix/client/v3/rooms/{room_id}/send/m.room.message/{txn_id}",
+            headers=_matrix_headers(),
+            json={"msgtype": "m.text", "body": text},
+        )
+        resp.raise_for_status()
+        return {"ok": True, "event_id": resp.json().get("event_id")}
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 
 def main() -> None:
