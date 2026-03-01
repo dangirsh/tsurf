@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 49 complete. Security hardening follow-up — bootstrap passwords removed, internalOnlyPorts expanded to 23 entries.
+**Current focus:** Phase 50 complete. Coherence & simplicity audit — public modules improved, private overlay consolidated (695 lines removed).
 
 ## Current Position
 
-Phase: 49 (Security Hardening Follow-up) — COMPLETE
-Plan: 49-01 — COMPLETE
-Status: All HIGH priority security issues from Phase 47 audit fixed in public repo. Bootstrap scripts no longer contain hardcoded passwords. internalOnlyPorts covers all 23 known service ports. SEC49-01 accepted risk documented. Private overlay follow-ups (Matrix registration verification, Docker image pinning) documented for separate session.
-Last activity: 2026-03-01 - Executed 49-01 tasks A-F. Verified `nix flake check` pass for both hosts.
+Phase: 50 (Coherence & Simplicity Audit) — COMPLETE
+Plan: 50-02 — COMPLETE
+Status: Both plans executed. Public repo: improved clone logic, sorted eval checks, documented mkForce/owner patterns, added missing secret. Private overlay: 3 duplicate modules deleted, matrix.nix→21-line override, hardening restored, mkForce removed, 8 eval checks added, accepted risks documented.
+Last activity: 2026-03-01 - Executed 50-01 (7 tasks) and 50-02 (10 tasks). `nix flake check` passes for both hosts in both repos.
 
-Progress: Phase 49 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
+Progress: Phase 50 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
 
 ## Performance Metrics
 
@@ -51,8 +51,8 @@ Progress: Phase 49 complete. Phase 45 deployment checkpoint pending. Phase 44 re
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 49-01 (~2min), 48-02 (~82min), 48-01 (~95min), 47-03 (~8min)
-- Trend: Fast execution for focused fix plans after complex test infrastructure work.
+- Last 4 plans: 50-02 (~15min), 50-01 (~20min), 49-01 (~2min), 48-02 (~82min)
+- Trend: Phase 50 coherence audit completed efficiently — mostly documentation and deletion.
 
 *Updated after each plan completion*
 
@@ -223,6 +223,10 @@ Recent decisions affecting current work:
 
 ### Completed Phases
 
+- **Phase 50: Coherence & Simplicity Audit** (2 plans, completed 2026-03-01)
+  - 50-01: Public repo module improvements — backported .git clone check, added conway-api-key secret, documented mkForce/owner patterns (SEC-03/SEC-04), AGENTD-40-03 annotation, sorted firewall port eval checks, deleted stale fleet-status.sh.
+  - 50-02: Private overlay consolidation — deleted 3 duplicate modules (automaton, openclaw, spacebot), rewrote matrix.nix as 21-line override, added AGENT-50-02 annotation, restored HA hardening, removed unnecessary mkForce, fixed sopsFile priority (mkOverride 40), created 8 private eval checks, documented SEC50-01/SEC50-02.
+
 - **Phase 49: Security Hardening Follow-up** (1 plan, completed 2026-03-01)
   - 49-01: Removed hardcoded passwords from bootstrap scripts (Contabo `:?` required env var, OVH `openssl rand`), expanded internalOnlyPorts to 23 entries, documented SEC49-01 accepted risk. Private overlay follow-ups (Matrix registration, Docker image pinning) documented for separate session.
 
@@ -335,6 +339,7 @@ Recent decisions affecting current work:
 - Phase 49 added: Security Hardening Follow-up — Fix HIGH priority issues from Phase 47 audit: (1) remove hardcoded passwords from bootstrap scripts, (2) complete internalOnlyPorts coverage for OpenClaw/Spacebot/Matrix ports, (3) verify Matrix Conduit registration token enforcement, (4) pin Docker container images to SHA256 digests.
 - Phase 50 added: Coherence & Simplicity Audit — holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Cross-cutting analysis of all modules, services, secrets, deployment, and private overlay layering.
 - Phase 51 added: Conway Automaton profitability research — deep investigation into why the agent loop is ineffective (goal churn, worker timeouts, placeholder wallet, no real deployment/exposure) and how to reconfigure it to actually generate revenue. Research x402 viability, agent task sizing, deployment gaps, and produce a concrete reconfiguration plan.
+- Phase 53 added: Conway Dashboard Auth + Prompt Editor — token-based auth for public internet access (bearer token via sops-nix + nginx HTTPS) so dashboard works outside Tailscale; UI to edit genesis prompt and restart automaton agent without NixOS rebuild. Changes span conway-dashboard repo + private-neurosys overlay.
 
 ### Blockers/Concerns
 
@@ -371,5 +376,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 49 complete — security hardening follow-up merged to main. Private overlay follow-ups (Matrix registration verification, Docker image pinning) documented for separate session.
-Next: Push main to origin. Private overlay follow-ups or next phase.
+Stopped at: Phase 50 complete — coherence & simplicity audit finished. Both repos pushed.
+Next: Next phase from roadmap, or deploy pending phases (45/47/48/49/50) to live servers.
