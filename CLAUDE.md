@@ -94,6 +94,7 @@ Rules that agents MUST follow when modifying any module:
 - **SEC47-13:** `--no-sandbox` agent = effective root access — inherent to design. Mitigated by default sandbox-on, audit logging, operator awareness.
 - **SEC47-15:** Sandboxed agents have read-only access to all `/data/projects` — deliberate for cross-project reference. No `.env` files on server (sops-nix handles secrets).
 - **SEC47-16:** `anthropic-api-key` is broadly shared (bash, agentd, openclaw, spacebot) — secret-proxy mitigates for claw-swap agents. Per-consumer key rotation out of scope.
+- **SEC49-01:** Bootstrap script passwords (`CONTABO_PASS` default, `OVH_NEW_PASS`) remain in public git history (commits prior to Phase 49). Both passwords are ephemeral — used only during initial Ubuntu install which is immediately wiped by nixos-anywhere. Rewriting public repo history is impractical. Risk: minimal (passwords are useless after bootstrap completes).
 - **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
 
 ## Simplicity Conventions
