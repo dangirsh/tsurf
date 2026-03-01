@@ -192,6 +192,60 @@ let
     lib.generators.toTOML { } {
       agent = baseAgent;
     };
+
+  mkExecStart = name: agentCfg:
+    let
+      args = [
+        "-config" "/etc/agentd/${name}/jcard.toml"
+        "-api-socket" "/run/agentd/${name}/agentd.sock"
+        "-tmux-socket" "/run/agentd/${name}/tmux.sock"
+        "-secret-dir" "/run/agentd/${name}/secrets/"
+      ] ++ agentCfg.extraArgs;
+    in
+    "${agentCfg.package}/bin/agentd ${lib.escapeShellArgs args}";
+
+  mkPerAgentConfig = name: agentCfg:
+    let
+      wrapper = mkAgentWrapper name agentCfg;
+      resolvedEnvironmentFile =
+        if agentCfg.environmentFile != null then
+          agentCfg.environmentFile
+        else
+          config.sops.templates."agentd-env".path;
+    in
+    {
+      environment.etc."agentd/${name}/jcard.toml".text = mkJcard name agentCfg;
+
+      systemd.services."agentd-${name}" = {
+        description = "agentd agent: ${name}";
+        after = [ "network-online.target" "sops-nix.service" ];
+        wants = [ "network-online.target" ];
+        wantedBy = [ "multi-user.target" ];
+        path = [ wrapper ] ++ (with pkgs; [ tmux sudo bubblewrap coreutils ]);
+        serviceConfig = {
+          ExecStart = mkExecStart name agentCfg;
+          RuntimeDirectory = "agentd/${name}";
+          RuntimeDirectoryMode = "0750";
+          DynamicUser = false;
+          User = "root";
+          Restart = "on-failure";
+          RestartSec = 5;
+          EnvironmentFile = resolvedEnvironmentFile;
+        };
+      };
+
+      systemd.services."agentd-proxy-${name}" = lib.mkIf (agentCfg.apiProxyPort != null) {
+        description = "TCP proxy for agentd-${name} API";
+        after = [ "agentd-${name}.service" ];
+        bindsTo = [ "agentd-${name}.service" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          ExecStart = "${pkgs.socat}/bin/socat TCP-LISTEN:${toString agentCfg.apiProxyPort},fork,reuseaddr UNIX-CONNECT:/run/agentd/${name}/agentd.sock";
+          Restart = "on-failure";
+          RestartSec = 3;
+        };
+      };
+    };
 in
 {
   options.services.agentd.agents = lib.mkOption {
@@ -325,12 +379,14 @@ in
     }
 
     (lib.mkIf (enabledAgents != { }) {
-      environment.etc = lib.mapAttrs'
-        (name: agentCfg: {
-          name = "agentd/${name}/jcard.toml";
-          value.text = mkJcard name agentCfg;
-        })
-        enabledAgents;
+      sops.templates."agentd-env" = {
+        content = ''
+          ANTHROPIC_API_KEY=${config.sops.placeholder."anthropic-api-key"}
+        '';
+        owner = "root";
+      };
     })
+
+    (lib.mkMerge (lib.mapAttrsToList mkPerAgentConfig enabledAgents))
   ];
 }
