@@ -47,7 +47,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 44: Android CO2 Alert** - In progress (44-01 tasks A/B complete, 44-01-C human checkpoint pending). Push notification to Pixel 10 Pro when Apollo AIR-1 CO2 exceeds 1000 ppm. HA automation in home-assistant-config, cooldown to prevent spam, recovery notification when CO2 returns to normal.
 - [x] **Phase 45: Neurosys MCP Server** - Custom MCP server for Claude Android app. Python FastMCP with Streamable HTTP + OAuth 2.1. HA control + Matrix/Conduit DM queries. NixOS systemd service behind Tailscale Funnel.
 - [x] **Phase 47: Comprehensive Security Review** - Detailed security audit of both public and private neurosys components. Network attack surface hardening, intrusion blast radius containment, systemd service isolation, secrets boundary verification, Docker/container escape paths, Tailscale ACL audit, agent sandbox breakout analysis.
-- [ ] **Phase 49: Security Hardening Follow-up** - Fix HIGH priority issues from Phase 47 audit: remove hardcoded passwords from bootstrap scripts, complete internalOnlyPorts coverage, verify Matrix registration, pin Docker image digests.
+- [x] **Phase 49: Security Hardening Follow-up** - Fix HIGH priority issues from Phase 47 audit: remove hardcoded passwords from bootstrap scripts, complete internalOnlyPorts coverage, verify Matrix registration, pin Docker image digests.
 
 ## Phase Details
 
@@ -954,4 +954,4 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 49 to break down)
+- [x] 49-01: Remove hardcoded passwords, expand internalOnlyPorts to 23, document SEC49-01 accepted risk (2min, 2026-03-01)

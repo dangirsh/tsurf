@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 48-01 complete. Test automation infrastructure shipped (20 eval checks + 39 live BATS checks + flake/app wrappers).
+**Current focus:** Phase 49-01 complete. Security hardening follow-up — bootstrap passwords removed, internalOnlyPorts expanded to 23 entries.
 
 ## Current Position
 
-Phase: 48 (Test Automation Infrastructure) — IN PROGRESS
-Plan: 48-01 — COMPLETE
-Status: Two-layer test architecture implemented and verified. `flake.nix` now exports 20 eval checks under `checks.x86_64-linux`, preserves deploy-rs checks, adds `packages.test-live` + `apps.test-live`, and includes BATS tooling in devShell. Live test suites added for service health, endpoints, security, and secrets (39 tests total).
-Last activity: 2026-03-01 - Executed and committed tasks 48-01-A..I. Verified `nix flake check` pass and `nix build .#test-live --no-link` pass.
+Phase: 49 (Security Hardening Follow-up) — COMPLETE
+Plan: 49-01 — COMPLETE
+Status: All HIGH priority security issues from Phase 47 audit fixed in public repo. Bootstrap scripts no longer contain hardcoded passwords. internalOnlyPorts covers all 23 known service ports. SEC49-01 accepted risk documented. Private overlay follow-ups (Matrix registration verification, Docker image pinning) documented for separate session.
+Last activity: 2026-03-01 - Executed 49-01 tasks A-F. Verified `nix flake check` pass for both hosts.
 
-Progress: Phase 48 started with 48-01 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
+Progress: Phase 49 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28
-- Average duration: ~20.5min
-- Total execution time: ~573 min
+- Total plans completed: 29
+- Average duration: ~19.8min
+- Total execution time: ~575 min
 
 **By Phase:**
 
@@ -51,8 +51,8 @@ Progress: Phase 48 started with 48-01 complete. Phase 45 deployment checkpoint p
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 40-01 (~72min), 37-03 (~5min), 37-02 (~5min), 37-01 (~11min)
-- Trend: Execution stable; Phase 40 introduced higher complexity (new module + fork patch + evaluation blocker fix).
+- Last 4 plans: 49-01 (~2min), 48-01 (~15min), 47-03 (~8min), 47-02 (~10min)
+- Trend: Fast execution for focused fix plans; security hardening follow-up completed in 2min.
 
 *Updated after each plan completion*
 
@@ -211,8 +211,15 @@ Recent decisions affecting current work:
 - [48-01]: Added 20 eval checks (`tests/eval/config-checks.nix`) wired into `checks.x86_64-linux` with deploy-rs checks preserved.
 - [48-01]: Added flake `packages.test-live` and `apps.test-live` entry point (`nix run .#test-live -- neurosys|ovh`) with BATS runtime deps.
 - [48-01]: Added `scripts/run-tests.sh` for eval/live orchestration and `.claude/.test-status` pass/fail stamping.
+- [49-01]: SEC49-01: Bootstrap passwords in git history accepted as minimal risk (ephemeral, Ubuntu wiped by nixos-anywhere).
+- [49-01]: Contabo password uses bash `:?` operator (required env var) instead of `:-` default value.
+- [49-01]: OVH password uses `openssl rand -base64 16` (runtime generation) instead of hardcoded string.
+- [49-01]: Matrix/OpenClaw/Spacebot/mautrix ports added to internalOnlyPorts for comprehensive 23-port coverage.
 
 ### Completed Phases
+
+- **Phase 49: Security Hardening Follow-up** (1 plan, completed 2026-03-01)
+  - 49-01: Removed hardcoded passwords from bootstrap scripts (Contabo `:?` required env var, OVH `openssl rand`), expanded internalOnlyPorts to 23 entries, documented SEC49-01 accepted risk. Private overlay follow-ups (Matrix registration, Docker image pinning) documented for separate session.
 
 - **Phase 48: Test Automation Infrastructure** (1/2 plans, 48-01 completed 2026-03-01)
   - 48-01: Added two-layer validation stack: 20 flake eval checks + 39 BATS live tests, `nix run .#test-live` entry point, and `scripts/run-tests.sh` wrapper.
@@ -356,5 +363,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 47 complete — all 3 plans executed and merged to main. Private overlay tasks (47-03-F homepage allowedHosts, 47-03-G sops template audit) not yet done.
-Next: Push main to origin. Then either execute private overlay security tasks or move to next phase.
+Stopped at: Phase 49 complete — security hardening follow-up merged to main. Private overlay follow-ups (Matrix registration verification, Docker image pinning) documented for separate session.
+Next: Push main to origin. Private overlay follow-ups or next phase.
