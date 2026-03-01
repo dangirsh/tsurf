@@ -18,10 +18,12 @@
 
     secrets."cloudflare-dns-token" = { owner = "myuser"; };
 
-    secrets."openclaw-mark-gateway-token"    = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-    secrets."openclaw-lou-gateway-token"     = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-    secrets."openclaw-alexia-gateway-token"  = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-    secrets."openclaw-ari-gateway-token"     = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-mark-gateway-token"        = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-lou-gateway-token"         = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-alexia-gateway-token"      = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-ari-gateway-token"         = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-jordan-claw-gateway-token" = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
+    secrets."openclaw-tal-claw-gateway-token"    = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
 
     # --- Matrix / messaging bridge secrets ---
     # telegram-api-id and telegram-api-hash managed by parts module (parts.yaml)
