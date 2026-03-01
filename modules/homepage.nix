@@ -66,7 +66,24 @@
           }
         ];
       }
-      # Add your services here — see private overlay for examples.
+      {
+        "Parts" = [
+          {
+            "Parts Tools" = {
+              siteMonitor = "http://localhost:8080";
+              description = "Gateway + Telegram bot — tool execution, policy, approvals.";
+              icon = "node-js";
+            };
+          }
+          {
+            "Parts Agent" = {
+              siteMonitor = "http://localhost:3001";
+              description = "Session management + LLM dispatch.";
+              icon = "node-js";
+            };
+          }
+        ];
+      }
     ];
   };
 }

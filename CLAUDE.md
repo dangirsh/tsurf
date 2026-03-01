@@ -53,13 +53,6 @@ secrets/
 - **SSH hardened**: Port 22 on public firewall (key-only, fail2ban-protected); deploy prefers Tailscale MagicDNS but public SSH enables bootstrap/recovery when Tailscale is unavailable
 - **Kernel hardening**: sysctl settings restrict dmesg, kptr, BPF, ICMP redirects
 
-## Testing
-
-NixOS configs are validated with:
-- `nix flake check` — Flake evaluation
-- `nixos-rebuild build --flake .#neurosys` — Build without switching
-- `nixos-rebuild test --flake .#neurosys` — Build and switch (test, no boot entry)
-
 ## Conventions
 
 - One module per concern (networking, services, dev-tools)
@@ -68,6 +61,41 @@ NixOS configs are validated with:
 - Infrastructure repos cloned via activation scripts (clone-only, never pull)
 - Internal services use `openFirewall = false` + `trustedInterfaces` (Tailscale-only)
 - `@decision` annotations on security-relevant choices in module headers
+
+## Testing
+
+Two-layer test architecture: Nix eval checks (offline) + BATS live tests (SSH).
+
+### Eval Checks (offline, fast)
+```bash
+nix flake check
+```
+Validates config evaluation and expected security/service invariants for `neurosys` and `ovh`.
+
+### Live Tests (SSH to running hosts)
+```bash
+nix run .#test-live -- --host neurosys
+nix run .#test-live -- --host neurosys-prod
+scripts/run-tests.sh --live
+scripts/run-tests.sh --live --json
+```
+`--json` emits one JSON object per test (`name`, `status`, `error`) for agent parsing.
+
+### When a Test Fails
+- Read BATS failure output and follow `DEBUG:` commands.
+- SSH to the target host and validate service/runtime state directly.
+- Re-run only affected test files first, then full suite.
+
+### Test Conventions
+- One assertion per test with host-prefixed names (e.g. `neurosys: prometheus.service is active`).
+- Keep tests idempotent and read-only.
+- Prefer helpers from `tests/lib/common.bash`.
+- `scripts/run-tests.sh` writes `.claude/.test-status` for agent-runnable status checks.
+
+### Private Overlay Tests
+The private overlay extends the public suite. See `tests/eval/config-checks.nix`
+for the extension pattern. Private tests cover private agent fleets, nginx
+vhosts, ACME cert domains, and private service stacks.
 
 ## Security Conventions
 
@@ -94,6 +122,7 @@ Rules that agents MUST follow when modifying any module:
 - **SEC47-13:** `--no-sandbox` agent = effective root access — inherent to design. Mitigated by default sandbox-on, audit logging, operator awareness.
 - **SEC47-15:** Sandboxed agents have read-only access to all `/data/projects` — deliberate for cross-project reference. No `.env` files on server (sops-nix handles secrets).
 - **SEC47-16:** `anthropic-api-key` is broadly shared (bash, agentd, openclaw, spacebot) — secret-proxy mitigates for claw-swap agents. Per-consumer key rotation out of scope.
+- **SEC49-01:** Bootstrap script passwords (`CONTABO_PASS` default, `OVH_NEW_PASS`) remain in public git history (commits prior to Phase 49). Both passwords are ephemeral — used only during initial Ubuntu install which is immediately wiped by nixos-anywhere. Rewriting public repo history is impractical. Risk: minimal (passwords are useless after bootstrap completes).
 - **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
 
 ## Simplicity Conventions

@@ -12,10 +12,11 @@ let
   # Ports that must NEVER appear in allowedTCPPorts (internal services).
   # Services bind to localhost or are Tailscale-only — never on the public interface.
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
-  # Add private service ports in your private overlay.
-  # Private overlay services add their ports in their own networking override.
+  # All known service ports listed here for comprehensive assertion coverage.
+  # Private overlay services may also add ports in their own networking override.
   internalOnlyPorts = {
     "6052" = "esphome";
+    "6167" = "matrix-conduit [OVH only]";
     "8082" = "homepage-dashboard";
     "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
@@ -27,6 +28,16 @@ let
     "9202" = "agentd-proxy (conway-automaton)";
     "9203" = "agentd-proxy (claw-swap-dev)";
     "9204" = "agentd-proxy (ovh-dev) [OVH only]";
+    "18789" = "openclaw-mark";
+    "18790" = "openclaw-lou";
+    "18791" = "openclaw-alexia";
+    "18792" = "openclaw-ari";
+    "18793" = "openclaw-jordan-claw";
+    "18794" = "openclaw-tal-claw";
+    "19898" = "spacebot";
+    "29317" = "mautrix-telegram [OVH only]";
+    "29318" = "mautrix-whatsapp [OVH only]";
+    "29328" = "mautrix-signal [OVH only]";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;

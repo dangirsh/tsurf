@@ -4,7 +4,7 @@
 # USAGE:
 #   1. In Contabo control panel, reinstall VPS with Ubuntu.
 #      Contabo provides a root password via email after reinstall.
-#   2. Set CONTABO_PASS env var (or it will be read from default below).
+#   2. Set CONTABO_PASS env var (required — no default).
 #   3. Run this script — it handles everything else automatically.
 #
 # WHAT IT DOES:
@@ -48,11 +48,11 @@ if ! command -v sshpass &>/dev/null; then
 fi
 
 # ────────────────────────────────────────────────────────────────────────────
-# Password: read from environment or fall back to the default.
-# Contabo sends this via email after Ubuntu reinstall.
+# Password: required from environment (no default — each Contabo reinstall
+# generates a unique password sent via email).
 # @decision BOOT-06: ephemeral — Ubuntu is wiped immediately by nixos-anywhere.
 # ────────────────────────────────────────────────────────────────────────────
-CONTABO_PASS="${CONTABO_PASS:-fuckingcontabosecurityshit}"
+CONTABO_PASS="${CONTABO_PASS:?ERROR: Set CONTABO_PASS env var to the root password from Contabo reinstall email}"
 
 # ────────────────────────────────────────────────────────────────────────────
 # Phase 0: Verify preconditions

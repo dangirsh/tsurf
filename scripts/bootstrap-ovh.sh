@@ -32,8 +32,8 @@ EXTRA_FILES="$FLAKE_DIR/tmp/ovh-host-keys"
 FLAKE_TARGET="$FLAKE_DIR#ovh"
 TAILSCALE_HOSTNAME="neurosys-prod"
 
-# Ephemeral password used only during Ubuntu PAM change (Ubuntu is wiped after).
-OVH_NEW_PASS="Nx0sB00t2025!"
+# Ephemeral random password for Ubuntu PAM change (Ubuntu is wiped by nixos-anywhere).
+OVH_NEW_PASS="$(openssl rand -base64 16)"
 
 SSH_OPTS=(
   -i "$DEPLOY_KEY"
@@ -80,6 +80,12 @@ fi
 if ! python3 -c "import pexpect" 2>/dev/null; then
   echo "ERROR: python3 pexpect module not found."
   echo "       Install with: pip3 install pexpect  or  nix-shell -p python3Packages.pexpect"
+  exit 1
+fi
+
+if ! command -v openssl &>/dev/null; then
+  echo "ERROR: openssl not found. Required for random password generation."
+  echo "       Install with: nix-shell -p openssl"
   exit 1
 fi
 

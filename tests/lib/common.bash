@@ -34,22 +34,26 @@ remote_curl() {
 }
 
 # Retry helper for transient network/service startup races.
+# Usage: retry 3 2 remote systemctl is-active tailscaled.service
 retry() {
-  local attempts="$1"
+  local max_attempts="$1"
   local delay_seconds="$2"
   shift 2
 
-  local n=1
-  while true; do
+  local attempt=1
+  while [[ "$attempt" -le "$max_attempts" ]]; do
     if "$@"; then
       return 0
     fi
-    if [[ "$n" -ge "$attempts" ]]; then
-      return 1
+    if [[ "$attempt" -lt "$max_attempts" ]]; then
+      echo "# Attempt ${attempt}/${max_attempts} failed, retrying in ${delay_seconds}s..." >&2
+      sleep "$delay_seconds"
     fi
-    sleep "$delay_seconds"
-    n=$((n + 1))
+    attempt=$((attempt + 1))
   done
+
+  echo "FAIL: command failed after ${max_attempts} attempts: $*" >&2
+  return 1
 }
 
 # --- Assertion helpers ---

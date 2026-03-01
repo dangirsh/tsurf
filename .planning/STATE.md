@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 47 complete. Comprehensive security review shipped across 3 plans (network hardening, service isolation, secret scoping).
+**Current focus:** Phase 49 complete. Security hardening follow-up — bootstrap passwords removed, internalOnlyPorts expanded to 23 entries.
 
 ## Current Position
 
-Phase: 47 (Comprehensive Security Review) — COMPLETE
-Plan: 47-03 — COMPLETE
-Status: All 3 plans executed and merged to main. Network hardening (Mosh removed, SSH hardened, port audit), service isolation (systemd hardening for 4 services, blast radius docs), secret scoping (on-demand API keys, wget removed, Syncthing hostcheck, CLAUDE.md risks updated). Private overlay tasks (homepage allowedHosts, sops template audit) noted but not implemented.
-Last activity: 2026-03-01 - Executed 47-01, 47-02, 47-03 in wave-parallel execution. All `nix flake check` passes.
+Phase: 49 (Security Hardening Follow-up) — COMPLETE
+Plan: 49-01 — COMPLETE
+Status: All HIGH priority security issues from Phase 47 audit fixed in public repo. Bootstrap scripts no longer contain hardcoded passwords. internalOnlyPorts covers all 23 known service ports. SEC49-01 accepted risk documented. Private overlay follow-ups (Matrix registration verification, Docker image pinning) documented for separate session.
+Last activity: 2026-03-01 - Executed 49-01 tasks A-F. Verified `nix flake check` pass for both hosts.
 
-Progress: Phase 47 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
+Progress: Phase 49 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
-- Average duration: ~18.0min
-- Total execution time: ~478 min
+- Total plans completed: 30
+- Average duration: ~21.9min
+- Total execution time: ~657 min
 
 **By Phase:**
 
@@ -51,8 +51,8 @@ Progress: Phase 47 complete. Phase 45 deployment checkpoint pending. Phase 44 re
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 40-01 (~72min), 37-03 (~5min), 37-02 (~5min), 37-01 (~11min)
-- Trend: Execution stable; Phase 40 introduced higher complexity (new module + fork patch + evaluation blocker fix).
+- Last 4 plans: 49-01 (~2min), 48-02 (~82min), 48-01 (~95min), 47-03 (~8min)
+- Trend: Fast execution for focused fix plans after complex test infrastructure work.
 
 *Updated after each plan completion*
 
@@ -207,8 +207,28 @@ Recent decisions affecting current work:
 - [47-03]: SEC47-18: wget removed from system packages.
 - [47-03]: SEC47-21: Syncthing insecureSkipHostcheck set to false (Docker bridge comment was outdated).
 - [47-03]: SEC47-15: Cross-project read access documented in agentd.nix as deliberate.
+- [48-01]: TEST-48-01: Two-layer test strategy adopted — offline Nix eval checks + live SSH BATS suites.
+- [48-01]: Added 20 eval checks (`tests/eval/config-checks.nix`) wired into `checks.x86_64-linux` with deploy-rs checks preserved.
+- [48-01]: Added flake `packages.test-live` and `apps.test-live` entry point (`nix run .#test-live -- neurosys|ovh`) with BATS runtime deps.
+- [48-01]: Added `scripts/run-tests.sh` for eval/live orchestration and `.claude/.test-status` pass/fail stamping.
+- [48-02]: Added 5 deep live suites (`agentd`, `monitoring`, `impermanence`, `sandbox`, `networking`) for 25 additional host-runtime assertions.
+- [48-02]: `scripts/run-tests.sh --json` emits one JSON object per TAP test (`name`, `status`, `error`) for agent-parseable failure handling.
+- [48-02]: Added `.github/workflows/test.yml` to run `nix flake check` and `nix build .#test-live` on push/PR without SSH live tests.
+- [48-02]: Expanded flake shellcheck check to include `scripts/run-tests.sh` and all live BATS files (BATS lint non-blocking).
+- [48-02]: Documented private overlay test extension pattern in `tests/eval/config-checks.nix` and `CLAUDE.md`.
+- [49-01]: SEC49-01: Bootstrap passwords in git history accepted as minimal risk (ephemeral, Ubuntu wiped by nixos-anywhere).
+- [49-01]: Contabo password uses bash `:?` operator (required env var) instead of `:-` default value.
+- [49-01]: OVH password uses `openssl rand -base64 16` (runtime generation) instead of hardcoded string.
+- [49-01]: Matrix/OpenClaw/Spacebot/mautrix ports added to internalOnlyPorts for comprehensive 23-port coverage.
 
 ### Completed Phases
+
+- **Phase 49: Security Hardening Follow-up** (1 plan, completed 2026-03-01)
+  - 49-01: Removed hardcoded passwords from bootstrap scripts (Contabo `:?` required env var, OVH `openssl rand`), expanded internalOnlyPorts to 23 entries, documented SEC49-01 accepted risk. Private overlay follow-ups (Matrix registration, Docker image pinning) documented for separate session.
+
+- **Phase 48: Test Automation Infrastructure** (2/2 plans, completed 2026-03-01)
+  - 48-01: Added two-layer validation stack: 20 flake eval checks + 39 BATS live tests, `nix run .#test-live` entry point, and `scripts/run-tests.sh` wrapper.
+  - 48-02: Added 5 deep live suites (+25 tests), `--json` output mode, CI eval workflow, private overlay testing docs, and expanded shellcheck coverage.
 
 - **Phase 47: Comprehensive Security Review** (3 plans, completed 2026-03-01)
   - 47-01: Network hardening — port audit, Mosh removed (1001 UDP ports closed), SSH hardened (X11 off, MaxAuthTries 3, LoginGraceTime 30, keepalive), internalOnlyPorts updated, port 22 documentation contradiction resolved
@@ -313,6 +333,7 @@ Recent decisions affecting current work:
 - Phase 47 added: Comprehensive Security Review — end-to-end audit of public + private neurosys components. Three focus areas: (1) network attack surface hardening (ports, firewall, Tailscale ACLs), (2) intrusion blast radius containment (lateral movement limits, isolation boundaries, secrets compartmentalization), (3) attack surface minimization (unnecessary packages/services/privileges). Covers both hosts, all services, Docker, agent sandbox, sops secrets, deployment pipeline.
 - Phase 48 added: Test Automation Infrastructure — comprehensive e2e/integration test suite for all neurosys components (public modules, private overlay, agentd fleet, secrets, network, Docker services, MCP server, homepage, deploy pipeline). Agent-runnable tests with maximal feedback. Minimalism for prod, maximalism for test infra.
 - Phase 49 added: Security Hardening Follow-up — Fix HIGH priority issues from Phase 47 audit: (1) remove hardcoded passwords from bootstrap scripts, (2) complete internalOnlyPorts coverage for OpenClaw/Spacebot/Matrix ports, (3) verify Matrix Conduit registration token enforcement, (4) pin Docker container images to SHA256 digests.
+- Phase 50 added: Coherence & Simplicity Audit — holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Cross-cutting analysis of all modules, services, secrets, deployment, and private overlay layering.
 
 ### Blockers/Concerns
 
@@ -349,5 +370,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 47 complete — all 3 plans executed and merged to main. Private overlay tasks (47-03-F homepage allowedHosts, 47-03-G sops template audit) not yet done.
-Next: Push main to origin. Then either execute private overlay security tasks or move to next phase.
+Stopped at: Phase 49 complete — security hardening follow-up merged to main. Private overlay follow-ups (Matrix registration verification, Docker image pinning) documented for separate session.
+Next: Push main to origin. Private overlay follow-ups or next phase.
