@@ -97,6 +97,19 @@ The private overlay extends the public suite. See `tests/eval/config-checks.nix`
 for the extension pattern. Private tests cover private agent fleets, nginx
 vhosts, ACME cert domains, and private service stacks.
 
+## Deployment Rules
+
+**CRITICAL — read before running any deploy:**
+
+- **`scripts/deploy.sh` is for `neurosys` (Contabo) ONLY** — it hard-refuses `--node ovh`
+- **OVH must ALWAYS be deployed from the PRIVATE overlay:**
+  ```
+  cd /data/projects/private-neurosys && ./scripts/deploy.sh --node ovh
+  ```
+- **NEVER run `nixos-rebuild switch --flake .#ovh`** from this repo — the public flake has placeholder SSH keys; it will lock you out of the server
+- **NEVER run `nixos-rebuild switch --flake .#neurosys`** directly either — always go through `scripts/deploy.sh` which handles locking, rollback, and health checks
+- For first-time OVH bootstrap: `scripts/bootstrap-ovh.sh` installs base NixOS, then follow with private overlay deploy
+
 ## Security Conventions
 
 Rules that agents MUST follow when modifying any module:

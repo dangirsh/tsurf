@@ -140,6 +140,32 @@ if [[ "$NODE" != "neurosys" && "$NODE" != "ovh" ]]; then
   exit 1
 fi
 
+# SAFETY GUARD: OVH must NEVER be deployed from this public repo.
+# The public flake's nixosConfigurations.ovh is a base config with placeholder
+# SSH keys and no private services (nginx, Matrix/Conduit, dangirsh user, etc.).
+# Deploying it to a running OVH server STRIPS all private services and LOCKS
+# YOU OUT by replacing real SSH keys with placeholders from users.nix.
+#
+# OVH deploys MUST come from the private overlay:
+#   cd /data/projects/private-neurosys && ./scripts/deploy.sh --node ovh
+if [[ "$NODE" == "ovh" ]]; then
+  echo ""
+  echo "╔══════════════════════════════════════════════════════════════════╗"
+  echo "║  BLOCKED: OVH deploy refused from public repo                    ║"
+  echo "╚══════════════════════════════════════════════════════════════════╝"
+  echo ""
+  echo "  Deploying .#ovh from the PUBLIC repo strips private services"
+  echo "  (nginx, Matrix/Conduit, dangirsh user, real SSH keys) and"
+  echo "  LOCKS YOU OUT by installing placeholder authorized_keys."
+  echo ""
+  echo "  Always deploy OVH from the PRIVATE overlay:"
+  echo ""
+  echo "    cd /data/projects/private-neurosys"
+  echo "    ./scripts/deploy.sh --node ovh"
+  echo ""
+  exit 1
+fi
+
 if [[ "$TARGET_SET" == false ]]; then
   if [[ "$NODE" == "ovh" ]]; then
     TARGET="root@neurosys-prod"
