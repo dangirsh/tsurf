@@ -31,6 +31,7 @@ tap_to_json() {
       out = str
       gsub(/\\/, "\\\\", out)
       gsub(/"/, "\\\"", out)
+      gsub(/\n/, "\\n", out)
       gsub(/\t/, " ", out)
       gsub(/\r/, "", out)
       return out
@@ -52,7 +53,7 @@ tap_to_json() {
     /^ok [0-9]+ / {
       flush_fail()
       line = $0
-      sub(/^ok [0-9]+ -? /, "", line)
+      sub(/^ok [0-9]+ -? */, "", line)
       gsub(/[[:space:]]+$/, "", line)
 
       skip_reason = ""
@@ -70,7 +71,7 @@ tap_to_json() {
     /^not ok [0-9]+ / {
       flush_fail()
       line = $0
-      sub(/^not ok [0-9]+ -? /, "", line)
+      sub(/^not ok [0-9]+ -? */, "", line)
       gsub(/[[:space:]]+$/, "", line)
       in_fail = 1
       fail_name = line
