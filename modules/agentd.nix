@@ -1,6 +1,6 @@
 # modules/agentd.nix
 # @decision AGENTD-40-01: agentd manages lifecycle; custom harness executes a generated `agent` wrapper.
-# @decision AGENTD-40-02: bwrap wrapper preserves the existing agent-spawn sandbox policy and keeps secrets env-only.
+# @decision AGENTD-40-02: bwrap wrapper preserves the existing sandbox policy and keeps secrets env-only.
 { config, lib, pkgs, ... }:
 let
   zmx = pkgs.callPackage ../packages/zmx.nix { };
