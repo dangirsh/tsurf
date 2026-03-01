@@ -21,7 +21,7 @@
 #
 # @decision OCL-05: openclaw.json seeded via activation script (automaton.nix pattern).
 # @rationale: Config written only if absent — preserves user edits across rebuilds.
-#   gateway.mode must be "local" for self-hosted operation.
+#   gateway.mode omitted — "local" blocks web browser pairing via nginx reverse proxy.
 #
 # @decision OCL-06: State dirs use 0750 tmpfiles permissions, owned by UID/GID 1000.
 # @rationale: Container runs as UID 1000 (node user). Setting owner to 1000:1000
@@ -43,13 +43,16 @@ let
   #   via the ANTHROPIC_API_KEY env; user identity is gateway-level auth (token).
   mkOpenclawConfig = _user: builtins.toJSON {
     gateway = {
-      mode = "local";
       port = 18789;
       bind = "lan";
-      # @decision OCL-09: dangerouslyAllowHostHeaderOriginFallback used for Tailscale access.
-      # @rationale: All instances are Tailscale-only (direct IP, no proxy). The Host header
-      #   reflects the Tailscale IP/hostname the user connected to. For personal single-operator
-      #   use on a private VPN, Host-header origin fallback is acceptable.
+      # @decision OCL-09: dangerouslyAllowHostHeaderOriginFallback used for nginx proxy access.
+      # @rationale: nginx terminates TLS and forwards to container. Host-header origin fallback
+      #   is acceptable for personal single-operator use on a trusted reverse proxy.
+      # @decision OCL-11: trustedProxies required for nginx+Docker gateway.
+      # @rationale: Without this, proxy headers from nginx (172.17.0.1 Docker bridge) are
+      #   untrusted. OpenClaw logs "Proxy headers detected from untrusted address" and falls
+      #   back to blocking pairing. Include 127.0.0.1, Docker bridge, and Docker network.
+      trustedProxies = [ "127.0.0.1" "172.17.0.1" "172.18.0.1" ];
       auth = {
         rateLimit = {
           maxAttempts = 10;
@@ -152,8 +155,8 @@ in {
         state_dir="/var/lib/openclaw-''${user}"
         mkdir -p "''${state_dir}"
         target="''${state_dir}/openclaw.json"
-        # Replace if: absent, has invalid keys from old seed, or has nginx-era trustedProxies (172.17.0.1)
-        if [ ! -f "''${target}" ] || grep -q '"model":\|"user":\|172\.17\.0\.1' "''${target}" 2>/dev/null; then
+        # Replace if: absent or has invalid keys from old seed (model, user are not valid openclaw.json keys)
+        if [ ! -f "''${target}" ] || grep -q '"model":\|"user":' "''${target}" 2>/dev/null; then
           cp "''${config_file}" "''${target}"
           chown 1000:1000 "''${target}"
           chmod 0640 "''${target}"
