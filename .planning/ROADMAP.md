@@ -45,6 +45,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 32: Self-Hosted Conway Automaton on Neurosys** - Run Conway Automaton framework as NixOS systemd service on neurosys, eliminating Conway Cloud compute costs for agent runtime. BYOK inference via secret proxy. State persisted locally.
 - [x] **Phase 37: Open Source Prep** - Privacy audit, public/private repo split, lean README. Remove personal identifiers; extract personal config to private flake overlay; publish infrastructure patterns.
 - [ ] **Phase 44: Android CO2 Alert** - In progress (44-01 tasks A/B complete, 44-01-C human checkpoint pending). Push notification to Pixel 10 Pro when Apollo AIR-1 CO2 exceeds 1000 ppm. HA automation in home-assistant-config, cooldown to prevent spam, recovery notification when CO2 returns to normal.
+- [ ] **Phase 45: Neurosys MCP Server** - Custom MCP server for Claude Android app. Python FastMCP with Streamable HTTP + OAuth 2.1. HA control + Matrix/Conduit DM queries. NixOS systemd service behind Tailscale Funnel.
+- [ ] **Phase 47: Comprehensive Security Review** - Detailed security audit of both public and private neurosys components. Network attack surface hardening, intrusion blast radius containment, systemd service isolation, secrets boundary verification, Docker/container escape paths, Tailscale ACL audit, agent sandbox breakout analysis.
 
 ## Phase Details
 
@@ -881,10 +883,10 @@ Plans:
 Plans:
 - [ ] 44-01-PLAN.md -- CO2 alert automation: threshold trigger + cooldown + recovery notification in automations.yaml (tasks A/B complete; task C checkpoint pending)
 
-### Phase 45: Interrogate design principles and rewrite README principles section
+### Phase 45: Neurosys MCP Server
 
-**Goal:** [To be planned]
-**Depends on:** Phase 44
+**Goal:** Custom MCP server for Claude Android app. Python FastMCP with Streamable HTTP + OAuth 2.1. HA control + Matrix/Conduit DM queries. NixOS systemd service behind Tailscale Funnel.
+**Depends on:** Phase 38
 **Plans:** 0 plans
 
 Plans:
@@ -907,3 +909,24 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 46 to break down)
+
+### Phase 47: Comprehensive Security Review — Network hardening, intrusion blast radius containment, and attack surface minimization across public and private components
+
+**Goal:** End-to-end security audit of the full neurosys infrastructure — both the public repo and private overlay — with three focus areas: (1) **Network attack surface hardening** — audit every listening port, firewall rule, nftables chain, Tailscale ACL, and public-facing service for unnecessary exposure or misconfiguration; verify defense-in-depth (fail2ban + nftables + Tailscale) has no gaps. (2) **Intrusion blast radius containment** — assess what an attacker can reach after compromising each component (agent sandbox, Docker container, systemd service, user session, sops secret); verify isolation boundaries (namespaces, cgroups, filesystem mounts, network segments, Unix users) limit lateral movement; ensure no single compromise grants access to all secrets or all services. (3) **Attack surface minimization** — identify unnecessary packages, services, open ports, elevated privileges, writable paths, and ambient capabilities that could be removed without functional impact. Covers: public modules, private overlay modules (nginx, repos, spacebot, automaton, homepage overrides, agent-compute overrides), Docker containers, sops secrets, deployment pipeline, and the agent sandbox.
+**Depends on:** Nothing (independent audit — can run anytime)
+**Requirements:** None (security hardening gate)
+**Success Criteria** (what must be TRUE):
+  1. Every listening port on both hosts (Contabo + OVH) has been enumerated and justified — no unnecessary listeners
+  2. Every systemd service audited for isolation: ProtectSystem, ProtectHome, PrivateTmp, NoNewPrivileges, CapabilityBoundingSet, DynamicUser where applicable
+  3. Blast radius matrix documented: for each component (agent sandbox, Docker container, HA, Matrix/Conduit, nginx, claw-swap, parts, spacebot, automaton), what can an attacker reach if that component is compromised?
+  4. Tailscale ACLs reviewed and tightened — device-to-service access follows least privilege
+  5. Docker containers audited for hardening: read-only rootfs, cap-drop ALL, no-new-privileges, resource limits, network isolation, no unnecessary volume mounts
+  6. sops secrets audit: no over-broad access (each secret accessible only by the service that needs it), no unused secrets, owner/group permissions minimal
+  7. Agent sandbox escape paths re-assessed with current config — cross-project read, Docker socket, /run/secrets visibility, network access
+  8. Private overlay security review: nginx TLS config, proxy headers, ACME, public-facing service hardening
+  9. All actionable findings implemented — `nix flake check` passes for both hosts after changes
+  10. Residual accepted risks documented with @decision annotations and added to CLAUDE.md Accepted Risks
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 47 to break down)

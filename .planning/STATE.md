@@ -290,6 +290,7 @@ Recent decisions affecting current work:
 - Phase 39 added: Conway Automaton monitoring dashboard — lightweight Tailscale-only web UI showing live agent status (state, credits, turns, goal progress, tool calls, spend rate), linked from homepage dashboard.
 - Phase 39 progressing: 39-01 completed — private `dangirsh/conway-dashboard` repo created with `server.py` and `dashboard.html`; ready for 39-02 neurosys integration.
 - Phase 45 added: Interrogate design principles and rewrite README principles section — discussion-first phase to nail down exact principles (agents-first, secure defaults, minimal untracked state, headless/long-running), then rewrite README Design Principles section to reflect them accurately.
+- Phase 47 added: Comprehensive Security Review — end-to-end audit of public + private neurosys components. Three focus areas: (1) network attack surface hardening (ports, firewall, Tailscale ACLs), (2) intrusion blast radius containment (lateral movement limits, isolation boundaries, secrets compartmentalization), (3) attack surface minimization (unnecessary packages/services/privileges). Covers both hosts, all services, Docker, agent sandbox, sops secrets, deployment pipeline.
 
 ### Blockers/Concerns
 
