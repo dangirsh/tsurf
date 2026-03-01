@@ -46,7 +46,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 37: Open Source Prep** - Privacy audit, public/private repo split, lean README. Remove personal identifiers; extract personal config to private flake overlay; publish infrastructure patterns.
 - [ ] **Phase 44: Android CO2 Alert** - In progress (44-01 tasks A/B complete, 44-01-C human checkpoint pending). Push notification to Pixel 10 Pro when Apollo AIR-1 CO2 exceeds 1000 ppm. HA automation in home-assistant-config, cooldown to prevent spam, recovery notification when CO2 returns to normal.
 - [x] **Phase 45: Neurosys MCP Server** - Custom MCP server for Claude Android app. Python FastMCP with Streamable HTTP + OAuth 2.1. HA control + Matrix/Conduit DM queries. NixOS systemd service behind Tailscale Funnel.
-- [ ] **Phase 47: Comprehensive Security Review** - Detailed security audit of both public and private neurosys components. Network attack surface hardening, intrusion blast radius containment, systemd service isolation, secrets boundary verification, Docker/container escape paths, Tailscale ACL audit, agent sandbox breakout analysis.
+- [x] **Phase 47: Comprehensive Security Review** - Detailed security audit of both public and private neurosys components. Network attack surface hardening, intrusion blast radius containment, systemd service isolation, secrets boundary verification, Docker/container escape paths, Tailscale ACL audit, agent sandbox breakout analysis.
+- [ ] **Phase 49: Security Hardening Follow-up** - Fix HIGH priority issues from Phase 47 audit: remove hardcoded passwords from bootstrap scripts, complete internalOnlyPorts coverage, verify Matrix registration, pin Docker image digests.
 
 ## Phase Details
 
@@ -939,3 +940,18 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 48 to break down)
+
+### Phase 49: Security Hardening Follow-up — Fix HIGH priority issues from Phase 47 audit
+
+**Goal:** Fix all HIGH priority security issues identified during the Phase 47 comprehensive security review. Four issues: (1) hardcoded passwords in bootstrap scripts visible in public repo history, (2) incomplete internalOnlyPorts coverage leaving 12+ ports without build-time assertion protection, (3) Matrix Conduit open registration potentially allowing unauthorized account creation, (4) Docker container images using unpinned tags (:latest/:slim) creating supply chain risk.
+**Depends on:** Phase 47
+**Success Criteria** (what must be TRUE):
+  1. `scripts/bootstrap-contabo.sh` and `scripts/bootstrap-ovh.sh` contain no hardcoded passwords — env vars required or random generation used
+  2. `internalOnlyPorts` in `networking.nix` covers all service ports including OpenClaw (18789-18794), Spacebot (19898), and Matrix (6167, 29317, 29318, 29328)
+  3. Matrix Conduit registration is either token-protected (verified) or disabled
+  4. All Docker container images in `openclaw.nix` and `spacebot.nix` are pinned to SHA256 digests
+  5. `nix flake check` passes for both configurations
+**Plans:** 1 plan
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 49 to break down)
