@@ -17,13 +17,11 @@ from __future__ import annotations
 import secrets
 import time
 from typing import Any
-from urllib.parse import urlencode
-
 from mcp.server.auth.provider import (
-    AuthorizationCode,
     AuthorizationParams,
     construct_redirect_uri,
 )
+from mcp.server.auth.settings import ClientRegistrationOptions
 from mcp.shared.auth import OAuthClientInformationFull
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
@@ -83,7 +81,11 @@ class NeurosysOAuthProvider(InMemoryOAuthProvider):
         base_url: str,
         password: str,
     ):
-        super().__init__(base_url=base_url)
+        super().__init__(
+            base_url=base_url,
+            client_registration_options=ClientRegistrationOptions(enabled=True),
+            revocation_options=None,
+        )
         self._password = password
         self._pending: _PendingAuth = {}
 
