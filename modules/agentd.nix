@@ -3,8 +3,6 @@
 # @decision AGENTD-40-02: bwrap wrapper preserves the existing agent-spawn sandbox policy and keeps secrets env-only.
 { config, lib, pkgs, ... }:
 let
-  cfg = config.services.agentd;
-
   zmx = pkgs.callPackage ../packages/zmx.nix { };
 
   sandbox-docker-compat = pkgs.runCommandNoCC "sandbox-docker-compat" { } ''
@@ -12,24 +10,23 @@ let
     ln -s ${pkgs.podman}/bin/podman "$out/bin/docker"
   '';
 
-  enabledAgents = lib.filterAttrs (_: agentCfg: agentCfg.enable) cfg.agents;
+  mkDuplicateProxyPortAssertion = enabledAgents:
+    let
+      proxyPorts =
+        map (agentCfg: agentCfg.apiProxyPort)
+          (lib.attrValues enabledAgents);
+      nonNullProxyPorts = lib.filter (port: port != null) proxyPorts;
+    in
+    {
+      assertion = (lib.length nonNullProxyPorts) == (lib.length (lib.unique nonNullProxyPorts));
+      message = "services.agentd.agents.*.apiProxyPort must be unique across enabled agents.";
+    };
 
-  proxyPorts =
-    map (agentCfg: agentCfg.apiProxyPort)
-      (lib.attrValues enabledAgents);
-
-  nonNullProxyPorts = lib.filter (port: port != null) proxyPorts;
-
-  duplicateProxyPortAssertion = {
-    assertion = (lib.length nonNullProxyPorts) == (lib.length (lib.unique nonNullProxyPorts));
-    message = "services.agentd.agents.*.apiProxyPort must be unique across enabled agents.";
-  };
-
-  customHarnessAssertion = {
+  mkCustomHarnessAssertion = agents: {
     assertion =
       lib.all
         (agentCfg: !(agentCfg.enable && agentCfg.harness == "custom" && (!agentCfg.sandbox) && agentCfg.command == null))
-        (lib.attrValues cfg.agents);
+        (lib.attrValues agents);
     message = "services.agentd.agents.<name>.command is required when harness=custom and sandbox=false.";
   };
 
@@ -204,189 +201,213 @@ let
     in
     "${agentCfg.package}/bin/agentd ${lib.escapeShellArgs args}";
 
-  mkPerAgentConfig = name: agentCfg:
+  defaultEnvironmentFile = "/run/secrets/rendered/agentd-env";
+
+  mkAgentService = name: agentCfg:
     let
       wrapper = mkAgentWrapper name agentCfg;
-      resolvedEnvironmentFile =
+      environmentFile =
         if agentCfg.environmentFile != null then
           agentCfg.environmentFile
         else
-          config.sops.templates."agentd-env".path;
+          defaultEnvironmentFile;
     in
     {
-      environment.etc."agentd/${name}/jcard.toml".text = mkJcard name agentCfg;
-
-      systemd.services."agentd-${name}" = {
-        description = "agentd agent: ${name}";
-        after = [ "network-online.target" "sops-nix.service" ];
-        wants = [ "network-online.target" ];
-        wantedBy = [ "multi-user.target" ];
-        path = [ wrapper ] ++ (with pkgs; [ tmux sudo bubblewrap coreutils ]);
-        serviceConfig = {
-          ExecStart = mkExecStart name agentCfg;
-          RuntimeDirectory = "agentd/${name}";
-          RuntimeDirectoryMode = "0750";
-          DynamicUser = false;
-          User = "root";
-          Restart = "on-failure";
-          RestartSec = 5;
-          EnvironmentFile = resolvedEnvironmentFile;
-        };
+      description = "agentd agent: ${name}";
+      after = [ "network-online.target" "sops-nix.service" ];
+      wants = [ "network-online.target" ];
+      wantedBy = [ "multi-user.target" ];
+      path = [ wrapper ] ++ (with pkgs; [ tmux sudo bubblewrap coreutils ]);
+      serviceConfig = {
+        ExecStart = mkExecStart name agentCfg;
+        RuntimeDirectory = "agentd/${name}";
+        RuntimeDirectoryMode = "0750";
+        DynamicUser = false;
+        User = "root";
+        Restart = "on-failure";
+        RestartSec = 5;
+        EnvironmentFile = environmentFile;
       };
+    };
 
-      systemd.services."agentd-proxy-${name}" = lib.mkIf (agentCfg.apiProxyPort != null) {
-        description = "TCP proxy for agentd-${name} API";
-        after = [ "agentd-${name}.service" ];
-        bindsTo = [ "agentd-${name}.service" ];
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          ExecStart = "${pkgs.socat}/bin/socat TCP-LISTEN:${toString agentCfg.apiProxyPort},fork,reuseaddr UNIX-CONNECT:/run/agentd/${name}/agentd.sock";
-          Restart = "on-failure";
-          RestartSec = 3;
-        };
+  mkProxyService = name: agentCfg:
+    lib.mkIf (agentCfg.apiProxyPort != null) {
+      description = "TCP proxy for agentd-${name} API";
+      after = [ "agentd-${name}.service" ];
+      bindsTo = [ "agentd-${name}.service" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        ExecStart = "${pkgs.socat}/bin/socat TCP-LISTEN:${toString agentCfg.apiProxyPort},fork,reuseaddr UNIX-CONNECT:/run/agentd/${name}/agentd.sock";
+        Restart = "on-failure";
+        RestartSec = 3;
       };
     };
 in
 {
-  options.services.agentd.agents = lib.mkOption {
-    type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
-      options = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable this agentd-managed agent.";
-        };
+  options.services.agentd = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable agentd managed services defined under services.agentd.agents.";
+    };
 
-        package = lib.mkOption {
-          type = lib.types.package;
-          default = pkgs.agentd;
-          description = "agentd package to execute for this agent instance.";
-        };
+    agents = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Enable this agentd-managed agent.";
+          };
 
-        harness = lib.mkOption {
-          type = lib.types.enum [ "claude-code" "opencode" "gemini-cli" "custom" ];
-          default = "custom";
-          description = "Agent harness configured in jcard.toml.";
-        };
+          package = lib.mkOption {
+            type = lib.types.package;
+            default = pkgs.agentd;
+            description = "agentd package to execute for this agent instance.";
+          };
 
-        command = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = "Binary path used when sandbox=false and harness=custom.";
-        };
+          harness = lib.mkOption {
+            type = lib.types.enum [ "claude-code" "opencode" "gemini-cli" "custom" ];
+            default = "custom";
+            description = "Agent harness configured in jcard.toml.";
+          };
 
-        agentBinary = lib.mkOption {
-          type = lib.types.str;
-          default = "claude";
-          description = "Agent CLI binary launched by the wrapper inside bubblewrap.";
-        };
+          command = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Binary path used when sandbox=false and harness=custom.";
+          };
 
-        prompt = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-          description = "Inline startup prompt. Empty means interactive mode.";
-        };
+          agentBinary = lib.mkOption {
+            type = lib.types.str;
+            default = "claude";
+            description = "Agent CLI binary launched by the wrapper inside bubblewrap.";
+          };
 
-        promptFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          description = "Path to prompt file. Takes precedence over prompt.";
-        };
+          prompt = lib.mkOption {
+            type = lib.types.str;
+            default = "";
+            description = "Inline startup prompt. Empty means interactive mode.";
+          };
 
-        workdir = lib.mkOption {
-          type = lib.types.str;
-          default = "/data/projects";
-          description = "Agent working directory.";
-        };
+          promptFile = lib.mkOption {
+            type = lib.types.nullOr lib.types.path;
+            default = null;
+            description = "Path to prompt file. Takes precedence over prompt.";
+          };
 
-        restart = lib.mkOption {
-          type = lib.types.enum [ "no" "on-failure" "always" ];
-          default = "no";
-          description = "Restart policy for the agent in jcard.toml.";
-        };
+          workdir = lib.mkOption {
+            type = lib.types.str;
+            default = "/data/projects";
+            description = "Agent working directory.";
+          };
 
-        maxRestarts = lib.mkOption {
-          type = lib.types.int;
-          default = 0;
-          description = "Maximum restart attempts. 0 means unlimited.";
-        };
+          restart = lib.mkOption {
+            type = lib.types.enum [ "no" "on-failure" "always" ];
+            default = "no";
+            description = "Restart policy for the agent in jcard.toml.";
+          };
 
-        timeout = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-          description = "Optional agent timeout (Go duration string).";
-        };
+          maxRestarts = lib.mkOption {
+            type = lib.types.int;
+            default = 0;
+            description = "Maximum restart attempts. 0 means unlimited.";
+          };
 
-        gracePeriod = lib.mkOption {
-          type = lib.types.str;
-          default = "30s";
-          description = "Grace period between SIGINT and forced shutdown.";
-        };
+          timeout = lib.mkOption {
+            type = lib.types.str;
+            default = "";
+            description = "Optional agent timeout (Go duration string).";
+          };
 
-        session = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-          description = "tmux session name. Empty defaults to agent attr name.";
-        };
+          gracePeriod = lib.mkOption {
+            type = lib.types.str;
+            default = "30s";
+            description = "Grace period between SIGINT and forced shutdown.";
+          };
 
-        env = lib.mkOption {
-          type = lib.types.attrsOf lib.types.str;
-          default = { };
-          description = "Extra environment variables rendered into jcard.toml [agent.env].";
-        };
+          session = lib.mkOption {
+            type = lib.types.str;
+            default = "";
+            description = "tmux session name. Empty defaults to agent attr name.";
+          };
 
-        environmentFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = "Optional systemd EnvironmentFile containing API keys for this agent.";
-        };
+          env = lib.mkOption {
+            type = lib.types.attrsOf lib.types.str;
+            default = { };
+            description = "Extra environment variables rendered into jcard.toml [agent.env].";
+          };
 
-        extraArgs = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [ ];
-          description = "Extra CLI flags passed to agentd.";
-        };
+          environmentFile = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Optional systemd EnvironmentFile containing API keys for this agent.";
+          };
 
-        sandbox = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Run through bubblewrap wrapper when true.";
-        };
+          extraArgs = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = "Extra CLI flags passed to agentd.";
+          };
 
-        user = lib.mkOption {
-          type = lib.types.str;
-          default = "myuser";
-          description = "Identity used inside the bubblewrap sandbox (paths and env).";
-        };
+          sandbox = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Run through bubblewrap wrapper when true.";
+          };
 
-        apiProxyPort = lib.mkOption {
-          type = lib.types.nullOr (lib.types.ints.between 1 65535);
-          default = null;
-          description = "Optional TCP port for a local socat proxy to the agentd API socket.";
+          user = lib.mkOption {
+            type = lib.types.str;
+            default = "myuser";
+            description = "Identity used inside the bubblewrap sandbox (paths and env).";
+          };
+
+          apiProxyPort = lib.mkOption {
+            type = lib.types.nullOr (lib.types.ints.between 1 65535);
+            default = null;
+            description = "Optional TCP port for a local socat proxy to the agentd API socket.";
+          };
         };
-      };
-    }));
-    default = { };
-    description = "agentd agent definitions keyed by agent name.";
+      }));
+      default = { };
+      description = "agentd agent definitions keyed by agent name.";
+    };
   };
 
-  config = lib.mkMerge [
+  config = lib.mkIf config.services.agentd.enable (
+    let
+      enabledAgents = lib.filterAttrs (_: agentCfg: agentCfg.enable) config.services.agentd.agents;
+    in
     {
       assertions = [
-        customHarnessAssertion
-        duplicateProxyPortAssertion
+        (mkCustomHarnessAssertion config.services.agentd.agents)
+        (mkDuplicateProxyPortAssertion enabledAgents)
       ];
-    }
 
-    (lib.mkIf (enabledAgents != { }) {
-      sops.templates."agentd-env" = {
-        content = ''
-          ANTHROPIC_API_KEY=${config.sops.placeholder."anthropic-api-key"}
-        '';
-        owner = "root";
+      sops.templates = lib.mkIf (enabledAgents != { }) {
+        "agentd-env" = {
+          content = ''
+            ANTHROPIC_API_KEY=${config.sops.placeholder."anthropic-api-key"}
+          '';
+          owner = "root";
+        };
       };
-    })
 
-    (lib.mkMerge (lib.mapAttrsToList mkPerAgentConfig enabledAgents))
-  ];
+      environment.etc = lib.mapAttrs'
+        (name: agentCfg: {
+          name = "agentd/${name}/jcard.toml";
+          value.text = mkJcard name agentCfg;
+        })
+        enabledAgents;
+
+      systemd.services =
+        (lib.mapAttrs'
+          (name: agentCfg: lib.nameValuePair "agentd-${name}" (mkAgentService name agentCfg))
+          enabledAgents)
+        //
+        (lib.mapAttrs'
+          (name: agentCfg: lib.nameValuePair "agentd-proxy-${name}" (mkProxyService name agentCfg))
+          enabledAgents);
+    }
+  );
 }
