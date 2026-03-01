@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 49-01 complete. Security hardening follow-up — bootstrap passwords removed, internalOnlyPorts expanded to 23 entries.
+**Current focus:** Phase 49 complete. Security hardening follow-up — bootstrap passwords removed, internalOnlyPorts expanded to 23 entries.
 
 ## Current Position
 
@@ -19,9 +19,9 @@ Progress: Phase 49 complete. Phase 45 deployment checkpoint pending. Phase 44 re
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29
-- Average duration: ~19.8min
-- Total execution time: ~575 min
+- Total plans completed: 30
+- Average duration: ~21.9min
+- Total execution time: ~657 min
 
 **By Phase:**
 
@@ -51,8 +51,8 @@ Progress: Phase 49 complete. Phase 45 deployment checkpoint pending. Phase 44 re
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 49-01 (~2min), 48-01 (~15min), 47-03 (~8min), 47-02 (~10min)
-- Trend: Fast execution for focused fix plans; security hardening follow-up completed in 2min.
+- Last 4 plans: 49-01 (~2min), 48-02 (~82min), 48-01 (~95min), 47-03 (~8min)
+- Trend: Fast execution for focused fix plans after complex test infrastructure work.
 
 *Updated after each plan completion*
 
@@ -211,6 +211,11 @@ Recent decisions affecting current work:
 - [48-01]: Added 20 eval checks (`tests/eval/config-checks.nix`) wired into `checks.x86_64-linux` with deploy-rs checks preserved.
 - [48-01]: Added flake `packages.test-live` and `apps.test-live` entry point (`nix run .#test-live -- neurosys|ovh`) with BATS runtime deps.
 - [48-01]: Added `scripts/run-tests.sh` for eval/live orchestration and `.claude/.test-status` pass/fail stamping.
+- [48-02]: Added 5 deep live suites (`agentd`, `monitoring`, `impermanence`, `sandbox`, `networking`) for 25 additional host-runtime assertions.
+- [48-02]: `scripts/run-tests.sh --json` emits one JSON object per TAP test (`name`, `status`, `error`) for agent-parseable failure handling.
+- [48-02]: Added `.github/workflows/test.yml` to run `nix flake check` and `nix build .#test-live` on push/PR without SSH live tests.
+- [48-02]: Expanded flake shellcheck check to include `scripts/run-tests.sh` and all live BATS files (BATS lint non-blocking).
+- [48-02]: Documented private overlay test extension pattern in `tests/eval/config-checks.nix` and `CLAUDE.md`.
 - [49-01]: SEC49-01: Bootstrap passwords in git history accepted as minimal risk (ephemeral, Ubuntu wiped by nixos-anywhere).
 - [49-01]: Contabo password uses bash `:?` operator (required env var) instead of `:-` default value.
 - [49-01]: OVH password uses `openssl rand -base64 16` (runtime generation) instead of hardcoded string.
@@ -221,8 +226,9 @@ Recent decisions affecting current work:
 - **Phase 49: Security Hardening Follow-up** (1 plan, completed 2026-03-01)
   - 49-01: Removed hardcoded passwords from bootstrap scripts (Contabo `:?` required env var, OVH `openssl rand`), expanded internalOnlyPorts to 23 entries, documented SEC49-01 accepted risk. Private overlay follow-ups (Matrix registration, Docker image pinning) documented for separate session.
 
-- **Phase 48: Test Automation Infrastructure** (1/2 plans, 48-01 completed 2026-03-01)
+- **Phase 48: Test Automation Infrastructure** (2/2 plans, completed 2026-03-01)
   - 48-01: Added two-layer validation stack: 20 flake eval checks + 39 BATS live tests, `nix run .#test-live` entry point, and `scripts/run-tests.sh` wrapper.
+  - 48-02: Added 5 deep live suites (+25 tests), `--json` output mode, CI eval workflow, private overlay testing docs, and expanded shellcheck coverage.
 
 - **Phase 47: Comprehensive Security Review** (3 plans, completed 2026-03-01)
   - 47-01: Network hardening — port audit, Mosh removed (1001 UDP ports closed), SSH hardened (X11 off, MaxAuthTries 3, LoginGraceTime 30, keepalive), internalOnlyPorts updated, port 22 documentation contradiction resolved
