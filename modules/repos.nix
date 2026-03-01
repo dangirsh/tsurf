@@ -5,8 +5,7 @@
     deps = [ "users" ];
     text = ''
       repos=(
-        "example-user/my-service-a"
-        "example-user/my-service-b"
+        "dangirsh/agentic-dev-base"
       )
       CLONE_DIR="/data/projects"
       GH_TOKEN="$(cat ${config.sops.secrets."github-pat".path} 2>/dev/null || true)"
@@ -29,7 +28,7 @@
             -c credential.helper="store --file=$CRED_FILE" \
             clone "https://github.com/$repo.git" "$target" \
             || echo "WARNING: Failed to clone $repo (will retry on next activation)"
-          chown -R myuser:users "$target" 2>/dev/null || true
+          chown -R dev:users "$target" 2>/dev/null || true
         fi
       done
 

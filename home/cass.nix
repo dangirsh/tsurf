@@ -12,7 +12,7 @@ in
     Service = {
       Type = "oneshot";
       ExecStart = "${cass}/bin/cass index --full";
-      Environment = [ "HOME=/home/myuser" ];
+      Environment = [ "HOME=/home/dev" ];
     };
   };
 

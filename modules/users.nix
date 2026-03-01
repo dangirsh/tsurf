@@ -1,9 +1,9 @@
 # modules/users.nix
-# @decision SYS-01: myuser with sudo (wheel) + docker group; mutableUsers=false, execWheelOnly=true
+# @decision SYS-01: dev with sudo (wheel) + docker group; mutableUsers=false, execWheelOnly=true
 { config, pkgs, ... }: {
   users.mutableUsers = false;
 
-  users.users.myuser = {
+  users.users.dev = {
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" ];
     subUidRanges = [{ startUid = 100000; count = 65536; }];
@@ -19,7 +19,7 @@
     ];
   };
 
-  # Passwordless sudo for wheel — no interactive password was set for myuser.
+  # Passwordless sudo for wheel — no interactive password was set for dev.
   # Public template: allows eval without shipping real SSH keys/password hashes.
   # Replace placeholder keys above for real deployments.
   users.allowNoPasswordLogin = true;

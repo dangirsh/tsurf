@@ -68,7 +68,9 @@
 
       mkdir -p /var/lib/hass
 
-      if [ ! -d "$HA_REPO_DIR" ]; then
+      # Check for .git dir — a failed clone leaves the dir but no .git, so we retry.
+      if [ ! -d "$HA_REPO_DIR/.git" ]; then
+        rm -rf "$HA_REPO_DIR"  # Clean up any failed clone remnants (placeholder dir)
         if [ -n "$GH_TOKEN" ]; then
           CRED_FILE=$(mktemp)
           chmod 600 "$CRED_FILE"

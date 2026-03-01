@@ -1,3 +1,8 @@
+# @decision SEC-04: API key secrets owned by 'dev' in public template.
+# @rationale: Private overlay overrides owner to the real username via
+#   lib.mkForce in its own secrets.nix. This two-layer pattern is inherent
+#   to the public/private split — public declares secrets with template
+#   ownership, private overrides to actual user.
 { config, lib, ... }: {
   sops = {
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
@@ -9,15 +14,25 @@
     secrets."b2-account-id" = {};
     secrets."b2-account-key" = {};
     secrets."restic-password" = {};
-    secrets."anthropic-api-key" = { owner = "myuser"; };
-    secrets."openai-api-key" = { owner = "myuser"; };
-    secrets."google-api-key" = { owner = "myuser"; };
-    secrets."xai-api-key" = { owner = "myuser"; };
-    secrets."openrouter-api-key" = { owner = "myuser"; };
-    secrets."github-pat" = { owner = "myuser"; };
+    secrets."anthropic-api-key" = { owner = "dev"; };
+    secrets."openai-api-key" = { owner = "dev"; };
+    secrets."google-api-key" = { owner = "dev"; };
+    secrets."xai-api-key" = { owner = "dev"; };
+    secrets."openrouter-api-key" = { owner = "dev"; };
+    secrets."github-pat" = { owner = "dev"; };
 
-    secrets."cloudflare-dns-token" = { owner = "myuser"; };
+    secrets."conway-api-key" = {
+      sopsFile = lib.mkForce ../secrets/neurosys.yaml;
+    };
 
+    secrets."cloudflare-dns-token" = { owner = "dev"; };
+
+    # @decision SEC-03: Per-secret sopsFile override for host-specific secrets.
+    # @rationale: defaultSopsFile is set per-host in hosts/*/default.nix (neurosys.yaml
+    #   or ovh.yaml). These secrets only exist in neurosys.yaml regardless of host.
+    #   mkForce overrides the host default to point at the correct sops file.
+    #   The private overlay's matrix.nix uses mkOverride 40 (beats mkForce=50)
+    #   to redirect OVH-only secrets to ovh.yaml.
     secrets."openclaw-mark-gateway-token"        = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
     secrets."openclaw-lou-gateway-token"         = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
     secrets."openclaw-alexia-gateway-token"      = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };

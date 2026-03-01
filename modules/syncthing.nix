@@ -1,5 +1,5 @@
 # modules/syncthing.nix
-# @decision SVC-02: Syncthing runs as user myuser with fully declarative devices/folders.
+# @decision SVC-02: Syncthing runs as user dev with fully declarative devices/folders.
 # @decision SVC-03: GUI/API binds 0.0.0.0 — NixOS firewall restricts access to Docker bridges and Tailscale.
 { ... }: {
   systemd.services.syncthing.environment = {
@@ -7,15 +7,15 @@
   };
 
   systemd.tmpfiles.rules = [
-    "d /home/myuser/Sync 0755 myuser users -"
+    "d /home/dev/Sync 0755 dev users -"
   ];
 
   services.syncthing = {
     enable = true;
-    user = "myuser";
+    user = "dev";
     group = "users";
-    dataDir = "/home/myuser";
-    configDir = "/home/myuser/.config/syncthing";
+    dataDir = "/home/dev";
+    configDir = "/home/dev/.config/syncthing";
     openDefaultPorts = true;
     guiAddress = "0.0.0.0:8384";
     overrideDevices = true;
@@ -35,7 +35,7 @@
         "sync" = {
           id = "sync";
           label = "Sync";
-          path = "/home/myuser/Sync";
+          path = "/home/dev/Sync";
           devices = [
             "my-laptop"
             "my-phone"

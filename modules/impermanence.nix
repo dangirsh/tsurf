@@ -1,7 +1,7 @@
 # modules/impermanence.nix
 # @decision IMP-01: BTRFS subvolume rollback (not tmpfs) — server workloads need disk-backed root
 # @decision IMP-02: Docker on own @docker subvolume (not impermanence bind-mount) — avoids overlay2 nested mount conflicts
-# @decision IMP-03: Persist whole /home/myuser (not per-file) — simpler for server, covers Syncthing data + config
+# @decision IMP-03: Persist whole /home/dev (not per-file) — simpler for server, covers Syncthing data + config
 # @decision IMP-04: /var/lib/private covers DynamicUser services (ESPHome, future services)
 { config, lib, ... }: {
   # @decision IMP-05: Fix /etc permissions for sshd strict mode checks.
@@ -43,7 +43,7 @@
       "/var/lib/systemd/coredump"          # Core dumps (currently empty, but systemd expects it)
       "/var/lib/systemd/timers"            # Timer stamps for Persistent=true timers
       "/var/lib/systemd/timesync"          # NTP clock file
-      "/var/lib/systemd/linger"            # User linger state for myuser
+      "/var/lib/systemd/linger"            # User linger state for dev
 
       # --- Service data ---
       "/var/lib/fail2ban"                  # Ban database (nice-to-have; regenerated if lost)
@@ -67,7 +67,7 @@
       "/var/lib/openclaw-tal-claw"           # OpenClaw gateway state — tal-claw instance
 
       # --- User data ---
-      "/home/myuser"                       # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh
+      "/home/dev"                       # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh
       "/root"                              # .cache/restic, .config/nix, .ssh/known_hosts, .gitconfig, .docker
 
       # --- Code repos ---

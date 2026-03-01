@@ -49,6 +49,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 47: Comprehensive Security Review** - Detailed security audit of both public and private neurosys components. Network attack surface hardening, intrusion blast radius containment, systemd service isolation, secrets boundary verification, Docker/container escape paths, Tailscale ACL audit, agent sandbox breakout analysis.
 - [x] **Phase 49: Security Hardening Follow-up** - Fix HIGH priority issues from Phase 47 audit: remove hardcoded passwords from bootstrap scripts, complete internalOnlyPorts coverage, verify Matrix registration, pin Docker image digests.
 - [ ] **Phase 50: Coherence & Simplicity Audit** - Holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Prioritized findings report + fixes.
+- [ ] **Phase 52: Nativize the Lobster Farm — Docker-Free Contabo** - Replace remaining Docker containers (OpenClaw ×6, Spacebot) with native NixOS systemd services. buildNpmPackage for OpenClaw, Nix package for Spacebot. Zero data loss (preserve /var/lib state dirs). Same ports, same secrets injection (sops env files), same nginx/homepage integration. Goal: eliminate Docker daemon dependency on Contabo entirely. Activation-time data migration with rollback safety.
 
 ## Phase Details
 
@@ -974,3 +975,40 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 50 to break down)
+
+### Phase 51: Conway Automaton profitability research — why the agent loop fails and how to fix it
+
+**Goal:** [To be planned]
+**Depends on:** Phase 50
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 51 to break down)
+
+### Phase 52: Nativize the Lobster Farm — Docker-Free Contabo
+**Goal**: Eliminate Docker from Contabo by converting OpenClaw (6 instances) and Spacebot from OCI containers to native NixOS systemd services. Active users must not notice the transition — no data loss, no downtime beyond a single `nixos-rebuild switch`.
+**Depends on**: Phase 50 (coherence audit may surface relevant findings)
+**Requirements**:
+  - OpenClaw: `buildNpmPackage` from `ghcr.io/openclaw/openclaw` source (Node.js). 6 instances with per-instance systemd services, same ports (18789-18794), same gateway config, same sops env templates.
+  - Spacebot: Nix package from source or pre-built binary (Rust + React). Same port (19898), same `/var/lib/spacebot` state, same sops env template.
+  - Data continuity: `/var/lib/openclaw-{user}/` and `/var/lib/spacebot/` volumes preserved in-place (Docker bind mounts → systemd StateDirectory). Activation script verifies data integrity.
+  - Secret injection: Convert Docker `--env-file` to systemd `EnvironmentFile` (same sops templates, no secret changes needed).
+  - Nginx: No changes — already proxies to `127.0.0.1:{port}`, Docker IP not used.
+  - Homepage dashboard: Update from Docker container widgets to systemd service widgets. Remove `homepage-dashboard` user from `docker` group. Remove Docker socket dependency.
+  - Monitoring: Service health checks stay on same ports. No Prometheus config changes.
+  - openclaw-auto-approve.nix: Replace `docker exec` commands with direct CLI invocation.
+  - Docker teardown: Remove `virtualisation.docker` and `virtualisation.oci-containers` from Contabo config once all containers are migrated. Prune Docker data after verification.
+  - Rollback: Keep Docker config available on a branch for emergency revert during the transition window.
+**Success Criteria** (what must be TRUE):
+  1. All 6 OpenClaw instances respond on their original ports with working gateway + WebSocket connections
+  2. Spacebot responds on port 19898 with existing SQLite DB and LanceDB embeddings intact
+  3. `docker ps` returns empty on Contabo (no running containers)
+  4. `systemctl status docker` is inactive/disabled on Contabo
+  5. Homepage dashboard shows all services healthy without Docker socket access
+  6. WhatsApp/messaging sessions remain active (no re-pairing required)
+  7. `nix flake check` passes with updated config
+  8. Restic backup still covers all state directories
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 52 to break down)

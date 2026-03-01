@@ -334,6 +334,7 @@ Recent decisions affecting current work:
 - Phase 48 added: Test Automation Infrastructure — comprehensive e2e/integration test suite for all neurosys components (public modules, private overlay, agentd fleet, secrets, network, Docker services, MCP server, homepage, deploy pipeline). Agent-runnable tests with maximal feedback. Minimalism for prod, maximalism for test infra.
 - Phase 49 added: Security Hardening Follow-up — Fix HIGH priority issues from Phase 47 audit: (1) remove hardcoded passwords from bootstrap scripts, (2) complete internalOnlyPorts coverage for OpenClaw/Spacebot/Matrix ports, (3) verify Matrix Conduit registration token enforcement, (4) pin Docker container images to SHA256 digests.
 - Phase 50 added: Coherence & Simplicity Audit — holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Cross-cutting analysis of all modules, services, secrets, deployment, and private overlay layering.
+- Phase 51 added: Conway Automaton profitability research — deep investigation into why the agent loop is ineffective (goal churn, worker timeouts, placeholder wallet, no real deployment/exposure) and how to reconfigure it to actually generate revenue. Research x402 viability, agent task sizing, deployment gaps, and produce a concrete reconfiguration plan.
 
 ### Blockers/Concerns
 

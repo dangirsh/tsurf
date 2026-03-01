@@ -28,27 +28,27 @@ in
     touch "$out"
   '';
 
-  firewall-ports-neurosys = pkgs.runCommandNoCC "firewall-ports-neurosys" { } ''
-    actual='${builtins.toJSON neurosysCfg.networking.firewall.allowedTCPPorts}'
-    expected='[22,80,443,22000]'
-    if [ "$actual" != "$expected" ]; then
-      echo "FAIL: neurosys allowedTCPPorts=$actual expected=$expected"
-      exit 1
-    fi
-    echo "PASS: neurosys firewall ports are correct"
-    touch "$out"
-  '';
+  firewall-ports-neurosys =
+    let
+      actual = builtins.sort builtins.lessThan neurosysCfg.networking.firewall.allowedTCPPorts;
+      expected = [ 22 80 443 22000 ];
+    in
+    mkCheck
+      "firewall-ports-neurosys"
+      "neurosys firewall ports are [22,80,443,22000]"
+      "neurosys allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
+      (actual == expected);
 
-  firewall-ports-ovh = pkgs.runCommandNoCC "firewall-ports-ovh" { } ''
-    actual='${builtins.toJSON ovhCfg.networking.firewall.allowedTCPPorts}'
-    expected='[22,80,443,22000]'
-    if [ "$actual" != "$expected" ]; then
-      echo "FAIL: ovh allowedTCPPorts=$actual expected=$expected"
-      exit 1
-    fi
-    echo "PASS: ovh firewall ports are correct"
-    touch "$out"
-  '';
+  firewall-ports-ovh =
+    let
+      actual = builtins.sort builtins.lessThan ovhCfg.networking.firewall.allowedTCPPorts;
+      expected = [ 22 80 443 22000 ];
+    in
+    mkCheck
+      "firewall-ports-ovh"
+      "ovh firewall ports are [22,80,443,22000]"
+      "ovh allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
+      (actual == expected);
 
   trusted-interfaces-neurosys = pkgs.runCommandNoCC "trusted-interfaces-neurosys" { } ''
     actual='${builtins.toJSON neurosysCfg.networking.firewall.trustedInterfaces}'
@@ -160,7 +160,7 @@ in
         "/var/lib/nixos"
         "/var/lib/tailscale"
         "/var/lib/prometheus2"
-        "/home/myuser"
+        "/home/dev"
         "/data"
       ];
       missing = builtins.filter (path: !(lib.hasInfix "\"${path}\"" source)) criticalPaths;

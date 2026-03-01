@@ -204,6 +204,12 @@ let
     in
     "${agentCfg.package}/bin/agentd ${lib.escapeShellArgs args}";
 
+  # @decision AGENTD-40-03: Hardcoded sops-nix rendered template path.
+  # @rationale: sops-nix renders sops.templates to /run/secrets/rendered/<name>.
+  #   This is a stable sops-nix convention (not an implementation detail), but
+  #   if sops-nix changes the path, this will break. Alternative: reference
+  #   config.sops.templates."agentd-env".path, but that creates a circular
+  #   dependency when the agentd module is imported before sops-nix evaluates.
   defaultEnvironmentFile = "/run/secrets/rendered/agentd-env";
 
   mkAgentService = name: agentCfg:
@@ -364,7 +370,7 @@ in
 
           user = lib.mkOption {
             type = lib.types.str;
-            default = "myuser";
+            default = "dev";
             description = "Identity used inside the bubblewrap sandbox (paths and env).";
           };
 

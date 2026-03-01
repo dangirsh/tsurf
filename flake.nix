@@ -59,7 +59,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.extraSpecialArgs = { inherit inputs; };
-          home-manager.users.myuser = import ./home;
+          home-manager.users.dev = import ./home;
         }
       ];
 
@@ -77,7 +77,7 @@
       nixosConfigurations.ovh = mkHost ./hosts/ovh;
 
       deploy.nodes.neurosys = {
-        hostname = "neurosys";
+        hostname = "100.104.43.26"; # temp: SSH config maps "neurosys" to stale IP 100.113.239.14
         sshUser = "root";
         magicRollback = true;
         autoRollback = true;

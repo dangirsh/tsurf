@@ -1,6 +1,6 @@
 { config, pkgs, ... }: {
-  home.username = "myuser";
-  home.homeDirectory = "/home/myuser";
+  home.username = "dev";
+  home.homeDirectory = "/home/dev";
   home.stateVersion = "25.11";
   programs.home-manager.enable = true;
 
@@ -12,5 +12,6 @@
     ./cass.nix
     ./beads.nix
     ./agent-config.nix
+    ./agentic-dev-base.nix
   ];
 }
