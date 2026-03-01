@@ -186,7 +186,7 @@ let
         timeout = agentCfg.timeout;
       };
     in
-    lib.generators.toTOML { } {
+    (pkgs.formats.toml { }).generate "jcard-${name}.toml" {
       agent = baseAgent;
     };
 
@@ -396,7 +396,7 @@ in
       environment.etc = lib.mapAttrs'
         (name: agentCfg: {
           name = "agentd/${name}/jcard.toml";
-          value.text = mkJcard name agentCfg;
+          value.source = mkJcard name agentCfg;
         })
         enabledAgents;
 
