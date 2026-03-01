@@ -35,15 +35,14 @@
   environment.systemPackages = with pkgs; [
     git
     curl
-    wget
     rsync
     jq
     yq-go
     ripgrep
     fd
     btop
-    nodejs
-    cachix
+    nodejs    # @decision SEC47-19: agent tooling (Claude Code, npm-based tools)
+    cachix    # @decision SEC47-20: deploy.sh post-deploy Cachix push step
   ];
 
   programs.ssh.startAgent = true;

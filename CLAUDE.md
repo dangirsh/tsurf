@@ -86,11 +86,14 @@ Rules that agents MUST follow when modifying any module:
 
 ### Accepted Risks (documented, not actionable)
 
-- **SEC3:** Docker container hardening (read-only rootfs, cap-drop, no-new-privileges) is deferred -- containers are declared in external repos (parts, claw-swap), changes needed there
+- **SEC3:** Docker container hardening (read-only rootfs, cap-drop, no-new-privileges) — PARTIALLY ADDRESSED in Phase 47-02 (secret-proxy, monitoring hardened). Parts/claw-swap containers remain external.
 - **SEC5:** `--no-sandbox` agents can modify `~/.claude/settings.json` -- mitigated by default sandbox-on and requiring explicit `--no-sandbox` flag
 - **SEC6:** Docker socket mounted in homepage-dashboard -- mitigated by Tailscale-only access (port 8082 in internalOnlyPorts)
-- **SEC9:** Systemd service hardening (ProtectHome, PrivateTmp) is deferred -- NixOS service modules provide baseline defaults, custom overrides risk breaking services
+- **SEC9:** Systemd service hardening — PARTIALLY ADDRESSED in Phase 47-02 (secret-proxy, Prometheus, node-exporter, tailscale-serve-ha hardened). Remaining services use NixOS module defaults.
 - **SEC11:** Pre-built binaries (zmx, cass) lack signature verification -- mitigated by SHA256 hash pinning
+- **SEC47-13:** `--no-sandbox` agent = effective root access — inherent to design. Mitigated by default sandbox-on, audit logging, operator awareness.
+- **SEC47-15:** Sandboxed agents have read-only access to all `/data/projects` — deliberate for cross-project reference. No `.env` files on server (sops-nix handles secrets).
+- **SEC47-16:** `anthropic-api-key` is broadly shared (bash, agentd, openclaw, spacebot) — secret-proxy mitigates for claw-swap agents. Per-consumer key rotation out of scope.
 - **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
 
 ## Simplicity Conventions

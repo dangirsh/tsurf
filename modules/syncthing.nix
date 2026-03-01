@@ -53,7 +53,9 @@
       };
 
       gui = {
-        insecureSkipHostcheck = true;  # API accessed via Docker bridge (host.docker.internal)
+        # @decision SEC47-21: Host check re-enabled (default)
+        # @rationale: Only localhost access (homepage siteMonitor). Docker bridge not used.
+        insecureSkipHostcheck = false;
       };
 
       options = {
