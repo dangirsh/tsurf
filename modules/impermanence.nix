@@ -64,6 +64,7 @@
       "/var/lib/openclaw-alexia"             # OpenClaw gateway state — alexia instance
       "/var/lib/openclaw-ari"                # OpenClaw gateway state — ari instance
       "/var/lib/openclaw-jordan-claw"        # OpenClaw gateway state — jordan-claw instance
+      "/var/lib/openclaw-tal-claw"           # OpenClaw gateway state — tal-claw instance
 
       # --- User data ---
       "/home/myuser"                       # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh
