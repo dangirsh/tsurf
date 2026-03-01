@@ -51,7 +51,7 @@ completed: 2026-03-01
 - Task 4 (private): `1121d53` — feat(40-02): remove agent-spawn from private agent compute
 - Task 5 (private): `932c32b` — feat(40-02): add agentd widgets to homepage agents
 - Task 6 hard-cutover cleanup (public): `2f1fd5c` — fix(40-02): remove residual agent-spawn references
-- Task 7 (public summary): pending commit in this branch
+- Task 7 (public summary): `71e18aa` — feat(40-02): add plan 02 execution summary
 
 ## Deviations from Plan
 - Public repo completeness grep was executed against the public feature worktree path (instead of `/data/projects/neurosys` with `tmp/` excluded) to avoid false positives from untouched `main` while following the required worktree-only workflow.
