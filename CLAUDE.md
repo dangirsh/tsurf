@@ -137,6 +137,8 @@ Rules that agents MUST follow when modifying any module:
 - **SEC47-16:** `anthropic-api-key` is broadly shared (bash, agentd, openclaw, spacebot) — secret-proxy mitigates for claw-swap agents. Per-consumer key rotation out of scope.
 - **SEC49-01:** Bootstrap script passwords (`CONTABO_PASS` default, `OVH_NEW_PASS`) remain in public git history (commits prior to Phase 49). Both passwords are ephemeral — used only during initial Ubuntu install which is immediately wiped by nixos-anywhere. Rewriting public repo history is impractical. Risk: minimal (passwords are useless after bootstrap completes).
 - **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
+- **SEC50-01:** Public template `users.allowNoPasswordLogin = true` — required for the public template to evaluate without real credential hashes. Private overlay replaces `users.nix` entirely and does NOT set this. The setting only affects the public template, never the deployed config.
+- **SEC50-02:** `srvos.nixosModules.server` imports numerous server defaults (fail2ban, SSH hardening, systemd-networkd) that are relied upon implicitly. Specific overrides are documented per-host with `mkForce`. A full audit of srvos defaults is deferred to a future phase.
 
 ## Simplicity Conventions
 
@@ -149,6 +151,7 @@ Rules to prevent bloat and over-engineering:
 - Prefer inline over separate files for small configs (<20 lines)
 - Let bindings for values used more than once (e.g., Tailscale IP in homepage.nix)
 - `tmp/` in project root for temporary files (never `/tmp/`) -- convention from global CLAUDE.md
+- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (users.nix, agent-compute.nix), or when the entire content differs (homepage.nix, syncthing.nix). For service modules (automaton, openclaw, spacebot, matrix), import from public and override only what differs.
 
 ## Module Change Checklist
 
