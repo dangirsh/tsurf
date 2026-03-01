@@ -48,6 +48,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 45: Neurosys MCP Server** - Custom MCP server for Claude Android app. Python FastMCP with Streamable HTTP + OAuth 2.1. HA control + Matrix/Conduit DM queries. NixOS systemd service behind Tailscale Funnel.
 - [x] **Phase 47: Comprehensive Security Review** - Detailed security audit of both public and private neurosys components. Network attack surface hardening, intrusion blast radius containment, systemd service isolation, secrets boundary verification, Docker/container escape paths, Tailscale ACL audit, agent sandbox breakout analysis.
 - [x] **Phase 49: Security Hardening Follow-up** - Fix HIGH priority issues from Phase 47 audit: remove hardcoded passwords from bootstrap scripts, complete internalOnlyPorts coverage, verify Matrix registration, pin Docker image digests.
+- [ ] **Phase 50: Coherence & Simplicity Audit** - Holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Prioritized findings report + fixes.
 
 ## Phase Details
 
@@ -955,3 +956,21 @@ Plans:
 
 Plans:
 - [x] 49-01: Remove hardcoded passwords, expand internalOnlyPorts to 23, document SEC49-01 accepted risk (2min, 2026-03-01)
+
+### Phase 50: Coherence & Simplicity Audit
+
+**Goal:** Holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Cross-cutting analysis: do modules compose cleanly? Are security boundaries consistent across the pub/priv split? Is complexity justified everywhere? Are there features that contradict each other or patterns that should be unified? Examine: flake structure, module design, service architecture (Docker vs native vs systemd), secret handling patterns, deployment pipeline, agent sandbox model, impermanence integration, monitoring, backup, and private overlay layering. Produce a prioritized findings report with concrete fix recommendations — then implement the fixes.
+**Depends on:** Phase 49
+**Success Criteria** (what must be TRUE):
+  1. Every module in public repo reviewed for coherence with its neighbors — no contradictory patterns, no orphaned abstractions, no features that fight each other
+  2. Private overlay modules reviewed for clean composition with public base — no surprising overrides, no copy-paste divergence, no unnecessary `mkForce`
+  3. Threat model reviewed for consistency — security boundaries don't contradict each other (e.g., hardened service X next to unhardened service Y with same trust level)
+  4. Over-engineering identified and removed — abstractions without justification, premature generalization, dead options, unused flexibility
+  5. Code smells fixed — inconsistent naming, duplicated logic across modules, surprising conventions that could be standard NixOS patterns
+  6. Non-standard decisions either documented with rationale (@decision annotations) or replaced with standard approaches
+  7. Findings report produced with severity ratings (fix now / fix later / accept with documentation)
+  8. All "fix now" items implemented — `nix flake check` passes for both configurations
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 50 to break down)
