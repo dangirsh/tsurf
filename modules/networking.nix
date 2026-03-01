@@ -21,6 +21,7 @@ let
     "9201" = "agentd-proxy (neurosys-dev)";
     "9202" = "agentd-proxy (conway-automaton)";
     "9203" = "agentd-proxy (claw-swap-dev)";
+    "9204" = "agentd-proxy (ovh-dev) [OVH only]";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;
