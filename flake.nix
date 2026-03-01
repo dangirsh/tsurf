@@ -99,6 +99,7 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
+        neurosys-mcp = pkgs.callPackage ./packages/neurosys-mcp.nix { };
       };
 
       formatter.${system} = treefmtEval.config.build.wrapper;

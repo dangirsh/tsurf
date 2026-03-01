@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neurosys-mcp"
+version = "0.1.0"
+description = "Neurosys Home Assistant MCP server"
+requires-python = ">=3.11"
+dependencies = [
+  "fastmcp>=2.12.4,<3.0.0",
+  "httpx>=0.28.1,<1.0.0",
+]
+
+[project.scripts]
+neurosys-mcp = "server:main"
+
+[tool.setuptools]
+py-modules = ["server"]

@@ -14,6 +14,7 @@ let
   internalOnlyPorts = {
     "8082" = "homepage-dashboard";
     "8384" = "syncthing-gui (localhost)";
+    "8400" = "neurosys-mcp";
     "9090" = "prometheus (localhost)";
     "9091" = "anthropic-secret-proxy";
     "9100" = "node-exporter";
