@@ -92,6 +92,11 @@ scripts/run-tests.sh --live --json
 - Prefer helpers from `tests/lib/common.bash`.
 - `scripts/run-tests.sh` writes `.claude/.test-status` for agent-runnable status checks.
 
+### Private Overlay Tests
+The private overlay extends the public suite. See `tests/eval/config-checks.nix`
+for the extension pattern. Private tests cover private agent fleets, nginx
+vhosts, ACME cert domains, and private service stacks.
+
 ## Security Conventions
 
 Rules that agents MUST follow when modifying any module:
