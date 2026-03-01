@@ -297,6 +297,7 @@ Recent decisions affecting current work:
 - Phase 39 progressing: 39-01 completed — private `dangirsh/conway-dashboard` repo created with `server.py` and `dashboard.html`; ready for 39-02 neurosys integration.
 - Phase 45 added: Interrogate design principles and rewrite README principles section — discussion-first phase to nail down exact principles (agents-first, secure defaults, minimal untracked state, headless/long-running), then rewrite README Design Principles section to reflect them accurately.
 - Phase 47 added: Comprehensive Security Review — end-to-end audit of public + private neurosys components. Three focus areas: (1) network attack surface hardening (ports, firewall, Tailscale ACLs), (2) intrusion blast radius containment (lateral movement limits, isolation boundaries, secrets compartmentalization), (3) attack surface minimization (unnecessary packages/services/privileges). Covers both hosts, all services, Docker, agent sandbox, sops secrets, deployment pipeline.
+- Phase 48 added: Test Automation Infrastructure — comprehensive e2e/integration test suite for all neurosys components (public modules, private overlay, agentd fleet, secrets, network, Docker services, MCP server, homepage, deploy pipeline). Agent-runnable tests with maximal feedback. Minimalism for prod, maximalism for test infra.
 
 ### Blockers/Concerns
 
