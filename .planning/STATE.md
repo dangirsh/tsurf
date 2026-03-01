@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 38 execution complete. Plan 38-01 established dual-host role separation (shared module base + per-host imports) and fixed node-aware deploy health checks.
+**Current focus:** Phase 40 execution in progress. Plan 40-01 shipped the core `agentd` module foundation (schema, jcard rendering, wrapper + service generation) and passed `nix flake check` on both hosts.
 
 ## Current Position
 
-Phase: 38 (Dual-Host Role Separation) — COMPLETE
-Plan: 38-01 — COMPLETE
-Status: Shared module set reduced to 11 modules; `homepage`/`restic` moved to `hosts/neurosys`; `repos` moved to `hosts/ovh`; `deploy.sh` health checks now depend on `--node`; parts/cachix reporting guarded to neurosys-only deploys.
-Last activity: 2026-02-27 - Executed 38-01 end-to-end, resolved a stale shared secret declaration blocker, and passed `nix flake check` for both hosts.
+Phase: 40 (agentd Integration — Supervised Agent Lifecycle) — ACTIVE
+Plan: 40-01 — COMPLETE
+Status: Added `agentd` flake input (dangirsh fork), created `modules/agentd.nix` with `services.agentd.agents` schema, generated per-agent jcard/systemd/proxy resources, imported module globally, reserved proxy ports 9201-9203, and validated both hosts with `nix flake check` while keeping public agent declarations empty.
+Last activity: 2026-03-01 - Executed 40-01 end-to-end, patched fork for configurable `-agent-user`, fixed a blocking module recursion issue, and passed `nix flake check` for `neurosys` and `ovh`.
 
-Progress: Phase 38 is complete and ready for follow-on deploy execution. Phase 44 remains pending at task C (`checkpoint:human-action`) in its own workflow.
+Progress: Phase 40 foundation is complete and ready for plan 40-02 (fleet declarations, agent-spawn removal, homepage widget). Phase 44 remains pending at task C (`checkpoint:human-action`) in its own workflow.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
-- Average duration: ~16.0min
-- Total execution time: ~406 min
+- Total plans completed: 27
+- Average duration: ~18.0min
+- Total execution time: ~478 min
 
 **By Phase:**
 
@@ -48,10 +48,11 @@ Progress: Phase 38 is complete and ready for follow-on deploy execution. Phase 4
 | 28 | 2/4 | ~22min | ~11min |
 | 37 | 3/3 | ~21min | ~7min |
 | 39 | 1/2 | ~20min | ~20min |
+| 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 37-03 (~5min), 37-02 (~5min), 37-01 (~11min), 39-01 (~20min)
-- Trend: Execution stable; Phase 37 open-source prep completed in ~21min total across 3 plans.
+- Last 4 plans: 40-01 (~72min), 37-03 (~5min), 37-02 (~5min), 37-01 (~11min)
+- Trend: Execution stable; Phase 40 introduced higher complexity (new module + fork patch + evaluation blocker fix).
 
 *Updated after each plan completion*
 
@@ -70,6 +71,9 @@ Recent decisions affecting current work:
 - [38-01]: `modules/default.nix` now exports only shared modules; host-specific `homepage`/`restic` and `repos` imports moved to `hosts/*/default.nix`.
 - [38-01]: `scripts/deploy.sh` service health checks are node-conditional (`neurosys`: parts/postgresql/claw-swap; `ovh`: prometheus/syncthing/tailscaled).
 - [38-01]: Parts update/revision and Cachix push paths are guarded for neurosys-only deploys; OVH deploys no longer touch parts-specific logic.
+- [40-01]: Public flake now includes `agentd` input (`github:dangirsh/agentd`) and overlay; lock pinned to fork commit with configurable `-agent-user` flag.
+- [40-01]: Added `modules/agentd.nix` with `services.agentd.agents` schema, jcard rendering, per-agent bwrap `agent` wrapper generation, and `agentd-<name>` / `agentd-proxy-<name>` systemd service generation.
+- [40-01]: Shared `sops.templates."agentd-env"` now renders only `ANTHROPIC_API_KEY`; public repo keeps `services.agentd.agents = {}` (no live agents) for cross-host-safe evaluation.
 
 - [06-01]: Syncthing GUI binds 0.0.0.0:8384, restricted via trustedInterfaces (not IP binding)
 - [06-01]: allowUnfreePredicate for claude-code added to base.nix (pre-existing Phase 5 issue)
