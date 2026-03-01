@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 47 complete. Comprehensive security review shipped across 3 plans (network hardening, service isolation, secret scoping).
+**Current focus:** Phase 48-01 complete. Test automation infrastructure shipped (20 eval checks + 39 live BATS checks + flake/app wrappers).
 
 ## Current Position
 
-Phase: 47 (Comprehensive Security Review) — COMPLETE
-Plan: 47-03 — COMPLETE
-Status: All 3 plans executed and merged to main. Network hardening (Mosh removed, SSH hardened, port audit), service isolation (systemd hardening for 4 services, blast radius docs), secret scoping (on-demand API keys, wget removed, Syncthing hostcheck, CLAUDE.md risks updated). Private overlay tasks (homepage allowedHosts, sops template audit) noted but not implemented.
-Last activity: 2026-03-01 - Executed 47-01, 47-02, 47-03 in wave-parallel execution. All `nix flake check` passes.
+Phase: 48 (Test Automation Infrastructure) — IN PROGRESS
+Plan: 48-01 — COMPLETE
+Status: Two-layer test architecture implemented and verified. `flake.nix` now exports 20 eval checks under `checks.x86_64-linux`, preserves deploy-rs checks, adds `packages.test-live` + `apps.test-live`, and includes BATS tooling in devShell. Live test suites added for service health, endpoints, security, and secrets (39 tests total).
+Last activity: 2026-03-01 - Executed and committed tasks 48-01-A..I. Verified `nix flake check` pass and `nix build .#test-live --no-link` pass.
 
-Progress: Phase 47 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
+Progress: Phase 48 started with 48-01 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
-- Average duration: ~18.0min
-- Total execution time: ~478 min
+- Total plans completed: 28
+- Average duration: ~20.5min
+- Total execution time: ~573 min
 
 **By Phase:**
 
@@ -207,8 +207,15 @@ Recent decisions affecting current work:
 - [47-03]: SEC47-18: wget removed from system packages.
 - [47-03]: SEC47-21: Syncthing insecureSkipHostcheck set to false (Docker bridge comment was outdated).
 - [47-03]: SEC47-15: Cross-project read access documented in agentd.nix as deliberate.
+- [48-01]: TEST-48-01: Two-layer test strategy adopted — offline Nix eval checks + live SSH BATS suites.
+- [48-01]: Added 20 eval checks (`tests/eval/config-checks.nix`) wired into `checks.x86_64-linux` with deploy-rs checks preserved.
+- [48-01]: Added flake `packages.test-live` and `apps.test-live` entry point (`nix run .#test-live -- neurosys|ovh`) with BATS runtime deps.
+- [48-01]: Added `scripts/run-tests.sh` for eval/live orchestration and `.claude/.test-status` pass/fail stamping.
 
 ### Completed Phases
+
+- **Phase 48: Test Automation Infrastructure** (1/2 plans, 48-01 completed 2026-03-01)
+  - 48-01: Added two-layer validation stack: 20 flake eval checks + 39 BATS live tests, `nix run .#test-live` entry point, and `scripts/run-tests.sh` wrapper.
 
 - **Phase 47: Comprehensive Security Review** (3 plans, completed 2026-03-01)
   - 47-01: Network hardening — port audit, Mosh removed (1001 UDP ports closed), SSH hardened (X11 off, MaxAuthTries 3, LoginGraceTime 30, keepalive), internalOnlyPorts updated, port 22 documentation contradiction resolved
