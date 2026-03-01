@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 40 (agentd Integration — Supervised Agent Lifecycle) — ACTIVE
-Plan: 40-01 — COMPLETE
-Status: Added `agentd` flake input (dangirsh fork), created `modules/agentd.nix` with `services.agentd.agents` schema, generated per-agent jcard/systemd/proxy resources, imported module globally, reserved proxy ports 9201-9203, and validated both hosts with `nix flake check` while keeping public agent declarations empty.
-Last activity: 2026-03-01 - Executed 40-01 end-to-end, patched fork for configurable `-agent-user`, fixed a blocking module recursion issue, and passed `nix flake check` for `neurosys` and `ovh`.
+Phase: 45 (Neurosys MCP Server) — COMPLETE (deployment checkpoint pending)
+Plan: 45-02 — COMPLETE
+Status: All code shipped and validated. Public repo: FastMCP server with 10 tools (5 HA + 5 Matrix), OAuth 2.1 auth, Nix package. Private overlay: NixOS module (systemd + Tailscale Funnel + sops template), secrets added. Both repos pushed. Deployment checkpoint pending (deploy, enable Funnel ACL, create Matrix bot, set OAuth password, connect Claude.ai).
+Last activity: 2026-03-01 - Executed 45-01 (Codex) and 45-02 (Claude Code) end-to-end. Public `nix flake check` and private `nix flake check` both pass.
 
-Progress: Phase 40 foundation is complete and ready for plan 40-02 (fleet declarations, agent-spawn removal, homepage widget). Phase 44 remains pending at task C (`checkpoint:human-action`) in its own workflow.
+Progress: Phase 45 code complete (both plans shipped). Phase 40 foundation ready for plan 40-02. Phase 44 remains pending at task C (`checkpoint:human-action`).
 
 ## Performance Metrics
 
@@ -196,8 +196,14 @@ Recent decisions affecting current work:
 - [44]: Phase 44 added — Android CO2 alert via HA automation in home-assistant-config. Trigger: `sensor.apollo_air_1_5221b0_co2 > 1000 ppm`, notify Pixel 10 Pro, 30min cooldown, recovery notification on drop below 900 ppm. Single plan (44-01).
 - [44-01]: Task A complete — appended `co2_alert_high` and `co2_alert_recovery` to `/data/projects/home-assistant-config/automations.yaml` and validated syntax with `python3 -c "import yaml; yaml.safe_load(open('automations.yaml'))"`.
 - [44-01]: Task B complete — pushed `home-assistant-config` commit `4c3679a` to `origin/main`; updated `.claude/.test-status` to `pass|0|<epoch>` for neurosys no-Nix-change gate.
+- [45-01]: MCP server source (`src/neurosys-mcp/server.py`) with 5 HA tools (get_states, get_state, call_service, list_services, search_entities) using FastMCP Streamable HTTP transport, packaged via `packages/neurosys-mcp.nix` with pinned PyPI hashes. Port 8400 in internalOnlyPorts.
+- [45-02]: MCP-05: Localhost-only binding (127.0.0.1:8400); public access via Tailscale Funnel on port 8443 (MCP-11). OAuth 2.1 via `NeurosysOAuthProvider` subclass with HTML login form. 5 Matrix tools with graceful degradation. Private overlay NixOS module with DynamicUser + ProtectSystem=strict (MCP-06), sops EnvironmentFile for all secrets (MCP-07).
 
 ### Completed Phases
+
+- **Phase 45: Neurosys MCP Server** (2 plans, completed 2026-03-01)
+  - 45-01: FastMCP Streamable HTTP server with 5 HA tools, Nix package from PyPI (fastmcp 2.12.4 + mcp 1.26.0), port 8400 registered in internalOnlyPorts
+  - 45-02: OAuth 2.1 (NeurosysOAuthProvider with HTML login form), 5 Matrix/Conduit tools, private overlay NixOS module (systemd + Tailscale Funnel 8443 + sops template), deployment checkpoint pending
 
 - **Phase 37: Open Source Prep** (3 plans, completed 2026-02-27)
   - 37-01: Privacy audit — personal identifiers, private inputs, private service bindings removed; `nix flake check` passes
