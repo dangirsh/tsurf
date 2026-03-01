@@ -243,6 +243,9 @@ let
         ExecStart = "${pkgs.socat}/bin/socat TCP-LISTEN:${toString agentCfg.apiProxyPort},fork,reuseaddr UNIX-CONNECT:/run/agentd/${name}/agentd.sock";
         Restart = "on-failure";
         RestartSec = 3;
+        # socat exits 143 (128+SIGTERM) on graceful stop; treat as success so
+        # switch-to-configuration does not record it as a failure (exit 4).
+        SuccessExitStatus = [ 143 ];
       };
     };
 in
