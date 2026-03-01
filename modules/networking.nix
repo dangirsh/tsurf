@@ -17,6 +17,9 @@ let
     "9090" = "prometheus (localhost)";
     "9091" = "anthropic-secret-proxy";
     "9100" = "node-exporter";
+    "9201" = "agentd-proxy (neurosys-dev)";
+    "9202" = "agentd-proxy (conway-automaton)";
+    "9203" = "agentd-proxy (claw-swap-dev)";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;
