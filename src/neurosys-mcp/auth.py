@@ -18,6 +18,12 @@
 #   /.well-known/oauth-protected-resource{mcp_path} (RFC 9728 path-aware).
 #   Clients (Claude.ai) follow the header URL and get 404. We serve the same
 #   metadata at both URLs as a workaround.
+#
+# @decision MCP-12: Patch OAuth metadata to include token_endpoint_auth_method "none".
+# @rationale: MCP SDK hardcodes ["client_secret_post", "client_secret_basic"]
+#   in build_metadata(). Claude.ai is a public client (no secret) that uses
+#   token_endpoint_auth_method "none". Without "none" advertised, Claude.ai
+#   refuses to proceed past DCR.
 
 from __future__ import annotations
 
@@ -153,28 +159,60 @@ class NeurosysOAuthProvider(InMemoryOAuthProvider):
         mcp_path: str | None = None,
         mcp_endpoint: Any | None = None,
     ) -> list[Route]:
-        """Add /login route and non-path-aware resource metadata workaround."""
+        """Add /login, patched OAuth metadata, and resource metadata workaround."""
+        from mcp.server.auth.json_response import PydanticJSONResponse
+        from mcp.server.auth.routes import cors_middleware
+
         routes = super().get_routes(mcp_path, mcp_endpoint)
         routes.append(
             Route("/login", endpoint=self._handle_login, methods=["GET", "POST"])
         )
 
+        # MCP-12: Prepend a patched /.well-known/oauth-authorization-server route
+        # that adds "none" to token_endpoint_auth_methods_supported (public clients).
+        # Starlette uses first-match routing so this takes precedence over the
+        # SDK's original route.
+        from mcp.server.auth.routes import build_metadata
+        from mcp.server.auth.settings import RevocationOptions
+
+        patched = build_metadata(
+            self.issuer_url,
+            self.service_documentation_url,
+            self.client_registration_options or ClientRegistrationOptions(),
+            self.revocation_options or RevocationOptions(),
+        )
+        patched.token_endpoint_auth_methods_supported = [
+            "client_secret_post", "client_secret_basic", "none",
+        ]
+
+        async def _handle_patched_metadata(request: Request) -> Response:
+            return PydanticJSONResponse(
+                content=patched,
+                headers={"Cache-Control": "public, max-age=3600"},
+            )
+
+        routes.insert(0, Route(
+            "/.well-known/oauth-authorization-server",
+            endpoint=cors_middleware(
+                _handle_patched_metadata, ["GET", "OPTIONS"]
+            ),
+            methods=["GET", "OPTIONS"],
+        ))
+
         # MCP-11: Serve protected-resource metadata at the non-path-aware URL
         # that FastMCP advertises in the WWW-Authenticate header.
         if mcp_path and self.base_url:
-            from mcp.server.auth.json_response import PydanticJSONResponse
-            from mcp.server.auth.routes import cors_middleware
             from mcp.shared.auth import ProtectedResourceMetadata
 
             resource_url = self._get_resource_url(mcp_path)
-            metadata = ProtectedResourceMetadata(
+            resource_meta = ProtectedResourceMetadata(
                 resource=resource_url,
                 authorization_servers=[self.issuer_url],
             )
 
             async def _handle_resource_metadata(request: Request) -> Response:
                 return PydanticJSONResponse(
-                    content=metadata,
+                    content=resource_meta,
                     headers={"Cache-Control": "public, max-age=3600"},
                 )
 
