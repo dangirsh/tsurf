@@ -190,9 +190,10 @@
         deployChecks // evalChecks // {
           shellcheck-tests = pkgs.runCommandNoCC "shellcheck-tests" {
             nativeBuildInputs = [ pkgs.shellcheck ];
-            src = ./tests;
+            src = ./.;
           } ''
-            shellcheck "$src"/lib/*.bash || true
+            shellcheck "$src"/tests/lib/*.bash "$src"/scripts/run-tests.sh
+            shellcheck "$src"/tests/live/*.bats || true
             touch "$out"
           '';
         };
