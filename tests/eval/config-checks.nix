@@ -101,12 +101,12 @@ in
     let
       sysPkgs = neurosysCfg.environment.systemPackages;
       expectedPkgs = {
-        claude-code = pkgs.claude-code;
-        codex = pkgs.codex;
         git = pkgs.git;
         curl = pkgs.curl;
         jq = pkgs.jq;
         ripgrep = pkgs.ripgrep;
+        openssh = pkgs.openssh;
+        tailscale = pkgs.tailscale;
       };
       missing = lib.filterAttrs (_: drv: !(builtins.any (p: p == drv) sysPkgs)) expectedPkgs;
       missingNames = builtins.attrNames missing;

@@ -42,6 +42,7 @@
   outputs = { self, nixpkgs, home-manager, sops-nix, disko, llm-agents, agentd, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
     let
       system = "x86_64-linux";
+      lib = nixpkgs.lib;
       pkgs = nixpkgs.legacyPackages.${system};
       treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
 
@@ -67,6 +68,8 @@
         specialArgs = { inherit inputs; };
         modules = commonModules ++ [ hostDir ];
       };
+
+      evalChecks = import ./tests/eval/config-checks.nix { inherit self pkgs lib; };
     in {
       nixosModules.default = import ./modules;
 
@@ -100,6 +103,69 @@
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
         neurosys-mcp = pkgs.callPackage ./packages/neurosys-mcp.nix { };
+
+        test-live = pkgs.writeShellApplication {
+          name = "test-live";
+          runtimeInputs = with pkgs; [
+            bats
+            bats.libraries.bats-support
+            bats.libraries.bats-assert
+            openssh
+            curl
+            jq
+            nmap
+            coreutils
+            findutils
+            gnugrep
+            gawk
+          ];
+          text = ''
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            HOST="neurosys"
+            BATS_FILES=()
+
+            while [[ $# -gt 0 ]]; do
+              case "$1" in
+                --host|-h)
+                  HOST="$2"
+                  shift 2
+                  ;;
+                neurosys|ovh|neurosys-prod)
+                  HOST="$1"
+                  shift
+                  ;;
+                *)
+                  BATS_FILES+=("$1")
+                  shift
+                  ;;
+              esac
+            done
+
+            export NEUROSYS_TEST_HOST="$HOST"
+            export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
+
+            tests_dir="${builtins.toString ./tests/live}"
+            if [[ ! -d "$tests_dir" ]]; then
+              echo "ERROR: tests directory not found: $tests_dir"
+              exit 1
+            fi
+
+            if [[ ''${#BATS_FILES[@]} -eq 0 ]]; then
+              echo "=== Running all live tests against $HOST ==="
+              bats --tap "$tests_dir"/*.bats
+            else
+              echo "=== Running selected live tests against $HOST ==="
+              bats --tap "''${BATS_FILES[@]}"
+            fi
+          '';
+        };
+      };
+
+      apps.${system}.test-live = {
+        type = "app";
+        program = "${self.packages.${system}.test-live}/bin/test-live";
       };
 
       formatter.${system} = treefmtEval.config.build.wrapper;
@@ -110,12 +176,25 @@
           pkgs.age
           pkgs.nixfmt
           pkgs.shellcheck
+          pkgs.bats
+          pkgs.bats.libraries.bats-support
+          pkgs.bats.libraries.bats-assert
           deploy-rs.packages.${system}.default
         ];
       };
 
-      checks = builtins.mapAttrs
-        (system: deployLib: deployLib.deployChecks self.deploy)
-        deploy-rs.lib;
+      checks.${system} =
+        let
+          deployChecks = deploy-rs.lib.${system}.deployChecks self.deploy;
+        in
+        deployChecks // evalChecks // {
+          shellcheck-tests = pkgs.runCommandNoCC "shellcheck-tests" {
+            nativeBuildInputs = [ pkgs.shellcheck ];
+            src = ./tests;
+          } ''
+            shellcheck "$src"/lib/*.bash || true
+            touch "$out"
+          '';
+        };
     };
 }
