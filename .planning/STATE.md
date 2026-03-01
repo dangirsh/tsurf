@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 40 execution in progress. Plan 40-01 shipped the core `agentd` module foundation (schema, jcard rendering, wrapper + service generation) and passed `nix flake check` on both hosts.
+**Current focus:** Phase 47 complete. Comprehensive security review shipped across 3 plans (network hardening, service isolation, secret scoping).
 
 ## Current Position
 
-Phase: 45 (Neurosys MCP Server) — COMPLETE (deployment checkpoint pending)
-Plan: 45-02 — COMPLETE
-Status: All code shipped and validated. Public repo: FastMCP server with 10 tools (5 HA + 5 Matrix), OAuth 2.1 auth, Nix package. Private overlay: NixOS module (systemd + Tailscale Funnel + sops template), secrets added. Both repos pushed. Deployment checkpoint pending (deploy, enable Funnel ACL, create Matrix bot, set OAuth password, connect Claude.ai).
-Last activity: 2026-03-01 - Executed 45-01 (Codex) and 45-02 (Claude Code) end-to-end. Public `nix flake check` and private `nix flake check` both pass.
+Phase: 47 (Comprehensive Security Review) — COMPLETE
+Plan: 47-03 — COMPLETE
+Status: All 3 plans executed and merged to main. Network hardening (Mosh removed, SSH hardened, port audit), service isolation (systemd hardening for 4 services, blast radius docs), secret scoping (on-demand API keys, wget removed, Syncthing hostcheck, CLAUDE.md risks updated). Private overlay tasks (homepage allowedHosts, sops template audit) noted but not implemented.
+Last activity: 2026-03-01 - Executed 47-01, 47-02, 47-03 in wave-parallel execution. All `nix flake check` passes.
 
-Progress: Phase 45 code complete (both plans shipped). Phase 40 foundation ready for plan 40-02. Phase 44 remains pending at task C (`checkpoint:human-action`).
+Progress: Phase 47 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
 
 ## Performance Metrics
 
@@ -198,8 +198,22 @@ Recent decisions affecting current work:
 - [44-01]: Task B complete — pushed `home-assistant-config` commit `4c3679a` to `origin/main`; updated `.claude/.test-status` to `pass|0|<epoch>` for neurosys no-Nix-change gate.
 - [45-01]: MCP server source (`src/neurosys-mcp/server.py`) with 5 HA tools (get_states, get_state, call_service, list_services, search_entities) using FastMCP Streamable HTTP transport, packaged via `packages/neurosys-mcp.nix` with pinned PyPI hashes. Port 8400 in internalOnlyPorts.
 - [45-02]: MCP-05: Localhost-only binding (127.0.0.1:8400); public access via Tailscale Funnel on port 8443 (MCP-11). OAuth 2.1 via `NeurosysOAuthProvider` subclass with HTML login form. 5 Matrix tools with graceful degradation. Private overlay NixOS module with DynamicUser + ProtectSystem=strict (MCP-06), sops EnvironmentFile for all secrets (MCP-07).
+- [47-01]: SEC47-01: Port 22 public SSH is deliberate for bootstrap/recovery, not temporary. NET-01 annotation updated.
+- [47-01]: SEC47-08: Mosh removed — programs.mosh.enable deleted, closing UDP 60000-61000.
+- [47-01]: NET-10/NET-11/NET-12/NET-13: @decision annotations for all public ports and SSH hardening.
+- [47-02]: SEC47-13: --no-sandbox agent = effective root. Documented as inherent design tradeoff.
+- [47-02]: Systemd hardening added to secret-proxy (16 directives), Prometheus, node-exporter, tailscale-serve-ha.
+- [47-03]: SEC47-34: On-demand API key loading via load-api-keys shell function. GH_TOKEN stays auto-loaded.
+- [47-03]: SEC47-18: wget removed from system packages.
+- [47-03]: SEC47-21: Syncthing insecureSkipHostcheck set to false (Docker bridge comment was outdated).
+- [47-03]: SEC47-15: Cross-project read access documented in agentd.nix as deliberate.
 
 ### Completed Phases
+
+- **Phase 47: Comprehensive Security Review** (3 plans, completed 2026-03-01)
+  - 47-01: Network hardening — port audit, Mosh removed (1001 UDP ports closed), SSH hardened (X11 off, MaxAuthTries 3, LoginGraceTime 30, keepalive), internalOnlyPorts updated, port 22 documentation contradiction resolved
+  - 47-02: Service isolation — systemd hardening (secret-proxy, Prometheus, node-exporter, tailscale-serve-ha), blast radius documentation for sandboxed vs unsandboxed agents
+  - 47-03: Secret scoping — on-demand API key loading (load-api-keys function), wget removed, Syncthing hostcheck re-enabled, cross-project read documented, accepted risks updated
 
 - **Phase 45: Neurosys MCP Server** (2 plans, completed 2026-03-01)
   - 45-01: FastMCP Streamable HTTP server with 5 HA tools, Nix package from PyPI (fastmcp 2.12.4 + mcp 1.26.0), port 8400 registered in internalOnlyPorts
@@ -333,6 +347,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Phase 44 plan 44-01 tasks A/B complete. Task C is pending human checkpoint action on the HA server (pull + reload + entity verification + live notification test).
-Next: Run 44-01-C checkpoint commands on `neurosys` server, confirm both automation entities are `on`, and verify notification delivery on Pixel 10 Pro.
+Last session: 2026-03-01
+Stopped at: Phase 47 complete — all 3 plans executed and merged to main. Private overlay tasks (47-03-F homepage allowedHosts, 47-03-G sops template audit) not yet done.
+Next: Push main to origin. Then either execute private overlay security tasks or move to next phase.
