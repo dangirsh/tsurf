@@ -11,16 +11,20 @@
 # @rationale: The MCP SDK's AuthorizationHandler calls provider.authorize() which
 #   can return any redirect URL. We redirect to /login first, then complete the
 #   OAuth flow after password verification.
+#
+# @decision MCP-11: Duplicate protected-resource metadata at non-path-aware URL.
+# @rationale: FastMCP bug — WWW-Authenticate header advertises
+#   /.well-known/oauth-protected-resource but only registers the route at
+#   /.well-known/oauth-protected-resource{mcp_path} (RFC 9728 path-aware).
+#   Clients (Claude.ai) follow the header URL and get 404. We serve the same
+#   metadata at both URLs as a workaround.
 
 from __future__ import annotations
 
 import secrets
 import time
 from typing import Any
-from mcp.server.auth.provider import (
-    AuthorizationParams,
-    construct_redirect_uri,
-)
+from mcp.server.auth.provider import AuthorizationParams
 from mcp.server.auth.settings import ClientRegistrationOptions
 from mcp.shared.auth import OAuthClientInformationFull
 from starlette.requests import Request
@@ -149,11 +153,41 @@ class NeurosysOAuthProvider(InMemoryOAuthProvider):
         mcp_path: str | None = None,
         mcp_endpoint: Any | None = None,
     ) -> list[Route]:
-        """Add /login route to the standard OAuth routes."""
+        """Add /login route and non-path-aware resource metadata workaround."""
         routes = super().get_routes(mcp_path, mcp_endpoint)
         routes.append(
             Route("/login", endpoint=self._handle_login, methods=["GET", "POST"])
         )
+
+        # MCP-11: Serve protected-resource metadata at the non-path-aware URL
+        # that FastMCP advertises in the WWW-Authenticate header.
+        if mcp_path and self.base_url:
+            from mcp.server.auth.json_response import PydanticJSONResponse
+            from mcp.server.auth.routes import cors_middleware
+            from mcp.shared.auth import ProtectedResourceMetadata
+
+            resource_url = self._get_resource_url(mcp_path)
+            metadata = ProtectedResourceMetadata(
+                resource=resource_url,
+                authorization_servers=[self.issuer_url],
+            )
+
+            async def _handle_resource_metadata(request: Request) -> Response:
+                return PydanticJSONResponse(
+                    content=metadata,
+                    headers={"Cache-Control": "public, max-age=3600"},
+                )
+
+            routes.append(
+                Route(
+                    "/.well-known/oauth-protected-resource",
+                    endpoint=cors_middleware(
+                        _handle_resource_metadata, ["GET", "OPTIONS"]
+                    ),
+                    methods=["GET", "OPTIONS"],
+                )
+            )
+
         return routes
 
 
