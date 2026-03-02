@@ -14,14 +14,6 @@ bats_load_library bats-assert/load
   assert_unit_active "docker.service"
 }
 
-@test "${HOST}: prometheus.service is active" {
-  assert_unit_active "prometheus.service"
-}
-
-@test "${HOST}: prometheus-node-exporter.service is active" {
-  assert_unit_active "prometheus-node-exporter.service"
-}
-
 @test "${HOST}: syncthing.service is active" {
   assert_unit_active "syncthing.service"
 }

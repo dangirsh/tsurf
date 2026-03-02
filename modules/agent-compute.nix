@@ -1,22 +1,11 @@
+# modules/agent-compute.nix
 # @decision: Package names are `claude-code` and `codex` from llm-agents overlay
 #   (not `llm-agents-claude-code` — the overlay adds packages directly to pkgs namespace)
-# @decision AGENTD-40-01: Agent lifecycle managed by agentd (modules/agentd.nix);
-#   agent-compute.nix provides CLI packages and sandbox infrastructure only.
 # @decision SANDBOX-11-01: Podman is enabled rootless; dockerCompat=false (conflicts with Docker)
-#   — sandbox uses a PATH-local docker->podman symlink derivation instead.
+#   — sandbox uses a PATH-local docker->podman symlink derivation.
 # @decision SEC47-13: --no-sandbox agent = effective root access (accepted risk)
-# @rationale: The chain is: --no-sandbox -> runs as dev -> wheel group
-#   -> passwordless sudo -> root. Also: docker group -> root-equivalent.
-#   This is inherent to the design: trusted operators use --no-sandbox for
-#   operations requiring system access (deploy, sops, host config). The
-#   default is sandbox-on (bubblewrap). Only explicit --no-sandbox bypasses it.
-#   Mitigation: default sandbox, audit log (agentd-spawn), operator awareness.
-#
-# Blast radius matrix:
-# - Sandboxed agent: project dir (rw), other projects (ro), API keys (env),
-#   Nix daemon. CANNOT: /run/secrets, ~/.ssh, Docker, sudo, PID namespace.
-# - --no-sandbox agent: full dev access = all sops secrets, Docker socket,
-#   passwordless sudo = effective root. Use only for trusted operations.
+# @rationale: --no-sandbox -> dev -> wheel -> passwordless sudo -> root.
+#   Mitigated by default sandbox-on, audit log, operator awareness.
 { config, pkgs, ... }:
 
 let
@@ -27,17 +16,12 @@ in
   environment.systemPackages = [
     pkgs.claude-code
     pkgs.codex
-    pkgs.opencode
-    pkgs.gemini-cli
-    pkgs.llm-agents.pi
     zmx
   ];
 
   # Rootless Podman for sandboxed agent container workflows.
   # dockerCompat = false because virtualisation.docker.enable = true in docker.nix —
-  # NixOS asserts they cannot coexist. Instead, a sandbox-local docker->podman symlink
-  # (sandbox-docker-compat derivation in agentd.nix) is added to the sandbox PATH so
-  # agents see `docker` resolving to `podman` without affecting the host Docker daemon.
+  # NixOS asserts they cannot coexist.
   virtualisation.podman = {
     enable = true;
     dockerCompat = false;
@@ -63,7 +47,7 @@ in
     };
   };
 
-  # Pre-create audit log directory for agentd spawn logging.
+  # Pre-create audit log directory for agent spawn logging.
   systemd.tmpfiles.rules = [
     "d /data/projects/.agent-audit 0750 dev users -"
   ];

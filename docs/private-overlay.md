@@ -14,7 +14,6 @@ neurosys-private/
   modules/
     private-default.nix    # import hub for private modules
     home-assistant.nix     # personal home automation
-    spacebot.nix           # personal services
     repos.nix              # private repos to clone on activation
     nginx.nix              # public-facing reverse proxy + TLS
   hosts/
@@ -105,7 +104,6 @@ neurosys-private/
 ```nix
 { imports = [
     ./home-assistant.nix
-    ./spacebot.nix
     ./repos.nix
     ./nginx.nix
 ]; }

@@ -73,8 +73,6 @@ in
   expected-services-neurosys =
     let
       expectedServices = [
-        "prometheus"
-        "prometheus-node-exporter"
         "tailscaled"
         "syncthing"
         "homepage-dashboard"
@@ -108,8 +106,6 @@ in
   expected-services-ovh =
     let
       expectedServices = [
-        "prometheus"
-        "prometheus-node-exporter"
         "tailscaled"
         "syncthing"
         "docker"
@@ -170,12 +166,6 @@ in
     "Tailscale service is disabled"
     neurosysCfg.services.tailscale.enable;
 
-  prometheus-retention = mkCheck
-    "prometheus-retention"
-    "Prometheus retentionTime is 90d"
-    "Prometheus retentionTime is ${neurosysCfg.services.prometheus.retentionTime}, expected 90d"
-    (neurosysCfg.services.prometheus.retentionTime == "90d");
-
   # Keep this source-based so we do not force full evaluation of the deprecated
   # impermanence option internals on this branch.
   impermanence-paths =
@@ -184,7 +174,6 @@ in
       criticalPaths = [
         "/var/lib/nixos"
         "/var/lib/tailscale"
-        "/var/lib/prometheus2"
         "/home/dev"
         "/data"
       ];
@@ -210,16 +199,6 @@ in
       "critical impermanence files are declared"
       "missing impermanence files: ${builtins.concatStringsSep ", " missing}"
       (missing == [ ]);
-
-  agentd-options-exist = mkCheck
-    "agentd-options-exist"
-    "agentd options (enable/agents) exist"
-    "agentd options are missing enable and/or agents"
-    (
-      builtins.hasAttr "agentd" neurosysCfg.services
-      && builtins.hasAttr "enable" neurosysCfg.services.agentd
-      && builtins.hasAttr "agents" neurosysCfg.services.agentd
-    );
 
   nftables-enabled = mkCheck
     "nftables-enabled"

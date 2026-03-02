@@ -39,15 +39,6 @@ bats_load_library bats-assert/load
   fi
 }
 
-@test "${HOST}: rendered agentd-env template exists" {
-  run remote test -f /run/secrets/rendered/agentd-env
-  if [[ "$status" -ne 0 ]]; then
-    echo "FAIL: /run/secrets/rendered/agentd-env not found"
-    echo "DEBUG: ssh ${SSH_USER}@${HOST} ls -la /run/secrets/rendered/"
-    return 1
-  fi
-}
-
 @test "${HOST}: SSH host key exists for sops age key derivation" {
   local key_path="/etc/ssh/ssh_host_ed25519_key"
   if is_ovh; then

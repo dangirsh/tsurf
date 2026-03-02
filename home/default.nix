@@ -11,7 +11,6 @@
     ./direnv.nix
     ./cass.nix
     ./beads.nix
-    ./agent-config.nix
     ./agentic-dev-base.nix
   ];
 }
