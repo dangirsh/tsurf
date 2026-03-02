@@ -24,6 +24,7 @@ let
     "8400" = "neurosys-mcp";
     "9090" = "prometheus (localhost)";
     "9091" = "anthropic-secret-proxy";
+    "9093" = "automaton-dashboard";
     "9100" = "node-exporter";
     "9201" = "agentd-proxy (neurosys-dev)";
     "9202" = "agentd-proxy (conway-automaton)";
