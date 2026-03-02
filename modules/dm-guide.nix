@@ -40,7 +40,7 @@ let
     .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.6rem; }
     .field { flex: 1 1 280px; }
     label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--accent); }
-    input[type="text"], input[type="password"], input[type="tel"] {
+    input[type="text"], input[type="password"], input[type="tel"], select {
       background: var(--surface); color: var(--text); border: 1px solid var(--border);
       padding: 0.45rem; border-radius: 4px; width: 100%;
     }
@@ -52,6 +52,21 @@ let
     .qr { background: white; display: inline-flex; padding: 0.6rem; border-radius: 6px; min-height: 160px; min-width: 160px; align-items: center; justify-content: center; }
     pre { background: #0f1226; border: 1px solid var(--border); border-radius: 6px; padding: 0.7rem; max-height: 230px; overflow: auto; font-size: 0.8rem; }
     .small { font-size: 0.8rem; color: #a9a9bc; }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      color: #a9a9bc;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    .dropzone.dragover {
+      border-color: var(--ok);
+      color: var(--ok);
+    }
+    progress { width: 100%; height: 1rem; }
+    .hidden { display: none; }
     </style>
     </head>
     <body>
@@ -116,6 +131,55 @@ let
       <pre id="telegram-response">{}</pre>
     </div>
 
+    <div class="section">
+      <h2>Backup Upload</h2>
+      <p>Upload historical exports to decrypt/parse into structured JSON imports.</p>
+      <div class="row">
+        <div class="field">
+          <label for="backup-bridge">Bridge type</label>
+          <select id="backup-bridge" onchange="togglePassphrase()">
+            <option value="signal">Signal (.backup)</option>
+            <option value="whatsapp">WhatsApp (.zip export)</option>
+            <option value="telegram">Telegram (.json export)</option>
+          </select>
+        </div>
+      </div>
+      <div id="backup-passphrase-row" class="row">
+        <div class="field">
+          <label for="backup-passphrase">Signal backup passphrase</label>
+          <input id="backup-passphrase" type="password" autocomplete="off">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Backup file</label>
+          <div
+            id="backup-dropzone"
+            class="dropzone"
+            onclick="document.getElementById('backup-file').click()"
+            ondragover="event.preventDefault(); event.stopPropagation(); this.classList.add('dragover')"
+            ondragleave="event.preventDefault(); event.stopPropagation(); this.classList.remove('dragover')"
+            ondrop="handleDrop(event)"
+          >
+            Drop backup file here or click to select
+          </div>
+          <input id="backup-file" type="file" class="hidden" onchange="fileSelected(this)">
+          <div id="backup-file-name" class="small">No file selected</div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="primary" onclick="uploadBackup()">Upload Backup</button>
+      </div>
+      <div class="row">
+        <div class="field">
+          <progress id="backup-progress" value="0" max="100"></progress>
+          <div id="backup-progress-text" class="small">0%</div>
+        </div>
+      </div>
+      <div id="status-backup" class="status"></div>
+      <pre id="backup-result">{}</pre>
+    </div>
+
     <script>
     const sessionState = {
       signal: {},
@@ -126,6 +190,10 @@ let
     const pollers = {
       signal: null,
       whatsapp: null
+    };
+
+    const backupState = {
+      file: null
     };
 
     function matrixUserId() {
@@ -266,7 +334,108 @@ let
       setTelegram(result);
     }
 
+    function togglePassphrase() {
+      const bridge = document.getElementById('backup-bridge').value;
+      const row = document.getElementById('backup-passphrase-row');
+      if (bridge === 'signal') {
+        row.classList.remove('hidden');
+      } else {
+        row.classList.add('hidden');
+      }
+    }
+
+    function fileSelected(input) {
+      backupState.file = (input.files && input.files.length > 0) ? input.files[0] : null;
+      const label = document.getElementById('backup-file-name');
+      label.textContent = backupState.file ? backupState.file.name : 'No file selected';
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const dropzone = document.getElementById('backup-dropzone');
+      dropzone.classList.remove('dragover');
+      if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) {
+        return;
+      }
+      backupState.file = e.dataTransfer.files[0];
+      const label = document.getElementById('backup-file-name');
+      label.textContent = backupState.file.name;
+    }
+
+    function setBackupStatus(text, ok) {
+      const el = document.getElementById('status-backup');
+      el.textContent = text;
+      el.className = ok === null ? 'status' : (ok ? 'status ok' : 'status err');
+    }
+
+    function setBackupResult(data) {
+      document.getElementById('backup-result').textContent = JSON.stringify(data || {}, null, 2);
+    }
+
+    function setBackupProgress(value, text) {
+      const clamped = Math.max(0, Math.min(100, Number(value || 0)));
+      document.getElementById('backup-progress').value = clamped;
+      document.getElementById('backup-progress-text').textContent = text || (Math.round(clamped) + '%');
+    }
+
+    function uploadBackup() {
+      const bridge = document.getElementById('backup-bridge').value;
+      const passphrase = document.getElementById('backup-passphrase').value;
+      if (!backupState.file) {
+        setBackupStatus('Choose a backup file first', false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('bridge', bridge);
+      formData.append('passphrase', passphrase);
+      formData.append('backup', backupState.file);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/backup/upload');
+      setBackupStatus('Uploading backup...', null);
+      setBackupProgress(0, '0%');
+      setBackupResult({});
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          setBackupProgress(0, 'Uploading...');
+          return;
+        }
+        const pct = (event.loaded / event.total) * 100;
+        setBackupProgress(pct, 'Upload ' + Math.round(pct) + '%');
+      };
+
+      xhr.upload.onload = () => {
+        setBackupProgress(100, 'Upload complete');
+        setBackupStatus('Upload complete, decrypting/parsing...', null);
+      };
+
+      xhr.onerror = () => {
+        setBackupStatus('Upload failed', false);
+      };
+
+      xhr.onload = () => {
+        let data = {};
+        try {
+          data = JSON.parse(xhr.responseText || '{}');
+        } catch (err) {
+          data = { ok: false, error: 'invalid server response' };
+        }
+        setBackupResult(data);
+        if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
+          setBackupStatus('Import complete', true);
+        } else {
+          setBackupStatus(data.error || 'Import failed', false);
+        }
+      };
+
+      xhr.send(formData);
+    }
+
     ['signal', 'whatsapp'].forEach((bridge) => renderQr(bridge, ""));
+    togglePassphrase();
     </script>
     </body>
     </html>
