@@ -45,6 +45,12 @@
 # @rationale: Node.js V8 JIT compilation requires writable+executable memory pages.
 #   Setting true crashes the process immediately. Explicit false signals intentional override.
 #
+# @decision OCL-19: alexia=18800, ari=18810 (not 18791/18792).
+# @rationale: openclaw spawns a child gateway process that binds port N (gateway), N+2 (browser-control),
+#   N+3 (internal) — even with bind=loopback. Ports 18791 and 18792 are mark's (18789) auxiliary ports;
+#   when alexia/ari try to start on those ports, openclaw detects "another gateway instance already listening"
+#   and exits. Moved to 18800/18810 which have clean auxiliary ranges (18802/18803 and 18812/18813).
+#
 # @decision OCL-18: NODE_OPTIONS heap 1GB, MemoryHigh 1.5GB, MemoryMax 2GB.
 # @rationale: Instances with WhatsApp session history exhaust the initial 384M V8 heap cap on startup.
 #   Server has 96GB RAM; 6 instances at 2GB max = 12GB worst case — well within budget.
@@ -72,12 +78,12 @@ let
       defaultModel = "claude-sonnet-4-6";
     };
     alexia = {
-      port = 18791;
+      port = 18800;  # OCL-19: 18791 conflicts with mark's auxiliary ports (gateway +2); moved to 18800
       gatewaySecret = "openclaw-alexia-gateway-token";
       defaultModel = "claude-sonnet-4-6";
     };
     ari = {
-      port = 18792;
+      port = 18810;  # OCL-19: 18792 conflicts with mark's auxiliary ports (gateway +3); moved to 18810
       gatewaySecret = "openclaw-ari-gateway-token";
       defaultModel = "claude-sonnet-4-6";
     };
