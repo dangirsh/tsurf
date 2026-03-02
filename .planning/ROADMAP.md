@@ -52,7 +52,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 52: Nativize the Lobster Farm — Docker-Free Contabo** - Replace remaining Docker containers (OpenClaw ×6, Spacebot) with native NixOS systemd services. buildNpmPackage for OpenClaw, Nix package for Spacebot. Zero data loss (preserve /var/lib state dirs). Same ports, same secrets injection (sops env files), same nginx/homepage integration. Goal: eliminate Docker daemon dependency on Contabo entirely. Activation-time data migration with rollback safety.
 - [ ] **Phase 53: Conway Dashboard Auth + Prompt Editor** - Token-based auth for public internet access (bearer token via sops-nix + nginx HTTPS). UI to edit genesis prompt and restart automaton agent without NixOS rebuild.
 - [x] **Phase 55: Evaluate absurd Durable Execution** - Research-only. All 5 components REJECT or DEFER. No adoption warranted. Conway Automaton DEFER pending upstream plugin support or permanent fork.
-- [ ] **Phase 56: Voice Interface Research — Low-Latency Parts Assistant** - Research and compare approaches (Claude Android voice+MCP baseline, ClawdTalk/Telnyx PSTN, WebRTC-native with LiveKit/Daily/Vapi) for a Parts-aware voice assistant on Android + Mac. Produce recommendation + Phase 57 implementation plan.
+- [x] **Phase 56: Voice Interface Research — Low-Latency Parts Assistant** - Research-only. LiveKit Agents + Anthropic Plugin recommended (Rank 1). Pipecat+Daily (Rank 2), Vapi (Rank 3). Claude App+MCP blocked. docs/VOICE-RESEARCH.md deliverable. Phase 57 skeleton drafted (2 plans).
 - [ ] **Phase 57: OVH Re-bootstrap as neurosys-dev** - Fresh Ubuntu 25 on OVH VPS. nixos-anywhere install, hostname neurosys-dev, dev agent workloads only (services stay on Contabo). Verify SSH, bootstrap, Tailscale, agent tooling.
 
 ## Phase Details
@@ -982,12 +982,15 @@ Plans:
 
 ### Phase 51: Conway Automaton profitability research — why the agent loop fails and how to fix it
 
-**Goal:** [To be planned]
+**Goal:** Diagnose why the automaton agent loop fails to produce profitable outcomes, reconfigure for productive work, and validate the agent can complete a revenue cycle.
 **Depends on:** Phase 50
-**Plans:** 0 plans
+**Plans:** 4 plans (3 waves)
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 51 to break down)
+- [x] 51-01-PLAN.md -- Diagnostic: SSH to verify service status, wallet, API key, DB state (wave 1)
+- [x] 51-02-PLAN.md -- Reconfiguration: genesis prompt, token budget, maxChildren, social relay, SOUL.md (wave 2)
+- [x] 51-03-PLAN.md -- Infrastructure: verify Conway API key, wallet funding deferred (wave 2, parallel with 51-02)
+- [ ] 51-04-PLAN.md -- Validation: end-to-end revenue cycle verification (wave 3, pending)
 
 ### Phase 52: Nativize the Lobster Farm — Docker-Free Contabo
 **Goal**: Eliminate Docker from Contabo by converting OpenClaw (6 instances) and Spacebot from OCI containers to native NixOS systemd services. Active users must not notice the transition — no data loss, no downtime beyond a single `nixos-rebuild switch`.
@@ -1093,10 +1096,10 @@ Plans:
 3. Phase 57 implementation skeleton drafted (ready to plan/execute)
 4. Required neurosys additions identified (ports, sops secrets, new modules)
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 56 to break down)
+- [x] 56-01: Voice interface research compiled into docs/VOICE-RESEARCH.md. 5 approaches evaluated, LiveKit Agents recommended. Phase 57 skeleton drafted. Decision recorded in STATE.md.
 
 ### Phase 57: OVH Re-bootstrap as neurosys-dev
 
