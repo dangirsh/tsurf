@@ -4,6 +4,7 @@
 # @decision RESTIC-03: sops.templates for B2 credentials env file, passwordFile for encryption key
 # @decision RESTIC-04: Public template keeps backupPrepareCommand as a no-op; private overlay can add service-specific dump hooks.
 # @decision RESTIC-05: Back up /persist subvolume (all stateful data). Ephemeral root, /nix, Docker subvolume excluded by design.
+# @decision RESTIC-06: Backup timestamp served on localhost:9200 (python3 http.server) for homepage widget — no Prometheus dependency.
 { config, pkgs, ... }: {
 
   services.restic.backups.b2 = {
@@ -54,8 +55,24 @@
     '';
 
     backupCleanupCommand = ''
-      # Write timestamp for node_exporter textfile collector (BackupStale alert + homepage widget)
-      echo "restic_backup_last_run_timestamp $(date +%s)" > /var/lib/prometheus-node-exporter/restic.prom
+      # Private overlay: add service-specific post-backup hooks here if needed.
+      mkdir -p /var/lib/restic-status
+      echo "{\"timestamp\": $(date +%s), \"date\": \"$(date -Iseconds)\"}" \
+        > /var/lib/restic-status/status.json
     '';
+  };
+
+  systemd.tmpfiles.rules = [ "d /var/lib/restic-status 0755 root root -" ];
+
+  # Minimal HTTP server so homepage can display last backup time without Prometheus.
+  systemd.services.restic-status-server = {
+    description = "Restic backup status server for homepage widget";
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      ExecStart = "${pkgs.python3}/bin/python3 -m http.server 9200 --bind 127.0.0.1 --directory /var/lib/restic-status";
+      Restart = "always";
+      StandardOutput = "null";
+      StandardError = "null";
+    };
   };
 }

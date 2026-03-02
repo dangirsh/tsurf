@@ -178,8 +178,8 @@ fi
 # --- Node-specific service health checks ---
 if [[ "$NODE" == "neurosys" ]]; then  # parts-tools parts-agent postgresql claw-swap-app
   SYSTEMD_SERVICES=("parts-tools" "parts-agent" "postgresql" "claw-swap-app")
-elif [[ "$NODE" == "ovh" ]]; then  # prometheus syncthing tailscaled
-  SYSTEMD_SERVICES=("prometheus" "syncthing" "tailscaled")
+elif [[ "$NODE" == "ovh" ]]; then  # syncthing tailscaled
+  SYSTEMD_SERVICES=("syncthing" "tailscaled")
 fi
 
 LOCAL_LOCK="$FLAKE_DIR/tmp/neurosys-${NODE}-deploy.local.lock"

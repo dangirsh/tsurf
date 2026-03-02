@@ -17,10 +17,6 @@
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    agentd = {
-      url = "github:dangirsh/agentd";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     deploy-rs = {
       url = "github:serokell/deploy-rs";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -39,7 +35,7 @@
   };
 
   # Private overlay: add your private inputs (parts, personal services, etc.) in a separate private flake that imports this one.
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, llm-agents, agentd, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
+  outputs = { self, nixpkgs, home-manager, sops-nix, disko, llm-agents, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
     let
       system = "x86_64-linux";
       lib = nixpkgs.lib;
@@ -53,7 +49,7 @@
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
         {
-          nixpkgs.overlays = [ llm-agents.overlays.default agentd.overlays.default ];
+          nixpkgs.overlays = [ llm-agents.overlays.default ];
         }
         {
           home-manager.useGlobalPkgs = true;
@@ -102,7 +98,6 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
-        neurosys-mcp = pkgs.callPackage ./packages/neurosys-mcp.nix { };
         openclaw = pkgs.callPackage ./packages/openclaw.nix { };
 
         test-live = pkgs.writeShellApplication {

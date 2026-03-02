@@ -25,6 +25,15 @@
         };
       }
       { greeting = { text = "All services are Tailscale-only"; }; }
+      { customapi = {
+          label = "Last Backup";
+          url = "http://localhost:9200/status.json";
+          display = "list";
+          mappings = [
+            { field = "date"; label = "Last run"; format = "relativeDate"; }
+          ];
+        };
+      }
     ];
 
     services = [
@@ -43,13 +52,6 @@
       {
         "Infrastructure" = [
           {
-            "Prometheus" = {
-              siteMonitor = "http://localhost:9090/-/healthy";
-              description = "Metrics + alerts — localhost-only, agents query /api/v1/alerts.";
-              icon = "prometheus";
-            };
-          }
-          {
             "Syncthing" = {
               siteMonitor = "http://localhost:8384";
               description = "File sync — localhost-only, agents interact via filesystem.";
@@ -61,19 +63,6 @@
               href = "https://secure.backblaze.com/b2_buckets.htm";
               description = "Daily backups — 7 daily, 5 weekly, 12 monthly retention.";
               icon = "backblaze-b2";
-              widget = {
-                type = "customapi";
-                url = "http://localhost:9090/api/v1/query?query=time()-restic_backup_last_run_timestamp";
-                mappings = [
-                  {
-                    field = "data.result.0.value.1";
-                    label = "Last Backup";
-                    format = "duration";
-                    scale = 1;
-                    suffix = " ago";
-                  }
-                ];
-              };
             };
           }
         ];

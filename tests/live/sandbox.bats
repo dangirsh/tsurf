@@ -57,27 +57,3 @@ bats_load_library bats-assert/load
   return 1
 }
 
-@test "${HOST}: generated agent wrapper sets SANDBOX env var" {
-  if ! is_neurosys; then
-    skip "agentd wrapper verification is expected on neurosys"
-  fi
-
-  local wrappers
-  wrappers="$(remote "find /nix/store -maxdepth 4 -type f -path '*/bin/agent' 2>/dev/null | head -n 30")" || true
-  if [[ -z "$wrappers" ]]; then
-    skip "no candidate agent wrappers found in /nix/store"
-  fi
-
-  local wrapper
-  while IFS= read -r wrapper; do
-    if remote grep -q "AGENTD_SPAWN" "$wrapper" 2>/dev/null; then
-      remote grep -q -- "--setenv SANDBOX 1" "$wrapper" || {
-        echo "FAIL: wrapper missing '--setenv SANDBOX 1': $wrapper"
-        return 1
-      }
-      return 0
-    fi
-  done <<< "$wrappers"
-
-  skip "no generated agent wrapper found (agents may be private-overlay only)"
-}

@@ -94,7 +94,7 @@ bats_load_library bats-assert/load
     return 1
   }
 
-  local internal_ports="9090 9091 8082 8384 8400 9100"
+  local internal_ports="9091 8082 8384"
   local port
   for port in $internal_ports; do
     if echo "$nft_output" | grep -E "tcp dport.*\\b${port}\\b.*accept" | grep -v "tailscale0" > /dev/null 2>&1; then

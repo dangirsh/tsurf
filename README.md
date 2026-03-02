@@ -19,9 +19,8 @@ NixOS server config for an agentic development platform. Declarative, batteries-
 | `networking.nix` | nftables firewall, SSH, Tailscale, fail2ban | port 22 assertion prevents accidental public exposure |
 | `secrets.nix` | sops-nix secret declarations | age key derived from SSH host key |
 | `docker.nix` | Docker engine | `--iptables=false`; NAT via nftables |
-| `monitoring.nix` | Prometheus + node\_exporter | 15s scrape, 90d retention, textfile collector |
 | `syncthing.nix` | Syncthing file sync | GUI Tailscale-only; replace device ID placeholders |
-| `agent-compute.nix` | Agent CLIs + bubblewrap sandbox + agent-spawn | See Agent Tooling section |
+| `agent-compute.nix` | Agent CLIs + bubblewrap sandbox | See Agent Tooling section |
 | `secret-proxy.nix` | Anthropic API key forwarding proxy | Port 9091, localhost-only; key injected pre-sandbox |
 | `impermanence.nix` | BTRFS ephemeral root | `/persist` state manifest; Docker on `@docker` subvolume |
 | `restic.nix` | Restic backup to Backblaze B2 | Daily, blanket `/persist` with exclusions |
@@ -30,11 +29,7 @@ NixOS server config for an agentic development platform. Declarative, batteries-
 ## Agent Tooling
 
 **Included CLIs** (via [llm-agents.nix](https://github.com/numtide/llm-agents.nix) overlay):
-`claude-code`, `codex`, `opencode`, `gemini-cli`, `pi` — plus `zmx` (session persistence) and `agent-spawn` (sandboxed launcher).
-
-```
-agent-spawn <name> <project-dir> [claude|codex|opencode|gemini|pi] [--no-sandbox]
-```
+`claude-code`, `codex` — plus `zmx` (session persistence).
 
 **Sandbox policy** (bubblewrap + systemd slice):
 
@@ -43,8 +38,7 @@ agent-spawn <name> <project-dir> [claude|codex|opencode|gemini|pi] [--no-sandbox
 | `/nix/store` | read-only bind |
 | `/data/projects` | read-only (all siblings visible) |
 | `<project-dir>` | read-write |
-| `~/.claude`, `~/.codex`, `~/.gemini` | read-only |
-| `~/.local/share/opencode` | read-write |
+| `~/.claude`, `~/.codex` | read-only |
 | `/run/secrets`, `~/.ssh` | **hidden** |
 | `/var/run/docker.sock` | **hidden** |
 | Network | unrestricted (agents need API/git) |
@@ -66,9 +60,7 @@ Port 9091 listens on localhost. Specific projects route via `ANTHROPIC_BASE_URL=
 | 22000 | Syncthing transfer | Public |
 | 8082 | Homepage dashboard | Tailscale-only |
 | 8384 | Syncthing GUI | Tailscale-only |
-| 9090 | Prometheus | Tailscale-only |
 | 9091 | Secret proxy | localhost-only |
-| 9100 | node-exporter | Tailscale-only |
 
 Build-time assertion prevents any `internalOnlyPorts` from appearing in `allowedTCPPorts`. Add private service ports in your private overlay.
 
@@ -77,7 +69,7 @@ Build-time assertion prevents any `internalOnlyPorts` from appearing in `allowed
 1. Fork this repo. Create your private overlay (see [docs/private-overlay.md](docs/private-overlay.md)).
 2. Generate age key from SSH host key (`ssh-to-age`). Encrypt secrets with `sops`.
 3. Deploy: `nixos-anywhere` for first install; `nix run .#deploy-rs` (or `scripts/deploy.sh`) for updates.
-4. Launch agents: `agent-spawn <name> <project-dir> [claude|codex|opencode]`
+4. Launch agents: `claude` or `codex` from any project directory
 
 ## Flake Inputs
 

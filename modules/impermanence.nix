@@ -53,12 +53,9 @@
       "/var/lib/mautrix-telegram"          # mautrix-telegram bridge state + registration.yaml
       "/var/lib/mautrix-whatsapp"          # mautrix-whatsapp bridge state + session DB
       "/var/lib/mautrix-signal"            # mautrix-signal bridge state + signal-cli data
-      "/var/lib/prometheus2"               # 90-day metrics history
-      "/var/lib/prometheus-node-exporter"  # Textfile collector .prom files (restic timestamp)
       "/var/lib/acme"                      # Let's Encrypt ACME certs + account keys (rate limit protection)
       "/var/lib/postgresql"                # PostgreSQL data (claw-swap DB)
       "/var/lib/parts"                     # Session logs, runtime data
-      "/var/lib/spacebot"                  # Spacebot: config.toml, SQLite DB, LanceDB embeddings
       "/var/lib/openclaw-mark"               # OpenClaw gateway state — mark instance
       "/var/lib/openclaw-lou"                # OpenClaw gateway state — lou instance
       "/var/lib/openclaw-alexia"             # OpenClaw gateway state — alexia instance

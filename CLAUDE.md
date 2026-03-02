@@ -19,11 +19,10 @@ modules/
   users.nix            # User accounts, sudo, SSH authorized keys
   secrets.nix          # sops-nix secret declarations
   docker.nix           # Docker engine (--iptables=false), NAT
-  monitoring.nix       # Prometheus + node_exporter + alert rules
   syncthing.nix        # Syncthing file sync service
   home-assistant.nix   # Home Assistant + ESPHome
   homepage.nix         # Homepage dashboard (Tailscale-only)
-  agent-compute.nix    # Agent CLI (claude, codex), bubblewrap sandbox, Podman, agent-spawn
+  agent-compute.nix    # Agent CLI (claude, codex), bubblewrap sandbox, Podman
   repos.nix            # Idempotent repo cloning on activation
   restic.nix           # Restic backup to Backblaze B2
 home/
@@ -33,7 +32,7 @@ home/
   ssh.nix              # SSH client config
   direnv.nix           # Direnv auto-loading
   cass.nix             # CASS indexer timer
-  agent-config.nix     # ~/.claude and ~/.codex symlinks
+  agentic-dev-base.nix # agentic-dev-base symlinks via activation
 packages/
   zmx.nix              # Pre-built zmx terminal multiplexer binary
   cass.nix             # Pre-built CASS indexer binary
@@ -87,7 +86,7 @@ scripts/run-tests.sh --live --json
 - Re-run only affected test files first, then full suite.
 
 ### Test Conventions
-- One assertion per test with host-prefixed names (e.g. `neurosys: prometheus.service is active`).
+- One assertion per test with host-prefixed names (e.g. `neurosys: tailscaled.service is active`).
 - Keep tests idempotent and read-only.
 - Prefer helpers from `tests/lib/common.bash`.
 - `scripts/run-tests.sh` writes `.claude/.test-status` for agent-runnable status checks.
@@ -126,14 +125,14 @@ Rules that agents MUST follow when modifying any module:
 
 ### Accepted Risks (documented, not actionable)
 
-- **SEC3:** Docker container hardening (read-only rootfs, cap-drop, no-new-privileges) — PARTIALLY ADDRESSED in Phase 47-02 (secret-proxy, monitoring hardened). Parts/claw-swap containers remain external.
+- **SEC3:** Docker container hardening (read-only rootfs, cap-drop, no-new-privileges) — PARTIALLY ADDRESSED in Phase 47-02 (secret-proxy hardened). Parts/claw-swap containers remain external.
 - **SEC5:** `--no-sandbox` agents can modify `~/.claude/settings.json` -- mitigated by default sandbox-on and requiring explicit `--no-sandbox` flag
 - **SEC6:** Docker socket mounted in homepage-dashboard -- mitigated by Tailscale-only access (port 8082 in internalOnlyPorts)
-- **SEC9:** Systemd service hardening — PARTIALLY ADDRESSED in Phase 47-02 (secret-proxy, Prometheus, node-exporter, tailscale-serve-ha hardened). Remaining services use NixOS module defaults.
+- **SEC9:** Systemd service hardening — PARTIALLY ADDRESSED in Phase 47-02 (secret-proxy, tailscale-serve-ha hardened). Remaining services use NixOS module defaults.
 - **SEC11:** Pre-built binaries (zmx, cass) lack signature verification -- mitigated by SHA256 hash pinning
 - **SEC47-13:** `--no-sandbox` agent = effective root access — inherent to design. Mitigated by default sandbox-on, audit logging, operator awareness.
 - **SEC47-15:** Sandboxed agents have read-only access to all `/data/projects` — deliberate for cross-project reference. No `.env` files on server (sops-nix handles secrets).
-- **SEC47-16:** `anthropic-api-key` is broadly shared (bash, agentd, openclaw, spacebot) — secret-proxy mitigates for claw-swap agents. Per-consumer key rotation out of scope.
+- **SEC47-16:** `anthropic-api-key` is broadly shared (bash, openclaw) — secret-proxy mitigates for claw-swap agents. Per-consumer key rotation out of scope.
 - **SEC49-01:** Bootstrap script passwords (`CONTABO_PASS` default, `OVH_NEW_PASS`) remain in public git history (commits prior to Phase 49). Both passwords are ephemeral — used only during initial Ubuntu install which is immediately wiped by nixos-anywhere. Rewriting public repo history is impractical. Risk: minimal (passwords are useless after bootstrap completes).
 - **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
 - **SEC50-01:** Public template `users.allowNoPasswordLogin = true` — required for the public template to evaluate without real credential hashes. Private overlay replaces `users.nix` entirely and does NOT set this. The setting only affects the public template, never the deployed config.
@@ -150,7 +149,7 @@ Rules to prevent bloat and over-engineering:
 - Prefer inline over separate files for small configs (<20 lines)
 - Let bindings for values used more than once (e.g., Tailscale IP in homepage.nix)
 - `tmp/` in project root for temporary files (never `/tmp/`) -- convention from global CLAUDE.md
-- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (users.nix, agent-compute.nix), or when the entire content differs (homepage.nix, syncthing.nix). For service modules (automaton, openclaw, spacebot, matrix), import from public and override only what differs.
+- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (users.nix, agent-compute.nix), or when the entire content differs (homepage.nix, syncthing.nix). For service modules (automaton, openclaw, matrix), import from public and override only what differs.
 
 ## Module Change Checklist
 

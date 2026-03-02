@@ -7,10 +7,8 @@
     ./networking.nix
     ./secrets.nix
     ./docker.nix
-    ./monitoring.nix
     ./syncthing.nix
     ./agent-compute.nix
-    ./agentd.nix
     ./secret-proxy.nix
     ./impermanence.nix
   ];
