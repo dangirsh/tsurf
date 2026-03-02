@@ -45,6 +45,10 @@
 # @rationale: Node.js V8 JIT compilation requires writable+executable memory pages.
 #   Setting true crashes the process immediately. Explicit false signals intentional override.
 #
+# @decision OCL-18: NODE_OPTIONS heap 1GB, MemoryHigh 1.5GB, MemoryMax 2GB.
+# @rationale: Instances with WhatsApp session history exhaust the initial 384M V8 heap cap on startup.
+#   Server has 96GB RAM; 6 instances at 2GB max = 12GB worst case — well within budget.
+#
 # @decision OCL-17: No SystemCallFilter; AF_NETLINK required in RestrictAddressFamilies.
 # @rationale: Node.js + native sqlite3 addons use an unpredictable syscall surface.
 #   Other hardening (PrivateTmp, ProtectSystem, RestrictAddressFamilies, CapabilityBoundingSet)
@@ -194,7 +198,7 @@ ${lib.concatMapStringsSep "\n"
           StateDirectoryMode = "0750";
           Environment = [
             "HOME=/var/lib/openclaw-${name}"
-            "NODE_OPTIONS=--max-old-space-size=384"
+            "NODE_OPTIONS=--max-old-space-size=1024"  # OCL-18: 1GB V8 heap — instances with WhatsApp session history need >384M
           ];
           EnvironmentFile = config.sops.templates."openclaw-${name}-env".path;
           ExecStart = "${openclawPkg}/bin/openclaw gateway --allow-unconfigured --port ${toString instance.port}";
@@ -220,8 +224,8 @@ ${lib.concatMapStringsSep "\n"
           CapabilityBoundingSet = "";      # no capabilities needed — port > 1024
 
           # --- Resource limits ---
-          MemoryHigh = "512M";
-          MemoryMax = "768M";
+          MemoryHigh = "1500M";  # OCL-18: instances with session history can use >512M; server has 96GB
+          MemoryMax = "2G";
           CPUQuota = "100%";
           TasksMax = 200;
         };
