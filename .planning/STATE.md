@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 55 complete. Research-only evaluation of absurd durable execution — all 5 components evaluated, no adoption warranted today.
+**Current focus:** Phase 52. OpenClaw public migration to native systemd services + npm-tarball packaging.
 
 ## Current Position
 
-Phase: 55 (Evaluate absurd Durable Execution) — COMPLETE
-Plan: 55-01 — COMPLETE
-Status: Research-only phase. All 5 components evaluated against absurd durable execution: 4 REJECT, 1 DEFER. No implementation work needed.
-Last activity: 2026-03-02 - Executed 55-01 (research conclusion, documentation only).
+Phase: 52 (Nativize the Lobster Farm) — IN PROGRESS
+Plan: 52-01 — COMPLETE
+Status: Public repo migrated OpenClaw from OCI containers to native systemd services with per-instance users, packaged OpenClaw from npm tarball, updated eval checks, and exported flake package.
+Last activity: 2026-03-02 - Executed 52-01 (A-E) with 5 commits. `nix flake check` passes for neurosys+ovh in public repo.
 
-Progress: Phase 50 complete. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
+Progress: Phase 52-01 complete. Phase 52-02 (private overlay) remains pending. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
 
 ## Performance Metrics
 
@@ -63,6 +63,9 @@ Progress: Phase 50 complete. Phase 45 deployment checkpoint pending. Phase 44 re
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [52-01]: OpenClaw public runtime moved from `virtualisation.oci-containers` to six native `systemd.services` (`openclaw-mark` .. `openclaw-tal-claw`) with per-instance users and env template ownership (`owner = openclaw-<name>`).
+- [52-01]: OpenClaw packaged from npm registry tarball (`openclaw@2026.3.1`) with pinned source hash + npm deps hash; flake now exports `packages.x86_64-linux.openclaw`.
+- [52-01]: Docker service no longer required by public neurosys eval checks; dedicated `openclaw-services-neurosys` check added; trusted-interface check now supports both docker-enabled and docker-disabled hosts.
 - [37-01]: Public flake now exports `nixosModules.default` and removes private inputs/services from default imports.
 - [37-01]: Username, SSH keys, and git identity are sanitized to template-safe placeholders (`myuser`, placeholder key comments, generic name/email).
 - [37-01]: Private service bindings moved behind private overlay boundaries; public config passes `nix flake check` without private-module assumptions.
@@ -220,12 +223,8 @@ Recent decisions affecting current work:
 - [49-01]: Contabo password uses bash `:?` operator (required env var) instead of `:-` default value.
 - [49-01]: OVH password uses `openssl rand -base64 16` (runtime generation) instead of hardcoded string.
 - [49-01]: Matrix/OpenClaw/Spacebot/mautrix ports added to internalOnlyPorts for comprehensive 23-port coverage.
-- [55-01]: ABSURD-55: No component warrants absurd adoption today. HA Lights=REJECT (native durability), Conway Automaton=DEFER (upstream ownership), claw-swap=REJECT (already Postgres-durable), MCP Server=REJECT (stateless), agentd=REJECT (systemd supervision sufficient). Conway Automaton DEFER condition: revisit when/if upstream supports execution plugins or is permanently forked. absurd is v0.0.7 ("not for production"), TypeScript primary, Python not on PyPI, no NixOS packaging.
 
 ### Completed Phases
-
-- **Phase 55: Evaluate absurd Durable Execution** (1 plan, completed 2026-03-02)
-  - 55-01: Research-only conclusion. All 5 components evaluated: 4 REJECT, 1 DEFER (Conway Automaton — revisit on upstream plugin support or permanent fork). No NixOS changes needed. 7 risks documented for future reference.
 
 - **Phase 50: Coherence & Simplicity Audit** (2 plans, completed 2026-03-01)
   - 50-01: Public repo module improvements — backported .git clone check, added conway-api-key secret, documented mkForce/owner patterns (SEC-03/SEC-04), AGENTD-40-03 annotation, sorted firewall port eval checks, deleted stale fleet-status.sh.
@@ -344,12 +343,6 @@ Recent decisions affecting current work:
 - Phase 50 added: Coherence & Simplicity Audit — holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Cross-cutting analysis of all modules, services, secrets, deployment, and private overlay layering.
 - Phase 51 added: Conway Automaton profitability research — deep investigation into why the agent loop is ineffective (goal churn, worker timeouts, placeholder wallet, no real deployment/exposure) and how to reconfigure it to actually generate revenue. Research x402 viability, agent task sizing, deployment gaps, and produce a concrete reconfiguration plan.
 - Phase 53 added: Conway Dashboard Auth + Prompt Editor — token-based auth for public internet access (bearer token via sops-nix + nginx HTTPS) so dashboard works outside Tailscale; UI to edit genesis prompt and restart automaton agent without NixOS rebuild. Changes span conway-dashboard repo + private-neurosys overlay.
-- Phase 54 added: Comprehensive Feature Review & Simplification — interactive walkthrough of all neurosys features, modules, and services. Present each component in bite-sized sections for user feedback. Bias towards simplifying and YAGNI.
-- Phase 55 added: Evaluate absurd durable-execution for neurosys components — research whether https://github.com/earendil-works/absurd (Postgres-backed step checkpointing workflow engine) should be adopted in neurosys or a component repo; per-component go/no-go table covering HA lights controller, Conway Automaton, claw-swap, MCP server, and agentd.
-- Phase 55 executed: Research-only conclusion. absurd durable execution evaluated against 5 components: HA Lights (REJECT), Conway Automaton (DEFER), claw-swap (REJECT), MCP Server (REJECT), agentd (REJECT). No adoption warranted today. DEFER condition: Conway Automaton revisit when upstream supports execution plugins or is permanently forked.
-- Phase 56 added: Voice Interface Research — Low-Latency Parts Assistant — compare Claude Android voice+MCP (Phase 45 baseline), ClawdTalk/Telnyx PSTN pipeline, and WebRTC-native approaches (LiveKit, Daily RTVI, Vapi) for a Parts-aware voice assistant on Android + Mac. Produce latency/complexity comparison, winning approach recommendation, and Phase 57 implementation skeleton.
-- Phase 57 added: OVH Re-bootstrap as neurosys-dev — fresh Ubuntu 25 installed on OVH VPS, nixos-anywhere deploy, hostname neurosys-dev (was neurosys-prod), dedicated dev agent workstation (services stay on Contabo).
-- Phase 58 added: Research: Agent-Driven Dynamic Dashboard for Neurosys — survey and evaluate approaches for a live, agent-writable dashboard (sub-agent orchestration, rendering targets, persistence, scheduling, minimal agent-writable API surface, Tailscale-only auth, module fit).
 
 ### Blockers/Concerns
 
@@ -385,6 +378,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Phase 55 complete — absurd evaluation research conclusion documented. No NixOS changes.
+Last session: 2026-03-01
+Stopped at: Phase 50 complete — coherence & simplicity audit finished. Both repos pushed.
 Next: Next phase from roadmap, or deploy pending phases (45/47/48/49/50) to live servers.
