@@ -25,6 +25,15 @@
         };
       }
       { greeting = { text = "All services are Tailscale-only"; }; }
+      { customapi = {
+          label = "Last Backup";
+          url = "http://localhost:9200/status.json";
+          display = "list";
+          mappings = [
+            { field = "date"; label = "Last run"; format = "relativeDate"; }
+          ];
+        };
+      }
     ];
 
     services = [
