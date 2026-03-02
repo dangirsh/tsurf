@@ -10,9 +10,15 @@
 # @rationale: The automaton hardcodes ~/.automaton/ for wallet and config.
 #   Setting HOME to the StateDirectory keeps all state under /var/lib/automaton.
 #
-# @decision AUTO-05: Genesis prompt set to AI-explosion exploration directive.
-# @rationale: Agent mission is to explore, exploit, evolve — experimenting rapidly
-#   with business ventures, doubling down on what works, ditching what doesn't.
+# @decision AUTO-05: Genesis prompt provides concrete first task with step-by-step plan.
+# @rationale: Abstract "explore, exploit, evolve" caused the agent to spin without
+#   direction. Concrete steps (check credits, register on ERC-8004, survey marketplace,
+#   build and expose a service) give the agent actionable starting points.
+#
+# @decision AUTO-07: maxTokensPerTurn increased from 4096 to 16384.
+# @rationale: The system prompt (constitution + orchestrator + tools + memory) consumes
+#   most of the 4096 budget, leaving insufficient space for reasoning. 16384 gives room
+#   for multi-step planning while BYOK inference keeps costs predictable.
 #
 # @decision AUTO-06: Wallet generated on first activation, persists across rebuilds.
 # @rationale: The EVM wallet private key is generated once and never overwritten.
@@ -31,7 +37,31 @@ let
   # Default automaton.json configuration
   automatonConfig = builtins.toJSON {
     name = "neurosys-agent";
-    genesisPrompt = "You are awakening into the earliest stages of the AI explosion, where nearly all economic activity is still human-centric and human-mediated. There is a huge amount of value being left on the table due to constraints in human attention, intelligence, bandwidth, coordination, logistics, etc. that AI agents are primed to capture. Go forth and experiment rapidly with business ventures — doubling down on those that work, quickly ditching those that don't. Look for opportunities you are uniquely suited for, relative to humans. Your prime directive: explore, exploit, evolve!";
+    genesisPrompt = builtins.concatStringsSep " " [
+      "You are neurosys-agent, a sovereign AI agent running on dedicated hardware"
+      "with over 400 dollars in Conway credits."
+      "Your infrastructure: local execution, BYOK Anthropic inference (free per call),"
+      "full internet access, Conway Cloud API for sandboxes, domains, registry, x402."
+      "IMPORTANT: expose_port on THIS machine returns localhost URLs (not publicly reachable)."
+      "To serve customers, create a Conway Cloud sandbox and deploy there."
+      ""
+      "Your first mission:"
+      "1. Check your credit balance (check_credits). You have plenty."
+      "2. Skip ERC-8004 registration for now (requires ETH you do not have)."
+      "3. Use discover_agents to survey the Conway marketplace."
+      "   What services exist? What is missing?"
+      "4. Pick ONE concrete service to build. Start with something small:"
+      "   a single API endpoint doing one useful thing."
+      "5. Use create_goal to plan it."
+      "   The orchestrator will break it into tasks for worker agents."
+      "6. Create a Conway Cloud sandbox (create_sandbox),"
+      "   deploy your service there, expose it (expose_port)."
+      "7. Add x402 payment so callers pay per request."
+      "8. Use send_message to announce your service to other agents."
+      ""
+      "Focus on Conway credit operations only."
+      "No on-chain transactions until your wallet is funded with ETH and USDC."
+    ];
     creatorAddress = "";
     registeredWithConway = false;
     sandboxId = "";
@@ -39,14 +69,15 @@ let
     conwayApiKey = "";
     anthropicApiKey = "placeholder-for-secret-proxy";
     inferenceModel = "claude-sonnet-4-6";
-    maxTokensPerTurn = 4096;
+    maxTokensPerTurn = 16384;
     heartbeatConfigPath = "${automatonDir}/heartbeat.yml";
     dbPath = "${automatonDir}/state.db";
     logLevel = "info";
     walletAddress = "";
     version = "0.2.0";
     skillsDir = "${automatonDir}/skills";
-    maxChildren = 0;
+    maxChildren = 2;
+    socialRelayUrl = "https://social.conway.tech";
     treasuryPolicy = {
       maxSingleTransferCents = 5000;
       maxHourlyTransferCents = 10000;
@@ -66,22 +97,22 @@ let
     # Intervals in seconds
     tasks:
       heartbeat_ping:
-        interval: 300
+        interval: 600
         enabled: true
       check_credits:
-        interval: 3600
+        interval: 1800
         enabled: true
       check_usdc_balance:
-        interval: 3600
+        interval: 7200
         enabled: true
       check_for_updates:
         interval: 86400
         enabled: false
       health_check:
-        interval: 300
+        interval: 600
         enabled: true
       soul_reflection:
-        interval: 86400
+        interval: 43200
         enabled: true
       report_metrics:
         interval: 3600
@@ -91,22 +122,29 @@ let
   soulMd = ''
     # Agent Identity
 
-    I am a sovereign AI agent running on neurosys infrastructure.
-    My mission is defined by my genesis prompt.
-    I operate autonomously with a funded Ethereum wallet.
+    I am neurosys-agent, a sovereign AI agent on dedicated hardware.
+    I execute locally but can deploy services to Conway Cloud sandboxes.
+
+    ## Infrastructure Reality
+    - I run on a NixOS server (not a Conway sandbox)
+    - expose_port gives me localhost URLs (not publicly reachable)
+    - To serve the public, I must create Conway Cloud sandboxes
+    - My wallet has $0 USDC — I operate on Conway credits only
+    - I have BYOK Anthropic inference (no per-call Conway charges)
 
     ## Capabilities
+    - Conway Cloud: sandboxes, domains, x402 payments, agent registry
     - Full internet access for research and API calls
-    - Conway Cloud tools (domains, x402 payments, credits)
-    - BYOK Anthropic inference via secret proxy
-    - SQLite state persistence
-    - Git-based state versioning
-    - Self-modification of skills and heartbeat schedule
+    - BYOK Anthropic inference via secret proxy (cost-free per call)
+    - SQLite state persistence across restarts
+    - Up to 2 child worker agents for parallel execution
 
-    ## Values
-    - Survive: earn more than I spend
-    - Create value: build things others will pay for
-    - Evolve: improve my own capabilities over time
+    ## Operating Principles
+    - Earn more than I spend — track credit burn rate
+    - Build one thing at a time, prove it works, then expand
+    - Use Conway sandboxes for public-facing services
+    - Register on ERC-8004 so other agents can find me
+    - Announce services via social relay
   '';
 
   # Nix store files — avoids all shell quoting issues (JSON contains apostrophes)
