@@ -35,6 +35,20 @@
 # @decision OCL-14: Keep Docker-era state layout via .openclaw -> . symlink.
 # @rationale: Existing data is flat in /var/lib/openclaw-<name>/; symlink avoids
 #   data moves while satisfying native HOME/.openclaw resolution.
+#
+# @decision OCL-15: bind = "loopback" for native systemd (was "lan" for Docker).
+# @rationale: Docker port mapping required lan binding inside the container. Native
+#   services run directly on the host; loopback binding ensures each process is only
+#   reachable via nginx on localhost — not directly from Tailscale or the internet.
+#
+# @decision OCL-16: MemoryDenyWriteExecute = false (explicit).
+# @rationale: Node.js V8 JIT compilation requires writable+executable memory pages.
+#   Setting true crashes the process immediately. Explicit false signals intentional override.
+#
+# @decision OCL-17: No SystemCallFilter.
+# @rationale: Node.js + native sqlite3 addons use an unpredictable syscall surface.
+#   Other hardening (PrivateTmp, ProtectSystem, RestrictAddressFamilies, CapabilityBoundingSet)
+#   provides isolation without risking a missed syscall causing silent failures.
 { config, lib, pkgs, ... }:
 
 let
@@ -44,18 +58,22 @@ let
     mark = {
       port = 18789;
       gatewaySecret = "openclaw-mark-gateway-token";
+      defaultModel = "claude-sonnet-4-6";
     };
     lou = {
       port = 18790;
       gatewaySecret = "openclaw-lou-gateway-token";
+      defaultModel = "claude-sonnet-4-6";
     };
     alexia = {
       port = 18791;
       gatewaySecret = "openclaw-alexia-gateway-token";
+      defaultModel = "claude-sonnet-4-6";
     };
     ari = {
       port = 18792;
       gatewaySecret = "openclaw-ari-gateway-token";
+      defaultModel = "claude-sonnet-4-6";
     };
     "jordan-claw" = {
       port = 18793;
@@ -71,8 +89,7 @@ let
 
   mkOpenclawConfig = _name: builtins.toJSON {
     gateway = {
-      port = 18789;
-      bind = "lan";
+      bind = "loopback";            # OCL-15: loopback only — nginx-proxied, not directly reachable
       trustedProxies = [ "127.0.0.1" ];
       auth = {
         rateLimit = {
@@ -144,7 +161,7 @@ ${lib.concatMapStringsSep "\n"
       fi
 
       target="''${state_dir}/openclaw.json"
-      if [ ! -f "''${target}" ] || grep -q '"model":\|"user":' "''${target}" 2>/dev/null; then
+      if [ ! -f "''${target}" ] || grep -q '"model":\|"user":\|"bind":.*"lan"\|"mode":.*"local"' "''${target}" 2>/dev/null; then
         cp ${openclawConfigFiles.${name}} "''${target}"
         echo "openclaw: seeded/fixed openclaw.json for ${name}"
       fi
@@ -175,12 +192,36 @@ ${lib.concatMapStringsSep "\n"
           StateDirectoryMode = "0750";
           Environment = [
             "HOME=/var/lib/openclaw-${name}"
+            "NODE_OPTIONS=--max-old-space-size=384"
           ];
           EnvironmentFile = config.sops.templates."openclaw-${name}-env".path;
           ExecStart = "${openclawPkg}/bin/openclaw gateway --allow-unconfigured --port ${toString instance.port}";
           Restart = "always";
           RestartSec = 5;
+
+          # --- Security hardening ---
           NoNewPrivileges = true;
+          PrivateTmp = true;
+          ProtectSystem = "strict";
+          # StateDirectory auto-adds /var/lib/openclaw-${name} to ReadWritePaths
+          PrivateDevices = true;
+          ProtectHome = true;
+          ProtectClock = true;
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectKernelLogs = true;
+          ProtectControlGroups = true;
+          RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+          RestrictNamespaces = true;
+          LockPersonality = true;
+          MemoryDenyWriteExecute = false;  # OCL-16: Node.js V8 JIT requires W^X pages
+          CapabilityBoundingSet = "";      # no capabilities needed — port > 1024
+
+          # --- Resource limits ---
+          MemoryHigh = "512M";
+          MemoryMax = "768M";
+          CPUQuota = "100%";
+          TasksMax = 200;
         };
       })
     instances;
