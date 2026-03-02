@@ -27,7 +27,10 @@ set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 VPS_IP="135.125.196.143"
-DEPLOY_KEY="$FLAKE_DIR/tmp/ovh_deploy_key"
+# DEPLOY_KEY: override with OVH_DEPLOY_KEY env var if the OVH wizard used a different key
+# than the auto-generated one (e.g. a pre-registered key from your OVH account).
+# Example: OVH_DEPLOY_KEY=~/.ssh/id_ed25519 bash scripts/bootstrap-ovh.sh
+DEPLOY_KEY="${OVH_DEPLOY_KEY:-$FLAKE_DIR/tmp/ovh_deploy_key}"
 EXTRA_FILES="$FLAKE_DIR/tmp/ovh-host-keys"
 FLAKE_TARGET="$FLAKE_DIR#ovh"
 TAILSCALE_HOSTNAME="neurosys-prod"
