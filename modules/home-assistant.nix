@@ -8,6 +8,11 @@
 # @decision HA-04: trusted_proxies for Tailscale Serve reverse proxy
 #   Tailscale Serve terminates TLS on port 443 and proxies to 127.0.0.1:8123.
 #   HA must trust localhost as a proxy to correctly handle X-Forwarded-For.
+# @decision HA-07: adaptive_lighting custom component replaces sun-schedule.nix.
+# @rationale: adaptive_lighting (3.2k stars, nixpkgs packaged) tracks actual sun
+#   elevation for continuous color temp + brightness adjustment, auto-detects manual
+#   overrides, and supports sleep mode. Replaces 375-line custom Python service with
+#   a community-maintained HA integration configured entirely through the HA UI.
 #
 # Security model:
 # - Home Assistant listens on 0.0.0.0:8123 to avoid startup ordering issues with tailscale0.
@@ -22,6 +27,11 @@
       "hue"
       "esphome"
       "mcp_server"
+      "sun"
+    ];
+
+    customComponents = [
+      pkgs.home-assistant-custom-components.adaptive_lighting
     ];
 
     config = {
