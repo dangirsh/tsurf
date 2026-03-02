@@ -8,6 +8,8 @@
     ../../modules/homepage.nix
     ../../modules/restic.nix
     ../../modules/sun-schedule.nix
+    ../../modules/matrix.nix
+    ../../modules/dm-guide.nix
     # nginx module moved to private overlay
   ];
 

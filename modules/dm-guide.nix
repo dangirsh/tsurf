@@ -1,0 +1,1376 @@
+# modules/dm-guide.nix
+# DM Pairing Guide: self-hosted bridge login helper for Matrix DM onboarding.
+#
+# @decision DMG-01: Standalone Python HTTP service (stdlib only, no framework).
+# @rationale: Minimal dependency surface and predictable packaging via
+#   pkgs.writers.writePython3Bin. A single binary serves HTML + proxy API.
+#
+# @decision DMG-02: Shared provisioning secret read at runtime via LoadCredential.
+# @rationale: Secret never enters the Nix store and is not exposed in process args.
+#   systemd injects a root-readable credential file scoped to the service.
+#
+# @decision DMG-03: One local guide service proxies all bridge login flows.
+# @rationale: Browser never talks to bridge ports directly; auth header injection
+#   remains server-side. This centralizes provisioning API compatibility logic.
+#
+# @decision DMG-04: Port 8086 binds 0.0.0.0 with firewall closed.
+# @rationale: Matches existing internal tooling pattern: reachable over trusted
+#   interfaces (Tailscale), not publicly exposed via allowedTCPPorts.
+#
+# @decision DMG-05: Backup uploads are written to /var/lib/dm-guide and parsed locally.
+# @rationale: Keeps decrypted message artifacts and temporary uploads in service
+#   state storage with no external network hop; passphrases are transient only.
+{ config, pkgs, lib, ... }:
+
+let
+  port = 8086;
+
+  htmlPage = pkgs.writeText "dm-guide.html" ''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DM Pairing Guide</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <style>
+    :root { --bg: #1a1a2e; --surface: #16213e; --border: #0f3460; --text: #e0e0e0; --accent: #e94560; --ok: #4ecca3; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 1.5rem; max-width: 980px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; color: var(--ok); }
+    h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 0.6rem; }
+    p { margin-bottom: 0.7rem; color: #c8c8d8; }
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.6rem; }
+    .field { flex: 1 1 280px; }
+    label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--accent); }
+    input[type="text"], input[type="password"], input[type="tel"], select {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+      padding: 0.45rem; border-radius: 4px; width: 100%;
+    }
+    button { padding: 0.45rem 0.9rem; border: none; border-radius: 4px; cursor: pointer; background: var(--border); color: var(--text); }
+    button.primary { background: var(--ok); color: var(--bg); font-weight: bold; }
+    .status { font-size: 0.85rem; min-height: 1.2rem; }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--accent); }
+    .qr { background: white; display: inline-flex; padding: 0.6rem; border-radius: 6px; min-height: 160px; min-width: 160px; align-items: center; justify-content: center; }
+    pre { background: #0f1226; border: 1px solid var(--border); border-radius: 6px; padding: 0.7rem; max-height: 230px; overflow: auto; font-size: 0.8rem; }
+    .small { font-size: 0.8rem; color: #a9a9bc; }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      color: #a9a9bc;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    .dropzone.dragover {
+      border-color: var(--ok);
+      color: var(--ok);
+    }
+    progress { width: 100%; height: 1rem; }
+    .hidden { display: none; }
+    </style>
+    </head>
+    <body>
+    <h1>DM Pairing Guide</h1>
+    <p>Use this page to pair Matrix bridges for direct messaging.</p>
+
+    <div class="section">
+      <div class="row">
+        <div class="field">
+          <label for="mxid">Matrix user ID</label>
+          <input id="mxid" type="text" value="@admin:neurosys.local">
+        </div>
+      </div>
+      <div class="small">Provisioning calls are proxied locally and authenticated by a service credential.</div>
+    </div>
+
+    <div class="section">
+      <h2>Signal</h2>
+      <p>Start login and scan the QR code from Signal on your phone.</p>
+      <div class="row">
+        <button class="primary" onclick="startQr('signal')">Start Signal Pairing</button>
+      </div>
+      <div id="status-signal" class="status"></div>
+      <div id="qr-signal" class="qr"></div>
+    </div>
+
+    <div class="section">
+      <h2>WhatsApp</h2>
+      <p>Start login and scan the QR code from WhatsApp linked-devices settings.</p>
+      <div class="row">
+        <button class="primary" onclick="startQr('whatsapp')">Start WhatsApp Pairing</button>
+      </div>
+      <div id="status-whatsapp" class="status"></div>
+      <div id="qr-whatsapp" class="qr"></div>
+    </div>
+
+    <div class="section">
+      <h2>Telegram</h2>
+      <p>Enter your phone number, then submit code and optional 2FA password.</p>
+      <div class="row">
+        <div class="field">
+          <label for="tg-phone">Phone number (E.164)</label>
+          <input id="tg-phone" type="tel" placeholder="+491234567890">
+        </div>
+        <button class="primary" onclick="telegramPhone()">Send Code</button>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="tg-code">SMS / Telegram code</label>
+          <input id="tg-code" type="text" placeholder="12345">
+        </div>
+        <button onclick="telegramCode()">Submit Code</button>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="tg-password">2FA password (if required)</label>
+          <input id="tg-password" type="password">
+        </div>
+        <button onclick="telegramPassword()">Submit 2FA</button>
+      </div>
+      <div id="status-telegram" class="status"></div>
+      <pre id="telegram-response">{}</pre>
+    </div>
+
+    <div class="section">
+      <h2>Backup Upload</h2>
+      <p>Upload historical exports to decrypt/parse into structured JSON imports.</p>
+      <div class="row">
+        <div class="field">
+          <label for="backup-bridge">Bridge type</label>
+          <select id="backup-bridge" onchange="togglePassphrase()">
+            <option value="signal">Signal (.backup)</option>
+            <option value="whatsapp">WhatsApp (.zip export)</option>
+            <option value="telegram">Telegram (.json export)</option>
+          </select>
+        </div>
+      </div>
+      <div id="backup-passphrase-row" class="row">
+        <div class="field">
+          <label for="backup-passphrase">Signal backup passphrase</label>
+          <input id="backup-passphrase" type="password" autocomplete="off">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Backup file</label>
+          <div
+            id="backup-dropzone"
+            class="dropzone"
+            onclick="document.getElementById('backup-file').click()"
+            ondragover="event.preventDefault(); event.stopPropagation(); this.classList.add('dragover')"
+            ondragleave="event.preventDefault(); event.stopPropagation(); this.classList.remove('dragover')"
+            ondrop="handleDrop(event)"
+          >
+            Drop backup file here or click to select
+          </div>
+          <input id="backup-file" type="file" class="hidden" onchange="fileSelected(this)">
+          <div id="backup-file-name" class="small">No file selected</div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="primary" onclick="uploadBackup()">Upload Backup</button>
+      </div>
+      <div class="row">
+        <div class="field">
+          <progress id="backup-progress" value="0" max="100"></progress>
+          <div id="backup-progress-text" class="small">0%</div>
+        </div>
+      </div>
+      <div id="status-backup" class="status"></div>
+      <pre id="backup-result">{}</pre>
+    </div>
+
+    <script>
+    const sessionState = {
+      signal: {},
+      whatsapp: {},
+      telegram: {}
+    };
+
+    const pollers = {
+      signal: null,
+      whatsapp: null
+    };
+
+    const backupState = {
+      file: null
+    };
+
+    function matrixUserId() {
+      return document.getElementById('mxid').value.trim();
+    }
+
+    function setStatus(bridge, text, ok) {
+      const el = document.getElementById('status-' + bridge);
+      el.textContent = text;
+      el.className = ok === null ? 'status' : (ok ? 'status ok' : 'status err');
+    }
+
+    function renderQr(bridge, qrText) {
+      const container = document.getElementById('qr-' + bridge);
+      if (!qrText) {
+        container.textContent = 'No QR data yet';
+        return;
+      }
+      try {
+        const qr = qrcode(0, 'M');
+        qr.addData(qrText);
+        qr.make();
+        container.innerHTML = qr.createImgTag(5, 8);
+      } catch (err) {
+        container.textContent = 'QR render failed: ' + err;
+      }
+    }
+
+    function basePayload(extra) {
+      return Object.assign({ user_id: matrixUserId() }, extra || {});
+    }
+
+    async function postBridge(bridge, action, payload) {
+      const resp = await fetch('/api/bridge/' + bridge + '/login/' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload(payload))
+      });
+      return await resp.json();
+    }
+
+    function loginComplete(data) {
+      if (!data || typeof data !== 'object') return false;
+      if (data.logged_in === true) return true;
+      if (data.connected === true) return true;
+      const text = String(data.state || data.status || "").toLowerCase();
+      return ['done', 'success', 'connected', 'complete', 'logged_in'].includes(text);
+    }
+
+    function updateSession(bridge, data) {
+      if (!data || typeof data !== 'object') return;
+      const next = Object.assign({}, sessionState[bridge]);
+      const keys = ['flow_id', 'login_id', 'session_id', 'token', 'txn_id', 'phone_number'];
+      keys.forEach((k) => {
+        if (data[k]) next[k] = data[k];
+      });
+      if (data.raw && typeof data.raw === 'object') {
+        keys.forEach((k) => {
+          if (data.raw[k]) next[k] = data.raw[k];
+        });
+      }
+      sessionState[bridge] = next;
+    }
+
+    function stopPolling(bridge) {
+      if (pollers[bridge]) {
+        clearInterval(pollers[bridge]);
+        pollers[bridge] = null;
+      }
+    }
+
+    function startPolling(bridge) {
+      stopPolling(bridge);
+      pollers[bridge] = setInterval(async () => {
+        const result = await postBridge(bridge, 'wait', sessionState[bridge]);
+        if (!result.ok) {
+          setStatus(bridge, result.error || 'Waiting for scan...', null);
+          return;
+        }
+        updateSession(bridge, result);
+        if (result.qr_data) {
+          renderQr(bridge, result.qr_data);
+        }
+        if (loginComplete(result)) {
+          setStatus(bridge, 'Pairing complete', true);
+          stopPolling(bridge);
+          return;
+        }
+        setStatus(bridge, 'Waiting for scan/confirmation...', null);
+      }, 2500);
+    }
+
+    async function startQr(bridge) {
+      setStatus(bridge, 'Starting login...', null);
+      const result = await postBridge(bridge, 'start', {});
+      if (!result.ok) {
+        setStatus(bridge, result.error || 'Start failed', false);
+        return;
+      }
+      updateSession(bridge, result);
+      renderQr(bridge, result.qr_data || "");
+      if (result.qr_data) {
+        setStatus(bridge, 'QR ready - scan from your phone', true);
+      } else {
+        setStatus(bridge, 'Login started (no QR returned yet)', null);
+      }
+      startPolling(bridge);
+    }
+
+    function setTelegram(result) {
+      const pre = document.getElementById('telegram-response');
+      pre.textContent = JSON.stringify(result || {}, null, 2);
+      setStatus('telegram', result.ok ? 'Step accepted' : (result.error || 'Step failed'), !!result.ok);
+      updateSession('telegram', result);
+      if (result.raw && typeof result.raw === 'object') {
+        updateSession('telegram', result.raw);
+      }
+    }
+
+    async function telegramPhone() {
+      const phone = document.getElementById('tg-phone').value.trim();
+      const result = await postBridge('telegram', 'phone', { phone_number: phone });
+      sessionState.telegram.phone_number = phone;
+      setTelegram(result);
+    }
+
+    async function telegramCode() {
+      const code = document.getElementById('tg-code').value.trim();
+      const payload = Object.assign({}, sessionState.telegram, { code: code });
+      const result = await postBridge('telegram', 'code', payload);
+      setTelegram(result);
+    }
+
+    async function telegramPassword() {
+      const password = document.getElementById('tg-password').value;
+      const payload = Object.assign({}, sessionState.telegram, { password: password });
+      const result = await postBridge('telegram', 'password', payload);
+      setTelegram(result);
+    }
+
+    function togglePassphrase() {
+      const bridge = document.getElementById('backup-bridge').value;
+      const row = document.getElementById('backup-passphrase-row');
+      if (bridge === 'signal') {
+        row.classList.remove('hidden');
+      } else {
+        row.classList.add('hidden');
+      }
+    }
+
+    function fileSelected(input) {
+      backupState.file = (input.files && input.files.length > 0) ? input.files[0] : null;
+      const label = document.getElementById('backup-file-name');
+      label.textContent = backupState.file ? backupState.file.name : 'No file selected';
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const dropzone = document.getElementById('backup-dropzone');
+      dropzone.classList.remove('dragover');
+      if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) {
+        return;
+      }
+      backupState.file = e.dataTransfer.files[0];
+      const label = document.getElementById('backup-file-name');
+      label.textContent = backupState.file.name;
+    }
+
+    function setBackupStatus(text, ok) {
+      const el = document.getElementById('status-backup');
+      el.textContent = text;
+      el.className = ok === null ? 'status' : (ok ? 'status ok' : 'status err');
+    }
+
+    function setBackupResult(data) {
+      document.getElementById('backup-result').textContent = JSON.stringify(data || {}, null, 2);
+    }
+
+    function setBackupProgress(value, text) {
+      const clamped = Math.max(0, Math.min(100, Number(value || 0)));
+      document.getElementById('backup-progress').value = clamped;
+      document.getElementById('backup-progress-text').textContent = text || (Math.round(clamped) + '%');
+    }
+
+    function uploadBackup() {
+      const bridge = document.getElementById('backup-bridge').value;
+      const passphrase = document.getElementById('backup-passphrase').value;
+      if (!backupState.file) {
+        setBackupStatus('Choose a backup file first', false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('bridge', bridge);
+      formData.append('passphrase', passphrase);
+      formData.append('backup', backupState.file);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/backup/upload');
+      setBackupStatus('Uploading backup...', null);
+      setBackupProgress(0, '0%');
+      setBackupResult({});
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          setBackupProgress(0, 'Uploading...');
+          return;
+        }
+        const pct = (event.loaded / event.total) * 100;
+        setBackupProgress(pct, 'Upload ' + Math.round(pct) + '%');
+      };
+
+      xhr.upload.onload = () => {
+        setBackupProgress(100, 'Upload complete');
+        setBackupStatus('Upload complete, decrypting/parsing...', null);
+      };
+
+      xhr.onerror = () => {
+        setBackupStatus('Upload failed', false);
+      };
+
+      xhr.onload = () => {
+        let data = {};
+        try {
+          data = JSON.parse(xhr.responseText || '{}');
+        } catch (err) {
+          data = { ok: false, error: 'invalid server response' };
+        }
+        setBackupResult(data);
+        if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
+          setBackupStatus('Import complete', true);
+        } else {
+          setBackupStatus(data.error || 'Import failed', false);
+        }
+      };
+
+      xhr.send(formData);
+    }
+
+    ['signal', 'whatsapp'].forEach((bridge) => renderQr(bridge, ""));
+    togglePassphrase();
+    </script>
+    </body>
+    </html>
+  '';
+
+  dmGuideServer = pkgs.writers.writePython3Bin "dm-guide-server"
+    {
+      flakeIgnore = [ "E501" ];
+    }
+    ''
+    import http.server
+    import json
+    import os
+    import re
+    import shutil
+    import socketserver
+    import subprocess
+    import tempfile
+    import time
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+    import zipfile
+    from sqlite3 import Error as SqliteError
+    import sqlite3
+
+    PORT = ${toString port}
+    HTML_FILE = "${htmlPage}"
+    SIGNAL_TOOLS = "${pkgs.signalbackup-tools}/bin/signalbackup-tools"
+    UPLOAD_DIR = "/var/lib/dm-guide/uploads"
+    IMPORT_DIR = "/var/lib/dm-guide/imports"
+    MAX_UPLOAD = 500 * 1024 * 1024
+    CREDS_DIR = os.environ.get("CREDENTIALS_DIRECTORY", "/run/secrets")
+    SECRET_FILE = os.path.join(CREDS_DIR, "dm-provisioning-secret")
+
+    BRIDGE_BASE_URLS = {
+        "whatsapp": "http://localhost:29318/_matrix/provision",
+        "signal": "http://localhost:29328/_matrix/provision",
+        "telegram": "http://localhost:29317/_matrix/provision",
+    }
+
+
+    def read_secret():
+        try:
+            with open(SECRET_FILE) as f:
+                return f.read().strip()
+        except FileNotFoundError:
+            return ""
+
+
+    def normalize_endpoint(endpoint):
+        if endpoint.startswith("/"):
+            return endpoint
+        return "/" + endpoint
+
+
+    def decode_body(data):
+        if not data:
+            return {}
+        try:
+            return json.loads(data.decode())
+        except Exception:
+            return {"raw": data.decode(errors="replace")}
+
+
+    def bridge_request(bridge, method, endpoint, payload=None, query_string=""):
+        base = BRIDGE_BASE_URLS[bridge]
+        path = normalize_endpoint(endpoint)
+        url = base + path
+        if query_string:
+            url = url + "?" + query_string
+
+        body = None
+        if payload is not None:
+            body = json.dumps(payload).encode()
+
+        req = urllib.request.Request(url, method=method, data=body)
+        req.add_header("Authorization", "Bearer " + read_secret())
+        req.add_header("Accept", "application/json")
+        if body is not None:
+            req.add_header("Content-Type", "application/json")
+
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                data = decode_body(resp.read())
+                return {"ok": True, "status": resp.getcode(), "data": data}
+        except urllib.error.HTTPError as err:
+            response = decode_body(err.read())
+            error = response.get("error") if isinstance(response, dict) else str(response)
+            return {"ok": False, "status": err.code, "error": error or err.reason, "data": response}
+        except urllib.error.URLError as err:
+            return {"ok": False, "status": 502, "error": str(err.reason), "data": {}}
+        except Exception as err:
+            return {"ok": False, "status": 500, "error": str(err), "data": {}}
+
+
+    def first_value(data, keys):
+        if not isinstance(data, dict):
+            return None
+        for key in keys:
+            value = data.get(key)
+            if value:
+                return value
+        return None
+
+
+    def extract_qr_data(data):
+        if isinstance(data, dict):
+            for key in ["qr_data", "qrData", "qr", "qr_code", "qrcode", "code"]:
+                value = data.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value
+            nested = data.get("data")
+            if isinstance(nested, dict):
+                return extract_qr_data(nested)
+        return None
+
+
+    def request_candidates(bridge, method, endpoints, payload=None, query_string=""):
+        errors = []
+        for endpoint in endpoints:
+            result = bridge_request(bridge, method, endpoint, payload, query_string)
+            if result["ok"]:
+                return result
+            errors.append(
+                {
+                    "endpoint": endpoint,
+                    "status": result.get("status"),
+                    "error": result.get("error"),
+                }
+            )
+        return {"ok": False, "status": 502, "error": "no candidate endpoint succeeded", "errors": errors}
+
+
+    def normalize_flows(data):
+        if isinstance(data, dict):
+            flows = data.get("flows")
+            if isinstance(flows, list):
+                return flows
+        if isinstance(data, list):
+            return data
+        return []
+
+
+    def start_qr_login(bridge, payload):
+        user_id = payload.get("user_id", "@admin:neurosys.local")
+        query = urllib.parse.urlencode({"user_id": user_id})
+        flows_result = request_candidates(
+            bridge,
+            "GET",
+            ["/v3/login/flows", "/v2/login/flows", "/v1/login/flows", "/login/flows"],
+            query_string=query,
+        )
+        if not flows_result["ok"]:
+            flows_result = request_candidates(
+                bridge,
+                "GET",
+                ["/v3/login/flows", "/v2/login/flows", "/v1/login/flows", "/login/flows"],
+            )
+
+        flows = normalize_flows(flows_result.get("data", {})) if flows_result["ok"] else []
+        qr_flow = None
+        for flow in flows:
+            flow_type = str(flow.get("type", "")).lower()
+            if "qr" in flow_type:
+                qr_flow = flow
+                break
+
+        start_payload = dict(payload)
+        start_payload["user_id"] = user_id
+        flow_id = None
+        if isinstance(qr_flow, dict):
+            flow_id = first_value(qr_flow, ["flow_id", "id", "type"])
+            if flow_id and "flow_id" not in start_payload:
+                start_payload["flow_id"] = flow_id
+
+        start_result = request_candidates(
+            bridge,
+            "POST",
+            ["/v3/login/start", "/v2/login/start", "/v1/login/start", "/login/start"],
+            payload=start_payload,
+        )
+        if not start_result["ok"] and flow_id:
+            start_result = request_candidates(
+                bridge,
+                "POST",
+                [
+                    "/v3/login/" + str(flow_id) + "/start",
+                    "/v2/login/" + str(flow_id) + "/start",
+                    "/v1/login/" + str(flow_id) + "/start",
+                    "/login/" + str(flow_id) + "/start",
+                ],
+                payload=start_payload,
+            )
+
+        if not start_result["ok"]:
+            return {
+                "ok": False,
+                "status": start_result.get("status", 502),
+                "error": start_result.get("error", "unable to start login flow"),
+                "errors": start_result.get("errors", []),
+                "flows": flows,
+            }
+
+        data = start_result.get("data", {})
+        qr_data = extract_qr_data(data)
+        response = {
+            "ok": True,
+            "status": start_result.get("status", 200),
+            "raw": data,
+            "flows": flows,
+            "flow_id": flow_id or first_value(data, ["flow_id", "id"]),
+            "login_id": first_value(data, ["login_id", "session_id"]),
+            "token": first_value(data, ["token", "txn_id"]),
+            "qr_data": qr_data,
+        }
+        if not qr_data:
+            response["error"] = "login started but provisioning API returned no QR payload"
+        return response
+
+
+    def wait_qr_login(bridge, payload):
+        wait_payload = dict(payload)
+        if "user_id" not in wait_payload:
+            wait_payload["user_id"] = "@admin:neurosys.local"
+
+        wait_result = request_candidates(
+            bridge,
+            "POST",
+            ["/v3/login/wait", "/v2/login/wait", "/v1/login/wait", "/login/wait"],
+            payload=wait_payload,
+        )
+        if not wait_result["ok"]:
+            query = urllib.parse.urlencode(
+                {k: str(v) for k, v in wait_payload.items() if v is not None}
+            )
+            wait_result = request_candidates(
+                bridge,
+                "GET",
+                ["/v3/login/wait", "/v2/login/wait", "/v1/login/wait", "/login/wait"],
+                query_string=query,
+            )
+
+        if not wait_result["ok"]:
+            return {
+                "ok": False,
+                "status": wait_result.get("status", 502),
+                "error": wait_result.get("error", "unable to poll login state"),
+                "errors": wait_result.get("errors", []),
+            }
+
+        data = wait_result.get("data", {})
+        state = ""
+        if isinstance(data, dict):
+            state = str(data.get("state", data.get("status", ""))).lower()
+        complete = state in ["done", "success", "connected", "complete", "logged_in"]
+        if isinstance(data, dict) and (data.get("logged_in") or data.get("connected")):
+            complete = True
+
+        return {
+            "ok": True,
+            "status": wait_result.get("status", 200),
+            "raw": data,
+            "state": state,
+            "connected": complete,
+            "flow_id": first_value(data, ["flow_id", "id"]),
+            "login_id": first_value(data, ["login_id", "session_id"]),
+            "token": first_value(data, ["token", "txn_id"]),
+            "qr_data": extract_qr_data(data),
+        }
+
+
+    def telegram_step(step, payload):
+        step_payload = dict(payload)
+        step_payload.setdefault("user_id", "@admin:neurosys.local")
+        if step == "phone":
+            phone_number = step_payload.get("phone_number") or step_payload.get("phone")
+            if not phone_number:
+                return {"ok": False, "status": 400, "error": "phone_number is required"}
+            step_payload["phone_number"] = phone_number
+
+        result = request_candidates(
+            "telegram",
+            "POST",
+            [
+                "/v3/login/" + step,
+                "/v2/login/" + step,
+                "/v1/login/" + step,
+                "/login/" + step,
+            ],
+            payload=step_payload,
+        )
+        if not result["ok"]:
+            return {
+                "ok": False,
+                "status": result.get("status", 502),
+                "error": result.get("error", "telegram provisioning step failed"),
+                "errors": result.get("errors", []),
+            }
+
+        data = result.get("data", {})
+        return {
+            "ok": True,
+            "status": result.get("status", 200),
+            "raw": data,
+            "session_id": first_value(data, ["session_id", "login_id"]),
+            "login_id": first_value(data, ["login_id", "session_id"]),
+            "token": first_value(data, ["token", "txn_id"]),
+            "phone_number": first_value(data, ["phone_number", "phone"]),
+            "state": first_value(data, ["state", "status"]),
+        }
+
+
+    def proxy_login_request(bridge, method, tail, query_string, payload):
+        endpoint = "/login"
+        if tail:
+            endpoint = endpoint + "/" + tail
+        result = bridge_request(bridge, method, endpoint, payload, query_string)
+        if not result["ok"]:
+            return {
+                "ok": False,
+                "status": result.get("status", 502),
+                "error": result.get("error", "provisioning request failed"),
+                "raw": result.get("data", {}),
+            }
+        return {"ok": True, "status": result.get("status", 200), "raw": result.get("data", {})}
+
+
+    class UploadError(Exception):
+        def __init__(self, message, status=400):
+            super().__init__(message)
+            self.status = status
+
+
+    def ensure_storage_dirs():
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        os.makedirs(IMPORT_DIR, exist_ok=True)
+
+
+    def safe_filename(name):
+        cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", os.path.basename(name or ""))
+        return cleaned or "upload.bin"
+
+
+    def parse_multipart_upload(handler):
+        content_type = handler.headers.get("Content-Type", "")
+        if "multipart/form-data" not in content_type:
+            raise UploadError("expected multipart/form-data", 400)
+
+        boundary_match = re.search(r'boundary=(?:"([^"]+)"|([^;]+))', content_type)
+        boundary = (boundary_match.group(1) or boundary_match.group(2) or "").strip() if boundary_match else ""
+        if not boundary:
+            raise UploadError("missing multipart boundary", 400)
+
+        try:
+            length = int(handler.headers.get("Content-Length", "0"))
+        except ValueError:
+            raise UploadError("invalid Content-Length", 400)
+
+        if length <= 0:
+            raise UploadError("empty upload body", 400)
+        if length > MAX_UPLOAD:
+            raise UploadError("upload exceeds 500MB limit", 413)
+
+        body = handler.rfile.read(length)
+        if len(body) != length:
+            raise UploadError("incomplete upload body", 400)
+
+        ensure_storage_dirs()
+        delimiter = ("--" + boundary).encode()
+        chunks = body.split(delimiter)
+        fields = {}
+        files = {}
+
+        for chunk in chunks[1:]:
+            if chunk.startswith(b"--"):
+                break
+            part = chunk
+            if part.startswith(b"\r\n"):
+                part = part[2:]
+            if part.endswith(b"\r\n"):
+                part = part[:-2]
+            if not part:
+                continue
+
+            header_blob, separator, payload = part.partition(b"\r\n\r\n")
+            if not separator:
+                continue
+
+            headers = {}
+            for line in header_blob.split(b"\r\n"):
+                if b":" not in line:
+                    continue
+                key, value = line.split(b":", 1)
+                headers[key.decode(errors="replace").strip().lower()] = value.decode(errors="replace").strip()
+
+            disposition = headers.get("content-disposition", "")
+            name_match = re.search(r'name="([^"]+)"', disposition)
+            if not name_match:
+                continue
+
+            field_name = name_match.group(1)
+            file_match = re.search(r'filename="([^"]*)"', disposition)
+            filename = file_match.group(1) if file_match else ""
+
+            if filename:
+                clean_name = safe_filename(filename)
+                fd, file_path = tempfile.mkstemp(
+                    prefix="dm-guide-upload-",
+                    suffix="-" + clean_name,
+                    dir=UPLOAD_DIR,
+                )
+                with os.fdopen(fd, "wb") as f:
+                    f.write(payload)
+                files[field_name] = {
+                    "path": file_path,
+                    "filename": clean_name,
+                    "size": len(payload),
+                    "content_type": headers.get("content-type", "application/octet-stream"),
+                }
+            else:
+                fields[field_name] = payload.decode("utf-8", errors="replace").strip()
+
+        return {"fields": fields, "files": files}
+
+
+    def make_timestamp_dir(bridge):
+        ensure_storage_dirs()
+        ts = time.strftime("%Y%m%d-%H%M%S", time.localtime())
+        base = os.path.join(IMPORT_DIR, bridge, ts)
+        candidate = base
+        suffix = 1
+        while os.path.exists(candidate):
+            candidate = base + "-" + str(suffix)
+            suffix += 1
+        os.makedirs(candidate, exist_ok=True)
+        return candidate
+
+
+    def write_json(path, data):
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+
+
+    def parse_timestamp(date_value, time_value):
+        variants = [
+            "%d/%m/%Y %H:%M:%S",
+            "%d/%m/%Y %H:%M",
+            "%d/%m/%y %H:%M:%S",
+            "%d/%m/%y %H:%M",
+        ]
+        text = (date_value + " " + time_value).strip()
+        for fmt in variants:
+            try:
+                return int(time.mktime(time.strptime(text, fmt)))
+            except ValueError:
+                continue
+        return None
+
+
+    def parse_whatsapp_text(text):
+        line_re = re.compile(r"^\[(\d{1,2}/\d{1,2}/\d{2,4}),\s*(\d{1,2}:\d{2}(?::\d{2})?)\]\s([^:]+):\s?(.*)$")
+        messages = []
+        current = None
+
+        for line in text.splitlines():
+            match = line_re.match(line)
+            if match:
+                if current is not None:
+                    messages.append(current)
+                date_value, time_value, sender, body = match.groups()
+                current = {
+                    "timestamp": parse_timestamp(date_value, time_value),
+                    "date": date_value,
+                    "time": time_value,
+                    "sender": sender.strip(),
+                    "text": body,
+                }
+                continue
+
+            if current is not None:
+                if current["text"]:
+                    current["text"] = current["text"] + "\n" + line
+                else:
+                    current["text"] = line
+
+        if current is not None:
+            messages.append(current)
+
+        return messages
+
+
+    def flatten_telegram_text(value):
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list):
+            out = []
+            for item in value:
+                if isinstance(item, str):
+                    out.append(item)
+                elif isinstance(item, dict):
+                    out.append(str(item.get("text", "")))
+            return "".join(out)
+        return ""
+
+
+    def load_signal_recipients(conn):
+        query = """
+            SELECT
+              _id,
+              COALESCE(system_display_name, profile_given_name, e164, aci, username, group_id, CAST(_id AS TEXT))
+            FROM recipient
+        """
+        recipients = {}
+        try:
+            for row in conn.execute(query):
+                recipients[str(row[0])] = str(row[1]) if row[1] is not None else str(row[0])
+        except SqliteError:
+            return {}
+        return recipients
+
+
+    def extract_signal_messages(db_path):
+        message_queries = [
+            """
+            SELECT date_sent AS ts, thread_id AS chat_id, from_recipient_id AS sender_id, body AS body
+            FROM message
+            WHERE body IS NOT NULL AND length(body) > 0
+            ORDER BY date_sent
+            """,
+            """
+            SELECT date_received AS ts, thread_id AS chat_id, recipient_id AS sender_id, body AS body
+            FROM sms
+            WHERE body IS NOT NULL AND length(body) > 0
+            ORDER BY date_received
+            """,
+        ]
+
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            recipients = load_signal_recipients(conn)
+            rows = None
+            for query in message_queries:
+                try:
+                    rows = conn.execute(query).fetchall()
+                    break
+                except SqliteError:
+                    continue
+            if rows is None:
+                raise UploadError("unable to extract messages from Signal backup database", 422)
+
+            messages = []
+            per_chat = {}
+            for row in rows:
+                sender_id = row["sender_id"]
+                sender_key = str(sender_id) if sender_id is not None else ""
+                sender = recipients.get(sender_key, sender_key or "unknown")
+                chat_id = row["chat_id"]
+                chat_key = str(chat_id) if chat_id is not None else "unknown"
+                per_chat[chat_key] = per_chat.get(chat_key, 0) + 1
+                messages.append(
+                    {
+                        "timestamp": int(row["ts"]) if row["ts"] is not None else None,
+                        "chat_id": chat_key,
+                        "sender_id": sender_id,
+                        "sender": sender,
+                        "text": row["body"],
+                    }
+                )
+
+            chats = [{"chat_id": key, "message_count": value} for key, value in sorted(per_chat.items())]
+            return {"messages": messages, "chats": chats}
+        finally:
+            conn.close()
+
+
+    def process_signal_backup(filepath, passphrase):
+        if not os.path.exists(SIGNAL_TOOLS):
+            return {"ok": False, "error": "signalbackup-tools is not available on this host"}
+        if not passphrase:
+            return {"ok": False, "error": "passphrase is required for Signal backups"}
+
+        unpack_dir = tempfile.mkdtemp(prefix="dm-guide-signal-", dir=UPLOAD_DIR)
+        try:
+            cmd = [
+                SIGNAL_TOOLS,
+                filepath,
+                passphrase,
+                "--output",
+                unpack_dir,
+                "--onlydb",
+                "--no-showprogress",
+            ]
+            run = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)
+            if run.returncode != 0:
+                error_text = (run.stderr or run.stdout or "").strip()
+                return {"ok": False, "error": "signalbackup-tools decrypt failed", "details": error_text[-800:]}
+
+            db_path = None
+            for root, _dirs, files in os.walk(unpack_dir):
+                for filename in files:
+                    if filename.endswith(".db") or filename.endswith(".sqlite") or filename.endswith(".sqlite3"):
+                        db_path = os.path.join(root, filename)
+                        break
+                if db_path:
+                    break
+
+            if not db_path:
+                return {"ok": False, "error": "decrypted Signal database file not found"}
+
+            parsed = extract_signal_messages(db_path)
+            return {
+                "ok": True,
+                "source_db": os.path.basename(db_path),
+                "message_count": len(parsed["messages"]),
+                "chats": parsed["chats"],
+                "messages": parsed["messages"],
+            }
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "error": "signalbackup-tools timed out after 300s"}
+        finally:
+            shutil.rmtree(unpack_dir, ignore_errors=True)
+
+
+    def process_whatsapp_zip(filepath):
+        chats = []
+        total = 0
+        with zipfile.ZipFile(filepath) as archive:
+            names = [name for name in archive.namelist() if name.lower().endswith("_chat.txt")]
+            if not names:
+                names = [name for name in archive.namelist() if name.lower().endswith(".txt")]
+            if not names:
+                return {"ok": False, "error": "no chat text file found in WhatsApp zip export"}
+
+            for name in names:
+                with archive.open(name) as f:
+                    text = f.read().decode("utf-8", errors="replace")
+                messages = parse_whatsapp_text(text)
+                total += len(messages)
+                chats.append(
+                    {
+                        "chat_file": name,
+                        "message_count": len(messages),
+                        "messages": messages,
+                    }
+                )
+
+        return {"ok": True, "message_count": total, "chats": chats}
+
+
+    def process_telegram_json(filepath):
+        with open(filepath, encoding="utf-8") as f:
+            export = json.load(f)
+
+        chat_list = export.get("chats", {}).get("list", [])
+        chats = []
+        total = 0
+
+        for chat in chat_list:
+            if not isinstance(chat, dict):
+                continue
+            out_messages = []
+            for message in chat.get("messages", []):
+                if not isinstance(message, dict):
+                    continue
+                text = flatten_telegram_text(message.get("text"))
+                if not text and message.get("type") != "message":
+                    continue
+                out_messages.append(
+                    {
+                        "id": message.get("id"),
+                        "date": message.get("date"),
+                        "timestamp": int(message.get("date_unixtime")) if str(message.get("date_unixtime", "")).isdigit() else None,
+                        "sender": message.get("from") or message.get("actor") or "unknown",
+                        "type": message.get("type"),
+                        "text": text,
+                    }
+                )
+
+            total += len(out_messages)
+            chats.append(
+                {
+                    "chat_id": chat.get("id"),
+                    "chat_name": chat.get("name"),
+                    "chat_type": chat.get("type"),
+                    "message_count": len(out_messages),
+                    "messages": out_messages,
+                }
+            )
+
+        return {"ok": True, "message_count": total, "chats": chats}
+
+
+    def process_backup_upload(bridge, filepath, passphrase):
+        if bridge == "signal":
+            return process_signal_backup(filepath, passphrase)
+        if bridge == "whatsapp":
+            return process_whatsapp_zip(filepath)
+        if bridge == "telegram":
+            return process_telegram_json(filepath)
+        return {"ok": False, "error": "unsupported bridge type"}
+
+
+    def handle_backup_upload(handler):
+        parsed = None
+        files_to_cleanup = []
+        passphrase = ""
+        try:
+            parsed = parse_multipart_upload(handler)
+            fields = parsed["fields"]
+            files = parsed["files"]
+            files_to_cleanup = [meta["path"] for meta in files.values()]
+
+            bridge = fields.get("bridge", "").strip().lower()
+            if bridge not in ["signal", "whatsapp", "telegram"]:
+                raise UploadError("bridge must be one of: signal, whatsapp, telegram", 400)
+
+            upload_meta = files.get("backup")
+            if not upload_meta:
+                raise UploadError("missing file field 'backup'", 400)
+
+            passphrase = fields.get("passphrase", "")
+            import_dir = make_timestamp_dir(bridge)
+            result = process_backup_upload(bridge, upload_meta["path"], passphrase)
+
+            if not result.get("ok"):
+                return {
+                    "ok": False,
+                    "bridge": bridge,
+                    "stage": "process",
+                    "error": result.get("error", "backup processing failed"),
+                    "details": result.get("details"),
+                }, 422
+
+            output = {
+                "bridge": bridge,
+                "source_file": upload_meta["filename"],
+                "imported_at": int(time.time()),
+                "message_count": result.get("message_count", 0),
+                "chats": result.get("chats", []),
+                "messages": result.get("messages", []),
+            }
+            output_file = os.path.join(import_dir, "messages.json")
+            write_json(output_file, output)
+
+            return {
+                "ok": True,
+                "bridge": bridge,
+                "stage": "complete",
+                "message_count": output["message_count"],
+                "chat_count": len(output["chats"]),
+                "output_dir": import_dir,
+                "output_file": output_file,
+            }, 200
+        except UploadError as err:
+            return {"ok": False, "error": str(err)}, err.status
+        except zipfile.BadZipFile:
+            return {"ok": False, "error": "invalid WhatsApp zip file"}, 400
+        except json.JSONDecodeError:
+            return {"ok": False, "error": "invalid Telegram JSON export"}, 400
+        except Exception as err:
+            return {"ok": False, "error": "internal backup processing error", "details": str(err)}, 500
+        finally:
+            passphrase = ""
+            for path in files_to_cleanup:
+                try:
+                    os.remove(path)
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    pass
+
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, fmt, *args):
+            pass
+
+        def send_json(self, data, status=200):
+            body = json.dumps(data).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def parse_bridge_path(self):
+            parsed = urllib.parse.urlparse(self.path)
+            parts = [p for p in parsed.path.split("/") if p]
+            if len(parts) < 4:
+                return None
+            if parts[0] != "api" or parts[1] != "bridge":
+                return None
+            bridge = parts[2]
+            if bridge not in BRIDGE_BASE_URLS:
+                return None
+            if parts[3] != "login":
+                return None
+            tail = "/".join(parts[4:])
+            return {
+                "bridge": bridge,
+                "tail": tail,
+                "query": parsed.query,
+            }
+
+        def read_json_body(self):
+            length = int(self.headers.get("Content-Length", 0))
+            if length <= 0:
+                return {}
+            body = self.rfile.read(length)
+            try:
+                return json.loads(body)
+            except json.JSONDecodeError:
+                return None
+
+        def do_GET(self):
+            parsed_path = urllib.parse.urlparse(self.path)
+            if parsed_path.path == "/":
+                with open(HTML_FILE, "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+                return
+
+            if parsed_path.path == "/api/backup/upload":
+                self.send_json({"ok": False, "error": "method not allowed"}, 405)
+                return
+
+            parsed = self.parse_bridge_path()
+            if not parsed:
+                self.send_error(404)
+                return
+
+            result = proxy_login_request(
+                parsed["bridge"],
+                "GET",
+                parsed["tail"],
+                parsed["query"],
+                None,
+            )
+            self.send_json(result, result.get("status", 200))
+
+        def do_POST(self):
+            parsed_path = urllib.parse.urlparse(self.path)
+            if parsed_path.path == "/api/backup/upload":
+                result, status = handle_backup_upload(self)
+                self.send_json(result, status)
+                return
+
+            parsed = self.parse_bridge_path()
+            if not parsed:
+                self.send_error(404)
+                return
+
+            payload = self.read_json_body()
+            if payload is None:
+                self.send_json({"ok": False, "error": "invalid JSON body"}, 400)
+                return
+
+            bridge = parsed["bridge"]
+            tail = parsed["tail"]
+
+            if bridge in ["signal", "whatsapp"] and tail == "start":
+                result = start_qr_login(bridge, payload)
+            elif bridge in ["signal", "whatsapp"] and tail == "wait":
+                result = wait_qr_login(bridge, payload)
+            elif bridge == "telegram" and tail in ["phone", "code", "password"]:
+                result = telegram_step(tail, payload)
+            else:
+                result = proxy_login_request(
+                    bridge,
+                    "POST",
+                    tail,
+                    parsed["query"],
+                    payload,
+                )
+
+            self.send_json(result, result.get("status", 200))
+
+
+    class ReusableServer(socketserver.TCPServer):
+        allow_reuse_address = True
+
+
+    if __name__ == "__main__":
+        with ReusableServer(("0.0.0.0", PORT), Handler) as httpd:
+            print(f"DM guide server on port {PORT}")
+            httpd.serve_forever()
+    '';
+
+in {
+  sops.secrets."dm-provisioning-secret" = {
+    sopsFile = lib.mkDefault ../secrets/neurosys.yaml;
+  };
+
+  systemd.services.dm-guide = {
+    description = "DM Guide — Matrix bridge pairing page";
+    after = [
+      "network.target"
+      "mautrix-telegram.service"
+      "mautrix-whatsapp.service"
+      "mautrix-signal.service"
+    ];
+    wants = [
+      "mautrix-telegram.service"
+      "mautrix-whatsapp.service"
+      "mautrix-signal.service"
+    ];
+    wantedBy = [ "multi-user.target" ];
+
+    serviceConfig = {
+      ExecStart = "${dmGuideServer}/bin/dm-guide-server";
+      DynamicUser = true;
+      StateDirectory = "dm-guide";
+      LoadCredential = [ "dm-provisioning-secret:${config.sops.secrets."dm-provisioning-secret".path}" ];
+      Restart = "on-failure";
+      RestartSec = 5;
+      # Hardening
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      RestrictSUIDSGID = true;
+      PrivateDevices = true;
+      PrivateTmp = true;
+    };
+  };
+}
