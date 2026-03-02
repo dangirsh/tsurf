@@ -385,6 +385,7 @@ Recent decisions affecting current work:
 - Phase 59 added: Logseq PKM Agent Suite — private repo (`logseq-agent-suite`) + neurosys private overlay component. Datalog query library, agent instruction files (todo triage, graph maintenance, review flows), NixOS module exposing vault path to agentd agents, and parts-agent interface for reading/writing the personal graph. Vault already in Syncthing.
 - Phase 56 executed: Research-only conclusion. Voice interface for HA control evaluated across 5 approaches. LiveKit Agents + Anthropic Plugin recommended (self-hosted WebRTC, localhost tool calls, 900-1400ms TTFB). Phase 57 implementation skeleton drafted (2 plans: infrastructure + application). docs/VOICE-RESEARCH.md created as project-level reference.
 - Phase 60 added: Dashboard DM Pairing & Backup Decrypt Guide — homepage dashboard links to a self-hosted guide for pairing DM bridge services (Signal/WhatsApp/Telegram mautrix) and uploading & decrypting message backups for historical import.
+- Phase 61 added: Nix-Derived Dynamic Dashboard — investigate generating a live dashboard directly from NixOS module expressions (tree view with status/links), replacing manually-maintained homepage config. May use module annotations (e.g., `meta.dashboard`). Goal: dashboard always reflects deployed Nix source, zero drift.
 
 ### Blockers/Concerns
 

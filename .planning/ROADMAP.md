@@ -1147,3 +1147,15 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 60 to break down)
+
+### Phase 61: Nix-Derived Dynamic Dashboard
+
+**Goal:** Investigate generating a live dashboard directly from NixOS module expressions, replacing the manually-maintained homepage config with a tree view of services, status indicators, and links — all derived from the source Nix. May require lightweight annotations in modules (e.g., `meta.dashboard = { ... }`). The dashboard should always reflect the actual deployed config, eliminating drift between Nix source and what the homepage shows.
+**Depends on:** None
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 61 to break down)
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 61 to break down)
