@@ -57,6 +57,7 @@ python3Packages.buildPythonApplication {
     python3Packages.httpx
     python3Packages.orgparse
     python3Packages.google-auth
+    python3Packages.requests
   ];
   pythonImportsCheck = [ "server" "auth" "logseq" "google_auth" "gmail" ];
   meta = with lib; {
