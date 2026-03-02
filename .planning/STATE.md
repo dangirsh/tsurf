@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 60 Plan 60-02 complete (public repo scope): DM guide now includes backup upload UI and server-side decrypt/parse pipeline for Signal/WhatsApp/Telegram exports. Post-deploy SSH validation task remains intentionally deferred by scope.
+**Current focus:** Phase 60 complete. DM guide service with bridge pairing UI + backup upload/decrypt pipeline merged to main. Next: Phase 62 (LLM Cost Tracking) or Phase 63 (Google OAuth + Gmail/Calendar MCP).
 
 ## Current Position
 
-Phase: 60 (Dashboard DM Pairing & Backup Decrypt Guide) — IN PROGRESS
-Plan: 60-02 — COMPLETE (public repo tasks A/B/C/D; task E skipped by scope)
-Status: DM guide backup upload UI + processing endpoint committed; Signal backup tool availability verified (`signalbackup-tools` present in nixpkgs); import pipeline writes structured JSON to `/var/lib/dm-guide/imports/{bridge}/{timestamp}/`; `nix flake check` passed.
-Last activity: 2026-03-02 - Executed 60-02 public-repo scope; added multipart upload parsing and backup extraction pipeline in `modules/dm-guide.nix`.
+Phase: 60 (Dashboard DM Pairing & Backup Decrypt Guide) — COMPLETE
+Plan: 60-02 — COMPLETE (all public repo tasks done)
+Status: Both plans merged to main. DM guide service on port 8086 with QR pairing for Signal/WhatsApp, phone flow for Telegram, and backup upload/decrypt for Signal .backup, WhatsApp .zip, Telegram JSON. Private overlay tasks (import in contaboModules, sops secrets) deferred to deploy time.
+Last activity: 2026-03-02 - Merged phase-60 branch to main, pushed to origin.
 
-Progress: Phase 60 in progress (plans 60-01 and 60-02 complete, scope-limited). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34
-- Average duration: ~20.0min
-- Total execution time: ~679 min
+- Total plans completed: 36
+- Average duration: ~19.4min
+- Total execution time: ~692 min
 
 **By Phase:**
 
@@ -49,6 +49,8 @@ Progress: Phase 60 in progress (plans 60-01 and 60-02 complete, scope-limited). 
 | 37 | 3/3 | ~21min | ~7min |
 | 39 | 1/2 | ~20min | ~20min |
 | 40 | 1/2 | ~72min | ~72min |
+
+| 60 | 2/2 | ~13min | ~6.5min |
 
 **Recent Trend:**
 - Last 4 plans: 60-02 (~5min), 60-01 (~8min), 59-02 (~4min), 59-01 (~2min)
