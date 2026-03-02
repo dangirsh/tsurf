@@ -56,6 +56,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 57: OVH Re-bootstrap as neurosys-dev** - Fresh Ubuntu 25 on OVH VPS. nixos-anywhere install, hostname neurosys-dev, dev agent workloads only (services stay on Contabo). Verify SSH, bootstrap, Tailscale, agent tooling.
 - [x] **Phase 59: Logseq PKM Agent Suite** - Three read-only Logseq org-mode MCP tools (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`) added to neurosys MCP server via orgparse. Private overlay wired with vault path + ProtectHome override. logseq-agent-suite GitHub repo with triage/graph-maintenance/review instruction files. Completed 2026-03-02.
 - [ ] **Phase 60: Dashboard DM Pairing & Backup Decrypt Guide** - Ensure the neurosys dashboard links to a page that helps pair each DM service (Signal, WhatsApp, Telegram) and upload & decrypt backups.
+- [ ] **Phase 62: LLM Cost Tracking & Display** - Track LLM API costs at the secret proxy level. Per-request cost estimation from token counts + model pricing tables. Daily/weekly/monthly aggregation. Expose via MCP tool (`llm_cost_summary`) and optional Telegram inline display on parts agent responses.
+- [ ] **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** - Add Google OAuth 2.0 flow to neurosys MCP server (callback via Tailscale Funnel). Token storage + auto-refresh. Gmail tools (read, search, draft, send, archive) and Calendar tools (list events, search, free/busy, create, update, delete) as MCP tools alongside existing HA/Matrix/Logseq. Parts connects via MCP client with approval gating (send email = contact_human).
 
 ## Phase Details
 
@@ -1157,5 +1159,36 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 61 to break down)
 
+### Phase 62: LLM Cost Tracking & Display
+
+**Goal:** Track LLM API costs at the secret proxy level so all inference usage across parts, Conway automaton, and other agents is captured in one place. Per-request cost estimation from token counts and model pricing tables. Daily/weekly/monthly aggregation stored in SQLite or Postgres. Expose via MCP tool (`llm_cost_summary`) for querying from Claude Android or parts. Optionally display inline on parts agent Telegram responses (e.g., `~$0.03` after each reply).
+
+**Depends on:** Phase 22 (secret proxy deployed)
+
+**Key areas:**
+1. **Request-level tracking** — intercept OpenRouter/Anthropic responses at the proxy, extract `usage` fields, calculate cost using model pricing table
+2. **Aggregation** — daily/weekly/monthly rollups, per-model and per-caller breakdown
+3. **MCP tool** — `llm_cost_summary` with time range and granularity parameters
+4. **Parts integration** — parts displays per-response cost in Telegram (lightweight — just reads the cost header/field from the proxied response)
+
+**Plans:** 0 plans
+
 Plans:
-- [ ] TBD (run /gsd:plan-phase 61 to break down)
+- [ ] TBD (run /gsd:plan-phase 62 to break down)
+
+### Phase 63: Google OAuth + Gmail/Calendar MCP Tools
+
+**Goal:** Add Google OAuth 2.0 to the neurosys MCP server so Gmail and Google Calendar are accessible as MCP tools alongside existing HA, Matrix, and Logseq integrations. OAuth callback via Tailscale Funnel (already set up for MCP). Token storage with automatic refresh. Gmail tools cover read, search, draft, send, and archive. Calendar tools cover list events, search, free/busy, create, update, and delete. Parts connects to these via its MCP client layer (Phase 45 pattern) with approval gating — sending email and creating events with attendees require `contact_human` approval.
+
+**Depends on:** Phase 45 (MCP server deployed with Tailscale Funnel)
+
+**Key areas:**
+1. **OAuth 2.0 flow** — Google Cloud Console project, OAuth consent screen, credential storage in sops-nix, callback endpoint on MCP server, token persistence + refresh
+2. **Gmail MCP tools** — `gmail_read`, `gmail_search`, `gmail_draft`, `gmail_send`, `gmail_archive` (mirrors parts-old surface but as MCP tools)
+3. **Calendar MCP tools** — `calendar_list`, `calendar_search`, `calendar_free_busy`, `calendar_create`, `calendar_update`, `calendar_delete`
+4. **Parts integration** — MCP client wraps Gmail/Calendar tools with parts approval gate (`gmail_send` = `contact_human`, reads = `observe`)
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 63 to break down)
