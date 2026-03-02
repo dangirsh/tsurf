@@ -54,6 +54,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 55: Evaluate absurd Durable Execution** - Research-only. All 5 components REJECT or DEFER. No adoption warranted. Conway Automaton DEFER pending upstream plugin support or permanent fork.
 - [x] **Phase 56: Voice Interface Research — Low-Latency Parts Assistant** - Research-only. LiveKit Agents + Anthropic Plugin recommended (Rank 1). Pipecat+Daily (Rank 2), Vapi (Rank 3). Claude App+MCP blocked. docs/VOICE-RESEARCH.md deliverable. Phase 57 skeleton drafted (2 plans).
 - [ ] **Phase 57: OVH Re-bootstrap as neurosys-dev** - Fresh Ubuntu 25 on OVH VPS. nixos-anywhere install, hostname neurosys-dev, dev agent workloads only (services stay on Contabo). Verify SSH, bootstrap, Tailscale, agent tooling.
+- [x] **Phase 59: Logseq PKM Agent Suite** - Three read-only Logseq org-mode MCP tools (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`) added to neurosys MCP server via orgparse. Private overlay wired with vault path + ProtectHome override. logseq-agent-suite GitHub repo with triage/graph-maintenance/review instruction files. Completed 2026-03-02.
+- [ ] **Phase 60: Dashboard DM Pairing & Backup Decrypt Guide** - Ensure the neurosys dashboard links to a page that helps pair each DM service (Signal, WhatsApp, Telegram) and upload & decrypt backups.
 
 ## Phase Details
 
@@ -1136,3 +1138,12 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 59 to break down)
+
+### Phase 60: Dashboard DM Pairing & Backup Decrypt Guide
+
+**Goal:** Ensure the neurosys homepage dashboard links to a self-hosted guide page that walks through two workflows: (1) pairing each DM bridge service (Signal, WhatsApp, Telegram via mautrix) — QR codes, auth flows, verification steps, and (2) uploading & decrypting message backups for historical import into the Matrix bridge / Spacebot LanceDB. Lightweight static or server-rendered page behind Tailscale, linked from the homepage Services section.
+**Depends on:** Phase 59
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 60 to break down)

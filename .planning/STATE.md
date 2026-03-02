@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 59 in progress. Plan 59-01 complete: public `neurosys-mcp` now includes read-only Logseq vault tools + `orgparse` packaging updates. Plan 59-02 pending (private overlay + `logseq-agent-suite` repo integration).
+**Current focus:** Phase 59 complete. Logseq PKM agent suite delivered: 3 read-only MCP tools in public repo, private overlay wired with vault path, logseq-agent-suite GitHub repo created. Deploy private overlay to activate.
 
 ## Current Position
 
-Phase: 59 (Logseq PKM Agent Suite) — IN PROGRESS
+Phase: 59 (Logseq PKM Agent Suite) — COMPLETE (2/2 plans)
 Plan: 59-01 — COMPLETE (public MCP Logseq query tools + Nix packaging)
-Plan: 59-02 — PENDING (private overlay NixOS changes + `logseq-agent-suite` repo wiring)
-Status: Added `logseq_get_todos`, `logseq_search_pages`, and `logseq_get_page` to `neurosys-mcp` via `register(mcp_instance)` module pattern, integrated `orgparse` in Python/Nix dependencies, and validated with syntax checks + passing `nix flake check`.
-Last activity: 2026-03-02 - Executed 59-01 (Logseq MCP tools in public repo, packaging updates, checks green).
+Plan: 59-02 — COMPLETE (private overlay vault path + ProtectHome + logseq-agent-suite repo)
+Status: All Phase 59 work committed and pushed. Vault not yet synced to server (only .stfolder present) — tools will degrade gracefully until Syncthing syncs. Deploy private overlay to activate.
+Last activity: 2026-03-02 - Executed 59-01 (public MCP tools) and 59-02 (private overlay + logseq-agent-suite repo).
 
-Progress: Phase 59 plan 01 complete, plan 02 pending. Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
@@ -64,6 +64,9 @@ Progress: Phase 59 plan 01 complete, plan 02 pending. Phase 53 complete (3/3 pla
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [59-02]: LOGSEQ-04: Vault path hardcoded to `/home/dangirsh/Sync/logseq` in private overlay (user-confirmed Syncthing location; stable, single vault on server).
+- [59-02]: LOGSEQ-05: `ProtectHome = "read-only"` required (not `true`) — `true` makes /home fully inaccessible even with ReadOnlyPaths; "read-only" allows listed paths while keeping rest of /home read-only.
+- [59-02]: logseq-agent-suite repo (dangirsh/logseq-agent-suite, private) created with triage/graph-maintenance/review instruction files. Cloned to /data/projects on activation.
 - [59-01]: LOGSEQ-01: Selected `orgparse` for Logseq org-mode parsing in `neurosys-mcp`; extracts TODO state/tags/properties/timestamps and file tree traversal, with `#+title`/`#+tags` parsed via regex from root body.
 - [59-01]: LOGSEQ-02: Scope is read-only for initial rollout (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`); write/mutation tools deferred to a later phase.
 - [59-01]: LOGSEQ-03: Logseq vault path is configured through `LOGSEQ_VAULT_PATH`; tools return structured `ok=false` errors when unset or invalid.
@@ -245,6 +248,10 @@ Recent decisions affecting current work:
 - [53-03]: WEB-14: conway.dangirsh.org vhost with ACME DNS-01 (Cloudflare), token auth via nginx map $arg_token, limit_req 10r/s burst=20.
 
 ### Completed Phases
+
+- **Phase 59: Logseq PKM Agent Suite** (2/2 plans, completed 2026-03-02)
+  - 59-01: Public repo — `logseq.py` with 3 read-only MCP tools (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`); `orgparse` added to Nix package; `nix flake check` passes.
+  - 59-02: Private overlay — `LOGSEQ_VAULT_PATH=/home/dangirsh/Sync/logseq` env var, `ProtectHome="read-only"` + `ReadOnlyPaths`; `dangirsh/logseq-agent-suite` GitHub repo with triage/graph-maintenance/review instruction files; cloning added to repos.nix.
 
 - **Phase 53: Conway Dashboard Auth + Prompt Editor** (3/3 plans, completed 2026-03-02)
   - 53-01: Dashboard backend — prompt save/history/restore API, lifecycle control API, service status enrichment, token-forwarding dashboard UI.
