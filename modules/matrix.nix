@@ -168,7 +168,7 @@ in
     mode = "0400";
   };
 
-  sops.templates."mautrix-telegram-env" = {
+  sops.templates."mautrix-telegram-env" = lib.mkIf config.services.mautrix-telegram.enable {
     content = ''
       MAUTRIX_TELEGRAM_TELEGRAM_API_ID=${config.sops.placeholder."telegram-api-id"}
       MAUTRIX_TELEGRAM_TELEGRAM_API_HASH=${config.sops.placeholder."telegram-api-hash"}
