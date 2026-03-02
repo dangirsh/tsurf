@@ -50,6 +50,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 49: Security Hardening Follow-up** - Fix HIGH priority issues from Phase 47 audit: remove hardcoded passwords from bootstrap scripts, complete internalOnlyPorts coverage, verify Matrix registration, pin Docker image digests.
 - [ ] **Phase 50: Coherence & Simplicity Audit** - Holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Prioritized findings report + fixes.
 - [ ] **Phase 52: Nativize the Lobster Farm — Docker-Free Contabo** - Replace remaining Docker containers (OpenClaw ×6, Spacebot) with native NixOS systemd services. buildNpmPackage for OpenClaw, Nix package for Spacebot. Zero data loss (preserve /var/lib state dirs). Same ports, same secrets injection (sops env files), same nginx/homepage integration. Goal: eliminate Docker daemon dependency on Contabo entirely. Activation-time data migration with rollback safety.
+- [ ] **Phase 53: Conway Dashboard Auth + Prompt Editor** - Token-based auth for public internet access (bearer token via sops-nix + nginx HTTPS). UI to edit genesis prompt and restart automaton agent without NixOS rebuild.
+- [x] **Phase 55: Evaluate absurd Durable Execution** - Research-only. All 5 components REJECT or DEFER. No adoption warranted. Conway Automaton DEFER pending upstream plugin support or permanent fork.
+- [ ] **Phase 56: Voice Interface Research — Low-Latency Parts Assistant** - Research and compare approaches (Claude Android voice+MCP baseline, ClawdTalk/Telnyx PSTN, WebRTC-native with LiveKit/Daily/Vapi) for a Parts-aware voice assistant on Android + Mac. Produce recommendation + Phase 57 implementation plan.
+- [ ] **Phase 57: OVH Re-bootstrap as neurosys-dev** - Fresh Ubuntu 25 on OVH VPS. nixos-anywhere install, hostname neurosys-dev, dev agent workloads only (services stay on Contabo). Verify SSH, bootstrap, Tailscale, agent tooling.
 
 ## Phase Details
 
@@ -1012,3 +1016,106 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 52 to break down)
+
+### Phase 53: Conway Dashboard Auth + Prompt Editor
+
+**Goal:** Two features for the Conway automaton dashboard: (1) Token-based authentication so the dashboard can be accessed over the public internet (not just Tailscale), via a bearer token in sops-nix and nginx reverse proxy with HTTPS. (2) A UI feature to edit the genesis prompt and restart the automaton agent with the new prompt — currently the prompt is hardcoded in Nix and requires a full NixOS rebuild to change. Changes span: `conway-dashboard` repo (server.py + dashboard.html), `private-neurosys` (automaton-dashboard.nix, automaton.nix, nginx.nix).
+**Depends on:** Phase 39 (dashboard exists), Phase 32 (automaton service)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 53 to break down)
+
+### Phase 54: Comprehensive Feature Review & Simplification
+
+**Goal:** [To be planned]
+**Depends on:** Phase 53
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 54 to break down)
+
+### Phase 55: Evaluate absurd durable-execution for neurosys components
+
+**Goal:** Assess whether https://github.com/earendil-works/absurd (PostgreSQL-backed durable execution with step checkpointing) should be adopted in neurosys or any component repo. Identify which workloads would benefit most, what the adoption cost is, and produce a concrete go/no-go recommendation per component.
+**Depends on:** Phase 54
+**Plans:** 1 plan
+
+**Context:**
+- absurd is a TypeScript/Python workflow engine backed by PostgreSQL (already deployed on neurosys)
+- Core value: step checkpointing so long-running tasks survive crashes/restarts; "exactly-once" semantics; event wait/resume; pull-based worker model
+- No extra services needed beyond Postgres + a Node/Python worker process
+
+**Components to evaluate:**
+1. **HA lights controller** — automations.yaml circadian cycle, CO2 alert, multi-step scenes. Do these multi-step light sequences need durability, or is HA's built-in automation engine sufficient?
+2. **Conway Automaton** — long-running agentic loops with inference cost tracking, goal checkpointing, tool call sequences. Highest candidate for durable execution benefit.
+3. **claw-swap** — agent task queue. Does it already have its own workflow/queue, or would absurd replace/complement it?
+4. **MCP server (neurosys-mcp)** — request handlers are stateless; unlikely candidate, but verify.
+5. **agentd** — manages agent lifecycle; compare absurd's worker model to agentd's reconciliation loop.
+
+**Research questions:**
+- Does absurd's Python SDK exist and is it usable? (README says "unpublished")
+- What's the operational overhead (schema migrations, `absurdctl`, `habitat` web UI)?
+- Is there a NixOS module or packaging path for absurd?
+- What's the license?
+- For each candidate: what specific failure modes does absurd fix? What's the status quo resilience?
+
+**Deliverable:** A research report with a per-component adoption table (ADOPT / DEFER / REJECT + rationale) and, if any component is ADOPT, a concrete integration sketch (where absurd runs, how Postgres connection is wired via sops-nix, what steps the workflow has).
+
+Plans:
+- [x] 55-01: Research conclusion — per-component evaluation complete (4 REJECT, 1 DEFER). Decision recorded in STATE.md. No NixOS changes.
+
+### Phase 56: Voice Interface Research — Low-Latency Parts Assistant
+
+**Goal:** Research and compare approaches for a natural, low-latency voice assistant with full access to neurosys/Parts context. Evaluate options usable from Android and Mac. Produce a concrete recommendation + implementation plan (Phase 57 skeleton).
+
+**Depends on:** Phase 55
+
+**Context:**
+- Phase 45 already built a neurosys MCP server (FastMCP, Streamable HTTP, OAuth 2.1, Tailscale Funnel)
+- Current candidate: Claude Android built-in voice mode + MCP → neurosys (works today, unknown latency/UX)
+- ClawdTalk pattern: Phone → Telnyx STT → ClawdTalk Server → WebSocket → OpenClaw Gateway → Agent → TTS → Phone (PSTN-based)
+- Parts is the personal agent runtime on neurosys; voice-enabling it is preferred over a standalone bot
+
+**Research questions:**
+1. Latency of Claude Android voice mode + MCP — is TTFB acceptable for natural conversation?
+2. ClawdTalk/Telnyx vs MCP approach — PSTN vs app, latency, context persistence, tools access
+3. WebRTC-native approaches (LiveKit Agents, Daily RTVI, Vapi, Bland AI) connecting to Parts/OpenClaw gateway
+4. Does Claude have a Realtime API? If not, best STT+LLM+TTS pipeline for Claude-based agents
+5. Simplest path to Parts-aware voice on Android + Mac with <500ms perceived latency
+6. Required neurosys infrastructure changes for the winning approach
+
+**Success Criteria:**
+1. All major approaches documented with latency estimates, complexity scores, neurosys integration requirements
+2. Clear winning approach identified with justification
+3. Phase 57 implementation skeleton drafted (ready to plan/execute)
+4. Required neurosys additions identified (ports, sops secrets, new modules)
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 56 to break down)
+
+### Phase 57: OVH Re-bootstrap as neurosys-dev
+
+**Goal:** Re-bootstrap the OVH VPS (135.125.196.143) with NixOS from fresh Ubuntu 25. Rename hostname from neurosys-prod to neurosys-dev. Configure as a dedicated dev agent workstation — no service modules (lobster farm, conway, parts stay on Contabo). Verify SSH, NixOS boot, Tailscale, and agent tooling.
+**Depends on:** Phase 50 (current config must be coherent)
+**Success Criteria** (what must be TRUE):
+  1. `bootstrap-ovh.sh` completes successfully against the fresh Ubuntu 25 install
+  2. NixOS boots on OVH VPS with hostname `neurosys-dev` and joins the tailnet
+  3. Agent tooling (claude-code, codex, bubblewrap sandbox) works on the VPS
+  4. Service modules not needed for dev agents are excluded from the OVH host config
+  5. `nix flake check` passes for both neurosys and ovh configurations
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 57 to break down)
+
+### Phase 58: Research: Agent-Driven Dynamic Dashboard for Neurosys
+
+**Goal:** [To be planned]
+**Depends on:** Phase 57
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 58 to break down)
