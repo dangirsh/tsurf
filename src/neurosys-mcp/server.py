@@ -44,12 +44,18 @@ if MCP_OAUTH_PASSWORD and MCP_PUBLIC_URL:
 mcp = FastMCP(
     name="neurosys",
     instructions=(
-        "Control Home Assistant entities and query Matrix/Conduit messages. "
+        "Control Home Assistant entities, query Matrix/Conduit messages, "
+        "and search the Logseq PKM vault. "
         "Use ha_list_services before calling unknown services. "
-        "Matrix tools return errors when Matrix is not configured."
+        "Matrix tools return errors when Matrix is not configured. "
+        "Logseq tools return errors when LOGSEQ_VAULT_PATH is not set."
     ),
     auth=_auth_provider,
 )
+
+# --- Logseq vault tools (Phase 59) ---
+import logseq as _logseq_tools
+_logseq_tools.register(mcp)
 
 
 def _normalized_path(path: str) -> str:
