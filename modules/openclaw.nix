@@ -163,8 +163,8 @@ ${lib.concatMapStringsSep "\n"
       lib.nameValuePair "openclaw-${name}" {
         description = "OpenClaw gateway (${name})";
         wantedBy = [ "multi-user.target" ];
-        wants = [ "network-online.target" ];
-        after = [ "network-online.target" "setupSecrets" ];
+        wants = [ "network-online.target" "sops-install-secrets.service" ];
+        after = [ "network-online.target" "sops-install-secrets.service" ];
 
         serviceConfig = {
           Type = "simple";
