@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 53 complete. Conway dashboard has token-based public auth, prompt editing, and lifecycle control. Phase 52 complete (OpenClaw nativized). Phase 57-01 complete (OVH hostname rename).
+**Current focus:** Phase 59 in progress. Plan 59-01 complete: public `neurosys-mcp` now includes read-only Logseq vault tools + `orgparse` packaging updates. Plan 59-02 pending (private overlay + `logseq-agent-suite` repo integration).
 
 ## Current Position
 
-Phase: 51 (Conway Automaton Profitability) — IN PROGRESS
-Plan: 51-02, 51-03 — COMPLETE (config changes applied, live server patched)
-Plan: 51-04 — PENDING (validation — monitoring agent revenue cycle)
-Status: Automaton reconfigured with concrete genesis prompt, 16384 token budget, 2 workers, social relay. Agent actively building "URL-to-Markdown paid micro-API" with local worker (17+ turns). Conway sandbox creation returned 403 — needs investigation. Wallet funding deferred ($416 credits sufficient).
-Last activity: 2026-03-02 - Executed 51-01 (diagnostics), 51-02 (config changes + live patching), 51-03 (API key verified, wallet funding deferred).
+Phase: 59 (Logseq PKM Agent Suite) — IN PROGRESS
+Plan: 59-01 — COMPLETE (public MCP Logseq query tools + Nix packaging)
+Plan: 59-02 — PENDING (private overlay NixOS changes + `logseq-agent-suite` repo wiring)
+Status: Added `logseq_get_todos`, `logseq_search_pages`, and `logseq_get_page` to `neurosys-mcp` via `register(mcp_instance)` module pattern, integrated `orgparse` in Python/Nix dependencies, and validated with syntax checks + passing `nix flake check`.
+Last activity: 2026-03-02 - Executed 59-01 (Logseq MCP tools in public repo, packaging updates, checks green).
 
-Progress: Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 59 plan 01 complete, plan 02 pending. Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 31
+- Total plans completed: 32
 - Average duration: ~21.4min
-- Total execution time: ~664 min
+- Total execution time: ~666 min
 
 **By Phase:**
 
@@ -64,6 +64,9 @@ Progress: Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [59-01]: LOGSEQ-01: Selected `orgparse` for Logseq org-mode parsing in `neurosys-mcp`; extracts TODO state/tags/properties/timestamps and file tree traversal, with `#+title`/`#+tags` parsed via regex from root body.
+- [59-01]: LOGSEQ-02: Scope is read-only for initial rollout (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`); write/mutation tools deferred to a later phase.
+- [59-01]: LOGSEQ-03: Logseq vault path is configured through `LOGSEQ_VAULT_PATH`; tools return structured `ok=false` errors when unset or invalid.
 - [52-01]: OpenClaw public runtime moved from `virtualisation.oci-containers` to six native `systemd.services` (`openclaw-mark` .. `openclaw-tal-claw`) with per-instance users and env template ownership (`owner = openclaw-<name>`).
 - [52-01]: OpenClaw packaged from npm registry tarball (`openclaw@2026.3.1`) with pinned source hash + npm deps hash; flake now exports `packages.x86_64-linux.openclaw`.
 - [52-01]: Docker service no longer required by public neurosys eval checks; dedicated `openclaw-services-neurosys` check added; trusted-interface check now supports both docker-enabled and docker-disabled hosts.
