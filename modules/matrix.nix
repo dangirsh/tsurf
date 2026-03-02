@@ -26,6 +26,16 @@
 #   detect and ban/disconnect the account. Mitigation: keep WhatsApp backup
 #   of chat history. Re-linking is possible if disconnected. Personal
 #   single-user usage has lower detection risk than bot-like behavior.
+#
+# @decision MTX-06: Provisioning API enabled with placeholder shared_secret.
+# @rationale: Guide page (dm-guide.nix) uses provisioning API for QR code
+#   login flows. Public template uses "disable"; private overlay overrides
+#   with sops-injected secrets.
+#
+# @decision MTX-07: Single shared provisioning secret for all three bridges.
+# @rationale: All three bridges run on the same host, accessed only by the
+#   dm-guide service (also on the same host). A per-bridge secret adds
+#   complexity without security benefit for this internal-only MVP.
 { config, lib, ... }:
 let
   # Permanent Matrix server name for this deployment.
@@ -68,6 +78,10 @@ in
         port = 29317;
         database = "sqlite:////var/lib/mautrix-telegram/mautrix-telegram.db";
       };
+      appservice.provisioning = {
+        enabled = true;
+        shared_secret = "disable";
+      };
       bridge.permissions = {
         "*" = "relaybot";
         "@admin:${serverName}" = "admin";
@@ -99,6 +113,9 @@ in
           create_portals = true;
         };
       };
+      provisioning = {
+        shared_secret = "disable";  # public default; private overlay overrides
+      };
     };
   };
 
@@ -120,6 +137,9 @@ in
       bridge.permissions = {
         "*" = "relay";
         "@admin:${serverName}" = "admin";
+      };
+      provisioning = {
+        shared_secret = "disable";
       };
     };
   };
@@ -146,5 +166,19 @@ in
     '';
     owner = "mautrix-telegram";
     mode = "0400";
+  };
+
+  # --- Matrix secret declarations for public repo eval ---
+  sops.secrets."matrix-registration-token" = {
+    sopsFile = ../secrets/neurosys.yaml;
+  };
+  sops.secrets."telegram-api-id" = {
+    sopsFile = ../secrets/neurosys.yaml;
+  };
+  sops.secrets."telegram-api-hash" = {
+    sopsFile = ../secrets/neurosys.yaml;
+  };
+  sops.secrets."dm-provisioning-secret" = {
+    sopsFile = ../secrets/neurosys.yaml;
   };
 }

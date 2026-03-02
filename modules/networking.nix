@@ -16,7 +16,7 @@ let
   # Private overlay services may also add ports in their own networking override.
   internalOnlyPorts = {
     "6052" = "esphome";
-    "6167" = "matrix-conduit [OVH only]";
+    "6167" = "matrix-conduit";
     "8082" = "homepage-dashboard";
     "8085" = "sun-schedule";
     "8123" = "home-assistant";
@@ -28,9 +28,10 @@ let
     "18792" = "openclaw-ari";
     "18793" = "openclaw-jordan-claw";
     "18794" = "openclaw-tal-claw";
-    "29317" = "mautrix-telegram [OVH only]";
-    "29318" = "mautrix-whatsapp [OVH only]";
-    "29328" = "mautrix-signal [OVH only]";
+    "19898" = "spacebot";
+    "29317" = "mautrix-telegram";
+    "29318" = "mautrix-whatsapp";
+    "29328" = "mautrix-signal";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;
