@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 60 complete. DM guide service with bridge pairing UI + backup upload/decrypt pipeline merged to main. Next: Phase 62 (LLM Cost Tracking) or Phase 63 (Google OAuth + Gmail/Calendar MCP).
+**Current focus:** Phase 63 complete. Neurosys MCP server restored with Google OAuth + Gmail tools. Next: private overlay secret wiring/deploy run and post-deploy OAuth authorization.
 
 ## Current Position
 
-Phase: 60 (Dashboard DM Pairing & Backup Decrypt Guide) — COMPLETE
-Plan: 60-02 — COMPLETE (all public repo tasks done)
-Status: Both plans merged to main. DM guide service on port 8086 with QR pairing for Signal/WhatsApp, phone flow for Telegram, and backup upload/decrypt for Signal .backup, WhatsApp .zip, Telegram JSON. Private overlay tasks (import in contaboModules, sops secrets) deferred to deploy time.
-Last activity: 2026-03-02 - Merged phase-60 branch to main, pushed to origin.
+Phase: 63 (Google OAuth + Gmail/Calendar MCP tools) — COMPLETE
+Plan: 63-01 — COMPLETE (public repo tasks done)
+Status: Restored `neurosys-mcp` server/auth/package plumbing; added `google_auth.py` OAuth flow and token persistence; added `gmail.py` tools (`gmail_read`, `gmail_search`, `gmail_draft`, `gmail_send`, `gmail_archive`); exposed package in flake and documented private deploy steps.
+Last activity: 2026-03-02 - Completed phase63-01 implementation + `nix flake check` pass in worktree branch.
 
-Progress: Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 63 complete (1/1 plans). Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
@@ -65,6 +65,10 @@ Progress: Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [63-01]: MCP-63-01/02/03: Added `google_auth.py` using `google-auth` + `httpx`, with env-driven config, `/google/auth` + `/google/callback`, and persisted tokens at `/var/lib/neurosys-mcp/google-tokens.json` with auto-refresh.
+- [63-01]: MCP-63-04/05: Added `gmail.py` register pattern with five Gmail MCP tools and centralized auth gate; tools return `{\"ok\": false, \"error\": \"google_auth_required\"}` when OAuth is missing/invalid.
+- [63-01]: MCP-63-06: `server.py` now composes Starlette routes for Google OAuth only when Google OAuth env vars are configured; otherwise falls back to plain `mcp.run(streamable-http)`.
+- [63-01]: [Rule 3 - Blocking] `nix build .#neurosys-mcp` initially failed because `google.auth.transport.requests` requires `requests`; fixed by adding `requests` to `pyproject.toml` and `python3Packages.requests` to `packages/neurosys-mcp.nix`.
 - [60-01]: MTX-06: Enabled provisioning API fields for WhatsApp/Signal/Telegram in public matrix module with placeholder `shared_secret = "disable"` for private overlay override.
 - [60-01]: MTX-07: Chose a single shared provisioning secret for all three bridges in this internal-only MVP.
 - [60-01]: DMG-01: Added standalone `dm-guide` Python stdlib server on port 8086 with in-module HTML UI and client-side QR rendering.
@@ -257,6 +261,11 @@ Recent decisions affecting current work:
 
 ### Completed Phases
 
+- **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** (1/1 plans, completed 2026-03-02)
+  - 63-01: Restored public `neurosys-mcp` modules (`server.py`, `auth.py`, `pyproject.toml`, `packages/neurosys-mcp.nix`) and added `google_auth.py` + `gmail.py` with five Gmail tools and callback routes.
+  - Flake export restored (`packages.x86_64-linux.neurosys-mcp`), `nix build .#neurosys-mcp` + `nix flake check` pass, Python syntax checks pass for all `src/neurosys-mcp/*.py`.
+  - Added deploy runbook: `.planning/phases/63-google-oauth-gmail-calendar-mcp-tools/63-DEPLOY.md` with sops wiring and note to reuse existing Google OAuth credentials.
+
 - **Phase 59: Logseq PKM Agent Suite** (2/2 plans, completed 2026-03-02)
   - 59-01: Public repo — `logseq.py` with 3 read-only MCP tools (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`); `orgparse` added to Nix package; `nix flake check` passes.
   - 59-02: Private overlay — `LOGSEQ_VAULT_PATH=/home/dangirsh/Sync/logseq` env var, `ProtectHome="read-only"` + `ReadOnlyPaths`; `dangirsh/logseq-agent-suite` GitHub repo with triage/graph-maintenance/review instruction files; cloning added to repos.nix.
@@ -393,6 +402,7 @@ Recent decisions affecting current work:
 - Phase 59 added: Logseq PKM Agent Suite — private repo (`logseq-agent-suite`) + neurosys private overlay component. Datalog query library, agent instruction files (todo triage, graph maintenance, review flows), NixOS module exposing vault path to agentd agents, and parts-agent interface for reading/writing the personal graph. Vault already in Syncthing.
 - Phase 56 executed: Research-only conclusion. Voice interface for HA control evaluated across 5 approaches. LiveKit Agents + Anthropic Plugin recommended (self-hosted WebRTC, localhost tool calls, 900-1400ms TTFB). Phase 57 implementation skeleton drafted (2 plans: infrastructure + application). docs/VOICE-RESEARCH.md created as project-level reference.
 - Phase 60 added: Dashboard DM Pairing & Backup Decrypt Guide — homepage dashboard links to a self-hosted guide for pairing DM bridge services (Signal/WhatsApp/Telegram mautrix) and uploading & decrypting message backups for historical import.
+- Phase 63 added/executed: Google OAuth + Gmail MCP tools — restored public neurosys-mcp server package, added interactive Google authorization routes, token persistence/refresh, and five Gmail tools.
 - Phase 61 added: Nix-Derived Dynamic Dashboard — investigate generating a live dashboard directly from NixOS module expressions (tree view with status/links), replacing manually-maintained homepage config. May use module annotations (e.g., `meta.dashboard`). Goal: dashboard always reflects deployed Nix source, zero drift.
 
 ### Blockers/Concerns
@@ -430,5 +440,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Phase 53 complete — Conway dashboard has token-based public auth (conway.dangirsh.org), prompt editing, and lifecycle control. All 3 plans executed via Codex backend (~20min total).
-Next: Deploy Phase 53 changes. Create Cloudflare DNS A record for conway.dangirsh.org. Verify ACME cert issuance and token auth.
+Stopped at: Phase 63 complete — neurosys-mcp restored with Google OAuth callback flow and Gmail MCP tools. Public Nix package + flake export restored and passing checks.
+Next: Apply private overlay secret wiring from `63-DEPLOY.md`, deploy, run one-time `/google/auth`, and verify Gmail tool behavior from an MCP client.
