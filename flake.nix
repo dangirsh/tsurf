@@ -103,6 +103,7 @@
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
         neurosys-mcp = pkgs.callPackage ./packages/neurosys-mcp.nix { };
+        openclaw = pkgs.callPackage ./packages/openclaw.nix { };
 
         test-live = pkgs.writeShellApplication {
           name = "test-live";
