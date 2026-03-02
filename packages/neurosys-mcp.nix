@@ -85,12 +85,13 @@ python3Packages.buildPythonApplication {
   dependencies = [
     fastmcp
     python3Packages.httpx
+    python3Packages.orgparse
   ];
 
-  pythonImportsCheck = [ "server" ];
+  pythonImportsCheck = [ "server" "logseq" ];
 
   meta = with lib; {
-    description = "FastMCP server exposing Home Assistant controls for neurosys";
+    description = "FastMCP server exposing Home Assistant, Matrix, and Logseq tools for neurosys";
     license = licenses.mit;
     platforms = platforms.linux;
     mainProgram = "neurosys-mcp";
