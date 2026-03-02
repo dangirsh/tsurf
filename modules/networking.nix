@@ -18,7 +18,6 @@ let
     "6052" = "esphome";
     "6167" = "matrix-conduit [OVH only]";
     "8082" = "homepage-dashboard";
-    "8085" = "sun-schedule";
     "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
     "9091" = "anthropic-secret-proxy";

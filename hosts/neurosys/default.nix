@@ -7,7 +7,6 @@
     # Contabo-only services
     ../../modules/homepage.nix
     ../../modules/restic.nix
-    ../../modules/sun-schedule.nix
     # nginx module moved to private overlay
   ];
 

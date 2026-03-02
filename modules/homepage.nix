@@ -38,18 +38,6 @@
 
     services = [
       {
-        "Home" = [
-          {
-            "Sun Schedule" = {
-              href = "http://neurosys:8085";
-              siteMonitor = "http://localhost:8085";
-              description = "Circadian light schedule editor — Hue lights via Home Assistant.";
-              icon = "home-assistant";
-            };
-          }
-        ];
-      }
-      {
         "Infrastructure" = [
           {
             "Syncthing" = {
