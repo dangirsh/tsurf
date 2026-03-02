@@ -45,10 +45,12 @@
 # @rationale: Node.js V8 JIT compilation requires writable+executable memory pages.
 #   Setting true crashes the process immediately. Explicit false signals intentional override.
 #
-# @decision OCL-17: No SystemCallFilter.
+# @decision OCL-17: No SystemCallFilter; AF_NETLINK required in RestrictAddressFamilies.
 # @rationale: Node.js + native sqlite3 addons use an unpredictable syscall surface.
 #   Other hardening (PrivateTmp, ProtectSystem, RestrictAddressFamilies, CapabilityBoundingSet)
 #   provides isolation without risking a missed syscall causing silent failures.
+#   AF_NETLINK is required because Node.js os.networkInterfaces() calls uv_interface_addresses
+#   which uses Netlink sockets to enumerate network interfaces — even with bind=loopback.
 { config, lib, pkgs, ... }:
 
 let
@@ -211,7 +213,7 @@ ${lib.concatMapStringsSep "\n"
           ProtectKernelModules = true;
           ProtectKernelLogs = true;
           ProtectControlGroups = true;
-          RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+          RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" "AF_NETLINK" ];  # AF_NETLINK required for os.networkInterfaces() (uv_interface_addresses)
           RestrictNamespaces = true;
           LockPersonality = true;
           MemoryDenyWriteExecute = false;  # OCL-16: Node.js V8 JIT requires W^X pages
