@@ -48,8 +48,7 @@
       # --- Service data ---
       "/var/lib/fail2ban"                  # Ban database (nice-to-have; regenerated if lost)
       "/var/lib/hass"                      # Home Assistant state, automations, history DB
-      "/var/lib/private"                   # DynamicUser services: ESPHome (/var/lib/private/esphome)
-      "/var/lib/matrix-conduit"            # Conduit Matrix homeserver (RocksDB data)
+      "/var/lib/private"                   # DynamicUser services: ESPHome, Conduit (matrix-conduit), sun-schedule
       "/var/lib/mautrix-telegram"          # mautrix-telegram bridge state + registration.yaml
       "/var/lib/mautrix-whatsapp"          # mautrix-whatsapp bridge state + session DB
       "/var/lib/mautrix-signal"            # mautrix-signal bridge state + signal-cli data
