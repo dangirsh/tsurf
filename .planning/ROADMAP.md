@@ -50,7 +50,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 49: Security Hardening Follow-up** - Fix HIGH priority issues from Phase 47 audit: remove hardcoded passwords from bootstrap scripts, complete internalOnlyPorts coverage, verify Matrix registration, pin Docker image digests.
 - [ ] **Phase 50: Coherence & Simplicity Audit** - Holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Prioritized findings report + fixes.
 - [ ] **Phase 52: Nativize the Lobster Farm — Docker-Free Contabo** - Replace remaining Docker containers (OpenClaw ×6, Spacebot) with native NixOS systemd services. buildNpmPackage for OpenClaw, Nix package for Spacebot. Zero data loss (preserve /var/lib state dirs). Same ports, same secrets injection (sops env files), same nginx/homepage integration. Goal: eliminate Docker daemon dependency on Contabo entirely. Activation-time data migration with rollback safety.
-- [ ] **Phase 53: Conway Dashboard Auth + Prompt Editor** - Token-based auth for public internet access (bearer token via sops-nix + nginx HTTPS). UI to edit genesis prompt and restart automaton agent without NixOS rebuild.
+- [x] **Phase 53: Conway Dashboard Auth + Prompt Editor** - Token-based auth for public internet access (bearer token via sops-nix + nginx HTTPS). UI to edit genesis prompt and restart automaton agent without NixOS rebuild.
 - [x] **Phase 55: Evaluate absurd Durable Execution** - Research-only. All 5 components REJECT or DEFER. No adoption warranted. Conway Automaton DEFER pending upstream plugin support or permanent fork.
 - [x] **Phase 56: Voice Interface Research — Low-Latency Parts Assistant** - Research-only. LiveKit Agents + Anthropic Plugin recommended (Rank 1). Pipecat+Daily (Rank 2), Vapi (Rank 3). Claude App+MCP blocked. docs/VOICE-RESEARCH.md deliverable. Phase 57 skeleton drafted (2 plans).
 - [ ] **Phase 57: OVH Re-bootstrap as neurosys-dev** - Fresh Ubuntu 25 on OVH VPS. nixos-anywhere install, hostname neurosys-dev, dev agent workloads only (services stay on Contabo). Verify SSH, bootstrap, Tailscale, agent tooling.
@@ -1022,14 +1022,17 @@ Plans:
 - [x] 52-01: Package OpenClaw + Rewrite Public Module
 - [x] 52-02: Update Private Overlay + Tests for Native OpenClaw
 
-### Phase 53: Conway Dashboard Auth + Prompt Editor
+### Phase 53: Conway Dashboard Auth + Prompt Editor ✓
 
 **Goal:** Two features for the Conway automaton dashboard: (1) Token-based authentication so the dashboard can be accessed over the public internet (not just Tailscale), via a bearer token in sops-nix and nginx reverse proxy with HTTPS. (2) A UI feature to edit the genesis prompt and restart the automaton agent with the new prompt — currently the prompt is hardcoded in Nix and requires a full NixOS rebuild to change. Changes span: `conway-dashboard` repo (server.py + dashboard.html), `private-neurosys` (automaton-dashboard.nix, automaton.nix, nginx.nix).
 **Depends on:** Phase 39 (dashboard exists), Phase 32 (automaton service)
-**Plans:** 0 plans
+**Plans:** 3/3 complete
+**Completed:** 2026-03-02
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 53 to break down)
+- [x] 53-01: Dashboard Backend — Prompt Editing + Lifecycle Control + Token Forwarding
+- [x] 53-02: Public Repo — Add Port 9093 to internalOnlyPorts
+- [x] 53-03: Private Overlay — nginx Auth Proxy, Secrets, Dashboard Hardening, Tests
 
 ### Phase 54: Comprehensive Feature Review & Simplification
 

@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 51 in progress. Conway Automaton reconfigured — agent now actively building services. Phase 52 complete (OpenClaw nativized). Phase 57-01 complete (OVH hostname rename).
+**Current focus:** Phase 53 complete. Conway dashboard has token-based public auth, prompt editing, and lifecycle control. Phase 52 complete (OpenClaw nativized). Phase 57-01 complete (OVH hostname rename).
 
 ## Current Position
 
@@ -15,7 +15,7 @@ Plan: 51-04 — PENDING (validation — monitoring agent revenue cycle)
 Status: Automaton reconfigured with concrete genesis prompt, 16384 token budget, 2 workers, social relay. Agent actively building "URL-to-Markdown paid micro-API" with local worker (17+ turns). Conway sandbox creation returned 403 — needs investigation. Wallet funding deferred ($416 credits sufficient).
 Last activity: 2026-03-02 - Executed 51-01 (diagnostics), 51-02 (config changes + live patching), 51-03 (API key verified, wallet funding deferred).
 
-Progress: Phase 51 plans 01-03 complete. Plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
@@ -52,8 +52,8 @@ Progress: Phase 51 plans 01-03 complete. Plan 04 (validation) pending. Phase 56 
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 52-02 (~8min), 57-01 (~8min), 52-01 (~15min), 50-02 (~15min)
-- Trend: Short, focused plans completing quickly.
+- Last 4 plans: 53-03 (~10min), 53-02 (~2min), 53-01 (~8min), 52-02 (~8min)
+- Trend: Short, focused plans completing quickly. Phase 53 via Codex backend.
 
 *Updated after each plan completion*
 
@@ -233,8 +233,20 @@ Recent decisions affecting current work:
 - [52-01]: OCL-01→OCL-14: Module rewritten from Docker OCI containers to native systemd services with parametric `instances` map, per-instance system users, `.openclaw -> .` symlink for state path compatibility, trustedProxies reduced to `127.0.0.1` only.
 - [52-02]: HP-02 updated: Docker group retained only for Spacebot container status. OpenClaw homepage widgets use siteMonitor-only.
 - [52-02]: SEC47-21: Syncthing `insecureSkipHostcheck` set to `false` — Docker bridge access pattern removed.
+- [53-01]: PROMPT-01: Atomic write via os.rename() for automaton.json prompt updates. HIST-01: JSONL prompt history capped at 50 entries.
+- [53-01]: TOKEN-01: apiUrl() helper extracts ?token= from URL, appends to all dashboard fetch() calls for nginx auth proxy compatibility.
+- [53-02]: PORT-53-02: Port 9093 (automaton-dashboard) added to internalOnlyPorts in networking.nix.
+- [53-03]: DASH-04: ReadWritePaths for /var/lib/automaton/.automaton (prompt editing), ReadOnlyPaths for parent directory.
+- [53-03]: DASH-05: Sudoers rule for automaton user — 3 lifecycle commands (start/stop/restart conway-automaton) with absolute paths, NOPASSWD.
+- [53-03]: DASH-06: `security.sudo.execWheelOnly = lib.mkForce false` — NixOS asserts when non-wheel users in sudo.extraRules while execWheelOnly is true.
+- [53-03]: WEB-14: conway.dangirsh.org vhost with ACME DNS-01 (Cloudflare), token auth via nginx map $arg_token, limit_req 10r/s burst=20.
 
 ### Completed Phases
+
+- **Phase 53: Conway Dashboard Auth + Prompt Editor** (3/3 plans, completed 2026-03-02)
+  - 53-01: Dashboard backend — prompt save/history/restore API, lifecycle control API, service status enrichment, token-forwarding dashboard UI.
+  - 53-02: Public repo — port 9093 added to internalOnlyPorts security assertion.
+  - 53-03: Private overlay — conway.dangirsh.org nginx vhost with ACME TLS + token auth, sops secret + template, ReadWritePaths + sudoers, 3 eval checks. nix flake check passes (18 checks).
 
 - **Phase 56: Voice Interface Research — Low-Latency Parts Assistant** (1 plan, completed 2026-03-02)
   - 56-01: Research-only conclusion. 5 approaches evaluated (LiveKit Agents, Pipecat+Daily, Vapi, ClawdTalk/Telnyx, Claude App+MCP). LiveKit Agents recommended (Rank 1). docs/VOICE-RESEARCH.md deliverable created. Phase 57 skeleton drafted.
@@ -398,5 +410,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Phase 57-01 complete — OVH hostname renamed from neurosys-prod to neurosys-dev in public repo. Flake validation passed.
-Next: Execute Phase 57-02 (live OVH bootstrap/deploy with human-action checkpoints).
+Stopped at: Phase 53 complete — Conway dashboard has token-based public auth (conway.dangirsh.org), prompt editing, and lifecycle control. All 3 plans executed via Codex backend (~20min total).
+Next: Deploy Phase 53 changes. Create Cloudflare DNS A record for conway.dangirsh.org. Verify ACME cert issuance and token auth.
