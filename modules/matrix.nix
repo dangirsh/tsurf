@@ -153,6 +153,15 @@ in
     };
   };
 
+  # Conduit must read bridge registration files (as_token/hs_token validation at startup).
+  # Files are owned by their respective bridge users with 0640 permissions.
+  # SupplementaryGroups grants Conduit read access without weakening file perms.
+  systemd.services.conduit.serviceConfig.SupplementaryGroups = [
+    "mautrix-signal"
+    "mautrix-whatsapp"
+    "mautrix-telegram"
+  ];
+
   # libsignal JIT requires W+X memory pages (see MTX-03)
   # Guard with mkIf: when enable=false, omit the override entirely so no bare unit is generated.
   # A bare unit (only MemoryDenyWriteExecute, no ExecStart) causes systemd to refuse activation.
