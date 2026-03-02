@@ -15,7 +15,8 @@
 
   users.users.root = {
     openssh.authorizedKeys.keys = [
-      # Replace with your SSH public key
+      # Bootstrap key — private overlay replaces this entire file with real users
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIac0b7Yb2yCJrPiWf+KJQJ1c7gwH7SgHTiadSSUH0tM dan@worldcoin.org"
     ];
   };
 
