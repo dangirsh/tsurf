@@ -61,6 +61,15 @@
 #   provides isolation without risking a missed syscall causing silent failures.
 #   AF_NETLINK is required because Node.js os.networkInterfaces() calls uv_interface_addresses
 #   which uses Netlink sockets to enumerate network interfaces — even with bind=loopback.
+#
+# @decision OCL-20: allowedOrigins replaces dangerouslyAllowHostHeaderOriginFallback.
+# @rationale: Security audit (2026-03-02) flagged Host-header origin fallback as a DNS rebinding
+#   weakness. Each instance has a fixed public HTTPS domain; use it as the explicit allowedOrigin.
+#   Existing configs are patched in-place via jq to preserve user channel config (Discord, etc.).
+#
+# @decision OCL-21: StateDirectoryMode 0700, openclaw.json 0600, credentials/ 0700.
+# @rationale: Security audit flagged 750/640/755 modes. State dir and config contain session keys
+#   and channel tokens; restrict to owner-only.
 { config, lib, pkgs, ... }:
 
 let
@@ -99,7 +108,7 @@ let
     };
   };
 
-  mkOpenclawConfig = _name: builtins.toJSON {
+  mkOpenclawConfig = name: builtins.toJSON {
     gateway = {
       bind = "loopback";            # OCL-15: loopback only — nginx-proxied, not directly reachable
       trustedProxies = [ "127.0.0.1" ];
@@ -111,7 +120,9 @@ let
         };
       };
       controlUi = {
-        dangerouslyAllowHostHeaderOriginFallback = true;
+        # OCL-20: explicit allowedOrigins instead of Host-header fallback
+        root = "/var/lib/openclaw-${name}/.openclaw/control-ui";
+        allowedOrigins = [ "https://${name}.openclaw.dangirsh.org" ];
       };
     };
   };
@@ -161,7 +172,7 @@ ${lib.concatMapStringsSep "\n"
       instance_user="openclaw-${name}"
 
       mkdir -p "''${state_dir}"
-      chmod 0750 "''${state_dir}"
+      chmod 0700 "''${state_dir}"  # OCL-21
 
       if [ -L "''${state_dir}/.openclaw" ]; then
         if [ "$(readlink "''${state_dir}/.openclaw")" != "." ]; then
@@ -178,9 +189,20 @@ ${lib.concatMapStringsSep "\n"
         echo "openclaw: seeded/fixed openclaw.json for ${name}"
       fi
 
+      # OCL-20: patch out dangerouslyAllowHostHeaderOriginFallback; set allowedOrigins if unset.
+      # jq-based in-place patch preserves user channel config (Discord tokens, etc.).
+      if tmpout=$(${pkgs.jq}/bin/jq \
+        'del(.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback) | .gateway.controlUi.allowedOrigins //= ["https://${name}.openclaw.dangirsh.org"]' \
+        "''${target}" 2>/dev/null); then
+        printf '%s\n' "''${tmpout}" > "''${target}.tmp" && mv "''${target}.tmp" "''${target}"
+      fi
+
       chown -h "''${instance_user}:''${instance_user}" "''${state_dir}/.openclaw" 2>/dev/null || true
       chown -R "''${instance_user}:''${instance_user}" "''${state_dir}"
-      chmod 0640 "''${target}"
+      chmod 0600 "''${target}"  # OCL-21
+      if [ -d "''${state_dir}/credentials" ]; then
+        chmod 0700 "''${state_dir}/credentials"  # OCL-21
+      fi
   '')
   instanceList}
     '';
@@ -201,7 +223,7 @@ ${lib.concatMapStringsSep "\n"
           Group = "openclaw-${name}";
           WorkingDirectory = "/var/lib/openclaw-${name}";
           StateDirectory = "openclaw-${name}";
-          StateDirectoryMode = "0750";
+          StateDirectoryMode = "0700";  # OCL-21
           Environment = [
             "HOME=/var/lib/openclaw-${name}"
             "NODE_OPTIONS=--max-old-space-size=1024"  # OCL-18: 1GB V8 heap — instances with WhatsApp session history need >384M
