@@ -171,7 +171,7 @@ let
       if (!data || typeof data !== 'object') return false;
       if (data.logged_in === true) return true;
       if (data.connected === true) return true;
-      const text = String(data.state || data.status || '').toLowerCase();
+      const text = String(data.state || data.status || "").toLowerCase();
       return ['done', 'success', 'connected', 'complete', 'logged_in'].includes(text);
     }
 
@@ -226,7 +226,7 @@ let
         return;
       }
       updateSession(bridge, result);
-      renderQr(bridge, result.qr_data || '');
+      renderQr(bridge, result.qr_data || "");
       if (result.qr_data) {
         setStatus(bridge, 'QR ready - scan from your phone', true);
       } else {
@@ -266,7 +266,7 @@ let
       setTelegram(result);
     }
 
-    ['signal', 'whatsapp'].forEach((bridge) => renderQr(bridge, ''));
+    ['signal', 'whatsapp'].forEach((bridge) => renderQr(bridge, ""));
     </script>
     </body>
     </html>
