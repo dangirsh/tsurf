@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 52 (Nativize the Lobster Farm — Docker-Free Contabo) — COMPLETE
-Plan: 52-02 — COMPLETE
-Status: Both plans executed. Public: OpenClaw npm package + 6 native systemd services with per-instance users + eval checks. Private: auto-approve CLI migration, homepage widget cleanup, syncthing fix, private eval tests. Both repos pass `nix flake check`.
-Last activity: 2026-03-02 - Executed 52-01 (public nativization) and 52-02 (private overlay).
+Phase: 56 (Voice Interface Research — Low-Latency Parts Assistant) — COMPLETE
+Plan: 56-01 — COMPLETE
+Status: Research-only phase. Evaluated 5 voice interface approaches for HA control. Recommendation: LiveKit Agents + Anthropic Plugin (self-hosted WebRTC, localhost HA tool calls, 900-1400ms TTFB). Phase 57 skeleton drafted (2 plans: infrastructure + application).
+Last activity: 2026-03-02 - Executed 56-01 (voice interface research, documentation only).
 
-Progress: Phase 52 complete. Phase 57-01 complete (OVH rename). Phase 57-02 (live OVH bootstrap) pending. Phase 45 deployment checkpoint pending.
+Progress: Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 (live OVH bootstrap) pending. Phase 45 deployment checkpoint pending.
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Recent decisions affecting current work:
 - [52-02]: Homepage OpenClaw widgets now use siteMonitor-only health (no Docker container status keys), while Spacebot Docker widget + homepage docker socket/group access remain intentionally enabled.
 - [52-02]: Private eval checks replaced OpenClaw container assertions with native `systemd.services` and per-instance user checks; Spacebot container assertion retained.
 - [57-01]: OVH/public hostname standardized from `neurosys-prod` to `neurosys-dev` in host config, deploy node, bootstrap/deploy scripts, test helpers, and docs. `test-live` CLI selector and `is_ovh()` predicate updated to match.
+- [56-01]: VOICE-56-01: LiveKit Agents + Anthropic Plugin recommended as primary voice interface for neurosys HA control. Ranked top 3: (1) LiveKit Agents — self-hosted WebRTC, localhost HA API, 900-1400ms TTFB, (2) Pipecat+Daily — SaaS WebRTC transport, same pipeline quality, (3) Vapi — lowest complexity but internet-routed tool calls add 200-400ms each. Claude App+MCP is blocked (Anthropic-side). ClawdTalk/Telnyx is supplementary (PSTN UX mismatch). No Anthropic Realtime API exists. STT: Deepgram Nova-3, TTS: Cartesia Sonic-3. Phase 57 skeleton: 2 plans (infra + app), ~4-6 days.
 - [37-01]: Public flake now exports `nixosModules.default` and removes private inputs/services from default imports.
 - [37-01]: Username, SSH keys, and git identity are sanitized to template-safe placeholders (`myuser`, placeholder key comments, generic name/email).
 - [37-01]: Private service bindings moved behind private overlay boundaries; public config passes `nix flake check` without private-module assumptions.
@@ -234,6 +235,9 @@ Recent decisions affecting current work:
 
 ### Completed Phases
 
+- **Phase 56: Voice Interface Research — Low-Latency Parts Assistant** (1 plan, completed 2026-03-02)
+  - 56-01: Research-only conclusion. 5 approaches evaluated (LiveKit Agents, Pipecat+Daily, Vapi, ClawdTalk/Telnyx, Claude App+MCP). LiveKit Agents recommended (Rank 1). docs/VOICE-RESEARCH.md deliverable created. Phase 57 skeleton drafted.
+
 - **Phase 52: Nativize the Lobster Farm (Docker-free Contabo)** (2/2 plans, completed 2026-03-02)
   - 52-01: Public neurosys OpenClaw runtime migrated from OCI containers to 6 native systemd services; OpenClaw package exported from flake; eval checks updated.
   - 52-02: Private overlay aligned with native OpenClaw runtime (`openclaw-auto-approve` CLI migration, homepage OpenClaw widget Docker key removal, private eval check migration, Syncthing host check hardening).
@@ -356,6 +360,7 @@ Recent decisions affecting current work:
 - Phase 51 added: Conway Automaton profitability research — deep investigation into why the agent loop is ineffective (goal churn, worker timeouts, placeholder wallet, no real deployment/exposure) and how to reconfigure it to actually generate revenue. Research x402 viability, agent task sizing, deployment gaps, and produce a concrete reconfiguration plan.
 - Phase 53 added: Conway Dashboard Auth + Prompt Editor — token-based auth for public internet access (bearer token via sops-nix + nginx HTTPS) so dashboard works outside Tailscale; UI to edit genesis prompt and restart automaton agent without NixOS rebuild. Changes span conway-dashboard repo + private-neurosys overlay.
 - Phase 59 added: Logseq PKM Agent Suite — private repo (`logseq-agent-suite`) + neurosys private overlay component. Datalog query library, agent instruction files (todo triage, graph maintenance, review flows), NixOS module exposing vault path to agentd agents, and parts-agent interface for reading/writing the personal graph. Vault already in Syncthing.
+- Phase 56 executed: Research-only conclusion. Voice interface for HA control evaluated across 5 approaches. LiveKit Agents + Anthropic Plugin recommended (self-hosted WebRTC, localhost tool calls, 900-1400ms TTFB). Phase 57 implementation skeleton drafted (2 plans: infrastructure + application). docs/VOICE-RESEARCH.md created as project-level reference.
 
 ### Blockers/Concerns
 
