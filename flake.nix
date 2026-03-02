@@ -89,7 +89,7 @@
       };
 
       deploy.nodes.ovh = {
-        hostname = "neurosys-prod";
+        hostname = "neurosys-dev";
         sshUser = "root";
         magicRollback = true;
         autoRollback = true;
@@ -133,7 +133,7 @@
                   HOST="$2"
                   shift 2
                   ;;
-                neurosys|ovh|neurosys-prod)
+                neurosys|ovh|neurosys-dev)
                   HOST="$1"
                   shift
                   ;;

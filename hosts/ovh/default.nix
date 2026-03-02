@@ -8,7 +8,7 @@
     # nginx module moved to private overlay
   ];
 
-  networking.hostName = "neurosys-prod";
+  networking.hostName = "neurosys-dev";
   time.timeZone = "Europe/Berlin";
   i18n.defaultLocale = "C.UTF-8";
 

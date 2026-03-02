@@ -75,7 +75,7 @@ Validates config evaluation and expected security/service invariants for `neuros
 ### Live Tests (SSH to running hosts)
 ```bash
 nix run .#test-live -- --host neurosys
-nix run .#test-live -- --host neurosys-prod
+nix run .#test-live -- --host neurosys-dev
 scripts/run-tests.sh --live
 scripts/run-tests.sh --live --json
 ```

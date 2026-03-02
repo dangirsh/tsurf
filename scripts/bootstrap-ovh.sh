@@ -33,7 +33,7 @@ VPS_IP="135.125.196.143"
 DEPLOY_KEY="${OVH_DEPLOY_KEY:-$FLAKE_DIR/tmp/ovh_deploy_key}"
 EXTRA_FILES="$FLAKE_DIR/tmp/ovh-host-keys"
 FLAKE_TARGET="$FLAKE_DIR#ovh"
-TAILSCALE_HOSTNAME="neurosys-prod"
+TAILSCALE_HOSTNAME="neurosys-dev"
 
 # Ephemeral random password for Ubuntu PAM change (Ubuntu is wiped by nixos-anywhere).
 OVH_NEW_PASS="$(openssl rand -base64 16)"

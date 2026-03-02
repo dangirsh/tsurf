@@ -140,5 +140,5 @@ is_neurosys() {
 }
 
 is_ovh() {
-  [[ "$HOST" == "neurosys-prod" ]] || [[ "$HOST" == "ovh" ]]
+  [[ "$HOST" == "neurosys-dev" ]] || [[ "$HOST" == "ovh" ]]
 }

@@ -169,7 +169,7 @@ fi
 
 if [[ "$TARGET_SET" == false ]]; then
   if [[ "$NODE" == "ovh" ]]; then
-    TARGET="root@neurosys-prod"
+    TARGET="root@neurosys-dev"
   else
     TARGET="root@neurosys"
   fi

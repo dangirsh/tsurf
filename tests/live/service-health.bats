@@ -104,7 +104,7 @@ bats_load_library bats-assert/load
   if is_neurosys; then
     expected_prefix="neurosys"
   else
-    expected_prefix="neurosys-prod"
+    expected_prefix="neurosys-dev"
   fi
 
   if [[ "$ts_hostname" != "${expected_prefix}"* ]]; then
