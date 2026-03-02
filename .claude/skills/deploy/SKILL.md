@@ -6,45 +6,57 @@ user_invocable: true
 
 # Deploy Skill
 
-Deploy the neurosys NixOS configuration to the Contabo VPS (neurosys) via deploy-rs.
+Deploy the neurosys NixOS configuration via deploy-rs.
+
+**CRITICAL: ALL deploys MUST run from the private overlay.** The public repo's
+`deploy.sh` refuses all deploys because both hosts run the private overlay config.
 
 ## How to Deploy
 
 When the user asks to deploy (or invokes `/deploy`), follow these steps:
 
-1. **Detect repo and resolve script path**:
-   - From **neurosys**: `./scripts/deploy.sh`
-   - From **parts**: `../neurosys/scripts/deploy.sh`
-   - Verify the script exists before proceeding.
-
-2. **Execute the deploy script**:
+1. **Always use the private overlay**:
    ```bash
-   # Default: remote build on neurosys (fastest — 18 vCPU EPYC builds faster than local)
+   cd /data/projects/private-neurosys
+   ```
+
+2. **If public neurosys was updated**, refresh the input first:
+   ```bash
+   nix flake lock --update-input neurosys
+   ```
+
+3. **Execute the deploy script**:
+   ```bash
+   # Default: deploy neurosys (Contabo) with remote build
    ./scripts/deploy.sh
+
+   # Deploy OVH:
+   ./scripts/deploy.sh --node ovh
 
    # Pull latest parts first:
    ./scripts/deploy.sh --update-parts
 
-   # Local build fallback (if server unreachable or testing local changes):
+   # Local build fallback (if server unreachable):
    ./scripts/deploy.sh --mode local
    ```
 
-3. **Monitor output**:
+4. **Monitor output**:
    - The script shows progress: nix build (on server), nixos-rebuild switch, service health check.
    - Watch for errors at each phase.
 
-4. **Verify deployment**:
+5. **Verify deployment**:
    - The script polls services for up to 30 seconds.
    - All services (`parts-tools`, `parts-agent`, `postgresql`, `claw-swap-app`) should show "active".
    - On success, it prints the Parts git revision deployed and duration.
 
-5. **Commit flake.lock if updated**:
-   - Only applies when run with `--update-parts`. The script reminds you to commit `flake.lock`.
+6. **Commit flake.lock if updated**:
+   - If you ran `--update-input neurosys` or `--update-parts`, commit the updated `flake.lock` in the private overlay.
 
 ## Flags
 
 | Flag | Description |
 |------|-------------|
+| `--node NAME` | Deploy flake node (`neurosys` or `ovh`, default: `neurosys`) |
 | `--update-parts` | Pull latest `parts` flake input before building |
 | `--skip-update` | No-op (parts update is skipped by default) |
 | `--mode remote` | (default) Build on target host via deploy-rs `--remote-build` |
@@ -56,17 +68,18 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
 ## What It Does
 
 1. **Nix build** — Builds the full NixOS system closure (remote by default, local if `--mode local`)
-2. **nixos-rebuild switch** — Atomically switches the server to the new config
+2. **deploy-rs switch** — Atomically switches the server to the new config with magic rollback
 3. **Service health poll** — Checks systemd services are running (30s timeout)
-4. **Flake update** (only with `--update-parts`) — Pulls latest Parts commit into `flake.lock`
+4. **Cachix push** — Pushes system closure to cache after successful deploy (Contabo only)
 
 ## Troubleshooting
 
 - **Rollback**: `ssh root@neurosys nixos-rebuild switch --rollback`
-- **Service logs**: `ssh root@neurosys journalctl -u parts-tools -n 50`
+- **Service logs**: `ssh root@neurosys journalctl -u <service> -n 50`
 - **Lock stuck**: If a previous deploy crashed, remove the remote lock:
   ```bash
   ssh root@neurosys rm -rf /var/lock/neurosys-neurosys-deploy.lock
   rm -f tmp/neurosys-neurosys-deploy.local.lock
   ```
 - **Build failures**: Check Nix build output for derivation errors. Common cause: Parts tests failing in the Nix build.
+- **Stale neurosys input**: If public neurosys was updated but private overlay uses old version, run `nix flake lock --update-input neurosys` in the private overlay.

@@ -101,13 +101,12 @@ vhosts, ACME cert domains, and private service stacks.
 
 **CRITICAL — read before running any deploy:**
 
-- **`scripts/deploy.sh` is for `neurosys` (Contabo) ONLY** — it hard-refuses `--node ovh`
-- **OVH must ALWAYS be deployed from the PRIVATE overlay:**
+- **ALL deploys MUST come from the PRIVATE overlay** — both hosts run private config:
   ```
-  cd /data/projects/private-neurosys && ./scripts/deploy.sh --node ovh
+  cd /data/projects/private-neurosys && ./scripts/deploy.sh [--node neurosys|ovh]
   ```
-- **NEVER run `nixos-rebuild switch --flake .#ovh`** from this repo — the public flake has placeholder SSH keys; it will lock you out of the server
-- **NEVER run `nixos-rebuild switch --flake .#neurosys`** directly either — always go through `scripts/deploy.sh` which handles locking, rollback, and health checks
+- **`scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `neurosys.url` guard detects public repo)
+- **NEVER run `nixos-rebuild switch --flake .#neurosys`** or `.#ovh` from this repo — the public flake has placeholder SSH keys and no private services; it will break the server
 - For first-time OVH bootstrap: `scripts/bootstrap-ovh.sh` installs base NixOS, then follow with private overlay deploy
 
 ## Security Conventions

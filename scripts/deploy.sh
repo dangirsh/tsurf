@@ -140,28 +140,29 @@ if [[ "$NODE" != "neurosys" && "$NODE" != "ovh" ]]; then
   exit 1
 fi
 
-# SAFETY GUARD: OVH must NEVER be deployed from this public repo.
-# The public flake's nixosConfigurations.ovh is a base config with placeholder
-# SSH keys and no private services (nginx, Matrix/Conduit, dangirsh user, etc.).
-# Deploying it to a running OVH server STRIPS all private services and LOCKS
-# YOU OUT by replacing real SSH keys with placeholders from users.nix.
+# SAFETY GUARD: All deploys MUST come from the private overlay.
+# @decision DEPLOY-02: Both neurosys and ovh run the private overlay config.
+#   The public flake's nixosConfigurations have placeholder SSH keys, no real
+#   users (dev instead of dangirsh), and no private services (nginx, parts,
+#   openclaw, HA, etc.). Deploying from the public repo to EITHER host strips
+#   all private config and can LOCK YOU OUT.
 #
-# OVH deploys MUST come from the private overlay:
-#   cd /data/projects/private-neurosys && ./scripts/deploy.sh --node ovh
-if [[ "$NODE" == "ovh" ]]; then
+# Detection: the private overlay has `neurosys.url` as a flake input; the
+# public repo does not. This is a reliable self-detection marker.
+if ! grep -q 'neurosys\.url' "$FLAKE_DIR/flake.nix" 2>/dev/null; then
   echo ""
   echo "╔══════════════════════════════════════════════════════════════════╗"
-  echo "║  BLOCKED: OVH deploy refused from public repo                    ║"
+  echo "║  BLOCKED: Deploy refused from public repo                      ║"
   echo "╚══════════════════════════════════════════════════════════════════╝"
   echo ""
-  echo "  Deploying .#ovh from the PUBLIC repo strips private services"
-  echo "  (nginx, Matrix/Conduit, dangirsh user, real SSH keys) and"
-  echo "  LOCKS YOU OUT by installing placeholder authorized_keys."
+  echo "  Both hosts (neurosys + ovh) run the PRIVATE overlay config."
+  echo "  Deploying from the public repo strips private services, users,"
+  echo "  and SSH keys — potentially locking you out."
   echo ""
-  echo "  Always deploy OVH from the PRIVATE overlay:"
+  echo "  Always deploy from the PRIVATE overlay:"
   echo ""
   echo "    cd /data/projects/private-neurosys"
-  echo "    ./scripts/deploy.sh --node ovh"
+  echo "    ./scripts/deploy.sh [--node neurosys|ovh]"
   echo ""
   exit 1
 fi
