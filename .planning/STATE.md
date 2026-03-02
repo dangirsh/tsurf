@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 60 Plan 60-01 complete (public repo scope): Matrix provisioning API defaults + DM pairing guide service delivered. Private overlay task (E) and post-deploy SSH task (G) remain intentionally deferred by scope.
+**Current focus:** Phase 60 Plan 60-02 complete (public repo scope): DM guide now includes backup upload UI and server-side decrypt/parse pipeline for Signal/WhatsApp/Telegram exports. Post-deploy SSH validation task remains intentionally deferred by scope.
 
 ## Current Position
 
 Phase: 60 (Dashboard DM Pairing & Backup Decrypt Guide) — IN PROGRESS
-Plan: 60-01 — COMPLETE (public repo tasks A/B/C/D/F)
-Status: Matrix provisioning config and dm-guide module are committed; host imports + networking updates landed; `nix flake check` passed. Task E (private overlay) and Task G (post-deploy SSH) were skipped per scope and documented in summary placeholders.
-Last activity: 2026-03-02 - Executed 60-01 public-repo scope; resolved blocking sops secret manifest key for dm-guide provisioning secret.
+Plan: 60-02 — COMPLETE (public repo tasks A/B/C/D; task E skipped by scope)
+Status: DM guide backup upload UI + processing endpoint committed; Signal backup tool availability verified (`signalbackup-tools` present in nixpkgs); import pipeline writes structured JSON to `/var/lib/dm-guide/imports/{bridge}/{timestamp}/`; `nix flake check` passed.
+Last activity: 2026-03-02 - Executed 60-02 public-repo scope; added multipart upload parsing and backup extraction pipeline in `modules/dm-guide.nix`.
 
-Progress: Phase 60 started (plan 60-01 complete, scope-limited). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 60 in progress (plans 60-01 and 60-02 complete, scope-limited). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 33
-- Average duration: ~20.4min
-- Total execution time: ~674 min
+- Total plans completed: 34
+- Average duration: ~20.0min
+- Total execution time: ~679 min
 
 **By Phase:**
 
@@ -51,7 +51,7 @@ Progress: Phase 60 started (plan 60-01 complete, scope-limited). Phase 59 comple
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 60-01 (~8min), 59-02 (~4min), 59-01 (~2min), 53-03 (~10min)
+- Last 4 plans: 60-02 (~5min), 60-01 (~8min), 59-02 (~4min), 59-01 (~2min)
 - Trend: Fast plan cadence with mostly low-churn infra/module increments.
 
 *Updated after each plan completion*
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - [60-01]: MTX-07: Chose a single shared provisioning secret for all three bridges in this internal-only MVP.
 - [60-01]: DMG-01: Added standalone `dm-guide` Python stdlib server on port 8086 with in-module HTML UI and client-side QR rendering.
 - [60-01]: [Rule 3 - Blocking] Added encrypted `dm-provisioning-secret` key to `secrets/neurosys.yaml` so sops manifest validation passes during `nix flake check`.
+- [60-02]: DMG-05: Added backup import pipeline to dm-guide with local-only processing and JSON output in `/var/lib/dm-guide/imports`.
+- [60-02]: Manual multipart boundary parser implemented using Python stdlib (no `cgi.FieldStorage`) for Python 3.13 compatibility.
+- [60-02]: Signal decrypt path uses `${pkgs.signalbackup-tools}/bin/signalbackup-tools` with 300s timeout and graceful missing-binary handling.
 - [59-02]: LOGSEQ-04: Vault path hardcoded to `/home/dangirsh/Sync/logseq` in private overlay (user-confirmed Syncthing location; stable, single vault on server).
 - [59-02]: LOGSEQ-05: `ProtectHome = "read-only"` required (not `true`) — `true` makes /home fully inaccessible even with ReadOnlyPaths; "read-only" allows listed paths while keeping rest of /home read-only.
 - [59-02]: logseq-agent-suite repo (dangirsh/logseq-agent-suite, private) created with triage/graph-maintenance/review instruction files. Cloned to /data/projects on activation.
