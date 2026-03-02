@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 57 plan 57-01 complete. OVH hostname renamed from neurosys-prod to neurosys-dev in public repo. Plan 57-02 (live bootstrap) pending.
+**Current focus:** Phase 52 complete. OpenClaw nativized — 6 Docker containers replaced with native systemd services. Phase 57-01 also complete (OVH hostname rename).
 
 ## Current Position
 
-Phase: 57 (OVH Re-bootstrap as neurosys-dev) — IN PROGRESS
-Plan: 57-01 — COMPLETE
-Status: All `neurosys-prod` references replaced with `neurosys-dev` across host config, flake deploy node, bootstrap/deploy scripts, test helpers, and docs. `nix flake check` passes.
-Last activity: 2026-03-02 - Executed 57-01 (hostname rename + flake validation).
+Phase: 52 (Nativize the Lobster Farm — Docker-Free Contabo) — COMPLETE
+Plan: 52-02 — COMPLETE
+Status: Both plans executed. Public: OpenClaw npm package + 6 native systemd services with per-instance users + eval checks. Private: auto-approve CLI migration, homepage widget cleanup, syncthing fix, private eval tests. Both repos pass `nix flake check`.
+Last activity: 2026-03-02 - Executed 52-01 (public nativization) and 52-02 (private overlay).
 
-Progress: Phase 57-01 complete. Phase 57-02 (live OVH bootstrap/deploy) pending. Phase 52-02 (private overlay) pending. Phase 45 deployment checkpoint pending.
+Progress: Phase 52 complete. Phase 57-01 complete (OVH rename). Phase 57-02 (live OVH bootstrap) pending. Phase 45 deployment checkpoint pending.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30
-- Average duration: ~21.9min
-- Total execution time: ~657 min
+- Total plans completed: 31
+- Average duration: ~21.4min
+- Total execution time: ~664 min
 
 **By Phase:**
 
@@ -51,7 +51,7 @@ Progress: Phase 57-01 complete. Phase 57-02 (live OVH bootstrap/deploy) pending.
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 57-01 (~8min), 52-01 (~15min), 50-02 (~15min), 50-01 (~20min)
+- Last 4 plans: 52-02 (~8min), 57-01 (~8min), 52-01 (~15min), 50-02 (~15min)
 - Trend: Short, focused plans completing quickly.
 
 *Updated after each plan completion*
@@ -66,6 +66,9 @@ Recent decisions affecting current work:
 - [52-01]: OpenClaw public runtime moved from `virtualisation.oci-containers` to six native `systemd.services` (`openclaw-mark` .. `openclaw-tal-claw`) with per-instance users and env template ownership (`owner = openclaw-<name>`).
 - [52-01]: OpenClaw packaged from npm registry tarball (`openclaw@2026.3.1`) with pinned source hash + npm deps hash; flake now exports `packages.x86_64-linux.openclaw`.
 - [52-01]: Docker service no longer required by public neurosys eval checks; dedicated `openclaw-services-neurosys` check added; trusted-interface check now supports both docker-enabled and docker-disabled hosts.
+- [52-02]: Private overlay migrated `openclaw-auto-approve` from `docker exec` to direct `${openclaw-pkg}/bin/openclaw` calls using per-instance ws ports (`:18793`, `:18794`) and native `openclaw-*.service` ordering.
+- [52-02]: Homepage OpenClaw widgets now use siteMonitor-only health (no Docker container status keys), while Spacebot Docker widget + homepage docker socket/group access remain intentionally enabled.
+- [52-02]: Private eval checks replaced OpenClaw container assertions with native `systemd.services` and per-instance user checks; Spacebot container assertion retained.
 - [57-01]: OVH/public hostname standardized from `neurosys-prod` to `neurosys-dev` in host config, deploy node, bootstrap/deploy scripts, test helpers, and docs. `test-live` CLI selector and `is_ovh()` predicate updated to match.
 - [37-01]: Public flake now exports `nixosModules.default` and removes private inputs/services from default imports.
 - [37-01]: Username, SSH keys, and git identity are sanitized to template-safe placeholders (`myuser`, placeholder key comments, generic name/email).
@@ -224,8 +227,16 @@ Recent decisions affecting current work:
 - [49-01]: Contabo password uses bash `:?` operator (required env var) instead of `:-` default value.
 - [49-01]: OVH password uses `openssl rand -base64 16` (runtime generation) instead of hardcoded string.
 - [49-01]: Matrix/OpenClaw/Spacebot/mautrix ports added to internalOnlyPorts for comprehensive 23-port coverage.
+- [52-01]: OCL-PKG-01: OpenClaw packaged from npm registry tarball (v2026.3.1) via `buildNpmPackage` with vendored package-lock.json. node-llama-cpp stripped.
+- [52-01]: OCL-01→OCL-14: Module rewritten from Docker OCI containers to native systemd services with parametric `instances` map, per-instance system users, `.openclaw -> .` symlink for state path compatibility, trustedProxies reduced to `127.0.0.1` only.
+- [52-02]: HP-02 updated: Docker group retained only for Spacebot container status. OpenClaw homepage widgets use siteMonitor-only.
+- [52-02]: SEC47-21: Syncthing `insecureSkipHostcheck` set to `false` — Docker bridge access pattern removed.
 
 ### Completed Phases
+
+- **Phase 52: Nativize the Lobster Farm (Docker-free Contabo)** (2/2 plans, completed 2026-03-02)
+  - 52-01: Public neurosys OpenClaw runtime migrated from OCI containers to 6 native systemd services; OpenClaw package exported from flake; eval checks updated.
+  - 52-02: Private overlay aligned with native OpenClaw runtime (`openclaw-auto-approve` CLI migration, homepage OpenClaw widget Docker key removal, private eval check migration, Syncthing host check hardening).
 
 - **Phase 50: Coherence & Simplicity Audit** (2 plans, completed 2026-03-01)
   - 50-01: Public repo module improvements — backported .git clone check, added conway-api-key secret, documented mkForce/owner patterns (SEC-03/SEC-04), AGENTD-40-03 annotation, sorted firewall port eval checks, deleted stale fleet-status.sh.
@@ -344,6 +355,7 @@ Recent decisions affecting current work:
 - Phase 50 added: Coherence & Simplicity Audit — holistic review of public + private neurosys for architectural coherence, threat model consistency, over-engineering, code smells, surprising non-standard decisions, feature conflicts, and design inconsistencies. Cross-cutting analysis of all modules, services, secrets, deployment, and private overlay layering.
 - Phase 51 added: Conway Automaton profitability research — deep investigation into why the agent loop is ineffective (goal churn, worker timeouts, placeholder wallet, no real deployment/exposure) and how to reconfigure it to actually generate revenue. Research x402 viability, agent task sizing, deployment gaps, and produce a concrete reconfiguration plan.
 - Phase 53 added: Conway Dashboard Auth + Prompt Editor — token-based auth for public internet access (bearer token via sops-nix + nginx HTTPS) so dashboard works outside Tailscale; UI to edit genesis prompt and restart automaton agent without NixOS rebuild. Changes span conway-dashboard repo + private-neurosys overlay.
+- Phase 59 added: Logseq PKM Agent Suite — private repo (`logseq-agent-suite`) + neurosys private overlay component. Datalog query library, agent instruction files (todo triage, graph maintenance, review flows), NixOS module exposing vault path to agentd agents, and parts-agent interface for reading/writing the personal graph. Vault already in Syncthing.
 
 ### Blockers/Concerns
 

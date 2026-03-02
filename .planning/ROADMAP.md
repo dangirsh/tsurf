@@ -1012,10 +1012,12 @@ Plans:
   6. WhatsApp/messaging sessions remain active (no re-pairing required)
   7. `nix flake check` passes with updated config
   8. Restic backup still covers all state directories
-**Plans**: 0 plans
+**Plans**: 2/2 complete (2026-03-02)
+**Status**: COMPLETE — OpenClaw nativized (6 native systemd services replace Docker containers). Spacebot stays Docker. Private overlay updated.
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 52 to break down)
+- [x] 52-01: Package OpenClaw + Rewrite Public Module
+- [x] 52-02: Update Private Overlay + Tests for Native OpenClaw
 
 ### Phase 53: Conway Dashboard Auth + Prompt Editor
 
@@ -1119,3 +1121,12 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 58 to break down)
+
+### Phase 59: Logseq PKM Agent Suite
+
+**Goal:** Create a private repo (`logseq-agent-suite`) and a matching neurosys private overlay component that turns the Logseq PKM vault (already in Syncthing) into an agent-accessible knowledge interface. Deliverables: (1) a documented Datalog query library and Logseq API helpers for navigating/manipulating the graph, (2) agent instruction files (system prompts / SOUL.md) covering todo triage, graph maintenance, and review flows, (3) a lightweight neurosys NixOS module exposing the vault path and optional tooling to agentd agents, and (4) a parts-agent interface so parts services can read/write the personal graph for task tracking and knowledge retrieval. The Logseq vault lives in the Syncthing folder already managed by neurosys.
+**Depends on:** Phase 57
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 59 to break down)
