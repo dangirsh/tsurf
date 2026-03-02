@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 52. OpenClaw public migration to native systemd services + npm-tarball packaging.
+**Current focus:** Phase 57 plan 57-01 complete. OVH hostname renamed from neurosys-prod to neurosys-dev in public repo. Plan 57-02 (live bootstrap) pending.
 
 ## Current Position
 
-Phase: 52 (Nativize the Lobster Farm) — IN PROGRESS
-Plan: 52-01 — COMPLETE
-Status: Public repo migrated OpenClaw from OCI containers to native systemd services with per-instance users, packaged OpenClaw from npm tarball, updated eval checks, and exported flake package.
-Last activity: 2026-03-02 - Executed 52-01 (A-E) with 5 commits. `nix flake check` passes for neurosys+ovh in public repo.
+Phase: 57 (OVH Re-bootstrap as neurosys-dev) — IN PROGRESS
+Plan: 57-01 — COMPLETE
+Status: All `neurosys-prod` references replaced with `neurosys-dev` across host config, flake deploy node, bootstrap/deploy scripts, test helpers, and docs. `nix flake check` passes.
+Last activity: 2026-03-02 - Executed 57-01 (hostname rename + flake validation).
 
-Progress: Phase 52-01 complete. Phase 52-02 (private overlay) remains pending. Phase 45 deployment checkpoint pending. Phase 44 remains pending at task C (`checkpoint:human-action`).
+Progress: Phase 57-01 complete. Phase 57-02 (live OVH bootstrap/deploy) pending. Phase 52-02 (private overlay) pending. Phase 45 deployment checkpoint pending.
 
 ## Performance Metrics
 
@@ -51,8 +51,8 @@ Progress: Phase 52-01 complete. Phase 52-02 (private overlay) remains pending. P
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 50-02 (~15min), 50-01 (~20min), 49-01 (~2min), 48-02 (~82min)
-- Trend: Phase 50 coherence audit completed efficiently — mostly documentation and deletion.
+- Last 4 plans: 57-01 (~8min), 52-01 (~15min), 50-02 (~15min), 50-01 (~20min)
+- Trend: Short, focused plans completing quickly.
 
 *Updated after each plan completion*
 
@@ -66,6 +66,7 @@ Recent decisions affecting current work:
 - [52-01]: OpenClaw public runtime moved from `virtualisation.oci-containers` to six native `systemd.services` (`openclaw-mark` .. `openclaw-tal-claw`) with per-instance users and env template ownership (`owner = openclaw-<name>`).
 - [52-01]: OpenClaw packaged from npm registry tarball (`openclaw@2026.3.1`) with pinned source hash + npm deps hash; flake now exports `packages.x86_64-linux.openclaw`.
 - [52-01]: Docker service no longer required by public neurosys eval checks; dedicated `openclaw-services-neurosys` check added; trusted-interface check now supports both docker-enabled and docker-disabled hosts.
+- [57-01]: OVH/public hostname standardized from `neurosys-prod` to `neurosys-dev` in host config, deploy node, bootstrap/deploy scripts, test helpers, and docs. `test-live` CLI selector and `is_ovh()` predicate updated to match.
 - [37-01]: Public flake now exports `nixosModules.default` and removes private inputs/services from default imports.
 - [37-01]: Username, SSH keys, and git identity are sanitized to template-safe placeholders (`myuser`, placeholder key comments, generic name/email).
 - [37-01]: Private service bindings moved behind private overlay boundaries; public config passes `nix flake check` without private-module assumptions.
@@ -378,6 +379,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Phase 50 complete — coherence & simplicity audit finished. Both repos pushed.
-Next: Next phase from roadmap, or deploy pending phases (45/47/48/49/50) to live servers.
+Last session: 2026-03-02
+Stopped at: Phase 57-01 complete — OVH hostname renamed from neurosys-prod to neurosys-dev in public repo. Flake validation passed.
+Next: Execute Phase 57-02 (live OVH bootstrap/deploy with human-action checkpoints).
