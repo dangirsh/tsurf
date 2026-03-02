@@ -5,24 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 59 complete. Logseq PKM agent suite delivered: 3 read-only MCP tools in public repo, private overlay wired with vault path, logseq-agent-suite GitHub repo created. Deploy private overlay to activate.
+**Current focus:** Phase 60 Plan 60-01 complete (public repo scope): Matrix provisioning API defaults + DM pairing guide service delivered. Private overlay task (E) and post-deploy SSH task (G) remain intentionally deferred by scope.
 
 ## Current Position
 
-Phase: 59 (Logseq PKM Agent Suite) — COMPLETE (2/2 plans)
-Plan: 59-01 — COMPLETE (public MCP Logseq query tools + Nix packaging)
-Plan: 59-02 — COMPLETE (private overlay vault path + ProtectHome + logseq-agent-suite repo)
-Status: All Phase 59 work committed and pushed. Vault not yet synced to server (only .stfolder present) — tools will degrade gracefully until Syncthing syncs. Deploy private overlay to activate.
-Last activity: 2026-03-02 - Executed 59-01 (public MCP tools) and 59-02 (private overlay + logseq-agent-suite repo).
+Phase: 60 (Dashboard DM Pairing & Backup Decrypt Guide) — IN PROGRESS
+Plan: 60-01 — COMPLETE (public repo tasks A/B/C/D/F)
+Status: Matrix provisioning config and dm-guide module are committed; host imports + networking updates landed; `nix flake check` passed. Task E (private overlay) and Task G (post-deploy SSH) were skipped per scope and documented in summary placeholders.
+Last activity: 2026-03-02 - Executed 60-01 public-repo scope; resolved blocking sops secret manifest key for dm-guide provisioning secret.
 
-Progress: Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 60 started (plan 60-01 complete, scope-limited). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32
-- Average duration: ~21.4min
-- Total execution time: ~666 min
+- Total plans completed: 33
+- Average duration: ~20.4min
+- Total execution time: ~674 min
 
 **By Phase:**
 
@@ -52,8 +51,8 @@ Progress: Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51
 | 40 | 1/2 | ~72min | ~72min |
 
 **Recent Trend:**
-- Last 4 plans: 53-03 (~10min), 53-02 (~2min), 53-01 (~8min), 52-02 (~8min)
-- Trend: Short, focused plans completing quickly. Phase 53 via Codex backend.
+- Last 4 plans: 60-01 (~8min), 59-02 (~4min), 59-01 (~2min), 53-03 (~10min)
+- Trend: Fast plan cadence with mostly low-churn infra/module increments.
 
 *Updated after each plan completion*
 
@@ -64,6 +63,10 @@ Progress: Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [60-01]: MTX-06: Enabled provisioning API fields for WhatsApp/Signal/Telegram in public matrix module with placeholder `shared_secret = "disable"` for private overlay override.
+- [60-01]: MTX-07: Chose a single shared provisioning secret for all three bridges in this internal-only MVP.
+- [60-01]: DMG-01: Added standalone `dm-guide` Python stdlib server on port 8086 with in-module HTML UI and client-side QR rendering.
+- [60-01]: [Rule 3 - Blocking] Added encrypted `dm-provisioning-secret` key to `secrets/neurosys.yaml` so sops manifest validation passes during `nix flake check`.
 - [59-02]: LOGSEQ-04: Vault path hardcoded to `/home/dangirsh/Sync/logseq` in private overlay (user-confirmed Syncthing location; stable, single vault on server).
 - [59-02]: LOGSEQ-05: `ProtectHome = "read-only"` required (not `true`) — `true` makes /home fully inaccessible even with ReadOnlyPaths; "read-only" allows listed paths while keeping rest of /home read-only.
 - [59-02]: logseq-agent-suite repo (dangirsh/logseq-agent-suite, private) created with triage/graph-maintenance/review instruction files. Cloned to /data/projects on activation.
