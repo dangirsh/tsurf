@@ -16,6 +16,10 @@
 # @decision DMG-04: Port 8086 binds 0.0.0.0 with firewall closed.
 # @rationale: Matches existing internal tooling pattern: reachable over trusted
 #   interfaces (Tailscale), not publicly exposed via allowedTCPPorts.
+#
+# @decision DMG-05: Backup uploads are written to /var/lib/dm-guide and parsed locally.
+# @rationale: Keeps decrypted message artifacts and temporary uploads in service
+#   state storage with no external network hop; passphrases are transient only.
 { config, pkgs, lib, ... }:
 
 let
@@ -449,13 +453,25 @@ let
     import http.server
     import json
     import os
+    import re
+    import shutil
     import socketserver
+    import subprocess
+    import tempfile
+    import time
     import urllib.error
     import urllib.parse
     import urllib.request
+    import zipfile
+    from sqlite3 import Error as SqliteError
+    import sqlite3
 
     PORT = ${toString port}
     HTML_FILE = "${htmlPage}"
+    SIGNAL_TOOLS = "${pkgs.signalbackup-tools}/bin/signalbackup-tools"
+    UPLOAD_DIR = "/var/lib/dm-guide/uploads"
+    IMPORT_DIR = "/var/lib/dm-guide/imports"
+    MAX_UPLOAD = 500 * 1024 * 1024
     CREDS_DIR = os.environ.get("CREDENTIALS_DIRECTORY", "/run/secrets")
     SECRET_FILE = os.path.join(CREDS_DIR, "dm-provisioning-secret")
 
@@ -752,6 +768,453 @@ let
         return {"ok": True, "status": result.get("status", 200), "raw": result.get("data", {})}
 
 
+    class UploadError(Exception):
+        def __init__(self, message, status=400):
+            super().__init__(message)
+            self.status = status
+
+
+    def ensure_storage_dirs():
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        os.makedirs(IMPORT_DIR, exist_ok=True)
+
+
+    def safe_filename(name):
+        cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", os.path.basename(name or ""))
+        return cleaned or "upload.bin"
+
+
+    def parse_multipart_upload(handler):
+        content_type = handler.headers.get("Content-Type", "")
+        if "multipart/form-data" not in content_type:
+            raise UploadError("expected multipart/form-data", 400)
+
+        boundary_match = re.search(r'boundary=(?:"([^"]+)"|([^;]+))', content_type)
+        boundary = (boundary_match.group(1) or boundary_match.group(2) or "").strip() if boundary_match else ""
+        if not boundary:
+            raise UploadError("missing multipart boundary", 400)
+
+        try:
+            length = int(handler.headers.get("Content-Length", "0"))
+        except ValueError:
+            raise UploadError("invalid Content-Length", 400)
+
+        if length <= 0:
+            raise UploadError("empty upload body", 400)
+        if length > MAX_UPLOAD:
+            raise UploadError("upload exceeds 500MB limit", 413)
+
+        body = handler.rfile.read(length)
+        if len(body) != length:
+            raise UploadError("incomplete upload body", 400)
+
+        ensure_storage_dirs()
+        delimiter = ("--" + boundary).encode()
+        chunks = body.split(delimiter)
+        fields = {}
+        files = {}
+
+        for chunk in chunks[1:]:
+            if chunk.startswith(b"--"):
+                break
+            part = chunk
+            if part.startswith(b"\r\n"):
+                part = part[2:]
+            if part.endswith(b"\r\n"):
+                part = part[:-2]
+            if not part:
+                continue
+
+            header_blob, separator, payload = part.partition(b"\r\n\r\n")
+            if not separator:
+                continue
+
+            headers = {}
+            for line in header_blob.split(b"\r\n"):
+                if b":" not in line:
+                    continue
+                key, value = line.split(b":", 1)
+                headers[key.decode(errors="replace").strip().lower()] = value.decode(errors="replace").strip()
+
+            disposition = headers.get("content-disposition", "")
+            name_match = re.search(r'name="([^"]+)"', disposition)
+            if not name_match:
+                continue
+
+            field_name = name_match.group(1)
+            file_match = re.search(r'filename="([^"]*)"', disposition)
+            filename = file_match.group(1) if file_match else ""
+
+            if filename:
+                clean_name = safe_filename(filename)
+                fd, file_path = tempfile.mkstemp(
+                    prefix="dm-guide-upload-",
+                    suffix="-" + clean_name,
+                    dir=UPLOAD_DIR,
+                )
+                with os.fdopen(fd, "wb") as f:
+                    f.write(payload)
+                files[field_name] = {
+                    "path": file_path,
+                    "filename": clean_name,
+                    "size": len(payload),
+                    "content_type": headers.get("content-type", "application/octet-stream"),
+                }
+            else:
+                fields[field_name] = payload.decode("utf-8", errors="replace").strip()
+
+        return {"fields": fields, "files": files}
+
+
+    def make_timestamp_dir(bridge):
+        ensure_storage_dirs()
+        ts = time.strftime("%Y%m%d-%H%M%S", time.localtime())
+        base = os.path.join(IMPORT_DIR, bridge, ts)
+        candidate = base
+        suffix = 1
+        while os.path.exists(candidate):
+            candidate = base + "-" + str(suffix)
+            suffix += 1
+        os.makedirs(candidate, exist_ok=True)
+        return candidate
+
+
+    def write_json(path, data):
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+
+
+    def parse_timestamp(date_value, time_value):
+        variants = [
+            "%d/%m/%Y %H:%M:%S",
+            "%d/%m/%Y %H:%M",
+            "%d/%m/%y %H:%M:%S",
+            "%d/%m/%y %H:%M",
+        ]
+        text = (date_value + " " + time_value).strip()
+        for fmt in variants:
+            try:
+                return int(time.mktime(time.strptime(text, fmt)))
+            except ValueError:
+                continue
+        return None
+
+
+    def parse_whatsapp_text(text):
+        line_re = re.compile(r"^\[(\d{1,2}/\d{1,2}/\d{2,4}),\s*(\d{1,2}:\d{2}(?::\d{2})?)\]\s([^:]+):\s?(.*)$")
+        messages = []
+        current = None
+
+        for line in text.splitlines():
+            match = line_re.match(line)
+            if match:
+                if current is not None:
+                    messages.append(current)
+                date_value, time_value, sender, body = match.groups()
+                current = {
+                    "timestamp": parse_timestamp(date_value, time_value),
+                    "date": date_value,
+                    "time": time_value,
+                    "sender": sender.strip(),
+                    "text": body,
+                }
+                continue
+
+            if current is not None:
+                if current["text"]:
+                    current["text"] = current["text"] + "\n" + line
+                else:
+                    current["text"] = line
+
+        if current is not None:
+            messages.append(current)
+
+        return messages
+
+
+    def flatten_telegram_text(value):
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list):
+            out = []
+            for item in value:
+                if isinstance(item, str):
+                    out.append(item)
+                elif isinstance(item, dict):
+                    out.append(str(item.get("text", "")))
+            return "".join(out)
+        return ""
+
+
+    def load_signal_recipients(conn):
+        query = """
+            SELECT
+              _id,
+              COALESCE(system_display_name, profile_given_name, e164, aci, username, group_id, CAST(_id AS TEXT))
+            FROM recipient
+        """
+        recipients = {}
+        try:
+            for row in conn.execute(query):
+                recipients[str(row[0])] = str(row[1]) if row[1] is not None else str(row[0])
+        except SqliteError:
+            return {}
+        return recipients
+
+
+    def extract_signal_messages(db_path):
+        message_queries = [
+            """
+            SELECT date_sent AS ts, thread_id AS chat_id, from_recipient_id AS sender_id, body AS body
+            FROM message
+            WHERE body IS NOT NULL AND length(body) > 0
+            ORDER BY date_sent
+            """,
+            """
+            SELECT date_received AS ts, thread_id AS chat_id, recipient_id AS sender_id, body AS body
+            FROM sms
+            WHERE body IS NOT NULL AND length(body) > 0
+            ORDER BY date_received
+            """,
+        ]
+
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            recipients = load_signal_recipients(conn)
+            rows = None
+            for query in message_queries:
+                try:
+                    rows = conn.execute(query).fetchall()
+                    break
+                except SqliteError:
+                    continue
+            if rows is None:
+                raise UploadError("unable to extract messages from Signal backup database", 422)
+
+            messages = []
+            per_chat = {}
+            for row in rows:
+                sender_id = row["sender_id"]
+                sender_key = str(sender_id) if sender_id is not None else ""
+                sender = recipients.get(sender_key, sender_key or "unknown")
+                chat_id = row["chat_id"]
+                chat_key = str(chat_id) if chat_id is not None else "unknown"
+                per_chat[chat_key] = per_chat.get(chat_key, 0) + 1
+                messages.append(
+                    {
+                        "timestamp": int(row["ts"]) if row["ts"] is not None else None,
+                        "chat_id": chat_key,
+                        "sender_id": sender_id,
+                        "sender": sender,
+                        "text": row["body"],
+                    }
+                )
+
+            chats = [{"chat_id": key, "message_count": value} for key, value in sorted(per_chat.items())]
+            return {"messages": messages, "chats": chats}
+        finally:
+            conn.close()
+
+
+    def process_signal_backup(filepath, passphrase):
+        if not os.path.exists(SIGNAL_TOOLS):
+            return {"ok": False, "error": "signalbackup-tools is not available on this host"}
+        if not passphrase:
+            return {"ok": False, "error": "passphrase is required for Signal backups"}
+
+        unpack_dir = tempfile.mkdtemp(prefix="dm-guide-signal-", dir=UPLOAD_DIR)
+        try:
+            cmd = [
+                SIGNAL_TOOLS,
+                filepath,
+                passphrase,
+                "--output",
+                unpack_dir,
+                "--onlydb",
+                "--no-showprogress",
+            ]
+            run = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)
+            if run.returncode != 0:
+                error_text = (run.stderr or run.stdout or "").strip()
+                return {"ok": False, "error": "signalbackup-tools decrypt failed", "details": error_text[-800:]}
+
+            db_path = None
+            for root, _dirs, files in os.walk(unpack_dir):
+                for filename in files:
+                    if filename.endswith(".db") or filename.endswith(".sqlite") or filename.endswith(".sqlite3"):
+                        db_path = os.path.join(root, filename)
+                        break
+                if db_path:
+                    break
+
+            if not db_path:
+                return {"ok": False, "error": "decrypted Signal database file not found"}
+
+            parsed = extract_signal_messages(db_path)
+            return {
+                "ok": True,
+                "source_db": os.path.basename(db_path),
+                "message_count": len(parsed["messages"]),
+                "chats": parsed["chats"],
+                "messages": parsed["messages"],
+            }
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "error": "signalbackup-tools timed out after 300s"}
+        finally:
+            shutil.rmtree(unpack_dir, ignore_errors=True)
+
+
+    def process_whatsapp_zip(filepath):
+        chats = []
+        total = 0
+        with zipfile.ZipFile(filepath) as archive:
+            names = [name for name in archive.namelist() if name.lower().endswith("_chat.txt")]
+            if not names:
+                names = [name for name in archive.namelist() if name.lower().endswith(".txt")]
+            if not names:
+                return {"ok": False, "error": "no chat text file found in WhatsApp zip export"}
+
+            for name in names:
+                with archive.open(name) as f:
+                    text = f.read().decode("utf-8", errors="replace")
+                messages = parse_whatsapp_text(text)
+                total += len(messages)
+                chats.append(
+                    {
+                        "chat_file": name,
+                        "message_count": len(messages),
+                        "messages": messages,
+                    }
+                )
+
+        return {"ok": True, "message_count": total, "chats": chats}
+
+
+    def process_telegram_json(filepath):
+        with open(filepath, encoding="utf-8") as f:
+            export = json.load(f)
+
+        chat_list = export.get("chats", {}).get("list", [])
+        chats = []
+        total = 0
+
+        for chat in chat_list:
+            if not isinstance(chat, dict):
+                continue
+            out_messages = []
+            for message in chat.get("messages", []):
+                if not isinstance(message, dict):
+                    continue
+                text = flatten_telegram_text(message.get("text"))
+                if not text and message.get("type") != "message":
+                    continue
+                out_messages.append(
+                    {
+                        "id": message.get("id"),
+                        "date": message.get("date"),
+                        "timestamp": int(message.get("date_unixtime")) if str(message.get("date_unixtime", "")).isdigit() else None,
+                        "sender": message.get("from") or message.get("actor") or "unknown",
+                        "type": message.get("type"),
+                        "text": text,
+                    }
+                )
+
+            total += len(out_messages)
+            chats.append(
+                {
+                    "chat_id": chat.get("id"),
+                    "chat_name": chat.get("name"),
+                    "chat_type": chat.get("type"),
+                    "message_count": len(out_messages),
+                    "messages": out_messages,
+                }
+            )
+
+        return {"ok": True, "message_count": total, "chats": chats}
+
+
+    def process_backup_upload(bridge, filepath, passphrase):
+        if bridge == "signal":
+            return process_signal_backup(filepath, passphrase)
+        if bridge == "whatsapp":
+            return process_whatsapp_zip(filepath)
+        if bridge == "telegram":
+            return process_telegram_json(filepath)
+        return {"ok": False, "error": "unsupported bridge type"}
+
+
+    def handle_backup_upload(handler):
+        parsed = None
+        files_to_cleanup = []
+        passphrase = ""
+        try:
+            parsed = parse_multipart_upload(handler)
+            fields = parsed["fields"]
+            files = parsed["files"]
+            files_to_cleanup = [meta["path"] for meta in files.values()]
+
+            bridge = fields.get("bridge", "").strip().lower()
+            if bridge not in ["signal", "whatsapp", "telegram"]:
+                raise UploadError("bridge must be one of: signal, whatsapp, telegram", 400)
+
+            upload_meta = files.get("backup")
+            if not upload_meta:
+                raise UploadError("missing file field 'backup'", 400)
+
+            passphrase = fields.get("passphrase", "")
+            import_dir = make_timestamp_dir(bridge)
+            result = process_backup_upload(bridge, upload_meta["path"], passphrase)
+
+            if not result.get("ok"):
+                return {
+                    "ok": False,
+                    "bridge": bridge,
+                    "stage": "process",
+                    "error": result.get("error", "backup processing failed"),
+                    "details": result.get("details"),
+                }, 422
+
+            output = {
+                "bridge": bridge,
+                "source_file": upload_meta["filename"],
+                "imported_at": int(time.time()),
+                "message_count": result.get("message_count", 0),
+                "chats": result.get("chats", []),
+                "messages": result.get("messages", []),
+            }
+            output_file = os.path.join(import_dir, "messages.json")
+            write_json(output_file, output)
+
+            return {
+                "ok": True,
+                "bridge": bridge,
+                "stage": "complete",
+                "message_count": output["message_count"],
+                "chat_count": len(output["chats"]),
+                "output_dir": import_dir,
+                "output_file": output_file,
+            }, 200
+        except UploadError as err:
+            return {"ok": False, "error": str(err)}, err.status
+        except zipfile.BadZipFile:
+            return {"ok": False, "error": "invalid WhatsApp zip file"}, 400
+        except json.JSONDecodeError:
+            return {"ok": False, "error": "invalid Telegram JSON export"}, 400
+        except Exception as err:
+            return {"ok": False, "error": "internal backup processing error", "details": str(err)}, 500
+        finally:
+            passphrase = ""
+            for path in files_to_cleanup:
+                try:
+                    os.remove(path)
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    pass
+
+
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             pass
@@ -794,7 +1257,8 @@ let
                 return None
 
         def do_GET(self):
-            if self.path == "/":
+            parsed_path = urllib.parse.urlparse(self.path)
+            if parsed_path.path == "/":
                 with open(HTML_FILE, "rb") as f:
                     content = f.read()
                 self.send_response(200)
@@ -802,6 +1266,10 @@ let
                 self.send_header("Content-Length", str(len(content)))
                 self.end_headers()
                 self.wfile.write(content)
+                return
+
+            if parsed_path.path == "/api/backup/upload":
+                self.send_json({"ok": False, "error": "method not allowed"}, 405)
                 return
 
             parsed = self.parse_bridge_path()
@@ -819,6 +1287,12 @@ let
             self.send_json(result, result.get("status", 200))
 
         def do_POST(self):
+            parsed_path = urllib.parse.urlparse(self.path)
+            if parsed_path.path == "/api/backup/upload":
+                result, status = handle_backup_upload(self)
+                self.send_json(result, status)
+                return
+
             parsed = self.parse_bridge_path()
             if not parsed:
                 self.send_error(404)
