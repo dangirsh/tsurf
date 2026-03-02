@@ -3,6 +3,7 @@
     ./hardware.nix
     ./disko-config.nix
     ../../modules
+    ../../modules/openclaw.nix
     # Contabo-only services
     ../../modules/homepage.nix
     ../../modules/restic.nix

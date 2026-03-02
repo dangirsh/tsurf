@@ -52,13 +52,21 @@ in
 
   trusted-interfaces-neurosys = pkgs.runCommandNoCC "trusted-interfaces-neurosys" { } ''
     actual='${builtins.toJSON neurosysCfg.networking.firewall.trustedInterfaces}'
-    for iface in tailscale0 docker0; do
+    require_iface() {
+      iface="$1"
       if ! echo "$actual" | ${jq} -e "index(\"$iface\")" > /dev/null 2>&1; then
         echo "FAIL: trustedInterfaces missing '$iface' (actual: $actual)"
         exit 1
       fi
-    done
-    echo "PASS: trusted interfaces include tailscale0 and docker0"
+    }
+
+    require_iface tailscale0
+    if ${if neurosysCfg.virtualisation.docker.enable then "true" else "false"}; then
+      require_iface docker0
+      echo "PASS: trusted interfaces include tailscale0 and docker0 (docker enabled)"
+    else
+      echo "PASS: trusted interfaces include tailscale0 (docker disabled)"
+    fi
     touch "$out"
   '';
 
@@ -70,7 +78,6 @@ in
         "tailscaled"
         "syncthing"
         "homepage-dashboard"
-        "docker"
       ];
       missing = builtins.filter (name: !(builtins.hasAttr name neurosysCfg.systemd.services)) expectedServices;
     in
@@ -78,6 +85,24 @@ in
       "expected-services-neurosys"
       "all expected neurosys services are defined"
       "missing neurosys services: ${builtins.concatStringsSep ", " missing}"
+      (missing == [ ]);
+
+  openclaw-services-neurosys =
+    let
+      expectedServices = [
+        "openclaw-mark"
+        "openclaw-lou"
+        "openclaw-alexia"
+        "openclaw-ari"
+        "openclaw-jordan-claw"
+        "openclaw-tal-claw"
+      ];
+      missing = builtins.filter (name: !(builtins.hasAttr name neurosysCfg.systemd.services)) expectedServices;
+    in
+    mkCheck
+      "openclaw-services-neurosys"
+      "all 6 openclaw native services are defined"
+      "missing openclaw services: ${builtins.concatStringsSep ", " missing}"
       (missing == [ ]);
 
   expected-services-ovh =
