@@ -48,7 +48,7 @@ let
 in
 python3Packages.buildPythonApplication {
   pname = "neurosys-mcp";
-  version = "0.2.0";
+  version = "0.3.0";
   pyproject = true;
   src = ../src/neurosys-mcp;
   build-system = [ python3Packages.setuptools python3Packages.wheel ];
@@ -59,9 +59,9 @@ python3Packages.buildPythonApplication {
     python3Packages.google-auth
     python3Packages.requests
   ];
-  pythonImportsCheck = [ "server" "auth" "logseq" "google_auth" "gmail" ];
+  pythonImportsCheck = [ "server" "auth" "logseq" "google_auth" "gmail" "calendar_tools" ];
   meta = with lib; {
-    description = "FastMCP server exposing Home Assistant, Matrix, Logseq, and Gmail tools for neurosys";
+    description = "FastMCP server exposing Home Assistant, Matrix, Logseq, Gmail, and Calendar tools for neurosys";
     license = licenses.mit;
     platforms = platforms.linux;
     mainProgram = "neurosys-mcp";

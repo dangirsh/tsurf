@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 63 complete. Neurosys MCP server restored with Google OAuth + Gmail tools. Next: private overlay secret wiring/deploy run and post-deploy OAuth authorization.
+**Current focus:** Phase 63 complete. Neurosys MCP server now includes Google OAuth + Gmail + Calendar tools. Next: private overlay secret wiring/deploy run and post-deploy OAuth authorization.
 
 ## Current Position
 
 Phase: 63 (Google OAuth + Gmail/Calendar MCP tools) — COMPLETE
-Plan: 63-01 — COMPLETE (public repo tasks done)
-Status: Restored `neurosys-mcp` server/auth/package plumbing; added `google_auth.py` OAuth flow and token persistence; added `gmail.py` tools (`gmail_read`, `gmail_search`, `gmail_draft`, `gmail_send`, `gmail_archive`); exposed package in flake and documented private deploy steps.
-Last activity: 2026-03-02 - Completed phase63-01 implementation + `nix flake check` pass in worktree branch.
+Plan: 63-02 — COMPLETE (Calendar tools + packaging/check updates)
+Status: Added `calendar_tools.py` with six Google Calendar MCP tools sharing `google_auth.get_access_token()` flow; registered Calendar tools in `server.py`; updated `pyproject.toml` and `packages/neurosys-mcp.nix` metadata/import checks; `nix build .#neurosys-mcp` and `nix flake check` pass.
+Last activity: 2026-03-02 - Completed phase63-02 implementation + build/check validation in worktree branch.
 
-Progress: Phase 63 complete (1/1 plans). Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 63 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36
-- Average duration: ~19.4min
-- Total execution time: ~692 min
+- Total plans completed: 37
+- Average duration: ~19.5min
+- Total execution time: ~720 min
 
 **By Phase:**
 
@@ -51,10 +51,11 @@ Progress: Phase 63 complete (1/1 plans). Phase 60 complete (2/2 plans). Phase 59
 | 40 | 1/2 | ~72min | ~72min |
 
 | 60 | 2/2 | ~13min | ~6.5min |
+| 63 | 2/2 | ~83min | ~41.5min |
 
 **Recent Trend:**
-- Last 4 plans: 60-02 (~5min), 60-01 (~8min), 59-02 (~4min), 59-01 (~2min)
-- Trend: Fast plan cadence with mostly low-churn infra/module increments.
+- Last 4 plans: 63-02 (~28min), 63-01 (~55min), 60-02 (~5min), 60-01 (~8min)
+- Trend: Recent work shifted from quick infra increments to moderate MCP package/tooling expansions.
 
 *Updated after each plan completion*
 
@@ -69,6 +70,9 @@ Recent decisions affecting current work:
 - [63-01]: MCP-63-04/05: Added `gmail.py` register pattern with five Gmail MCP tools and centralized auth gate; tools return `{\"ok\": false, \"error\": \"google_auth_required\"}` when OAuth is missing/invalid.
 - [63-01]: MCP-63-06: `server.py` now composes Starlette routes for Google OAuth only when Google OAuth env vars are configured; otherwise falls back to plain `mcp.run(streamable-http)`.
 - [63-01]: [Rule 3 - Blocking] `nix build .#neurosys-mcp` initially failed because `google.auth.transport.requests` requires `requests`; fixed by adding `requests` to `pyproject.toml` and `python3Packages.requests` to `packages/neurosys-mcp.nix`.
+- [63-02]: CAL-01/02/03: Added `calendar_tools.py` using `httpx` + shared bearer-token auth path from `google_auth`; scope intentionally limited to the primary calendar; module named to avoid stdlib shadowing.
+- [63-02]: Added six Calendar MCP tools (`calendar_list`, `calendar_search`, `calendar_free_busy`, `calendar_create`, `calendar_update`, `calendar_delete`) with shared auth-gate behavior returning `{\"ok\": false, \"error\": \"google_auth_required\"}` when OAuth tokens are unavailable/expired.
+- [63-02]: Updated package metadata and checks for Calendar support (`pyproject` module list/version/description, Nix `pythonImportsCheck`, package version `0.3.0`), validated via `nix build .#neurosys-mcp` and `nix flake check`.
 - [60-01]: MTX-06: Enabled provisioning API fields for WhatsApp/Signal/Telegram in public matrix module with placeholder `shared_secret = "disable"` for private overlay override.
 - [60-01]: MTX-07: Chose a single shared provisioning secret for all three bridges in this internal-only MVP.
 - [60-01]: DMG-01: Added standalone `dm-guide` Python stdlib server on port 8086 with in-module HTML UI and client-side QR rendering.
@@ -261,10 +265,11 @@ Recent decisions affecting current work:
 
 ### Completed Phases
 
-- **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** (1/1 plans, completed 2026-03-02)
+- **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** (2/2 plans, completed 2026-03-02)
   - 63-01: Restored public `neurosys-mcp` modules (`server.py`, `auth.py`, `pyproject.toml`, `packages/neurosys-mcp.nix`) and added `google_auth.py` + `gmail.py` with five Gmail tools and callback routes.
-  - Flake export restored (`packages.x86_64-linux.neurosys-mcp`), `nix build .#neurosys-mcp` + `nix flake check` pass, Python syntax checks pass for all `src/neurosys-mcp/*.py`.
-  - Added deploy runbook: `.planning/phases/63-google-oauth-gmail-calendar-mcp-tools/63-DEPLOY.md` with sops wiring and note to reuse existing Google OAuth credentials.
+  - 63-02: Added `calendar_tools.py` with six Calendar tools and shared OAuth token handling; wired Calendar registration in `server.py`; updated package metadata/import checks.
+  - Flake export/package checks green: `nix build .#neurosys-mcp` + `nix flake check` pass, Python syntax checks pass for all `src/neurosys-mcp/*.py`.
+  - Added planning artifacts: `.planning/phases/63-google-oauth-gmail-calendar-mcp-tools/63-DEPLOY.md` and `.planning/phases/63-google-oauth-gmail-calendar-mcp-tools/63-02-SUMMARY.md`.
 
 - **Phase 59: Logseq PKM Agent Suite** (2/2 plans, completed 2026-03-02)
   - 59-01: Public repo — `logseq.py` with 3 read-only MCP tools (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`); `orgparse` added to Nix package; `nix flake check` passes.
