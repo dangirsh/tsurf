@@ -18,6 +18,7 @@ let
     "6052" = "esphome";
     "6167" = "matrix-conduit";
     "8082" = "nix-dashboard";
+    "8083" = "agent-canvas";
     "8086" = "dm-guide";
     "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
