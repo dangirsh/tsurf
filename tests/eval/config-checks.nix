@@ -75,7 +75,7 @@ in
       expectedServices = [
         "tailscaled"
         "syncthing"
-        "homepage-dashboard"
+        "nix-dashboard"
       ];
       missing = builtins.filter (name: !(builtins.hasAttr name neurosysCfg.systemd.services)) expectedServices;
     in
@@ -218,22 +218,13 @@ in
     "OCI containers backend is ${neurosysCfg.virtualisation.oci-containers.backend}, expected docker"
     (neurosysCfg.virtualisation.oci-containers.backend == "docker");
 
-  homepage-enabled = mkCheck
-    "homepage-enabled"
-    "homepage-dashboard is enabled on port 8082"
-    "homepage-dashboard disabled or wrong listen port"
-    (
-      neurosysCfg.services.homepage-dashboard.enable
-      && neurosysCfg.services.homepage-dashboard.listenPort == 8082
-    );
-
   dashboard-enabled = mkCheck
     "dashboard-enabled"
-    "nix-dashboard is enabled on port 8083"
+    "nix-dashboard is enabled on port 8082"
     "nix-dashboard disabled or wrong port"
     (
       neurosysCfg.services.dashboard.enable
-      && neurosysCfg.services.dashboard.listenPort == 8083
+      && neurosysCfg.services.dashboard.listenPort == 8082
     );
 
   dashboard-entries =

@@ -626,7 +626,7 @@ in
 
     listenPort = lib.mkOption {
       type = lib.types.port;
-      default = 8083;
+      default = 8082;
       description = "Port for the dashboard HTTP server";
     };
 

@@ -15,7 +15,6 @@
     ../../modules/impermanence.nix
     # Host-specific services
     ../../modules/openclaw.nix
-    ../../modules/homepage.nix
     ../../modules/restic.nix
     ../../modules/matrix.nix
     ../../modules/dm-guide.nix

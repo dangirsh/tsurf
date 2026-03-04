@@ -32,11 +32,11 @@ bats_load_library bats-assert/load
   assert_success
 }
 
-@test "${HOST}: homepage-dashboard.service is active (neurosys only)" {
+@test "${HOST}: nix-dashboard.service is active (neurosys only)" {
   if ! is_neurosys; then
-    skip "homepage-dashboard only on neurosys"
+    skip "nix-dashboard only on neurosys"
   fi
-  assert_unit_active "homepage-dashboard.service"
+  assert_unit_active "nix-dashboard.service"
 }
 
 @test "${HOST}: restic-backups-b2.timer is enabled (neurosys only)" {
