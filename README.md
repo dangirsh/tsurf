@@ -1,9 +1,11 @@
-A NixOS server where agents are the primary operators. They read the config, make changes, deploy, and monitor services. NixOS is the OS because its declarative model is what agents reason about best: the entire system state is code, changes are atomic and reproducible, and there's nothing to drift.
+Neurosys is NixOS configuration optimized for secure agentic computing. I use it to deploy and manage agents across several remote hosts, alongside the services they build / maintain. 
+
+> Note: this public repo is only the base configuration. My personal services are configured in a private overlay repo.
 
 ## Design Principles
 
-- **Agents as operators**: the system is built for agents to read, modify, deploy, and monitor. Tooling and affordances are chosen for agent ergonomics first.
-- **Secure by default**: Tailscale-only internal networking, sops-nix secrets, nftables firewall, fail2ban, srvos hardening
+- **Agent-mediated**: All tools are chosen based on agents being their users. Humans talk to agents to make changes.  
+- **Secure defaults**: Networking, secret management, and agent sandboxing should be secure out-of-the-box.
 - **Maximally reproducible**: flake-pinned inputs, ephemeral root with explicit persist manifest, no imperative setup
 - **Forkable**: personal services live in a private overlay flake; public repo is a clean skeleton
 
