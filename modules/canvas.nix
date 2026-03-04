@@ -543,6 +543,436 @@ let
     if __name__ == "__main__":
         main()
   '';
+  canvasHtml = pkgs.writeText "canvas.html" ''
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Agent Canvas</title>
+        <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/gridstack@12.3.3/dist/gridstack.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/vega@6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vega-lite@6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vega-embed@7"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked@15"></script>
+        <script src="https://cdn.jsdelivr.net/npm/gridstack@12.3.3/dist/gridstack-all.js"></script>
+        <style>
+          :root {
+            color-scheme: dark;
+            --bg: #1a1a2e;
+            --panel: #232340;
+            --panel-alt: #2c2c4d;
+            --text: #f1f2f8;
+            --muted: #a3a8c0;
+            --border: #3c3f66;
+            --ok: #33d17a;
+            --bad: #ff6b6b;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #24244a, var(--bg));
+            color: var(--text);
+            font-family: "Iosevka Aile", "JetBrains Mono", monospace;
+          }
+
+          .page {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.2rem 0.8rem 2rem;
+          }
+
+          .title {
+            margin: 0;
+            font-size: 1.7rem;
+          }
+
+          .subtitle {
+            margin-top: 0.3rem;
+            color: var(--muted);
+            font-size: 0.95rem;
+          }
+
+          .status {
+            margin-top: 0.8rem;
+            color: var(--muted);
+            font-size: 0.85rem;
+          }
+
+          .status.bad {
+            color: var(--bad);
+          }
+
+          .status.ok {
+            color: var(--ok);
+          }
+
+          .empty {
+            margin-top: 1rem;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            padding: 1.2rem;
+            background: rgba(35, 35, 64, 0.7);
+            color: var(--muted);
+          }
+
+          .grid-stack {
+            margin-top: 1rem;
+            min-height: 320px;
+          }
+
+          .grid-stack-item-content.panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--panel);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+          }
+
+          .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.4rem;
+            padding: 0.55rem 0.65rem;
+            background: var(--panel-alt);
+            border-bottom: 1px solid var(--border);
+          }
+
+          .panel-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .panel-actions {
+            display: flex;
+            align-items: center;
+          }
+
+          .delete-btn {
+            border: 0;
+            border-radius: 6px;
+            background: rgba(255, 107, 107, 0.12);
+            color: var(--bad);
+            font: inherit;
+            line-height: 1;
+            padding: 0.35rem 0.45rem;
+            cursor: pointer;
+          }
+
+          .delete-btn:hover {
+            background: rgba(255, 107, 107, 0.22);
+          }
+
+          .panel-body {
+            flex: 1;
+            overflow: auto;
+            padding: 0.65rem;
+          }
+
+          .panel-body p {
+            line-height: 1.35;
+          }
+
+          .panel-body pre {
+            background: #0f1226;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.6rem;
+            overflow: auto;
+          }
+        </style>
+      </head>
+      <body>
+        <main class="page">
+          <h1 class="title">Agent Canvas</h1>
+          <div class="subtitle">
+            Live visualization canvas for agent-driven panels
+          </div>
+          <div id="status" class="status">Loading panels...</div>
+          <div id="emptyState" class="empty" hidden>
+            No panels yet. Agents can push visualizations via POST /api/panels.
+          </div>
+          <div class="grid-stack" id="canvasGrid"></div>
+        </main>
+        <script>
+          var grid = GridStack.init({
+            column: 12,
+            float: true,
+            margin: 8,
+            cellHeight: 80,
+            disableOneColumnMode: false
+          }, "#canvasGrid");
+
+          var panelCache = new Map();
+          var patchTimer = null;
+          var pendingLayouts = {};
+          var reconnectMs = 1000;
+          var reconnectHandle = null;
+          var eventSource = null;
+          var suppressLayoutEvents = 0;
+
+          var statusEl = document.getElementById("status");
+          var emptyStateEl = document.getElementById("emptyState");
+
+          function setStatus(message, cls) {
+            statusEl.textContent = message;
+            statusEl.className = "status";
+            if (cls) {
+              statusEl.classList.add(cls);
+            }
+          }
+
+          function updateEmptyState() {
+            emptyStateEl.hidden = panelCache.size !== 0;
+          }
+
+          function withSuppressedLayout(work) {
+            suppressLayoutEvents += 1;
+            try {
+              work();
+            } finally {
+              suppressLayoutEvents -= 1;
+            }
+          }
+
+          function panelSelector(panelId) {
+            return ".grid-stack-item[data-panel-id=\"" + panelId + "\"]";
+          }
+
+          function makePanelElement(panel) {
+            var item = document.createElement("div");
+            item.className = "grid-stack-item";
+            item.dataset.panelId = panel.id;
+
+            var content = document.createElement("div");
+            content.className = "grid-stack-item-content panel";
+            content.innerHTML =
+              "<div class=\"panel-header\">" +
+                "<div class=\"panel-title\"></div>" +
+                "<div class=\"panel-actions\">" +
+                  "<button class=\"delete-btn\" type=\"button\">X</button>" +
+                "</div>" +
+              "</div>" +
+              "<div class=\"panel-body\"></div>";
+
+            item.appendChild(content);
+            item.querySelector(".delete-btn").addEventListener("click",
+              function (event) {
+                event.preventDefault();
+                deletePanel(panel.id);
+              });
+            return item;
+          }
+
+          function renderPanelBody(panel, body) {
+            body.innerHTML = "";
+            if (panel.type === "vega-lite") {
+              var spec = panel.spec || {};
+              vegaEmbed(body, spec, { actions: false, renderer: "svg" })
+                .catch(function (error) {
+                  body.textContent = "Failed to render Vega-Lite panel: "
+                    + String(error);
+                });
+              return;
+            }
+
+            if (panel.type === "markdown") {
+              body.innerHTML = marked.parse(panel.content || "");
+              return;
+            }
+
+            body.textContent = "Unsupported panel type: " + String(panel.type);
+          }
+
+          function upsertPanel(panel) {
+            panelCache.set(panel.id, panel);
+            updateEmptyState();
+
+            withSuppressedLayout(function () {
+              var existing = document.querySelector(panelSelector(panel.id));
+              if (!existing) {
+                var created = makePanelElement(panel);
+                grid.addWidget(created, {
+                  x: panel.grid.x,
+                  y: panel.grid.y,
+                  w: panel.grid.w,
+                  h: panel.grid.h
+                });
+                existing = created;
+              } else {
+                grid.update(existing, {
+                  x: panel.grid.x,
+                  y: panel.grid.y,
+                  w: panel.grid.w,
+                  h: panel.grid.h
+                });
+              }
+
+              var titleEl = existing.querySelector(".panel-title");
+              var bodyEl = existing.querySelector(".panel-body");
+              titleEl.textContent = panel.title;
+              renderPanelBody(panel, bodyEl);
+            });
+          }
+
+          function removePanel(panelId) {
+            panelCache.delete(panelId);
+            updateEmptyState();
+            var item = document.querySelector(panelSelector(panelId));
+            if (item) {
+              withSuppressedLayout(function () {
+                grid.removeWidget(item, true, false);
+              });
+            }
+          }
+
+          async function fetchJson(url, options) {
+            var response = await fetch(url, options || {});
+            if (!response.ok) {
+              var text = await response.text();
+              throw new Error("HTTP " + response.status + ": " + text);
+            }
+            return await response.json();
+          }
+
+          async function deletePanel(panelId) {
+            try {
+              await fetchJson("/api/panels/" + panelId, { method: "DELETE" });
+              removePanel(panelId);
+            } catch (error) {
+              setStatus("Delete failed: " + String(error), "bad");
+            }
+          }
+
+          function queueLayoutPatch(panelId, layout) {
+            pendingLayouts[panelId] = layout;
+            if (patchTimer) {
+              clearTimeout(patchTimer);
+            }
+            patchTimer = setTimeout(flushLayoutPatches, 300);
+          }
+
+          async function flushLayoutPatches() {
+            patchTimer = null;
+            var entries = Object.entries(pendingLayouts);
+            pendingLayouts = {};
+            for (var i = 0; i < entries.length; i += 1) {
+              var panelId = entries[i][0];
+              var layout = entries[i][1];
+              try {
+                await fetchJson("/api/panels/" + panelId, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ grid: layout })
+                });
+              } catch (error) {
+                setStatus(
+                  "Layout sync failed for " + panelId + ": " + String(error),
+                  "bad"
+                );
+              }
+            }
+          }
+
+          function connectEvents() {
+            if (eventSource) {
+              eventSource.close();
+            }
+
+            eventSource = new EventSource("/api/events");
+            eventSource.onopen = function () {
+              reconnectMs = 1000;
+              setStatus("Connected", "ok");
+            };
+
+            eventSource.addEventListener("panel-created", function (event) {
+              var panel = JSON.parse(event.data);
+              upsertPanel(panel);
+            });
+
+            eventSource.addEventListener("panel-updated", function (event) {
+              var panel = JSON.parse(event.data);
+              upsertPanel(panel);
+            });
+
+            eventSource.addEventListener("panel-deleted", function (event) {
+              var payload = JSON.parse(event.data);
+              removePanel(payload.id);
+            });
+
+            eventSource.onerror = function () {
+              if (eventSource) {
+                eventSource.close();
+              }
+              setStatus(
+                "Events disconnected, retrying in "
+                + String(reconnectMs / 1000) + "s",
+                "bad"
+              );
+              if (reconnectHandle) {
+                clearTimeout(reconnectHandle);
+              }
+              reconnectHandle = setTimeout(function () {
+                connectEvents();
+              }, reconnectMs);
+              reconnectMs = Math.min(reconnectMs * 2, 30000);
+            };
+          }
+
+          grid.on("change", function (event, changedItems) {
+            if (suppressLayoutEvents > 0) {
+              return;
+            }
+            if (!changedItems) {
+              return;
+            }
+            for (var i = 0; i < changedItems.length; i += 1) {
+              var item = changedItems[i];
+              if (!item.el || !item.el.dataset.panelId) {
+                continue;
+              }
+              queueLayoutPatch(item.el.dataset.panelId, {
+                x: item.x,
+                y: item.y,
+                w: item.w,
+                h: item.h
+              });
+            }
+          });
+
+          async function initialLoad() {
+            try {
+              var panels = await fetchJson("/api/panels");
+              withSuppressedLayout(function () {
+                for (var i = 0; i < panels.length; i += 1) {
+                  upsertPanel(panels[i]);
+                }
+              });
+              updateEmptyState();
+              setStatus("Connected", "ok");
+            } catch (error) {
+              setStatus("Failed to load panels: " + String(error), "bad");
+            }
+          }
+
+          initialLoad();
+          connectEvents();
+        </script>
+      </body>
+    </html>
+  '';
 in
 {
 }
