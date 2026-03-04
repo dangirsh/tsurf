@@ -1,8 +1,8 @@
-NixOS server config for an agentic development platform. Declarative, batteries-included, Tailscale-only.
+A NixOS server where agents are the primary operators. Humans interact with the system through agents, not directly through CLIs or dashboards. NixOS is the OS because its declarative model is what agents reason about best: the entire system state is code, changes are atomic and reproducible, and there's nothing to drift.
 
 ## Design Principles
 
-- **Agent-driven**: agents are first-class workloads with sandboxing, resource isolation, and multi-provider key injection
+- **Agents as operators**: the system is built for agents to read, modify, deploy, and monitor. Tooling and affordances are chosen for agent ergonomics first.
 - **Secure by default**: Tailscale-only internal networking, sops-nix secrets, nftables firewall, fail2ban, srvos hardening
 - **Maximally reproducible**: flake-pinned inputs, ephemeral root with explicit persist manifest, no imperative setup
 - **Forkable**: personal services live in a private overlay flake; public repo is a clean skeleton
