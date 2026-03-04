@@ -349,7 +349,8 @@ let
               return "status-unknown";
             }
 
-            if (active === "active" && sub === "running") {
+            if (active === "active" &&
+                (sub === "running" || sub === "waiting" || sub === "exited")) {
               return "status-ok";
             }
 
@@ -393,11 +394,12 @@ let
             return state.active + "/" + state.sub;
           }
 
-          function makeDetailRow(label, value) {
+          function makeDetailRow(label, value, cls) {
             if (!value && value !== 0) {
               return "";
             }
-            return "<dt>" + label + "</dt><dd>" + value + "</dd>";
+            var ddAttr = cls ? ' class="' + cls + '"' : "";
+            return "<dt>" + label + "</dt><dd" + ddAttr + ">" + value + "</dd>";
           }
 
           function renderTree() {
@@ -507,7 +509,7 @@ let
                   makeDetailRow("Host", entry.host) +
                   makeDetailRow("Port", entry.port) +
                   makeDetailRow("Unit", entry.systemdUnit) +
-                  makeDetailRow("Status", "loading...") +
+                  makeDetailRow("Status", "loading...", "status-val") +
                   makeDetailRow("URL", link) +
                   "</dl>";
 
@@ -564,9 +566,7 @@ let
                 },
                 unit ? statusByUnit[unit] : null
               );
-              const cell = details.querySelector(
-                "dd:nth-of-type(4)"
-              );
+              const cell = details.querySelector("dd.status-val");
               if (cell) {
                 cell.textContent = text;
               }

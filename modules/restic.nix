@@ -80,7 +80,7 @@
     name = "Restic B2 Backup";
     module = "restic.nix";
     description = "Daily backups — 7 daily, 5 weekly, 12 monthly retention";
-    systemdUnit = "restic-backups-b2.service";
+    systemdUnit = "restic-backups-b2.timer";
     icon = "backblaze-b2";
     order = 15;
   };
