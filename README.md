@@ -1,4 +1,4 @@
-A NixOS server where agents are the primary operators. Humans interact with the system through agents, not directly through CLIs or dashboards. NixOS is the OS because its declarative model is what agents reason about best: the entire system state is code, changes are atomic and reproducible, and there's nothing to drift.
+A NixOS server where agents are the primary operators. They read the config, make changes, deploy, and monitor services. NixOS is the OS because its declarative model is what agents reason about best: the entire system state is code, changes are atomic and reproducible, and there's nothing to drift.
 
 ## Design Principles
 
