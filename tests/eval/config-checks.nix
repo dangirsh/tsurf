@@ -76,6 +76,7 @@ in
         "tailscaled"
         "syncthing"
         "nix-dashboard"
+        "agent-canvas"
       ];
       missing = builtins.filter (name: !(builtins.hasAttr name neurosysCfg.systemd.services)) expectedServices;
     in
@@ -225,6 +226,15 @@ in
     (
       neurosysCfg.services.dashboard.enable
       && neurosysCfg.services.dashboard.listenPort == 8082
+    );
+
+  canvas-enabled = mkCheck
+    "canvas-enabled"
+    "agent-canvas is enabled on port 8083"
+    "agent-canvas disabled or wrong port"
+    (
+      neurosysCfg.services.agentCanvas.enable
+      && neurosysCfg.services.agentCanvas.listenPort == 8083
     );
 
   dashboard-entries =
