@@ -72,10 +72,8 @@ in
   };
 
   # --- mautrix-telegram bridge ---
-  # Disabled until Conduit is bootstrapped with registration tokens.
-  # Re-enable after first Conduit boot generates bridge registration files.
   services.mautrix-telegram = {
-    enable = false;
+    enable = true;
     serviceDependencies = [ "conduit.service" ];
     environmentFile = config.sops.templates."mautrix-telegram-env".path;
     settings = {
@@ -101,9 +99,8 @@ in
   };
 
   # --- mautrix-whatsapp bridge ---
-  # Disabled until Conduit is bootstrapped (see mautrix-telegram comment above).
   services.mautrix-whatsapp = {
-    enable = false;
+    enable = true;
     serviceDependencies = [ "conduit.service" ];
     settings = {
       homeserver = {
@@ -132,9 +129,8 @@ in
   };
 
   # --- mautrix-signal bridge ---
-  # Disabled until Conduit is bootstrapped (see mautrix-telegram comment above).
   services.mautrix-signal = {
-    enable = false;
+    enable = true;
     serviceDependencies = [ "conduit.service" ];
     settings = {
       homeserver = {
