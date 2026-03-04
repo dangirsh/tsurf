@@ -57,6 +57,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 59: Logseq PKM Agent Suite** - Three read-only Logseq org-mode MCP tools (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`) added to neurosys MCP server via orgparse. Private overlay wired with vault path + ProtectHome override. logseq-agent-suite GitHub repo with triage/graph-maintenance/review instruction files. Completed 2026-03-02.
 - [x] **Phase 60: Dashboard DM Pairing & Backup Decrypt Guide** - DM guide service (port 8086) with QR pairing for Signal/WhatsApp, phone flow for Telegram, and backup upload/decrypt pipeline (Signal .backup, WhatsApp .zip, Telegram JSON). Matrix provisioning API enabled on all bridges. Completed 2026-03-02.
 - [ ] **Phase 62: LLM Cost Tracking & Display** - Track LLM API costs at the secret proxy level. Per-request cost estimation from token counts + model pricing tables. Daily/weekly/monthly aggregation. Expose via MCP tool (`llm_cost_summary`) and optional Telegram inline display on parts agent responses.
+- [x] **Phase 64: Repo Layout Simplification** - Rename hosts/neurosys→services, hosts/ovh→dev. Remove beads, logseq, docs, spacebot port. Delete modules hub; per-host explicit imports. Merge/inline small modules and packages. Completed 2026-03-04.
 - [ ] **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** - Add Google OAuth 2.0 flow to neurosys MCP server (callback via Tailscale Funnel). Token storage + auto-refresh. Gmail tools (read, search, draft, send, archive) and Calendar tools (list events, search, free/busy, create, update, delete) as MCP tools alongside existing HA/Matrix/Logseq. Parts connects via MCP client with approval gating (send email = contact_human).
 
 ## Phase Details
@@ -1192,3 +1193,13 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 63 to break down)
+
+### Phase 64: Repo Layout Simplification — rename hosts, remove dead code, flatten imports, merge modules
+
+**Goal:** Simplify repo structure for rapid iteration
+**Depends on:** Phase 63
+**Plans:** 2 plans (COMPLETE 2026-03-04)
+
+Plans:
+- [x] 64-01-PLAN.md -- Remove dead code (beads, logseq, docs, spacebot port)
+- [x] 64-02-PLAN.md -- Structural refactoring (rename hosts, flatten imports, merge/inline modules)

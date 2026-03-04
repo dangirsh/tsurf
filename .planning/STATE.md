@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 63 complete. Neurosys MCP server now includes Google OAuth + Gmail + Calendar tools. Next: private overlay secret wiring/deploy run and post-deploy OAuth authorization.
+**Current focus:** Phase 64 complete. Repo layout simplified — hosts renamed, dead code removed, imports flattened, modules merged/inlined.
 
 ## Current Position
 
-Phase: 63 (Google OAuth + Gmail/Calendar MCP tools) — COMPLETE
-Plan: 63-02 — COMPLETE (Calendar tools + packaging/check updates)
-Status: Added `calendar_tools.py` with six Google Calendar MCP tools sharing `google_auth.get_access_token()` flow; registered Calendar tools in `server.py`; updated `pyproject.toml` and `packages/neurosys-mcp.nix` metadata/import checks; `nix build .#neurosys-mcp` and `nix flake check` pass.
-Last activity: 2026-03-02 - Completed phase63-02 implementation + build/check validation in worktree branch.
+Phase: 64 (Repo Layout Simplification) — COMPLETE
+Plan: 64-02 — COMPLETE (structural refactoring)
+Status: Renamed hosts/neurosys→services, hosts/ovh→dev. Removed beads, logseq, docs/, spacebot port. Deleted modules/default.nix hub; per-host explicit imports. Merged direnv/ssh/git into home/default.nix. Inlined zmx→agent-compute.nix, cass→home/cass.nix, repos→hosts/dev. Updated CLAUDE.md. Private overlay updated in lockstep.
+Last activity: 2026-03-04 - Phase 64 complete (both plans executed, nix flake check passes, both repos pushed).
 
-Progress: Phase 63 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
@@ -409,6 +409,7 @@ Recent decisions affecting current work:
 - Phase 60 added: Dashboard DM Pairing & Backup Decrypt Guide — homepage dashboard links to a self-hosted guide for pairing DM bridge services (Signal/WhatsApp/Telegram mautrix) and uploading & decrypting message backups for historical import.
 - Phase 63 added/executed: Google OAuth + Gmail MCP tools — restored public neurosys-mcp server package, added interactive Google authorization routes, token persistence/refresh, and five Gmail tools.
 - Phase 61 added: Nix-Derived Dynamic Dashboard — investigate generating a live dashboard directly from NixOS module expressions (tree view with status/links), replacing manually-maintained homepage config. May use module annotations (e.g., `meta.dashboard`). Goal: dashboard always reflects deployed Nix source, zero drift.
+- Phase 64 added: Repo Layout Simplification — rename hosts/neurosys→services, hosts/ovh→dev; remove beads, logseq, docs/, spacebot port; delete modules/default.nix hub (explicit imports per host); merge small home modules inline; inline small packages; inline repos.nix; update flake.nix + CLAUDE.md.
 
 ### Blockers/Concerns
 
