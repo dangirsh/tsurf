@@ -57,6 +57,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 59: Logseq PKM Agent Suite** - Three read-only Logseq org-mode MCP tools (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`) added to neurosys MCP server via orgparse. Private overlay wired with vault path + ProtectHome override. logseq-agent-suite GitHub repo with triage/graph-maintenance/review instruction files. Completed 2026-03-02.
 - [x] **Phase 60: Dashboard DM Pairing & Backup Decrypt Guide** - DM guide service (port 8086) with QR pairing for Signal/WhatsApp, phone flow for Telegram, and backup upload/decrypt pipeline (Signal .backup, WhatsApp .zip, Telegram JSON). Matrix provisioning API enabled on all bridges. Completed 2026-03-02.
 - [ ] **Phase 62: LLM Cost Tracking & Display** - Track LLM API costs at the secret proxy level. Per-request cost estimation from token counts + model pricing tables. Daily/weekly/monthly aggregation. Expose via MCP tool (`llm_cost_summary`) and optional Telegram inline display on parts agent responses.
+- [x] **Phase 61: Nix-Derived Dynamic Dashboard** - Replace homepage-dashboard with Nix-derived dashboard. NixOS option schema `services.dashboard.entries`, build-time JSON manifest, Python HTTP server + dark-theme HTML frontend, systemd service on port 8082. All modules annotated with dashboard entries. Completed 2026-03-04.
 - [x] **Phase 64: Repo Layout Simplification** - Rename hosts/neurosys→services, hosts/ovh→dev. Remove beads, logseq, docs, spacebot port. Delete modules hub; per-host explicit imports. Merge/inline small modules and packages. Completed 2026-03-04.
 - [ ] **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** - Add Google OAuth 2.0 flow to neurosys MCP server (callback via Tailscale Funnel). Token storage + auto-refresh. Gmail tools (read, search, draft, send, archive) and Calendar tools (list events, search, free/busy, create, update, delete) as MCP tools alongside existing HA/Matrix/Logseq. Parts connects via MCP client with approval gating (send email = contact_human).
 
@@ -1151,14 +1152,15 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 60 to break down)
 
-### Phase 61: Nix-Derived Dynamic Dashboard
+### Phase 61: Nix-Derived Dynamic Dashboard — COMPLETE
 
-**Goal:** Investigate generating a live dashboard directly from NixOS module expressions, replacing the manually-maintained homepage config with a tree view of services, status indicators, and links — all derived from the source Nix. May require lightweight annotations in modules (e.g., `meta.dashboard = { ... }`). The dashboard should always reflect the actual deployed config, eliminating drift between Nix source and what the homepage shows.
+**Goal:** Replace homepage-dashboard with a Nix-derived dynamic dashboard. NixOS option schema `services.dashboard.entries` (attrsOf submodule), build-time JSON manifest via `builtins.toJSON`, Python HTTP server (stdlib only, `writePython3Bin`) serving dark-theme HTML + `/api/status` for live systemd status. All public modules annotated with dashboard entries. Port 8082, DynamicUser systemd service. Old homepage.nix removed.
 **Depends on:** None
-**Plans:** 0 plans
+**Plans:** 2 plans (complete)
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 61 to break down)
+- [x] 61-01: Dashboard Module + Annotations + Frontend (Codex)
+- [x] 61-02: Port swap to 8082, remove old homepage
 
 ### Phase 62: LLM Cost Tracking & Display
 

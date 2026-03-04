@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 64 complete. Repo layout simplified — hosts renamed, dead code removed, imports flattened, modules merged/inlined.
+**Current focus:** Phase 61 complete. Nix-derived dynamic dashboard replaces old homepage-dashboard on port 8082. All modules annotated with `services.dashboard.entries`.
 
 ## Current Position
 
-Phase: 64 (Repo Layout Simplification) — COMPLETE
-Plan: 64-02 — COMPLETE (structural refactoring)
-Status: Renamed hosts/neurosys→services, hosts/ovh→dev. Removed beads, logseq, docs/, spacebot port. Deleted modules/default.nix hub; per-host explicit imports. Merged direnv/ssh/git into home/default.nix. Inlined zmx→agent-compute.nix, cass→home/cass.nix, repos→hosts/dev. Updated CLAUDE.md. Private overlay updated in lockstep.
-Last activity: 2026-03-04 - Phase 64 complete (both plans executed, nix flake check passes, both repos pushed).
+Phase: 61 (Nix-Derived Dynamic Dashboard) — COMPLETE
+Plan: 61-02 — COMPLETE (port swap, homepage removal)
+Status: modules/dashboard.nix created with NixOS option schema, build-time JSON manifest, Python HTTP server, dark-theme HTML frontend, DynamicUser systemd service on port 8082. All public modules annotated with `services.dashboard.entries`. Old homepage.nix removed. 34 eval checks pass.
+Last activity: 2026-03-04 - Phase 61 complete (both plans executed, nix flake check passes). Deployment pending.
 
-Progress: Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 61 complete (2/2 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
