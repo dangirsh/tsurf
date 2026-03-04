@@ -1373,4 +1373,15 @@ in {
       PrivateTmp = true;
     };
   };
+
+  services.dashboard.entries.dm-guide = {
+    name = "DM Pairing Guide";
+    module = "dm-guide.nix";
+    description = "Bridge login helper for Matrix DM onboarding";
+    port = port;
+    url = "http://${config.networking.hostName}:${toString port}";
+    systemdUnit = "dm-guide.service";
+    icon = "matrix";
+    order = 55;
+  };
 }

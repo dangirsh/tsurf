@@ -170,6 +170,20 @@ in
       })
     instances;
 
+  services.dashboard.entries = lib.mapAttrs'
+    (name: instance:
+      lib.nameValuePair "openclaw-${name}" {
+        name = "OpenClaw ${name}";
+        module = "openclaw.nix";
+        description = "AI assistant gateway (port ${toString instance.port})";
+        port = instance.port;
+        url = "http://${config.networking.hostName}:${toString instance.port}";
+        systemdUnit = "openclaw-${name}.service";
+        icon = "openclaw";
+        order = 40;
+      })
+    instances;
+
   system.activationScripts.openclaw-state = {
     text = ''
       set -euo pipefail

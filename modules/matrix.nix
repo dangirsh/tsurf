@@ -157,6 +157,43 @@ in
     };
   };
 
+  services.dashboard.entries.matrix-conduit = {
+    name = "Conduit";
+    module = "matrix.nix";
+    description = "Matrix homeserver (federation disabled)";
+    port = 6167;
+    systemdUnit = "conduit.service";
+    icon = "matrix";
+    order = 50;
+  };
+
+  services.dashboard.entries.mautrix-telegram = {
+    name = "mautrix-telegram";
+    module = "matrix.nix";
+    description = "Telegram bridge";
+    port = 29317;
+    systemdUnit = "mautrix-telegram.service";
+    order = 51;
+  };
+
+  services.dashboard.entries.mautrix-whatsapp = {
+    name = "mautrix-whatsapp";
+    module = "matrix.nix";
+    description = "WhatsApp bridge";
+    port = 29318;
+    systemdUnit = "mautrix-whatsapp.service";
+    order = 52;
+  };
+
+  services.dashboard.entries.mautrix-signal = {
+    name = "mautrix-signal";
+    module = "matrix.nix";
+    description = "Signal bridge";
+    port = 29328;
+    systemdUnit = "mautrix-signal.service";
+    order = 53;
+  };
+
   # Conduit must read bridge registration files (as_token/hs_token validation at startup).
   # Files are owned by their respective bridge users with 0640 permissions.
   # SupplementaryGroups grants Conduit read access without weakening file perms.

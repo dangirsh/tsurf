@@ -140,4 +140,34 @@
       NoNewPrivileges = true;
     };
   };
+
+  services.dashboard.entries.home-assistant = {
+    name = "Home Assistant";
+    module = "home-assistant.nix";
+    description = "Home automation hub";
+    port = 8123;
+    url = "http://${config.networking.hostName}:8123";
+    systemdUnit = "home-assistant.service";
+    icon = "home-assistant";
+    order = 30;
+  };
+
+  services.dashboard.entries.esphome = {
+    name = "ESPHome";
+    module = "home-assistant.nix";
+    description = "ESP device management";
+    port = 6052;
+    url = "http://${config.networking.hostName}:6052";
+    systemdUnit = "esphome.service";
+    icon = "esphome";
+    order = 31;
+  };
+
+  services.dashboard.entries.tailscale-serve-ha = {
+    name = "Tailscale Serve HA";
+    module = "home-assistant.nix";
+    description = "HTTPS proxy to HA for MCP";
+    systemdUnit = "tailscale-serve-ha.service";
+    order = 32;
+  };
 }

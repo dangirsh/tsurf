@@ -75,4 +75,32 @@
       StandardError = "null";
     };
   };
+
+  services.dashboard.entries.restic-backup = {
+    name = "Restic B2 Backup";
+    module = "restic.nix";
+    description = "Daily backups — 7 daily, 5 weekly, 12 monthly retention";
+    systemdUnit = "restic-backups-b2.service";
+    icon = "backblaze-b2";
+    order = 15;
+  };
+
+  services.dashboard.entries.restic-status = {
+    name = "Backup Status Server";
+    module = "restic.nix";
+    description = "HTTP status endpoint for dashboard widgets";
+    port = 9200;
+    systemdUnit = "restic-status-server.service";
+    order = 16;
+  };
+
+  services.dashboard.entries.backblaze-b2 = {
+    name = "Backblaze B2";
+    module = "restic.nix";
+    description = "Cloud backup storage";
+    url = "https://secure.backblaze.com/b2_buckets.htm";
+    icon = "backblaze-b2";
+    external = true;
+    order = 17;
+  };
 }
