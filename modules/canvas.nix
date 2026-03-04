@@ -24,6 +24,7 @@ let
     import re
     import threading
     import time
+    import urllib.request
     import uuid
 
     from http.server import BaseHTTPRequestHandler
@@ -31,8 +32,12 @@ let
 
 
     MAX_BODY_SIZE = 1024 * 1024
+    PROXY_URL = "http://127.0.0.1:9091/v1/messages"
     PANEL_PATH_RE = re.compile(r"^/api/panels/([^/]+)$")
-    PANEL_DATA_PATH_RE = re.compile(r"^/api/panels/([^/]+)/data$")
+    PANEL_DATA_PATH_RE = re.compile(
+        r"^/api/panels/([^/]+)/data$"
+    )
+    GENERATE_PATH = "/api/panels/generate"
 
 
     def utc_now_iso():
@@ -74,6 +79,68 @@ let
 
     def default_grid():
         return {"x": 0, "y": 0, "w": 6, "h": 4}
+
+
+    SYSTEM_PROMPT = (
+        "You generate dashboard panels. "
+        "Return ONLY a JSON object with these fields: "
+        "title (string), type (vega-lite or markdown), "
+        "and either spec (Vega-Lite object) or "
+        "content (markdown string). "
+        "For vega-lite: include $schema, description, "
+        "mark, encoding, and inline data.values. "
+        "No explanation, just the JSON object."
+    )
+
+
+    def call_proxy(prompt):
+        body = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 2048,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "system": SYSTEM_PROMPT,
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            PROXY_URL,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": "placeholder",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(
+                    r.read().decode("utf-8")
+                )
+        except urllib.error.URLError as err:
+            raise RuntimeError(
+                "proxy unreachable: %s" % err
+            ) from err
+        except urllib.error.HTTPError as err:
+            raise RuntimeError(
+                "proxy error %d: %s"
+                % (err.code, err.read().decode("utf-8"))
+            ) from err
+
+
+    def extract_panel_json(response):
+        blocks = response.get("content", [])
+        text = ""
+        for block in blocks:
+            if block.get("type") == "text":
+                text += block.get("text", "")
+        text = text.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            text = "\n".join(lines)
+        return json.loads(text)
 
 
     class PanelStore:
@@ -413,6 +480,44 @@ let
                 self._send_json({"error": str(err)}, status=400)
                 return
 
+            if route == GENERATE_PATH:
+                prompt = payload.get("prompt", "")
+                if not isinstance(prompt, str):
+                    self._send_json(
+                        {"error": "prompt must be a string"},
+                        status=400,
+                    )
+                    return
+                prompt = prompt.strip()
+                if not prompt:
+                    self._send_json(
+                        {"error": "prompt is required"},
+                        status=400,
+                    )
+                    return
+                try:
+                    resp = call_proxy(prompt)
+                    spec = extract_panel_json(resp)
+                    panel = self.store.create_panel(spec)
+                except RuntimeError as err:
+                    self._send_json(
+                        {"error": str(err)},
+                        status=502,
+                    )
+                    return
+                except (
+                    json.JSONDecodeError,
+                    ValueError,
+                ) as err:
+                    self._send_json(
+                        {"error": str(err)},
+                        status=422,
+                    )
+                    return
+                self._publish("panel-created", panel)
+                self._send_json(panel, status=201)
+                return
+
             if route == "/api/panels":
                 try:
                     panel = self.store.create_panel(payload)
@@ -606,6 +711,17 @@ let
             font-size: 1.7rem;
           }
 
+          .dash-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 1.3rem;
+            margin-right: 0.4rem;
+          }
+
+          .dash-link:hover {
+            color: var(--text);
+          }
+
           .subtitle {
             margin-top: 0.3rem;
             color: var(--muted);
@@ -705,11 +821,143 @@ let
             padding: 0.6rem;
             overflow: auto;
           }
+
+          .fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            border: none;
+            border-radius: 50%;
+            background: #5b4fcf;
+            color: #fff;
+            font-size: 1.8rem;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            z-index: 900;
+            transition: background 0.15s;
+          }
+
+          .fab:hover {
+            background: #7a6fe0;
+          }
+
+          .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .modal-overlay.open {
+            display: flex;
+          }
+
+          .modal {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 520px;
+          }
+
+          .modal h2 {
+            margin: 0 0 0.8rem;
+            font-size: 1.15rem;
+          }
+
+          .modal textarea {
+            width: 100%;
+            min-height: 100px;
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.7rem;
+            font: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+          }
+
+          .modal textarea:focus {
+            outline: 2px solid #5b4fcf;
+            outline-offset: -1px;
+          }
+
+          .modal-footer {
+            display: flex;
+            gap: 0.6rem;
+            justify-content: flex-end;
+            margin-top: 0.8rem;
+          }
+
+          .modal-btn {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 1.1rem;
+            font: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            background: var(--panel-alt);
+            color: var(--text);
+          }
+
+          .modal-btn:hover {
+            background: var(--border);
+          }
+
+          .modal-btn.primary {
+            background: #5b4fcf;
+            border-color: #5b4fcf;
+            color: #fff;
+          }
+
+          .modal-btn.primary:hover {
+            background: #7a6fe0;
+          }
+
+          .modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+
+          .modal-error {
+            color: var(--bad);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            min-height: 1.2em;
+          }
+
+          .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 0.4rem;
+          }
+
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
         </style>
       </head>
       <body>
         <main class="page">
-          <h1 class="title">Agent Canvas</h1>
+          <h1 class="title">
+            <a href="//${config.networking.hostName}:${toString config.services.dashboard.listenPort}"
+               class="dash-link" title="Back to dashboard">&larr;</a>
+            Agent Canvas
+          </h1>
           <div class="subtitle">
             Live visualization canvas for agent-driven panels
           </div>
@@ -719,6 +967,19 @@ let
           </div>
           <div class="grid-stack" id="canvasGrid"></div>
         </main>
+        <button class="fab" id="fabBtn" type="button" title="Generate panel">+</button>
+        <div class="modal-overlay" id="genModal">
+          <div class="modal">
+            <h2>Generate Panel</h2>
+            <textarea id="genPrompt"
+              placeholder="Describe the panel you want, e.g. bar chart of programming languages by popularity"></textarea>
+            <div class="modal-error" id="genError"></div>
+            <div class="modal-footer">
+              <button class="modal-btn" id="genCancel" type="button">Cancel</button>
+              <button class="modal-btn primary" id="genSubmit" type="button">Generate</button>
+            </div>
+          </div>
+        </div>
         <script>
           var grid = GridStack.init({
             column: 12,
@@ -982,6 +1243,63 @@ let
 
           initialLoad();
           connectEvents();
+
+          var fabBtn = document.getElementById("fabBtn");
+          var genModal = document.getElementById("genModal");
+          var genPrompt = document.getElementById("genPrompt");
+          var genError = document.getElementById("genError");
+          var genCancel = document.getElementById("genCancel");
+          var genSubmit = document.getElementById("genSubmit");
+
+          function openGenModal() {
+            genPrompt.value = "";
+            genError.textContent = "";
+            genSubmit.disabled = false;
+            genSubmit.innerHTML = "Generate";
+            genModal.classList.add("open");
+            genPrompt.focus();
+          }
+
+          function closeGenModal() {
+            genModal.classList.remove("open");
+          }
+
+          fabBtn.addEventListener("click", openGenModal);
+          genCancel.addEventListener("click", closeGenModal);
+          genModal.addEventListener("click", function (e) {
+            if (e.target === genModal) { closeGenModal(); }
+          });
+
+          genPrompt.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              genSubmit.click();
+            }
+          });
+
+          genSubmit.addEventListener("click", async function () {
+            var prompt = genPrompt.value.trim();
+            if (!prompt) {
+              genError.textContent = "Please describe the panel you want.";
+              return;
+            }
+            genError.textContent = "";
+            genSubmit.disabled = true;
+            genSubmit.innerHTML =
+              "<span class=\"spinner\"></span>Generating...";
+            try {
+              await fetchJson("/api/panels/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: prompt })
+              });
+              closeGenModal();
+            } catch (error) {
+              genError.textContent = String(error);
+              genSubmit.disabled = false;
+              genSubmit.innerHTML = "Generate";
+            }
+          });
         </script>
       </body>
     </html>
