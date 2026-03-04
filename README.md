@@ -9,36 +9,35 @@ NixOS server config for an agentic development platform. Declarative, batteries-
 
 ## What's Included
 
-- **Agent sandboxing** (`agent-compute.nix`)
-  - CLIs: `claude-code`, `codex`, `zmx` via [llm-agents.nix](https://github.com/numtide/llm-agents.nix)
-  - bubblewrap + systemd slice: PID/cgroup/user/IPC namespace isolation
-  - `/run/secrets` and `~/.ssh` hidden from sandbox; API keys injected as env vars
-- **Secret proxy** (`secret-proxy.nix`)
-  - localhost-only proxy on port 9091; real API key never enters the sandbox
-  - projects route via `ANTHROPIC_BASE_URL=http://127.0.0.1:9091`
-- **Ephemeral root** (`impermanence.nix`)
-  - BTRFS subvolume rollback on boot; Docker on separate `@docker` subvolume
-  - explicit `/persist` manifest for stateful paths
-- **Server hardening** (`base.nix`, `networking.nix`)
-  - [srvos](https://github.com/nix-community/srvos) server profile, kernel sysctl hardening
-  - nftables firewall, fail2ban, SSH key-only with ed25519
+- **Agent sandboxing**: bubblewrap + systemd slice isolation for AI coding agents
+  - [`agent-compute.nix`](modules/agent-compute.nix), [`secret-proxy.nix`](modules/secret-proxy.nix)
+  - PID/cgroup/user/IPC namespace isolation; `/run/secrets` hidden from sandbox
+  - API keys read pre-sandbox and injected as env vars; secret proxy on port 9091 keeps real keys out of the sandbox entirely
+- **Server hardening**: locked-down defaults for a public-facing VPS
+  - [`networking.nix`](modules/networking.nix), [`base.nix`](modules/base.nix)
+  - [srvos](https://github.com/nix-community/srvos) server profile, nftables, fail2ban, kernel sysctl hardening
   - build-time assertion prevents internal ports from leaking to public firewall
-- **Secrets** (`secrets.nix`)
-  - sops-nix with age key derived from SSH host key
-  - multi-provider API keys: Anthropic, OpenAI, Google, XAI, OpenRouter, GitHub
-- **Backups** (`restic.nix`)
-  - daily restic to Backblaze B2; blanket `/persist` with exclusions
-- **File sync** (`syncthing.nix`)
-  - Syncthing with Tailscale-only GUI
-- **Dashboards** (`dashboard.nix`, `canvas.nix`)
-  - Nix-derived service dashboard with systemd status; agent visualization canvas
-- **Deployment** (`flake.nix`, `scripts/deploy.sh`)
-  - deploy-rs with magic rollback; `nixos-anywhere` for first install
-  - disko declarative disk layout
-- **Reverse proxy** (`nginx.nix`)
-  - ACME TLS stub; extend vhosts in private overlay
-- **Docker** (`docker.nix`)
-  - `--iptables=false`; NAT via nftables; trusted on Tailscale interface
+- **Ephemeral root**: BTRFS subvolume rollback on every boot
+  - [`impermanence.nix`](modules/impermanence.nix)
+  - explicit `/persist` manifest; Docker on separate `@docker` subvolume
+- **Secrets management**: sops-nix with age key derived from SSH host key
+  - [`secrets.nix`](modules/secrets.nix)
+  - multi-provider API keys (Anthropic, OpenAI, Google, XAI, OpenRouter, GitHub)
+- **Backups**: daily restic to Backblaze B2
+  - [`restic.nix`](modules/restic.nix)
+  - blanket `/persist` with exclusions
+- **Dashboards**: Nix-derived service status and agent visualization
+  - [`dashboard.nix`](modules/dashboard.nix), [`canvas.nix`](modules/canvas.nix)
+- **File sync**: Syncthing with Tailscale-only GUI
+  - [`syncthing.nix`](modules/syncthing.nix)
+- **Deployment**: deploy-rs with magic rollback
+  - [`flake.nix`](flake.nix), [`scripts/deploy.sh`](scripts/deploy.sh)
+  - `nixos-anywhere` for first install; disko declarative disk layout
+- **Reverse proxy**: nginx stub with ACME TLS
+  - [`nginx.nix`](modules/nginx.nix)
+  - extend vhosts in private overlay
+- **Docker**: engine with `--iptables=false`, NAT via nftables
+  - [`docker.nix`](modules/docker.nix)
 
 ## Example Use Cases
 
