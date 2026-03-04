@@ -6,10 +6,36 @@
 
   imports = [
     ./bash.nix
-    ./git.nix
-    ./ssh.nix
-    ./direnv.nix
     ./cass.nix
     ./agentic-dev-base.nix
   ];
+
+  # Inlined from git.nix
+  programs.git = {
+    enable = true;
+    userName = "Your Name";
+    userEmail = "your@email.com";
+  };
+
+  programs.gh = {
+    enable = true;
+    # Do NOT set settings -- breaks gh auth due to read-only config.yml symlink
+    # Auth uses GH_TOKEN env var from bash.nix initExtra
+  };
+
+  # Inlined from ssh.nix
+  programs.ssh = {
+    enable = true;
+    controlMaster = "auto";
+    controlPersist = "10m";
+    serverAliveInterval = 60;
+    hashKnownHosts = true;
+  };
+
+  # Inlined from direnv.nix
+  programs.direnv = {
+    enable = true;
+    enableBashIntegration = true;
+    nix-direnv.enable = true;
+  };
 }
