@@ -197,11 +197,11 @@ in
   # Conduit must read bridge registration files (as_token/hs_token validation at startup).
   # Files are owned by their respective bridge users with 0640 permissions.
   # SupplementaryGroups grants Conduit read access without weakening file perms.
-  systemd.services.conduit.serviceConfig.SupplementaryGroups = [
-    "mautrix-signal"
-    "mautrix-whatsapp"
-    "mautrix-telegram"
-  ];
+  # Only add groups when bridges are enabled (groups don't exist when bridges are disabled).
+  systemd.services.conduit.serviceConfig.SupplementaryGroups =
+    lib.optional config.services.mautrix-signal.enable "mautrix-signal"
+    ++ lib.optional config.services.mautrix-whatsapp.enable "mautrix-whatsapp"
+    ++ lib.optional config.services.mautrix-telegram.enable "mautrix-telegram";
 
   # libsignal JIT requires W+X memory pages (see MTX-03)
   # Guard with mkIf: when enable=false, omit the override entirely so no bare unit is generated.
