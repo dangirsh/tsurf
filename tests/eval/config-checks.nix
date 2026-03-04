@@ -226,6 +226,33 @@ in
       neurosysCfg.services.homepage-dashboard.enable
       && neurosysCfg.services.homepage-dashboard.listenPort == 8082
     );
+
+  dashboard-enabled = mkCheck
+    "dashboard-enabled"
+    "nix-dashboard is enabled on port 8083"
+    "nix-dashboard disabled or wrong port"
+    (
+      neurosysCfg.services.dashboard.enable
+      && neurosysCfg.services.dashboard.listenPort == 8083
+    );
+
+  dashboard-entries =
+    let
+      entryCount =
+        builtins.length (builtins.attrNames neurosysCfg.services.dashboard.entries);
+    in
+    mkCheck
+      "dashboard-entries"
+      "dashboard has ${toString entryCount} entries (>= 15)"
+      "dashboard has too few entries: ${toString entryCount}"
+      (entryCount >= 15);
+
+  dashboard-manifest = pkgs.runCommandNoCC "dashboard-manifest" { } ''
+    echo '${builtins.toJSON (builtins.fromJSON neurosysCfg.environment.etc."dashboard/manifest.json".text)}' \
+      | ${jq} . > /dev/null
+    echo "PASS: dashboard manifest is valid JSON"
+    touch "$out"
+  '';
 }
 
 # --- Private overlay test extension pattern ---
