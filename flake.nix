@@ -67,10 +67,8 @@
 
       evalChecks = import ./tests/eval/config-checks.nix { inherit self pkgs lib; };
     in {
-      nixosModules.default = import ./modules;
-
-      nixosConfigurations.neurosys = mkHost ./hosts/neurosys;
-      nixosConfigurations.ovh = mkHost ./hosts/ovh;
+      nixosConfigurations.neurosys = mkHost ./hosts/services;
+      nixosConfigurations.ovh = mkHost ./hosts/dev;
 
       deploy.nodes.neurosys = {
         hostname = "100.104.43.26"; # temp: SSH config maps "neurosys" to stale IP 100.113.239.14

@@ -50,18 +50,13 @@ mcp = FastMCP(
     name="neurosys",
     instructions=(
         "Control Home Assistant entities, query Matrix/Conduit messages, "
-        "search the Logseq PKM vault, and access Gmail and Google Calendar. "
+        "and access Gmail and Google Calendar. "
         "Use ha_list_services before calling unknown services. "
         "Matrix tools return errors when Matrix is not configured. "
-        "Logseq tools return errors when LOGSEQ_VAULT_PATH is not set. "
         "Gmail and Calendar tools return errors when Google OAuth is not configured."
     ),
     auth=_auth_provider,
 )
-
-# --- Logseq vault tools (Phase 59) ---
-import logseq as _logseq_tools
-_logseq_tools.register(mcp)
 
 # --- Google OAuth + Gmail tools (Phase 63) ---
 import google_auth as _google_auth

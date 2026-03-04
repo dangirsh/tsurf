@@ -7,7 +7,7 @@ NixOS server config for an agentic development platform. Declarative, batteries-
 - **Agents as first-class workloads**: bubblewrap sandboxing, cgroup isolation, multi-provider key injection
 - **Secrets never in the Nix store**: sops-nix age-encrypted, decrypted at activation
 - **Impermanent root**: BTRFS ephemeral `/` subvolume, explicit `/persist` state manifest
-- **Private config via overlay**: personal services and secrets in a separate private flake repo (see [docs/private-overlay.md](docs/private-overlay.md))
+- **Private config via overlay**: personal services and secrets in a separate private flake repo
 
 ## Modules
 
@@ -66,7 +66,7 @@ Build-time assertion prevents any `internalOnlyPorts` from appearing in `allowed
 
 ## Quick Start
 
-1. Fork this repo. Create your private overlay (see [docs/private-overlay.md](docs/private-overlay.md)).
+1. Fork this repo. Create your private overlay (consume `nixosModules.default` from a private flake).
 2. Generate age key from SSH host key (`ssh-to-age`). Encrypt secrets with `sops`.
 3. Deploy: `nixos-anywhere` for first install; `nix run .#deploy-rs` (or `scripts/deploy.sh`) for updates.
 4. Launch agents: `claude` or `codex` from any project directory

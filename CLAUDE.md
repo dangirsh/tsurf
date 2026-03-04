@@ -5,14 +5,16 @@ NixOS configuration for the `neurosys` server (and future machines). Declarative
 ## Project Structure
 
 ```
-flake.nix              # Entrypoint — inputs (7), outputs, nixosConfigurations.neurosys
-flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-nix, disko, parts, claw-swap, llm-agents)
+flake.nix              # Entrypoint — inputs, outputs, nixosConfigurations.neurosys + ovh
+flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-nix, disko, llm-agents)
 hosts/
-  neurosys/
-    default.nix        # Host-specific NixOS config (imports all modules)
+  services/
+    default.nix        # Contabo VPS host config (imports all shared + host-specific modules)
     hardware.nix       # Hardware/disk config (disko, Contabo VPS)
+  dev/
+    default.nix        # OVH dev host config (imports shared modules + inlined repo cloning)
+    hardware.nix       # Hardware/disk config (disko, OVH VPS)
 modules/
-  default.nix          # Import hub for all modules
   base.nix             # Nix settings, system packages, kernel sysctl hardening
   boot.nix             # GRUB bootloader config
   networking.nix       # Firewall (nftables), SSH (hardened), Tailscale, fail2ban
@@ -22,24 +24,17 @@ modules/
   syncthing.nix        # Syncthing file sync service
   home-assistant.nix   # Home Assistant + ESPHome
   homepage.nix         # Homepage dashboard (Tailscale-only)
-  agent-compute.nix    # Agent CLI (claude, codex), bubblewrap sandbox, Podman
-  repos.nix            # Idempotent repo cloning on activation
+  agent-compute.nix    # Agent CLI (claude, codex), Podman; zmx inlined here
   restic.nix           # Restic backup to Backblaze B2
 home/
-  default.nix          # home-manager import hub
+  default.nix          # home-manager config hub; git/ssh/direnv inlined here
   bash.nix             # Bash shell + API key exports
-  git.nix              # Git + gh CLI config
-  ssh.nix              # SSH client config
-  direnv.nix           # Direnv auto-loading
-  cass.nix             # CASS indexer timer
+  cass.nix             # CASS indexer timer; cass binary inlined here
   agentic-dev-base.nix # agentic-dev-base symlinks via activation
-packages/
-  zmx.nix              # Pre-built zmx terminal multiplexer binary
-  cass.nix             # Pre-built CASS indexer binary
 scripts/
   deploy.sh            # Deploy script (local/remote build, locking, container health check)
 secrets/
-  neurosys.yaml            # sops-encrypted secrets (7 secrets + 1 template)
+  neurosys.yaml        # sops-encrypted secrets (7 secrets + 1 template)
 ```
 
 ## Key Decisions
@@ -51,6 +46,7 @@ secrets/
 - **Agent tooling**: llm-agents overlay provides claude-code + codex; bubblewrap sandbox via agent-spawn
 - **SSH hardened**: Port 22 on public firewall (key-only, fail2ban-protected); deploy prefers Tailscale MagicDNS but public SSH enables bootstrap/recovery when Tailscale is unavailable
 - **Kernel hardening**: sysctl settings restrict dmesg, kptr, BPF, ICMP redirects
+- **Per-host explicit imports (no modules hub)**: Each host/default.nix lists all imports directly; modules/default.nix removed to eliminate indirection
 
 ## Conventions
 

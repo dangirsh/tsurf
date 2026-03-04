@@ -2,9 +2,19 @@
   imports = [
     ./hardware.nix
     ./disko-config.nix
-    ../../modules
+    # Shared modules (previously in modules/default.nix hub)
+    ../../modules/base.nix
+    ../../modules/boot.nix
+    ../../modules/users.nix
+    ../../modules/networking.nix
+    ../../modules/secrets.nix
+    ../../modules/docker.nix
+    ../../modules/syncthing.nix
+    ../../modules/agent-compute.nix
+    ../../modules/secret-proxy.nix
+    ../../modules/impermanence.nix
+    # Host-specific services
     ../../modules/openclaw.nix
-    # Contabo-only services
     ../../modules/homepage.nix
     ../../modules/restic.nix
     ../../modules/matrix.nix
