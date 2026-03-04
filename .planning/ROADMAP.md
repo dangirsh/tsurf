@@ -54,12 +54,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 55: Evaluate absurd Durable Execution** - Research-only. All 5 components REJECT or DEFER. No adoption warranted. Conway Automaton DEFER pending upstream plugin support or permanent fork.
 - [x] **Phase 56: Voice Interface Research — Low-Latency Parts Assistant** - Research and compare approaches (Claude Android voice+MCP baseline, ClawdTalk/Telnyx PSTN, WebRTC-native with LiveKit/Daily/Vapi) for a Parts-aware voice assistant on Android + Mac. Produce recommendation + Phase 57 implementation plan.
 - [ ] **Phase 57: OVH Re-bootstrap as neurosys-dev** - Fresh Ubuntu 25 on OVH VPS. nixos-anywhere install, hostname neurosys-dev, dev agent workloads only (services stay on Contabo). Verify SSH, bootstrap, Tailscale, agent tooling.
+- [x] **Phase 58: Agent Canvas — Generic Visualization Service** - Agent-driven visualization canvas on port 8083. Agents push Vega-Lite charts and markdown panels via REST API. Persistent panels, real-time SSE, GridStack.js layout. Single NixOS module (canvas.nix) with writePython3Bin stdlib-only server. Tailscale-only. Completed 2026-03-04.
 - [x] **Phase 59: Logseq PKM Agent Suite** - Three read-only Logseq org-mode MCP tools (`logseq_get_todos`, `logseq_search_pages`, `logseq_get_page`) added to neurosys MCP server via orgparse. Private overlay wired with vault path + ProtectHome override. logseq-agent-suite GitHub repo with triage/graph-maintenance/review instruction files. Completed 2026-03-02.
 - [x] **Phase 60: Dashboard DM Pairing & Backup Decrypt Guide** - DM guide service (port 8086) with QR pairing for Signal/WhatsApp, phone flow for Telegram, and backup upload/decrypt pipeline (Signal .backup, WhatsApp .zip, Telegram JSON). Matrix provisioning API enabled on all bridges. Completed 2026-03-02.
 - [ ] **Phase 62: LLM Cost Tracking & Display** - Track LLM API costs at the secret proxy level. Per-request cost estimation from token counts + model pricing tables. Daily/weekly/monthly aggregation. Expose via MCP tool (`llm_cost_summary`) and optional Telegram inline display on parts agent responses.
 - [x] **Phase 61: Nix-Derived Dynamic Dashboard** - Replace homepage-dashboard with Nix-derived dashboard. NixOS option schema `services.dashboard.entries`, build-time JSON manifest, Python HTTP server + dark-theme HTML frontend, systemd service on port 8082. All modules annotated with dashboard entries. Completed 2026-03-04.
 - [x] **Phase 64: Repo Layout Simplification** - Rename hosts/neurosys→services, hosts/ovh→dev. Remove beads, logseq, docs, spacebot port. Delete modules hub; per-host explicit imports. Merge/inline small modules and packages. Completed 2026-03-04.
 - [ ] **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** - Add Google OAuth 2.0 flow to neurosys MCP server (callback via Tailscale Funnel). Token storage + auto-refresh. Gmail tools (read, search, draft, send, archive) and Calendar tools (list events, search, free/busy, create, update, delete) as MCP tools alongside existing HA/Matrix/Logseq. Parts connects via MCP client with approval gating (send email = contact_human).
+- [ ] **Phase 65: Open Source Cleanup (v2)** - Strip public repo to a minimal, forkable skeleton for agentic NixOS servers. Move personal service modules (automaton, matrix, openclaw, dm-guide, home-assistant) to private overlay. Trim host imports and impermanence.nix to core-only. Remove agentic-dev-base.nix (personal repo). Clean up flake.nix exports (drop openclaw package). Add "Example Use Cases" section to README documenting generic versions of real deployments (autonomous agents, chat bridges, home automation, multi-instance SaaS, LLM cost tracking) so users see what's possible without exposing the exact private setup. Result: public repo contains only security hardening, agent sandboxing, secret proxy, deployment infra, backup, dashboard framework, and overlay extension points.
 
 ## Phase Details
 
@@ -1125,14 +1127,15 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 57 to break down)
 
-### Phase 58: Research: Agent-Driven Dynamic Dashboard for Neurosys
+### Phase 58: Agent Canvas — Generic Visualization Service for Agents
 
-**Goal:** [To be planned]
-**Depends on:** Phase 57
-**Plans:** 0 plans
+**Goal:** Build a generic agent-driven visualization canvas service. Agents push Vega-Lite charts and markdown panels via REST API. Persistent panels, real-time SSE updates, GridStack.js drag-and-drop layout. Port 8083, Tailscale-only. Single NixOS module (modules/canvas.nix) following writePython3Bin stdlib-only pattern.
+**Depends on:** Phase 61
+**Research:** Complete (58-RESEARCH.md — custom minimal canvas recommended, Grafana/Observable/Evidence/Panel disqualified)
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 58 to break down)
+- [ ] 58-01-PLAN.md -- Agent Canvas Service: module, Python server (REST API + SSE), HTML/JS client (Vega-Lite + GridStack + marked), systemd service, networking + host integration, eval checks
 
 ### Phase 59: Logseq PKM Agent Suite
 
@@ -1205,3 +1208,35 @@ Plans:
 Plans:
 - [x] 64-01-PLAN.md -- Remove dead code (beads, logseq, docs, spacebot port)
 - [x] 64-02-PLAN.md -- Structural refactoring (rename hosts, flatten imports, merge/inline modules)
+
+### Phase 65: Open Source Cleanup (v2) — minimal forkable skeleton
+
+**Goal:** Strip the public repo down to a minimal, forkable skeleton for agentic NixOS servers. The public repo should contain only the core infrastructure (security hardening, agent sandboxing, secret proxy, deployment, backup, dashboard framework) and clear overlay extension points. All personal service modules move to the private overlay. README gains an "Example Use Cases" section with generic descriptions of real deployments so users see what's possible without exposing the exact private setup.
+
+**Depends on:** Phase 64 (repo layout simplification)
+
+**Key areas:**
+1. **Remove personal modules from public repo** — automaton.nix, matrix.nix, openclaw.nix, dm-guide.nix, home-assistant.nix all move to private overlay (they're already overridden there, so this is just deleting the public copies)
+2. **Trim host imports** — hosts/services/default.nix and hosts/dev/default.nix should only import core modules; personal modules imported by private overlay
+3. **Clean impermanence.nix** — remove personal service state dirs (openclaw, mautrix, automaton, matrix-conduit); leave only core persist paths. Add comments showing how to add service-specific paths
+4. **Clean flake.nix** — drop openclaw and neurosys-mcp package exports; keep deploy-rs only
+5. **Remove home/agentic-dev-base.nix** — personal repo reference; inline the pattern as a comment in home/default.nix if useful
+6. **Clean networking.nix internalOnlyPorts** — remove personal service ports; keep only core ports (dashboard, syncthing GUI, secret proxy). Add comment showing how to add ports for private services
+7. **README "Example Use Cases"** — document generic versions of real deployments: autonomous AI agents (automaton pattern), chat bridge hub (matrix + mautrix pattern), home automation (HA + ESPHome pattern), multi-instance SaaS (openclaw fleet pattern), LLM cost tracking (secret proxy extension). Each with enough detail to be a starting point, none exposing exact private config
+8. **README cleanup** — update module table (remove personal modules), verify all sections match slimmed-down repo
+
+**Success Criteria** (what must be TRUE):
+  1. `nix flake check` passes with only core modules
+  2. No personal service names (automaton, openclaw, matrix, dm-guide, home-assistant) in any public module
+  3. `grep -r "conway\|openclaw\|mautrix\|dm-guide" modules/` returns zero matches
+  4. README has "Example Use Cases" section with at least 4 generic examples
+  5. Private overlay still works (imports moved modules from its own tree)
+  6. hosts/services/default.nix imports only core modules (base, boot, networking, users, secrets, docker, syncthing, agent-compute, secret-proxy, impermanence, restic, dashboard, nginx)
+  7. impermanence.nix contains no personal service paths
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 65-01-PLAN.md -- Move personal modules and packages to private overlay (wave 1)
+- [ ] 65-02-PLAN.md -- Clean core modules: remove personal service references (wave 2, depends on 65-01)
+- [ ] 65-03-PLAN.md -- README update: example use cases and module table cleanup (wave 3, depends on 65-02)
