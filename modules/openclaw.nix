@@ -71,6 +71,13 @@
 # @decision OCL-21: StateDirectoryMode 0700, openclaw.json 0600, credentials/ 0700.
 # @rationale: Security audit flagged 750/640/755 modes. State dir and config contain session keys
 #   and channel tokens; restrict to owner-only.
+#
+# @decision OCL-22: Set SHELL=/bin/sh and PATH=/run/current-system/sw/bin for agent exec.
+# @rationale: Service users have nologin as login shell (/etc/passwd) and systemd's default PATH
+#   only includes coreutils/findutils/grep/sed. OpenClaw's resolveShell() falls back to /bin/sh
+#   when SHELL is nologin, but agent-spawned commands need access to bash, node, git, curl, npm
+#   etc. Adding the system sw/bin to PATH makes these discoverable without relaxing any other
+#   hardening (ProtectSystem=strict, NoNewPrivileges, CapabilityBoundingSet="" all remain).
 { config, lib, pkgs, ... }:
 
 let
@@ -228,6 +235,8 @@ ${lib.concatMapStringsSep "\n"
           Environment = [
             "HOME=/var/lib/openclaw-${name}"
             "NODE_OPTIONS=--max-old-space-size=4096"  # OCL-18: 4GB V8 heap (50% of 8G MemoryMax)
+            "SHELL=/bin/sh"                           # OCL-22: override nologin from /etc/passwd
+            "PATH=/run/current-system/sw/bin"          # OCL-22: system binaries for agent exec
           ];
           EnvironmentFile = config.sops.templates."openclaw-${name}-env".path;
           ExecStart = "${openclawPkg}/bin/openclaw gateway --allow-unconfigured --port ${toString instance.port}";
