@@ -9,11 +9,11 @@
 { lib, buildNpmPackage, fetchurl, runCommand, gnutar, gzip, nodejs_22, python3 }:
 
 let
-  version = "2026.3.1";
+  version = "2026.3.2";
 
   upstreamTarball = fetchurl {
     url = "https://registry.npmjs.org/openclaw/-/openclaw-${version}.tgz";
-    hash = "sha256-xIUaRAmB1nt/5A/leOCXNb37uNV0Tui/RIHrhh4B9hg=";
+    hash = "sha256-PsmckwA3JcOvs9jDI29/twVGR9FR3Ce54CVuADcvMbc=";
   };
 
   # Upstream tarball does not ship package-lock.json. Inject a generated lockfile
@@ -35,7 +35,7 @@ buildNpmPackage rec {
   makeCacheWritable = true;
   dontNpmBuild = true;
 
-  npmDepsHash = "sha256-+ArJVHAJBsjXVuiVyTAoWkVTmBplzCS+1Ar03A8xlBI=";
+  npmDepsHash = "sha256-KvawSBKYVjJx1WVShtR4WpyeOuVPNJTbuzABrPsUpFI=";
   npmFlags = [ "--ignore-scripts" "--legacy-peer-deps" ];
   nativeBuildInputs = [ python3 nodejs_22 ];
 

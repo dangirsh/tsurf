@@ -51,9 +51,10 @@
 #   when alexia/ari try to start on those ports, openclaw detects "another gateway instance already listening"
 #   and exits. Moved to 18800/18810 which have clean auxiliary ranges (18802/18803 and 18812/18813).
 #
-# @decision OCL-18: NODE_OPTIONS heap 1GB, MemoryHigh 1.5GB, MemoryMax 2GB.
-# @rationale: Instances with WhatsApp session history exhaust the initial 384M V8 heap cap on startup.
-#   Server has 96GB RAM; 6 instances at 2GB max = 12GB worst case — well within budget.
+# @decision OCL-18: NODE_OPTIONS heap 4GB, MemoryHigh 6GB, MemoryMax 8GB, CPUQuota 150%.
+# @rationale: Resource limits set to 50% of neurosys total ÷ 6 instances (18 vCPU, 96 GB RAM).
+#   Each instance: 1.5 vCPU (9 vCPU fleet total) and 8 GB RAM (48 GB fleet total).
+#   V8 heap capped at 4 GB (50% of MemoryMax), leaving 4 GB for native heap/threads.
 #
 # @decision OCL-17: No SystemCallFilter; AF_NETLINK required in RestrictAddressFamilies.
 # @rationale: Node.js + native sqlite3 addons use an unpredictable syscall surface.
@@ -226,7 +227,7 @@ ${lib.concatMapStringsSep "\n"
           StateDirectoryMode = "0700";  # OCL-21
           Environment = [
             "HOME=/var/lib/openclaw-${name}"
-            "NODE_OPTIONS=--max-old-space-size=1024"  # OCL-18: 1GB V8 heap — instances with WhatsApp session history need >384M
+            "NODE_OPTIONS=--max-old-space-size=4096"  # OCL-18: 4GB V8 heap (50% of 8G MemoryMax)
           ];
           EnvironmentFile = config.sops.templates."openclaw-${name}-env".path;
           ExecStart = "${openclawPkg}/bin/openclaw gateway --allow-unconfigured --port ${toString instance.port}";
@@ -251,10 +252,10 @@ ${lib.concatMapStringsSep "\n"
           MemoryDenyWriteExecute = false;  # OCL-16: Node.js V8 JIT requires W^X pages
           CapabilityBoundingSet = "";      # no capabilities needed — port > 1024
 
-          # --- Resource limits ---
-          MemoryHigh = "1500M";  # OCL-18: instances with session history can use >512M; server has 96GB
-          MemoryMax = "2G";
-          CPUQuota = "100%";
+          # --- Resource limits (OCL-18: 50% of neurosys total ÷ 6 instances) ---
+          MemoryHigh = "6G";
+          MemoryMax = "8G";
+          CPUQuota = "150%";
           TasksMax = 200;
         };
       })
