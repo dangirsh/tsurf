@@ -5,12 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "neurosys-mcp"
 version = "0.3.0"
-description = "Neurosys MCP server — Home Assistant, Matrix, Logseq, Gmail, and Calendar tools"
+description = "Neurosys MCP server — Home Assistant, Matrix, Gmail, and Calendar tools"
 requires-python = ">=3.11"
 dependencies = [
   "fastmcp>=2.12.4,<3.0.0",
   "httpx>=0.28.1,<1.0.0",
-  "orgparse",
   "google-auth",
   "requests",
 ]
@@ -19,4 +18,4 @@ dependencies = [
 neurosys-mcp = "server:main"
 
 [tool.setuptools]
-py-modules = ["server", "auth", "logseq", "google_auth", "gmail", "calendar_tools"]
+py-modules = ["server", "auth", "google_auth", "gmail", "calendar_tools"]

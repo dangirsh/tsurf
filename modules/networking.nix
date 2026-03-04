@@ -28,7 +28,6 @@ let
     "18792" = "openclaw-ari";
     "18793" = "openclaw-jordan-claw";
     "18794" = "openclaw-tal-claw";
-    "19898" = "spacebot";
     "29317" = "mautrix-telegram";
     "29318" = "mautrix-whatsapp";
     "29328" = "mautrix-signal";
