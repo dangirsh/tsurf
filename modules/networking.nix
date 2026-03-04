@@ -15,23 +15,13 @@ let
   # All known service ports listed here for comprehensive assertion coverage.
   # Private overlay services may also add ports in their own networking override.
   internalOnlyPorts = {
-    "6052" = "esphome";
-    "6167" = "matrix-conduit";
+    # Core services — always internal
     "8082" = "nix-dashboard";
     "8083" = "agent-canvas";
-    "8086" = "dm-guide";
-    "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
     "9091" = "anthropic-secret-proxy";
-    "18789" = "openclaw-mark";
-    "18790" = "openclaw-lou";
-    "18791" = "openclaw-alexia";
-    "18792" = "openclaw-ari";
-    "18793" = "openclaw-jordan-claw";
-    "18794" = "openclaw-tal-claw";
-    "29317" = "mautrix-telegram";
-    "29318" = "mautrix-whatsapp";
-    "29328" = "mautrix-signal";
+    # Private overlay: add your service ports here. Example:
+    #   "8123" = "home-assistant";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;

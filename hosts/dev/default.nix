@@ -27,9 +27,9 @@
   system.activationScripts.clone-repos = {
     deps = [ "users" ];
     text = ''
-      repos=(
-        "dangirsh/agentic-dev-base"
-      )
+      # Add repos to clone on activation. Example:
+      #   repos=("your-org/your-repo")
+      repos=()
       CLONE_DIR="/data/projects"
       GH_TOKEN="$(cat ${config.sops.secrets."github-pat".path} 2>/dev/null || true)"
       CRED_FILE=$(mktemp)

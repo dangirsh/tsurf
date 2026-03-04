@@ -21,33 +21,9 @@
     secrets."openrouter-api-key" = { owner = "dev"; };
     secrets."github-pat" = { owner = "dev"; };
 
-    secrets."conway-api-key" = {
-      sopsFile = lib.mkForce ../secrets/neurosys.yaml;
-    };
-
-    secrets."cloudflare-dns-token" = { owner = "dev"; };
-
-    # @decision SEC-03: Per-secret sopsFile override for host-specific secrets.
-    # @rationale: defaultSopsFile is set per-host in hosts/*/default.nix (neurosys.yaml
-    #   or ovh.yaml). These secrets only exist in neurosys.yaml regardless of host.
-    #   mkForce overrides the host default to point at the correct sops file.
-    #   The private overlay's matrix.nix uses mkOverride 40 (beats mkForce=50)
-    #   to redirect OVH-only secrets to ovh.yaml.
-    secrets."openclaw-mark-gateway-token"        = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-    secrets."openclaw-lou-gateway-token"         = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-    secrets."openclaw-alexia-gateway-token"      = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-    secrets."openclaw-ari-gateway-token"         = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-    secrets."openclaw-jordan-claw-gateway-token" = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-    secrets."openclaw-tal-claw-gateway-token"    = { sopsFile = lib.mkForce ../secrets/neurosys.yaml; };
-
-    # --- Matrix / messaging bridge secrets ---
-    # telegram-api-id and telegram-api-hash managed by parts module (parts.yaml)
-    secrets."matrix-registration-token" = {
-      sopsFile = lib.mkForce ../secrets/neurosys.yaml;
-    };
-
-    # Cachix auth token — used by deploy.sh to push system closure after each deploy
-    secrets."cachix-auth-token" = {};
+    # Private overlay: add service-specific secrets in your own secrets module.
+    # Example:
+    #   secrets."my-service-token" = { sopsFile = ../secrets/my-secrets.yaml; };
 
     templates."restic-b2-env" = {
       content = ''

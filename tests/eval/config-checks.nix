@@ -86,24 +86,6 @@ in
       "missing neurosys services: ${builtins.concatStringsSep ", " missing}"
       (missing == [ ]);
 
-  openclaw-services-neurosys =
-    let
-      expectedServices = [
-        "openclaw-mark"
-        "openclaw-lou"
-        "openclaw-alexia"
-        "openclaw-ari"
-        "openclaw-jordan-claw"
-        "openclaw-tal-claw"
-      ];
-      missing = builtins.filter (name: !(builtins.hasAttr name neurosysCfg.systemd.services)) expectedServices;
-    in
-    mkCheck
-      "openclaw-services-neurosys"
-      "all 6 openclaw native services are defined"
-      "missing openclaw services: ${builtins.concatStringsSep ", " missing}"
-      (missing == [ ]);
-
   expected-services-ovh =
     let
       expectedServices = [
@@ -244,9 +226,9 @@ in
     in
     mkCheck
       "dashboard-entries"
-      "dashboard has ${toString entryCount} entries (>= 15)"
+      "dashboard has ${toString entryCount} entries (>= 5)"
       "dashboard has too few entries: ${toString entryCount}"
-      (entryCount >= 15);
+      (entryCount >= 5);
 
   dashboard-manifest = pkgs.runCommandNoCC "dashboard-manifest" { } ''
     echo '${builtins.toJSON (builtins.fromJSON neurosysCfg.environment.etc."dashboard/manifest.json".text)}' \

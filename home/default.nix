@@ -7,7 +7,7 @@
   imports = [
     ./bash.nix
     ./cass.nix
-    ./agentic-dev-base.nix
+    # Private overlay: add agentic-dev-base.nix, project-specific git config, etc.
   ];
 
   # Inlined from git.nix

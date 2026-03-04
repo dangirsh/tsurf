@@ -2,7 +2,7 @@
 # @decision IMP-01: BTRFS subvolume rollback (not tmpfs) — server workloads need disk-backed root
 # @decision IMP-02: Docker on own @docker subvolume (not impermanence bind-mount) — avoids overlay2 nested mount conflicts
 # @decision IMP-03: Persist whole /home/dev (not per-file) — simpler for server, covers Syncthing data + config
-# @decision IMP-04: /var/lib/private covers DynamicUser services (ESPHome, future services)
+# @decision IMP-04: /var/lib/private covers DynamicUser services
 { config, lib, ... }: {
   # @decision IMP-05: Fix /etc permissions for sshd strict mode checks.
   # Impermanence file bind-mounts create parent dirs as 775 (group-writable).
@@ -46,21 +46,10 @@
       "/var/lib/systemd/linger"            # User linger state for dev
 
       # --- Service data ---
-      "/var/lib/fail2ban"                  # Ban database (nice-to-have; regenerated if lost)
-      "/var/lib/hass"                      # Home Assistant state, automations, history DB
-      "/var/lib/private"                   # DynamicUser services: ESPHome, Conduit (matrix-conduit), sun-schedule
-      "/var/lib/mautrix-telegram"          # mautrix-telegram bridge state + registration.yaml
-      "/var/lib/mautrix-whatsapp"          # mautrix-whatsapp bridge state + session DB
-      "/var/lib/mautrix-signal"            # mautrix-signal bridge state + signal-cli data
-      "/var/lib/acme"                      # Let's Encrypt ACME certs + account keys (rate limit protection)
-      "/var/lib/postgresql"                # PostgreSQL data (claw-swap DB)
-      "/var/lib/parts"                     # Session logs, runtime data
-      "/var/lib/openclaw-mark"               # OpenClaw gateway state — mark instance
-      "/var/lib/openclaw-lou"                # OpenClaw gateway state — lou instance
-      "/var/lib/openclaw-alexia"             # OpenClaw gateway state — alexia instance
-      "/var/lib/openclaw-ari"                # OpenClaw gateway state — ari instance
-      "/var/lib/openclaw-jordan-claw"        # OpenClaw gateway state — jordan-claw instance
-      "/var/lib/openclaw-tal-claw"           # OpenClaw gateway state — tal-claw instance
+      # Add paths for your services here. Example:
+      #   "/var/lib/my-service"  # My custom service state
+      "/var/lib/fail2ban"                  # Ban database (regenerated if lost)
+      "/var/lib/private"                   # DynamicUser services (dashboard, etc.)
 
       # --- User data ---
       "/home/dev"                       # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh

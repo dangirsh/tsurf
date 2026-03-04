@@ -2,7 +2,7 @@
   imports = [
     ./hardware.nix
     ./disko-config.nix
-    # Shared modules (previously in modules/default.nix hub)
+    # Core modules
     ../../modules/base.nix
     ../../modules/boot.nix
     ../../modules/users.nix
@@ -13,14 +13,11 @@
     ../../modules/agent-compute.nix
     ../../modules/secret-proxy.nix
     ../../modules/impermanence.nix
-    # Host-specific services
-    ../../modules/openclaw.nix
     ../../modules/restic.nix
-    ../../modules/matrix.nix
-    ../../modules/dm-guide.nix
     ../../modules/dashboard.nix
     ../../modules/canvas.nix
-    # nginx module moved to private overlay
+    ../../modules/nginx.nix
+    # Private overlay: add personal service modules here
   ];
 
   networking.hostName = "neurosys";

@@ -9,7 +9,7 @@
 #   Reproducible, cached, testable via nix eval.
 #
 # @decision DASH-03: Single Python stdlib HTTP server (writePython3Bin).
-# @rationale: Matches dm-guide.nix and restic-status-server patterns.
+# @rationale: Matches restic-status-server pattern.
 #   One process, one port, one systemd unit. No framework dependencies.
 #
 # @decision DASH-04: DynamicUser for the dashboard service.
