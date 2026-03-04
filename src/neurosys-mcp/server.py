@@ -62,6 +62,7 @@ mcp = FastMCP(
 import google_auth as _google_auth
 import gmail as _gmail_tools
 import calendar_tools as _calendar_tools
+import rest_shim as _rest_shim
 _gmail_tools.register(mcp)
 _calendar_tools.register(mcp)
 
@@ -347,19 +348,17 @@ async def matrix_send_message(room_id: str, text: str) -> Any:
 def main() -> None:
     path = MCP_PATH if MCP_PATH.startswith("/") else f"/{MCP_PATH}"
 
-    if _google_auth._google_configured():
-        mcp_app = mcp.streamable_http_app(path=path)
-        routes = [*_google_auth.get_routes(), Mount("/", app=mcp_app)]
-        app = Starlette(routes=routes)
-        uvicorn.run(app, host=MCP_BIND_HOST, port=MCP_BIND_PORT)
-        return
+    # Always use Starlette to mount REST shim routes alongside MCP
+    mcp_app = mcp.streamable_http_app(path=path)
+    shim_routes = _rest_shim.get_shim_routes()
 
-    mcp.run(
-        transport="streamable-http",
-        host=MCP_BIND_HOST,
-        port=MCP_BIND_PORT,
-        path=path,
-    )
+    if _google_auth._google_configured():
+        routes = [*shim_routes, *_google_auth.get_routes(), Mount("/", app=mcp_app)]
+    else:
+        routes = [*shim_routes, Mount("/", app=mcp_app)]
+
+    app = Starlette(routes=routes)
+    uvicorn.run(app, host=MCP_BIND_HOST, port=MCP_BIND_PORT)
 
 
 if __name__ == "__main__":
