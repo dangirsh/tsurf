@@ -1,6 +1,19 @@
 # modules/canvas.nix
+# @decision CANVAS-01: Agent Canvas server uses writePython3Bin with stdlib only.
+# @rationale: Keeps dependency surface minimal while preserving reproducible
+# packaging and flake8 enforcement during evaluation.
+#
+# @decision CANVAS-02: Service runs with DynamicUser and StateDirectory.
+# @rationale: Persistent panel storage stays under /var/lib/agent-canvas while
+# the runtime account remains ephemeral and tightly sandboxed.
+#
+# @decision CANVAS-03: No application auth in this module.
+# @rationale: Access control is network-layer only (internal-only/Tailscale),
+# consistent with existing internal dashboards and tools.
 { config, lib, pkgs, ... }:
 let
+  cfg = config.services.agentCanvas;
+
   canvasServer = pkgs.writers.writePython3Bin "agent-canvas" { } ''
     import argparse
     import datetime
@@ -975,4 +988,58 @@ let
   '';
 in
 {
+  options.services.agentCanvas = {
+    enable = lib.mkEnableOption "agent-driven visualization canvas";
+
+    listenPort = lib.mkOption {
+      type = lib.types.port;
+      default = 8083;
+      description = "Port for the agent canvas HTTP server";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    services.dashboard.entries.canvas = lib.mkDefault {
+      name = "Agent Canvas";
+      module = "canvas.nix";
+      description = "Agent-driven Vega-Lite + markdown visualization canvas";
+      port = cfg.listenPort;
+      url = "http://${config.networking.hostName}:${toString cfg.listenPort}";
+      systemdUnit = "agent-canvas.service";
+      icon = "chart";
+      order = 58;
+    };
+
+    systemd.services."agent-canvas" = {
+      description = "Agent Canvas visualization server";
+      wantedBy = [ "multi-user.target" ];
+      wants = [ "network-online.target" ];
+      after = [ "network-online.target" ];
+
+      serviceConfig = {
+        ExecStart =
+          "${canvasServer}/bin/agent-canvas --port "
+          + "${toString cfg.listenPort} --data-dir /var/lib/agent-canvas "
+          + "--html ${canvasHtml}";
+        DynamicUser = true;
+        StateDirectory = "agent-canvas";
+        Restart = "on-failure";
+        RestartSec = "5s";
+        ProtectHome = true;
+        PrivateTmp = true;
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectClock = true;
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectKernelLogs = true;
+        ProtectControlGroups = true;
+        RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+        RestrictNamespaces = true;
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        CapabilityBoundingSet = "";
+      };
+    };
+  };
 }
