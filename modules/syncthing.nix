@@ -1,7 +1,7 @@
 # modules/syncthing.nix
 # @decision SVC-02: Syncthing runs as user dev with fully declarative devices/folders.
 # @decision SVC-03: GUI/API binds 0.0.0.0 — NixOS firewall restricts access to Docker bridges and Tailscale.
-{ ... }: {
+{ config, ... }: {
   systemd.services.syncthing.environment = {
     STNODEFAULTFOLDER = "true";
   };
@@ -62,5 +62,16 @@
         urAccepted = -1;
       };
     };
+  };
+
+  services.dashboard.entries.syncthing = {
+    name = "Syncthing";
+    module = "syncthing.nix";
+    description = "File sync across devices";
+    port = 8384;
+    url = "http://${config.networking.hostName}:8384";
+    systemdUnit = "syncthing.service";
+    icon = "syncthing";
+    order = 20;
   };
 }

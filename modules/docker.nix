@@ -33,4 +33,13 @@
   # User-defined bridge networks (br-<hash>) work because
   # networking.firewall.filterForward defaults to false (FORWARD accepts all).
   networking.firewall.trustedInterfaces = [ "docker0" ];
+
+  services.dashboard.entries.docker = {
+    name = "Docker Engine";
+    module = "docker.nix";
+    description = "Container runtime (iptables=false)";
+    systemdUnit = "docker.service";
+    icon = "docker";
+    order = 10;
+  };
 }

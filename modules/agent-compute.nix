@@ -74,4 +74,11 @@ in
 
   # User linger for persistent systemd user instance
   users.users.dev.linger = true;
+  services.dashboard.entries.agent-compute = {
+    name = "Agent Compute";
+    module = "agent-compute.nix";
+    description = "Claude Code, Codex, Podman sandbox";
+    icon = "terminal";
+    order = 70;
+  };
 }

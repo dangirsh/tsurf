@@ -18,6 +18,7 @@ let
     "6052" = "esphome";
     "6167" = "matrix-conduit";
     "8082" = "homepage-dashboard";
+    "8083" = "nix-dashboard (temp)";
     "8086" = "dm-guide";
     "8123" = "home-assistant";
     "8384" = "syncthing-gui (localhost)";
@@ -103,5 +104,23 @@ in {
     extraUpFlags = [
       "--accept-routes"
     ];
+  };
+
+  services.dashboard.entries.tailscale = {
+    name = "Tailscale";
+    module = "networking.nix";
+    description = "VPN mesh network";
+    systemdUnit = "tailscaled.service";
+    icon = "tailscale";
+    order = 5;
+  };
+
+  services.dashboard.entries.sshd = {
+    name = "SSH";
+    module = "networking.nix";
+    description = "Key-only, fail2ban-protected";
+    port = 22;
+    systemdUnit = "sshd.service";
+    order = 6;
   };
 }

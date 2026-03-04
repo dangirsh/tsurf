@@ -19,6 +19,7 @@
     ../../modules/restic.nix
     ../../modules/matrix.nix
     ../../modules/dm-guide.nix
+    ../../modules/dashboard.nix
     # nginx module moved to private overlay
   ];
 
@@ -44,6 +45,8 @@
   # srvos does not set this today, but mkForce guards against a future srvos
   # release enabling systemd initrd before Phase 21 is ready
   boot.initrd.systemd.enable = lib.mkForce false;
+
+  services.dashboard.enable = true;
 
   system.stateVersion = "25.11";
 }

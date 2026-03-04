@@ -292,4 +292,13 @@ in {
       ReadWritePaths = [ "/var/lib/automaton" ];
     };
   };
+
+  services.dashboard.entries.conway-automaton = {
+    name = "Conway Automaton";
+    module = "automaton.nix";
+    description = "Autonomous AI agent runtime";
+    systemdUnit = "conway-automaton.service";
+    icon = "robot";
+    order = 60;
+  };
 }
