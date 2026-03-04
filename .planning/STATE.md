@@ -5,16 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 61 complete. Nix-derived dynamic dashboard replaces old homepage-dashboard on port 8082. All modules annotated with `services.dashboard.entries`.
+**Current focus:** Phase 58 complete. Agent Canvas service added as a
+real-time, agent-driven visualization surface on port 8083 with
+REST+SSE APIs and persistent panel state.
 
 ## Current Position
 
-Phase: 61 (Nix-Derived Dynamic Dashboard) — COMPLETE
-Plan: 61-02 — COMPLETE (port swap, homepage removal)
-Status: modules/dashboard.nix created with NixOS option schema, build-time JSON manifest, Python HTTP server, dark-theme HTML frontend, DynamicUser systemd service on port 8082. All public modules annotated with `services.dashboard.entries`. Old homepage.nix removed. 34 eval checks pass.
-Last activity: 2026-03-04 - Phase 61 complete (both plans executed, nix flake check passes). Deployment pending.
+Phase: 58 (Agent-Driven Dynamic Dashboard Canvas) — COMPLETE
+Plan: 58-01 — COMPLETE (module, server, client, integration, eval checks)
+Status: Added `modules/canvas.nix` with stdlib Python HTTP server
+(REST API + SSE), GridStack/Vega-Lite/marked HTML client, atomic panel
+persistence under `/var/lib/agent-canvas`, hardened DynamicUser service,
+dashboard entry, host enablement, and eval assertions.
+Last activity: 2026-03-04 - Phase 58 complete (nix flake check passes;
+single `curl -X POST` smoke test verified panel creation/render path).
 
-Progress: Phase 61 complete (2/2 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 58 complete (1/1 plans). Phase 61 complete (2/2 plans).
+Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans). Phase 60
+complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete
+(3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation)
+pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename).
+Phase 57-02 pending.
 
 ## Performance Metrics
 
@@ -65,6 +76,16 @@ Progress: Phase 61 complete (2/2 plans). Phase 64 complete (2/2 plans). Phase 63
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+- [58-01]: CANVAS-01/02/03: Added `services.agentCanvas` module with
+  stdlib-only `writePython3Bin` server, DynamicUser+StateDirectory
+  service model, and network-layer-only access policy (internal/Tailscale).
+- [58-01]: Implemented panel APIs (`POST/GET/PATCH/DELETE /api/panels`,
+  `GET /api/panels/{id}`, `POST /api/panels/{id}/data`) plus `GET
+  /api/events` SSE for `panel-created`, `panel-updated`, `panel-deleted`.
+- [58-01]: Integrated canvas into neurosys host and safety checks:
+  `internalOnlyPorts."8083" = "agent-canvas"`, dashboard entry
+  `services.dashboard.entries.canvas`, and eval check `canvas-enabled`.
 
 - [63-01]: MCP-63-01/02/03: Added `google_auth.py` using `google-auth` + `httpx`, with env-driven config, `/google/auth` + `/google/callback`, and persisted tokens at `/var/lib/neurosys-mcp/google-tokens.json` with auto-refresh.
 - [63-01]: MCP-63-04/05: Added `gmail.py` register pattern with five Gmail MCP tools and centralized auth gate; tools return `{\"ok\": false, \"error\": \"google_auth_required\"}` when OAuth is missing/invalid.
