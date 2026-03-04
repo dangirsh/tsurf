@@ -90,6 +90,7 @@
     module = "restic.nix";
     description = "HTTP status endpoint for dashboard widgets";
     port = 9200;
+    url = "http://${config.networking.hostName}:9200";
     systemdUnit = "restic-status-server.service";
     order = 16;
   };
