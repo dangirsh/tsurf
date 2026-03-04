@@ -1209,7 +1209,7 @@ Plans:
 - [x] 64-01-PLAN.md -- Remove dead code (beads, logseq, docs, spacebot port)
 - [x] 64-02-PLAN.md -- Structural refactoring (rename hosts, flatten imports, merge/inline modules)
 
-### Phase 65: Open Source Cleanup (v2) — minimal forkable skeleton
+### Phase 65: Open Source Cleanup (v2) — minimal forkable skeleton ✅ (2026-03-04)
 
 **Goal:** Strip the public repo down to a minimal, forkable skeleton for agentic NixOS servers. The public repo should contain only the core infrastructure (security hardening, agent sandboxing, secret proxy, deployment, backup, dashboard framework) and clear overlay extension points. All personal service modules move to the private overlay. README gains an "Example Use Cases" section with generic descriptions of real deployments so users see what's possible without exposing the exact private setup.
 
@@ -1237,6 +1237,6 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 65-01-PLAN.md -- Move personal modules and packages to private overlay (wave 1)
-- [ ] 65-02-PLAN.md -- Clean core modules: remove personal service references (wave 2, depends on 65-01)
-- [ ] 65-03-PLAN.md -- README update: example use cases and module table cleanup (wave 3, depends on 65-02)
+- [x] 65-01-PLAN.md -- Move personal modules and packages to private overlay (wave 1)
+- [x] 65-02-PLAN.md -- Clean core modules: remove personal service references (wave 2, depends on 65-01)
+- [x] 65-03-PLAN.md -- README update: example use cases and module table cleanup (wave 3, depends on 65-02)

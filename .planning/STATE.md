@@ -5,27 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 58 complete. Agent Canvas service added as a
-real-time, agent-driven visualization surface on port 8083 with
-REST+SSE APIs and persistent panel state.
+**Current focus:** Phase 65 complete. Public repo stripped to a minimal
+forkable skeleton — all personal service modules moved to private overlay,
+core modules cleaned of personal references, README updated with example
+use cases.
 
 ## Current Position
 
-Phase: 58 (Agent-Driven Dynamic Dashboard Canvas) — COMPLETE
-Plan: 58-01 — COMPLETE (module, server, client, integration, eval checks)
-Status: Added `modules/canvas.nix` with stdlib Python HTTP server
-(REST API + SSE), GridStack/Vega-Lite/marked HTML client, atomic panel
-persistence under `/var/lib/agent-canvas`, hardened DynamicUser service,
-dashboard entry, host enablement, and eval assertions.
-Last activity: 2026-03-04 - Phase 58 complete (nix flake check passes;
-single `curl -X POST` smoke test verified panel creation/render path).
+Phase: 65 (Open Source Cleanup v2 — Minimal Forkable Skeleton) — COMPLETE
+Plan: 65-03 — COMPLETE (README update with example use cases)
+Status: Deleted 5 personal modules, 5 package files, stripped personal
+references from impermanence/networking/secrets/host-imports/eval-checks.
+Private overlay has all moved modules, packages, secrets, and persist paths.
+Last activity: 2026-03-04 - Phase 65 complete (nix flake check passes;
+19 eval checks pass; public repo has zero personal service references).
 
-Progress: Phase 58 complete (1/1 plans). Phase 61 complete (2/2 plans).
-Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans). Phase 60
-complete (2/2 plans). Phase 59 complete (2/2 plans). Phase 53 complete
-(3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation)
-pending. Phase 56 complete (research). Phase 57-01 complete (OVH rename).
-Phase 57-02 pending.
+Progress: Phase 65 complete (3/3 plans). Phase 58 complete (1/1 plans).
+Phase 61 complete (2/2 plans). Phase 64 complete (2/2 plans). Phase 63
+complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59 complete
+(2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete,
+plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01
+complete (OVH rename). Phase 57-02 pending.
 
 ## Performance Metrics
 
@@ -76,6 +76,11 @@ Phase 57-02 pending.
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+- [65-01]: Moved 4 personal modules (automaton, matrix, openclaw, dm-guide) and 4 package files to private overlay. Import paths rewritten from `${inputs.neurosys}/modules/...` to local `./modules/...`.
+- [65-02]: Stripped personal service references from all core modules: 13 impermanence paths, 12 internalOnlyPorts entries, 10 secret declarations, 2 package exports, 1 eval check removed from public repo. All moved to private overlay.
+- [65-02]: Private overlay gets `impermanence-private.nix` (13 persist paths), expanded `secrets-contabo.nix` (6 openclaw tokens + cloudflare + matrix), and emptied `secrets-ovh-overrides.nix`.
+- [65-03]: README updated with 14-module table, 5 example use cases, core-only networking table, removed nixosModules.default reference.
 
 - [58-01]: CANVAS-01/02/03: Added `services.agentCanvas` module with
   stdlib-only `writePython3Bin` server, DynamicUser+StateDirectory
@@ -286,6 +291,12 @@ Recent decisions affecting current work:
 
 ### Completed Phases
 
+- **Phase 65: Open Source Cleanup v2 — Minimal Forkable Skeleton** (3/3 plans, completed 2026-03-04)
+  - 65-01: Moved 4 personal modules and 4 package files to private overlay; updated import paths from `${inputs.neurosys}/modules/...` to local `./modules/...`.
+  - 65-02: Stripped all personal references from core modules (impermanence, networking, secrets, host imports, eval checks, flake packages). Created `impermanence-private.nix` and expanded `secrets-contabo.nix` in private overlay.
+  - 65-03: Updated README with 14-module table, 5 example use cases, core-only networking table.
+  - All 19 nix flake check assertions pass. Zero personal service names in `modules/`, `hosts/`, `packages/`.
+
 - **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** (2/2 plans, completed 2026-03-02)
   - 63-01: Restored public `neurosys-mcp` modules (`server.py`, `auth.py`, `pyproject.toml`, `packages/neurosys-mcp.nix`) and added `google_auth.py` + `gmail.py` with five Gmail tools and callback routes.
   - 63-02: Added `calendar_tools.py` with six Calendar tools and shared OAuth token handling; wired Calendar registration in `server.py`; updated package metadata/import checks.
@@ -466,6 +477,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Phase 63 complete — neurosys-mcp restored with Google OAuth callback flow and Gmail MCP tools. Public Nix package + flake export restored and passing checks.
-Next: Apply private overlay secret wiring from `63-DEPLOY.md`, deploy, run one-time `/google/auth`, and verify Gmail tool behavior from an MCP client.
+Last session: 2026-03-04
+Stopped at: Phase 65 complete — public repo stripped to minimal forkable skeleton. All personal modules/packages moved to private overlay. nix flake check passes (19 checks).
+Next: Deploy from private overlay to verify both hosts work with the new module layout. Push private overlay changes.
