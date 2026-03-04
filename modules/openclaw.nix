@@ -78,6 +78,13 @@
 #   when SHELL is nologin, but agent-spawned commands need access to bash, node, git, curl, npm
 #   etc. Adding the system sw/bin to PATH makes these discoverable without relaxing any other
 #   hardening (ProtectSystem=strict, NoNewPrivileges, CapabilityBoundingSet="" all remain).
+#
+# @decision OCL-23: Phase 8 security audit hardening batch.
+# @rationale: SystemCallArchitectures=native (prevent 32-bit ABI exploits),
+#   RestrictSUIDSGID=true, ProtectHostname=true, RemoveIPC=true — all safe for Node.js.
+#   UMask=0077 for owner-only file creation. Activation script extended to chmod 0700
+#   sensitive subdirs (devices/, identity/, agents/) and chmod 0600 identity files —
+#   fixes prior 0755/0777 permissions from UMask=0022 era.
 { config, lib, pkgs, ... }:
 
 let
@@ -226,6 +233,17 @@ ${lib.concatMapStringsSep "\n"
       if [ -d "''${state_dir}/credentials" ]; then
         chmod 0700 "''${state_dir}/credentials"  # OCL-21
       fi
+
+      # OCL-23: harden sensitive subdirs to 0700 (UMask on prior runs created them 0755)
+      for subdir in devices identity agents logs delivery-queue; do
+        if [ -d "''${state_dir}/''${subdir}" ]; then
+          chmod 0700 "''${state_dir}/''${subdir}"
+        fi
+      done
+      # Fix any world-writable/executable files in identity/ (e.g. 0777 device.json from old migration)
+      if [ -d "''${state_dir}/identity" ]; then
+        find "''${state_dir}/identity" -type f -exec chmod 0600 {} \;
+      fi
   '')
   instanceList}
     '';
@@ -275,6 +293,13 @@ ${lib.concatMapStringsSep "\n"
           LockPersonality = true;
           MemoryDenyWriteExecute = false;  # OCL-16: Node.js V8 JIT requires W^X pages
           CapabilityBoundingSet = "";      # no capabilities needed — port > 1024
+
+          # --- Additional hardening (OCL-23) ---
+          SystemCallArchitectures = "native";  # x86_64 only — no 32-bit ABI
+          RestrictSUIDSGID = true;             # cannot create SUID/SGID files
+          ProtectHostname = true;              # cannot change system hostname
+          RemoveIPC = true;                    # cleanup SysV IPC on exit
+          UMask = "0077";                      # new files/dirs: owner-only (rwx------)
 
           # --- Resource limits (OCL-18: 50% of neurosys total ÷ 6 instances) ---
           MemoryHigh = "6G";
