@@ -2,12 +2,10 @@ NixOS server config for an agentic development platform. Declarative, batteries-
 
 ## Design Principles
 
-- **Declarative everything**: no imperative setup steps after initial deploy
-- **Tailscale-only internal networking**: all services Tailscale-gated by default; public firewall minimal
-- **Agents as first-class workloads**: bubblewrap sandboxing, cgroup isolation, multi-provider key injection
-- **Secrets never in the Nix store**: sops-nix age-encrypted, decrypted at activation
-- **Impermanent root**: BTRFS ephemeral `/` subvolume, explicit `/persist` state manifest
-- **Private config via overlay**: personal services and secrets in a separate private flake repo
+- **Agent-driven**: agents are first-class workloads with sandboxing, resource isolation, and multi-provider key injection
+- **Secure by default**: Tailscale-only internal networking, sops-nix secrets, nftables firewall, fail2ban, srvos hardening
+- **Maximally reproducible**: flake-pinned inputs, ephemeral root with explicit persist manifest, no imperative setup
+- **Forkable**: personal services live in a private overlay flake; public repo is a clean skeleton
 
 ## What's Included
 
