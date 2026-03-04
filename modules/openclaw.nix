@@ -198,9 +198,10 @@ ${lib.concatMapStringsSep "\n"
       fi
 
       # OCL-20: patch out dangerouslyAllowHostHeaderOriginFallback; set allowedOrigins if unset.
+      # OCL-22: ensure tools.exec.host=gateway (not Docker sandbox) with security=full for headless.
       # jq-based in-place patch preserves user channel config (Discord tokens, etc.).
       if tmpout=$(${pkgs.jq}/bin/jq \
-        'del(.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback) | .gateway.controlUi.allowedOrigins //= ["https://${name}.openclaw.dangirsh.org"]' \
+        'del(.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback) | .gateway.controlUi.allowedOrigins //= ["https://${name}.openclaw.dangirsh.org"] | .tools.exec.host //= "gateway" | .tools.exec.security //= "full"' \
         "''${target}" 2>/dev/null); then
         printf '%s\n' "''${tmpout}" > "''${target}.tmp" && mv "''${target}.tmp" "''${target}"
       fi
