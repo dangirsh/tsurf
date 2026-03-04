@@ -85,7 +85,68 @@ let
 
           .subtitle {
             color: var(--muted);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
+          }
+
+          .filters {
+            display: flex;
+            gap: 0.6rem;
+            margin-bottom: 1.2rem;
+            align-items: center;
+          }
+
+          .search-input {
+            flex: 1;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--panel);
+            color: var(--text);
+            font: inherit;
+            font-size: 0.95rem;
+            outline: none;
+          }
+
+          .search-input:focus {
+            border-color: #8ad8ff;
+          }
+
+          .search-input::placeholder {
+            color: var(--muted);
+          }
+
+          .filter-btn {
+            padding: 0.55rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--panel);
+            color: var(--muted);
+            font: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s ease;
+          }
+
+          .filter-btn:hover {
+            border-color: var(--bad);
+            color: var(--text);
+          }
+
+          .filter-btn.active {
+            background: rgba(255, 107, 107, 0.15);
+            border-color: var(--bad);
+            color: var(--bad);
+          }
+
+          .hidden {
+            display: none !important;
+          }
+
+          .match-count {
+            color: var(--muted);
+            font-size: 0.85rem;
+            white-space: nowrap;
           }
 
           .module-group {
@@ -229,6 +290,13 @@ let
         <main>
           <h1>Nix Dashboard</h1>
           <div id="subtitle" class="subtitle">Loading manifest...</div>
+          <div class="filters">
+            <input type="text" id="search" class="search-input"
+              placeholder="Filter services..." autocomplete="off">
+            <button type="button" id="failingBtn" class="filter-btn"
+              >Failing</button>
+            <span id="matchCount" class="match-count"></span>
+          </div>
           <div id="tree"></div>
           <div class="footer">Status refresh: every 10 seconds</div>
         </main>
@@ -463,6 +531,66 @@ let
           }
 
           run();
+
+          let failingOnly = false;
+          const searchEl = document.getElementById("search");
+          const failBtn = document.getElementById("failingBtn");
+          const countEl = document.getElementById("matchCount");
+
+          function applyFilters() {
+            const query = searchEl.value.toLowerCase().trim();
+            const entries = document.querySelectorAll(".entry");
+            let visible = 0;
+            let total = entries.length;
+
+            entries.forEach((entry) => {
+              const btn = entry.querySelector(".entry-btn");
+              const name = btn ? btn.textContent.toLowerCase() : "";
+              const matchesText = !query || name.indexOf(query) !== -1;
+
+              let matchesFailing = true;
+              if (failingOnly) {
+                const dot = entry.querySelector(".status-dot");
+                if (dot) {
+                  const cls = dot.className;
+                  matchesFailing = cls.indexOf("status-bad") !== -1
+                    || cls.indexOf("status-warn") !== -1;
+                } else {
+                  matchesFailing = false;
+                }
+              }
+
+              const show = matchesText && matchesFailing;
+              entry.classList.toggle("hidden", !show);
+              if (show) visible++;
+            });
+
+            document.querySelectorAll(".module-group").forEach((group) => {
+              const visEntries = group.querySelectorAll(
+                ".entry:not(.hidden)"
+              );
+              group.classList.toggle("hidden", visEntries.length === 0);
+            });
+
+            if (query || failingOnly) {
+              countEl.textContent = visible + "/" + total;
+            } else {
+              countEl.textContent = "";
+            }
+          }
+
+          searchEl.addEventListener("input", applyFilters);
+          failBtn.addEventListener("click", () => {
+            failingOnly = !failingOnly;
+            failBtn.classList.toggle("active", failingOnly);
+            applyFilters();
+          });
+
+          const origUpdate = updateStatusUi;
+          updateStatusUi = function() {
+            origUpdate();
+            applyFilters();
+          };
         </script>
       </body>
     </html>
