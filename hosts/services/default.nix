@@ -19,6 +19,7 @@
     ../../modules/matrix.nix
     ../../modules/dm-guide.nix
     ../../modules/dashboard.nix
+    ../../modules/canvas.nix
     # nginx module moved to private overlay
   ];
 
@@ -46,6 +47,7 @@
   boot.initrd.systemd.enable = lib.mkForce false;
 
   services.dashboard.enable = true;
+  services.agentCanvas.enable = true;
 
   system.stateVersion = "25.11";
 }
