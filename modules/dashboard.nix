@@ -33,9 +33,26 @@ let
     builtins.groupBy (entry: entry.module)
       (builtins.sort entrySort entryList);
 
+  # Parse extra manifests, extract modules per remote host
+  extraHosts = builtins.mapAttrs (hostName: jsonStr:
+    let
+      parsed = builtins.fromJSON jsonStr;
+      hostData =
+        if parsed ? hosts
+        then parsed.hosts.${hostName} or {}
+        else {};
+    in {
+      modules = hostData.modules or (parsed.modules or {});
+    }
+  ) cfg.extraManifests;
+
   manifestJson = builtins.toJSON {
-    hostname = config.networking.hostName;
-    modules = groupedEntries;
+    primary = config.networking.hostName;
+    hosts = extraHosts // {
+      ${config.networking.hostName} = {
+        modules = groupedEntries;
+      };
+    };
   };
 
   dashboardHtml = pkgs.writeText "dashboard.html" ''
@@ -44,7 +61,7 @@ let
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Nix Dashboard</title>
+        <title>Neurosys</title>
         <style>
           :root {
             color-scheme: dark;
@@ -147,6 +164,25 @@ let
             color: var(--muted);
             font-size: 0.85rem;
             white-space: nowrap;
+          }
+
+          .host-badge {
+            font-size: 0.7rem;
+            padding: 0.05rem 0.35rem;
+            border-radius: 3px;
+            margin-left: 0.3rem;
+            font-weight: 400;
+            vertical-align: middle;
+          }
+
+          .host-local {
+            background: rgba(138, 216, 255, 0.12);
+            color: #8ad8ff;
+          }
+
+          .host-remote {
+            background: rgba(163, 168, 192, 0.12);
+            color: var(--muted);
           }
 
           .module-group {
@@ -288,7 +324,7 @@ let
       </head>
       <body>
         <main>
-          <h1>Nix Dashboard</h1>
+          <h1>Neurosys</h1>
           <div id="subtitle" class="subtitle">Loading manifest...</div>
           <div class="filters">
             <input type="text" id="search" class="search-input"
@@ -304,8 +340,8 @@ let
           let currentManifest = null;
           const statusByUnit = {};
 
-          function statusClass(active, sub, external) {
-            if (external) {
+          function statusClass(active, sub, external, local) {
+            if (external || local === false) {
               return "status-unknown";
             }
 
@@ -342,6 +378,10 @@ let
               return "external service";
             }
 
+            if (!entry.isLocal) {
+              return "remote";
+            }
+
             if (!entry.systemdUnit) {
               return "no systemd unit";
             }
@@ -368,8 +408,28 @@ let
             const tree = document.getElementById("tree");
             tree.innerHTML = "";
 
-            const modules = currentManifest.modules || {};
-            const names = Object.keys(modules).sort();
+            const primary = currentManifest.primary || "";
+            const hosts = currentManifest.hosts || {};
+            const hostNames = Object.keys(hosts);
+            const multiHost = hostNames.length > 1;
+
+            const byModule = {};
+            hostNames.forEach((hostName) => {
+              const modules = hosts[hostName].modules || {};
+              Object.keys(modules).forEach((modName) => {
+                if (!byModule[modName]) byModule[modName] = [];
+                modules[modName].forEach((entry) => {
+                  byModule[modName].push(
+                    Object.assign({}, entry, {
+                      host: hostName,
+                      isLocal: hostName === primary,
+                    })
+                  );
+                });
+              });
+            });
+
+            const names = Object.keys(byModule).sort();
 
             names.forEach((moduleName) => {
               const moduleWrap = document.createElement("details");
@@ -383,10 +443,11 @@ let
               const entriesWrap = document.createElement("div");
               entriesWrap.className = "entries";
 
-              modules[moduleName].forEach((entry) => {
+              byModule[moduleName].forEach((entry) => {
                 const row = document.createElement("div");
                 row.className = "entry";
                 row.dataset.entryId = entry.id;
+                row.dataset.host = entry.host;
 
                 const button = document.createElement("button");
                 button.className = "entry-btn";
@@ -399,6 +460,7 @@ let
                 dot.className = "status-dot status-unknown";
                 dot.dataset.unit = entry.systemdUnit || "";
                 dot.dataset.external = entry.external ? "1" : "0";
+                dot.dataset.local = entry.isLocal ? "1" : "0";
 
                 const name = document.createElement("span");
                 name.className = "entry-name";
@@ -406,6 +468,14 @@ let
 
                 title.appendChild(dot);
                 title.appendChild(name);
+
+                if (multiHost) {
+                  const badge = document.createElement("span");
+                  badge.className = "host-badge " +
+                    (entry.isLocal ? "host-local" : "host-remote");
+                  badge.textContent = entry.host;
+                  title.appendChild(badge);
+                }
 
                 if (entry.description) {
                   const desc = document.createElement("span");
@@ -424,7 +494,8 @@ let
 
                 const details = document.createElement("div");
                 details.className = "details";
-                details.dataset.status = entry.systemdUnit || entry.id;
+                details.dataset.status =
+                  entry.systemdUnit || entry.id;
 
                 const link = entry.url
                   ? "<a href=\"" + entry.url + "\" target=\"_blank\" " +
@@ -433,6 +504,7 @@ let
 
                 details.innerHTML =
                   "<dl>" +
+                  makeDetailRow("Host", entry.host) +
                   makeDetailRow("Port", entry.port) +
                   makeDetailRow("Unit", entry.systemdUnit) +
                   makeDetailRow("Status", "loading...") +
@@ -464,11 +536,12 @@ let
             dots.forEach((dot) => {
               const unit = dot.dataset.unit;
               const external = dot.dataset.external === "1";
+              const local = dot.dataset.local === "1";
               const state = unit ? statusByUnit[unit] : null;
               const active = state ? state.active : null;
               const sub = state ? state.sub : null;
               dot.className = "status-dot " +
-                statusClass(active, sub, external);
+                statusClass(active, sub, external, local);
             });
 
             const statusCells = document.querySelectorAll(".details");
@@ -479,15 +552,21 @@ let
               }
               const dot = parent.querySelector(".status-dot");
               const unit = dot ? dot.dataset.unit : "";
-              const external = dot ? dot.dataset.external === "1" : false;
+              const external = dot
+                ? dot.dataset.external === "1" : false;
+              const local = dot
+                ? dot.dataset.local === "1" : true;
               const text = statusText(
                 {
                   external: external,
                   systemdUnit: unit,
+                  isLocal: local,
                 },
                 unit ? statusByUnit[unit] : null
               );
-              const cell = details.querySelector("dd:nth-of-type(3)");
+              const cell = details.querySelector(
+                "dd:nth-of-type(4)"
+              );
               if (cell) {
                 cell.textContent = text;
               }
@@ -500,9 +579,11 @@ let
               throw new Error("manifest fetch failed");
             }
             currentManifest = await response.json();
-            const host = currentManifest.hostname || "unknown";
+            const hosts = Object.keys(
+              currentManifest.hosts || {}
+            );
             document.getElementById("subtitle").textContent =
-              "Host: " + host;
+              hosts.join(" + ");
             renderTree();
           }
 
@@ -611,19 +692,24 @@ let
 
     def load_manifest(manifest_path):
         try:
-            text = Path(manifest_path).read_text(encoding="utf-8")
+            text = Path(manifest_path).read_text(
+                encoding="utf-8"
+            )
         except OSError:
-            return {"hostname": "unknown", "modules": {}}
+            return {"primary": "unknown", "hosts": {}}
 
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            return {"hostname": "unknown", "modules": {}}
+            return {"primary": "unknown", "hosts": {}}
 
 
     def collect_units(manifest):
         units = []
-        modules = manifest.get("modules", {})
+        primary = manifest.get("primary", "")
+        hosts = manifest.get("hosts", {})
+        host_data = hosts.get(primary, {})
+        modules = host_data.get("modules", {})
         for entries in modules.values():
             for entry in entries:
                 unit = entry.get("systemdUnit")
@@ -809,9 +895,21 @@ in
       default = { };
       description = "Dashboard entries declared across modules";
     };
+
+    extraManifests = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "JSON manifests from remote hosts (hostname -> JSON text)";
+    };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkMerge [
+    {
+      # Always generate manifest so other hosts can reference it
+      # via services.dashboard.extraManifests
+      environment.etc."dashboard/manifest.json".text = manifestJson;
+    }
+    (lib.mkIf cfg.enable {
     services.dashboard.entries.dashboard = lib.mkDefault {
       name = "Dashboard";
       module = "dashboard.nix";
@@ -822,8 +920,6 @@ in
       icon = "dashboard";
       order = 99;
     };
-
-    environment.etc."dashboard/manifest.json".text = manifestJson;
 
     systemd.services.nix-dashboard = {
       description = "Nix-derived dynamic dashboard";
@@ -855,5 +951,6 @@ in
         CapabilityBoundingSet = "";
       };
     };
-  };
+    })
+  ];
 }
