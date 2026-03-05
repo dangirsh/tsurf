@@ -1,14 +1,15 @@
-Neurosys is a NixOS configuration optimized for secure agentic computing. 
+Neurosys is a NixOS configuration optimized for agentic computing. I use it to deploy and manage agents across several remote hosts, alongside the personal services they build / maintain. 
 
-I use it to deploy and manage agents across several remote hosts, alongside the services they build / maintain. 
+Agents greatly expand the amount of compute an individual can make use of. Neurosys is an attempt to stay secure, sane, and organized along the way.
 
 > Note: this public repo is only the base configuration. My personal services are configured in a private overlay repo.
 
 ## Design Principles
 
-- **Agent-mediated**: All tools are chosen based on agents being their primary user. Humans talk to agents to make changes.
-- **Declarative and reproducible**: Wherever possible, state/config is tracked in git. Undeclared system state is cleared on boot. 
-- **Secure defaults**: Defense-in-depth, least priviledge, regular audits by agents.
+- **Secure by Default**: Least priviledge, defense in depth, regular audits (by agents).
+- **Agents are the Users**: Optimize everything to be driven by agents. Humans interact with the system through the agents.
+- **Declarative and Reproducible**: State is maximally tracked in git. Undeclared system state is cleared on boot.
+
 
 ## What's Included
 
