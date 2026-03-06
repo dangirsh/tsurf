@@ -118,6 +118,7 @@ Rules that agents MUST follow when modifying any module:
 - New services MUST add their port to `internalOnlyPorts` in `networking.nix` if they should not be public
 - All new modules MUST include `@decision` annotations for security-relevant choices
 - Pre-built binaries (packages/*.nix) use SHA256 hash verification -- accepted risk, no signature verification available (SEC11)
+- **Never** add packages via `nix-env`, `nix profile install`, or any other imperative mechanism -- this system enforces purely declarative package management. All packages MUST be declared in a `.nix` file (`environment.systemPackages`, `home.packages`, etc.). The system intentionally has `nix.channel.enable = false` and an empty `nix.nixPath`; do not re-enable either.
 
 ### Accepted Risks (documented, not actionable)
 
@@ -156,4 +157,5 @@ Before committing any module change, verify:
 3. **New service:** Does this change add a service? Set `openFirewall = false` and add @decision annotation
 4. **Sandbox impact:** Does this change modify `agent-compute.nix`? Verify `/run/secrets` and `~/.ssh` remain hidden from sandboxed agents
 5. **Credentials:** Does this change handle tokens or API keys? Use env vars or sops-nix, never URLs or CLI args
-6. **Validation:** `nix flake check` passes
+6. **Declarative constraint:** Does this change touch `nix.channel.enable`, `nix.nixPath`, or `environment.defaultPackages`? Do not re-enable channels or restore a non-empty nixPath — the system is intentionally imperative-package-free (see @decision SYS-02 in `modules/base.nix`)
+7. **Validation:** `nix flake check` passes

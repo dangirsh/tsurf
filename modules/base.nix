@@ -1,8 +1,16 @@
-{ config, lib, pkgs, ... }:
+{ lib, pkgs, ... }:
 {
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
     "claude-code"
   ];
+
+  # @decision SYS-02: declarative-only enforcement — no imperative package management.
+  # nix-channel is removed so `nix-env` cannot resolve packages by channel name.
+  # NIX_PATH is explicitly cleared as belt-and-suspenders.
+  # defaultPackages is emptied so nothing lands on the system outside of a Nix declaration.
+  nix.channel.enable = false;
+  nix.nixPath = lib.mkForce [];
+  environment.defaultPackages = lib.mkForce [];
 
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
