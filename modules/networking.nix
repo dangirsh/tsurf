@@ -58,9 +58,11 @@ in {
     trustedInterfaces = [ "tailscale0" ];
   };
 
+  # --- fail2ban: temporarily disabled (caused lockout during active dev sessions) ---
+  services.fail2ban.enable = false;
+
   # --- SSH hardening ---
-  # @decision NET-12: fail2ban enabled via srvos server profile (automatic, no explicit config needed);
-  #   protects port 22 from brute-force with progressive banning.
+  # @decision NET-12: fail2ban disabled (see above); re-enable when active dev sessions are done.
   # @decision NET-13: SSH hardened beyond key-auth — X11 off, MaxAuthTries 3, 30s grace window,
   #   client keepalive 5min to detect stale connections.
   services.openssh = {
