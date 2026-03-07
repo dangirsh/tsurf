@@ -19,7 +19,9 @@ let
     "8082" = "nix-dashboard";
     "8083" = "agent-canvas";
     "8384" = "syncthing-gui (localhost)";
-    "9091" = "anthropic-secret-proxy";
+    # Note: secret-proxy ports bind to 127.0.0.1 only (no public exposure risk).
+    # Port collision detection is handled by modules/secret-proxy.nix assertions.
+    # Private overlay declares its service ports via services.secretProxy.services.<name>.port.
     # Private overlay: add your service ports here. Example:
     #   "8123" = "home-assistant";
   };
