@@ -62,7 +62,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 64: Repo Layout Simplification** - Rename hosts/neurosys→services, hosts/ovh→dev. Remove beads, logseq, docs, spacebot port. Delete modules hub; per-host explicit imports. Merge/inline small modules and packages. Completed 2026-03-04.
 - [x] **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** - Completed 2026-03-04. Added Google OAuth flow plus Gmail and Calendar MCP tools.
 - [x] **Phase 65: Open Source Cleanup (v2)** - Completed 2026-03-04. Public repo reduced to minimal forkable skeleton with private overlay extension points.
-- [ ] **Phase 66: Secret Placeholder Proxy Module** - Generic NixOS secret placeholder injection module and Rust proxy package refactor (Plans 66-01/66-02 complete, 66-03 pending).
+- [x] **Phase 66: Secret Placeholder Proxy Module** - Generic NixOS secret placeholder injection module and Rust proxy package (axum + reqwest). Per-service systemd isolation, bwrapArgs derived attr, port-collision assertion. Completed 2026-03-07.
+- [x] **Phase 67: Review and Document Secret Proxy** - Consumer-facing architecture doc (`docs/secret-proxy-architecture.md`): 8 design features, 10 limitations, test coverage gaps, 7 improvement areas. Completed 2026-03-07.
 
 ## Phase Details
 
@@ -1252,3 +1253,12 @@ Plans:
 - [x] 66-01-PLAN.md -- Rust `secret-proxy` binary + Nix package + flake export (completed 2026-03-07)
 - [x] 66-02-PLAN.md -- generic reusable NixOS module (`services.secretProxy.services`) + networking cleanup (completed 2026-03-07)
 - [x] 66-03-PLAN.md -- private overlay consumer migration + eval/live test updates (completed 2026-03-07)
+
+### Phase 67: Review and document the secret proxy — read all source, tests, and module code; produce an executive summary of key design features, limitations, and improvement areas
+
+**Goal:** Produce `docs/secret-proxy-architecture.md` — a consumer-facing executive summary of the secret-proxy design (8 features, 10 limitations, test coverage gaps, and 7 improvement areas) for anyone adopting the neurosys template.
+**Depends on:** Phase 66
+**Plans:** 1 plan (completed 2026-03-07)
+
+Plans:
+- [x] 67-01-PLAN.md -- architecture doc (docs/secret-proxy-architecture.md)

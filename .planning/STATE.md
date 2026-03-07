@@ -11,17 +11,14 @@ Next focus: Phase 67 (OVH dev environment migration planning/execution).
 
 ## Current Position
 
-Phase: 66 (Secret Placeholder Proxy Module) — COMPLETE
-Plan: 66-03 — COMPLETE (private consumer migration + tests)
-Status: Declared `services.secretProxy.services.claw-swap` in private overlay,
-granted `secret-proxy` group read access to `anthropic-api-key`, added public
-`has-secret-proxy-option` eval check, added private
-`secret-proxy-claw-swap-service` eval check, and updated live test debug hints.
-Last activity: 2026-03-07 - Plan 66-03 complete (`nix flake check` passes in
-public repo; private overlay evaluates with local-input override until public
-input pin is advanced from github revision `af29add`).
+Phase: 67 (Review and Document Secret Proxy) — COMPLETE
+Plan: 67-01 — COMPLETE (architecture doc)
+Status: Created `docs/secret-proxy-architecture.md` — consumer-facing executive
+summary covering 8 design features, 10 limitations (L1–L10), test coverage gaps,
+and 7 improvement areas (I1–I7). ROADMAP and STATE updated.
+Last activity: 2026-03-07 - Plan 67-01 complete.
 
-Progress: Phase 66 complete (3/3 plans complete). Phase 65 complete
+Progress: Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -455,6 +452,7 @@ Recent decisions affecting current work:
 - Phase 61 added: Nix-Derived Dynamic Dashboard — investigate generating a live dashboard directly from NixOS module expressions (tree view with status/links), replacing manually-maintained homepage config. May use module annotations (e.g., `meta.dashboard`). Goal: dashboard always reflects deployed Nix source, zero drift.
 - Phase 64 added: Repo Layout Simplification — rename hosts/neurosys→services, hosts/ovh→dev; remove beads, logseq, docs/, spacebot port; delete modules/default.nix hub (explicit imports per host); merge small home modules inline; inline small packages; inline repos.nix; update flake.nix + CLAUDE.md.
 - Phase 66 added: Secret Placeholder Proxy Module — extract the secret-proxy trick (Phase 22) into a generic, well-tested NixOS module. Research ironclaw, gondolin (earendil-works), and all relevant NixOS secret management approaches. Design: placeholder tokens → proxy re-injects real secrets with per-secret allowed-domain lists blocking exfiltration. Decouple from secret backend (sops/agenix) and sandbox (bwrap) where possible. Goal: prompt-injected agents can't exfiltrate but operate seamlessly.
+- Phase 67 added: Review and document the secret proxy — read all source, tests, and module code; produce an executive summary of key design features, limitations, and improvement areas
 
 ### Blockers/Concerns
 
