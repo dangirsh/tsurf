@@ -62,7 +62,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 64: Repo Layout Simplification** - Rename hosts/neurosys→services, hosts/ovh→dev. Remove beads, logseq, docs, spacebot port. Delete modules hub; per-host explicit imports. Merge/inline small modules and packages. Completed 2026-03-04.
 - [x] **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** - Completed 2026-03-04. Added Google OAuth flow plus Gmail and Calendar MCP tools.
 - [x] **Phase 65: Open Source Cleanup (v2)** - Completed 2026-03-04. Public repo reduced to minimal forkable skeleton with private overlay extension points.
-- [ ] **Phase 66: Secret Placeholder Proxy Module** - Generic NixOS secret placeholder injection module and Rust proxy package refactor (Plan 66-01 complete, 66-02/66-03 pending).
+- [ ] **Phase 66: Secret Placeholder Proxy Module** - Generic NixOS secret placeholder injection module and Rust proxy package refactor (Plans 66-01/66-02 complete, 66-03 pending).
 
 ## Phase Details
 
@@ -1250,5 +1250,5 @@ Plans:
 
 Plans:
 - [x] 66-01-PLAN.md -- Rust `secret-proxy` binary + Nix package + flake export (completed 2026-03-07)
-- [ ] 66-02-PLAN.md -- pending
+- [x] 66-02-PLAN.md -- generic reusable NixOS module (`services.secretProxy.services`) + networking cleanup (completed 2026-03-07)
 - [ ] 66-03-PLAN.md -- pending

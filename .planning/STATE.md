@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 66 in progress. Plan 66-01 completed with a new
-Rust `secret-proxy` binary and Nix package export; remaining work is
-module integration plans 66-02 and 66-03.
+**Current focus:** Phase 66 in progress. Plans 66-01 and 66-02 are complete:
+Rust `secret-proxy` binary/package plus a generic multi-service NixOS module.
+Remaining work is plan 66-03 consumer migration and rollout validation.
 
 ## Current Position
 
 Phase: 66 (Secret Placeholder Proxy Module) — IN PROGRESS
-Plan: 66-01 — COMPLETE (Rust secret-proxy binary + Nix packaging)
-Status: Created `packages/secret-proxy` Rust crate with host allowlist
-enforcement, startup secret-file loading, request-header injection, HTTPS
-forwarding, and streamed responses. Exported as
-`packages.x86_64-linux.secret-proxy` in flake outputs.
-Last activity: 2026-03-07 - Plan 66-01 complete (`cargo build`,
-`nix build .#packages.x86_64-linux.secret-proxy`, and `nix flake check`
-all pass).
+Plan: 66-02 — COMPLETE (generic secret-proxy NixOS module)
+Status: Replaced `modules/secret-proxy.nix` hardcoded Python service with a
+generic `services.secretProxy.services.<name>` attrsOf submodule that
+materializes per-service users, hardened units, and TOML config store paths.
+Added eval-time duplicate-port assertions and removed hardcoded `9091`
+internal-only networking mapping.
+Last activity: 2026-03-07 - Plan 66-02 complete (`nix flake check` passes with
+empty default service declarations).
 
-Progress: Phase 66 in progress (1/3 plans complete). Phase 65 complete
+Progress: Phase 66 in progress (2/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -32,9 +32,9 @@ Phase 57-02 pending.
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 38
-- Average duration: ~20.4min
-- Total execution time: ~773 min
+- Total plans completed: 39
+- Average duration: ~19.9min
+- Total execution time: ~776 min
 
 **By Phase:**
 
@@ -67,8 +67,8 @@ Phase 57-02 pending.
 | 63 | 2/2 | ~83min | ~41.5min |
 
 **Recent Trend:**
-- Last 4 plans: 66-01 (~53min), 65-03 (~5min), 65-02 (~11min), 65-01 (~7min)
-- Trend: Work has shifted to moderate infrastructure packaging and security-boundary refactors.
+- Last 4 plans: 66-02 (~3min), 66-01 (~53min), 65-03 (~5min), 65-02 (~11min)
+- Trend: Work has shifted to proxy boundary hardening and modular NixOS integration.
 
 *Updated after each plan completion*
 
@@ -79,6 +79,9 @@ Phase 57-02 pending.
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [66-02]: Rewrote `modules/secret-proxy.nix` into a generic `services.secretProxy.services` attrsOf submodule with per-service users, units, and read-only `bwrapArgs`.
+- [66-02]: Per-service TOML config is generated as a Nix store path via `pkgs.writeText`; runtime secrets remain file-backed via `secretFile` paths.
+- [66-02]: Removed hardcoded `internalOnlyPorts."9091"` mapping; proxy ports are loopback-only and duplicate-port validation now lives in module assertions.
 - [66-01]: Built new Rust `secret-proxy` binary (`axum` + `reqwest`) with plain HTTP localhost ingress and HTTPS upstream forwarding.
 - [66-01]: Upstream destination is fixed to `allowed_domains[0]` for the matched secret; incoming `Host` must match that secret's allowlist or request is denied with HTTP 403.
 - [66-01]: [Rule 3 - Blocking] Nix package needed `pkg-config` + `openssl` build inputs to satisfy `openssl-sys` during `nix build`.
@@ -485,5 +488,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed 66-01-PLAN.md — Rust `secret-proxy` crate, Nix package, and flake export verified.
-Next: Execute `66-02-PLAN.md` (generic NixOS module integration) and `66-03-PLAN.md` (validation/rollout).
+Stopped at: Completed 66-02-PLAN.md — generic secret-proxy NixOS module integration verified.
+Next: Execute `66-03-PLAN.md` (private overlay consumer migration + validation/rollout).
