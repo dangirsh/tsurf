@@ -334,7 +334,7 @@ let
             <span id="matchCount" class="match-count"></span>
           </div>
           <div id="tree"></div>
-          <div class="footer">Status refresh: every 10 seconds</div>
+          <div class="footer">Status refresh: every 10 seconds · <a href="/cost">Claw Cost →</a></div>
         </main>
         <script>
           let currentManifest = null;
@@ -677,10 +677,113 @@ let
     </html>
   '';
 
+  costHtml = pkgs.writeText "cost.html" ''
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Claw Cost — Neurosys</title>
+      <style>
+        :root {
+          color-scheme: dark;
+          --bg: #1a1a2e; --panel: #232340; --text: #f1f2f8;
+          --muted: #a3a8c0; --border: #3c3f66;
+          --ok: #33d17a; --warn: #f8e45c; --bad: #ff6b6b;
+        }
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          font-family: "Iosevka Aile", "JetBrains Mono", monospace;
+          background: radial-gradient(circle at top, #24244a, var(--bg));
+          color: var(--text); min-height: 100vh;
+        }
+        main { max-width: 760px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+        .hdr { display: flex; align-items: baseline; gap: 1.2rem; margin-bottom: 0.4rem; }
+        h1 { margin: 0; font-size: 1.8rem; }
+        .back { color: var(--muted); font-size: 0.9rem; text-decoration: none; }
+        .back:hover { color: var(--text); }
+        .sub { color: var(--muted); margin-bottom: 1.5rem; font-size: 0.88rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { text-align: left; padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+        .r { text-align: right; }
+        .total td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; }
+        .warn { color: var(--warn); } .bad { color: var(--bad); }
+        .footer { margin-top: 2rem; color: var(--muted); font-size: 0.83rem; }
+        .footer a { color: #8ad8ff; }
+        #err { color: var(--bad); margin-bottom: 1rem; }
+      </style>
+    </head>
+    <body>
+      <main>
+        <div class="hdr"><h1>Claw Cost</h1><a href="/" class="back">← Dashboard</a></div>
+        <div id="sub" class="sub">Loading…</div>
+        <div id="err"></div>
+        <table id="tbl" style="display:none">
+          <thead><tr>
+            <th>Instance</th><th class="r">24h spend</th>
+            <th class="r">Calls</th><th class="r">Max/call</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+          <tfoot><tr class="total">
+            <td>Fleet total</td>
+            <td class="r" id="ftotal">—</td>
+            <td class="r" id="fcalls">—</td>
+            <td></td>
+          </tr></tfoot>
+        </table>
+        <div class="footer">Auto-refreshes every 5 min · <a href="/">← Dashboard</a></div>
+      </main>
+      <script>
+        function fmt(n) { return "$" + n.toFixed(2); }
+        function ccls(v) { return v >= 50 ? "bad" : v >= 20 ? "warn" : ""; }
+        async function load() {
+          try {
+            var r = await fetch("/api/cost-data");
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            var d = await r.json();
+            var rows = document.getElementById("rows");
+            rows.innerHTML = "";
+            var tot = 0, calls = 0;
+            (d.instances || []).forEach(function(inst) {
+              var u = inst.usage || {};
+              var c = u.total_cost || 0, n = u.call_count || 0, mx = u.max_single_call || 0;
+              tot += c; calls += n;
+              var cl = ccls(c);
+              var tr = document.createElement("tr");
+              tr.innerHTML = "<td>" + inst.user + "</td>"
+                + "<td class=\"r" + (cl ? " " + cl : "") + "\">" + fmt(c) + "</td>"
+                + "<td class=\"r\">" + n + "</td>"
+                + "<td class=\"r\">" + (n > 0 ? fmt(mx) : "—") + "</td>";
+              rows.appendChild(tr);
+            });
+            var ftcl = ccls(tot);
+            var ftel = document.getElementById("ftotal");
+            ftel.textContent = fmt(tot);
+            ftel.className = "r" + (ftcl ? " " + ftcl : "");
+            document.getElementById("fcalls").textContent = calls;
+            document.getElementById("tbl").style.display = "";
+            var since = (d.since_iso || "").replace("T", " ").replace(".000Z", " UTC");
+            document.getElementById("sub").textContent = "24h window · since " + since + " · updated " + (d.as_of || "").replace("T", " ").slice(0, 19) + " UTC";
+            document.getElementById("err").textContent = "";
+          } catch(e) {
+            document.getElementById("err").textContent = "Error: " + e.message;
+          }
+        }
+        load();
+        setInterval(load, 300000);
+      </script>
+    </body>
+    </html>
+  '';
+
   dashboardBin = pkgs.writers.writePython3Bin "nix-dashboard" { } ''
     import argparse
     import json
     import subprocess
+    import time
+    from datetime import datetime, timedelta, timezone
     from http.server import BaseHTTPRequestHandler
     from http.server import ThreadingHTTPServer
     from pathlib import Path
@@ -778,7 +881,24 @@ let
             return b"<h1>Dashboard HTML missing</h1>"
 
 
-    def make_handler(manifest_path, html_path):
+    _cost_cache = {}
+    COST_CACHE_PATH = "/run/claw-cost.json"
+
+    def build_cost_payload():
+        cached = _cost_cache.get("data")
+        if cached and time.time() - _cost_cache.get("ts", 0) < 300:
+            return cached
+        try:
+            text = Path(COST_CACHE_PATH).read_text(encoding="utf-8")
+            payload = json.loads(text)
+        except Exception as exc:
+            payload = {"error": str(exc), "instances": []}
+        _cost_cache["data"] = payload
+        _cost_cache["ts"] = time.time()
+        return payload
+
+
+    def make_handler(manifest_path, html_path, cost_html_path):
         class Handler(BaseHTTPRequestHandler):
             def _send_bytes(self, payload, content_type, status=200):
                 self.send_response(status)
@@ -809,6 +929,15 @@ let
                 if route == "/api/status":
                     self._send_json(build_status_payload(manifest_path))
                     return
+                if route == "/cost":
+                    self._send_bytes(
+                        read_html(cost_html_path),
+                        "text/html; charset=utf-8",
+                    )
+                    return
+                if route == "/api/cost-data":
+                    self._send_json(build_cost_payload())
+                    return
                 self._send_json({"error": "not_found"}, status=404)
 
             def log_message(self, format_text, *args):
@@ -822,9 +951,10 @@ let
         parser.add_argument("--port", type=int, required=True)
         parser.add_argument("--manifest", required=True)
         parser.add_argument("--html", required=True)
+        parser.add_argument("--cost-html", required=True)
         args = parser.parse_args()
 
-        handler = make_handler(args.manifest, args.html)
+        handler = make_handler(args.manifest, args.html, args.cost_html)
         server = ThreadingHTTPServer(("0.0.0.0", args.port), handler)
         print("nix-dashboard listening on 0.0.0.0:%d" % args.port)
         server.serve_forever()
@@ -931,7 +1061,8 @@ in
         ExecStart =
           "${dashboardBin}/bin/nix-dashboard --port "
           + "${toString cfg.listenPort} --manifest "
-          + "/etc/dashboard/manifest.json --html ${dashboardHtml}";
+          + "/etc/dashboard/manifest.json --html ${dashboardHtml}"
+          + " --cost-html ${costHtml}";
         DynamicUser = true;
         Restart = "on-failure";
         RestartSec = "5s";
@@ -949,6 +1080,7 @@ in
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
         CapabilityBoundingSet = "";
+        ReadOnlyPaths = [ "/run/claw-cost.json" ];
       };
     };
     })
