@@ -219,6 +219,12 @@ in
       && neurosysCfg.services.agentCanvas.listenPort == 8083
     );
 
+  has-secret-proxy-option = mkCheck
+    "has-secret-proxy-option"
+    "services.secretProxy.services option is defined (module imported)"
+    "services.secretProxy.services option is missing"
+    (neurosysCfg.services.secretProxy.services == {});
+
   dashboard-entries =
     let
       entryCount =

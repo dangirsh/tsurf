@@ -26,7 +26,7 @@ bats_load_library bats-assert/load
   status="$(remote curl -so /dev/null -w "%{http_code}" --max-time 10 "http://localhost:9091/" 2>&1)" || true
   if [[ -z "$status" ]] || [[ "$status" == "000" ]]; then
     echo "FAIL: secret-proxy did not return an HTTP response"
-    echo "DEBUG: ssh ${SSH_USER}@${HOST} systemctl status anthropic-secret-proxy --no-pager"
+    echo "DEBUG: ssh ${SSH_USER}@${HOST} systemctl status secret-proxy-claw-swap --no-pager"
     return 1
   fi
 }
