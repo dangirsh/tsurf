@@ -5,34 +5,36 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 65 complete. Public repo stripped to a minimal
-forkable skeleton — all personal service modules moved to private overlay,
-core modules cleaned of personal references, README updated with example
-use cases.
+**Current focus:** Phase 66 in progress. Plan 66-01 completed with a new
+Rust `secret-proxy` binary and Nix package export; remaining work is
+module integration plans 66-02 and 66-03.
 
 ## Current Position
 
-Phase: 65 (Open Source Cleanup v2 — Minimal Forkable Skeleton) — COMPLETE
-Plan: 65-03 — COMPLETE (README update with example use cases)
-Status: Deleted 5 personal modules, 5 package files, stripped personal
-references from impermanence/networking/secrets/host-imports/eval-checks.
-Private overlay has all moved modules, packages, secrets, and persist paths.
-Last activity: 2026-03-04 - Phase 65 complete (nix flake check passes;
-19 eval checks pass; public repo has zero personal service references).
+Phase: 66 (Secret Placeholder Proxy Module) — IN PROGRESS
+Plan: 66-01 — COMPLETE (Rust secret-proxy binary + Nix packaging)
+Status: Created `packages/secret-proxy` Rust crate with host allowlist
+enforcement, startup secret-file loading, request-header injection, HTTPS
+forwarding, and streamed responses. Exported as
+`packages.x86_64-linux.secret-proxy` in flake outputs.
+Last activity: 2026-03-07 - Plan 66-01 complete (`cargo build`,
+`nix build .#packages.x86_64-linux.secret-proxy`, and `nix flake check`
+all pass).
 
-Progress: Phase 65 complete (3/3 plans). Phase 58 complete (1/1 plans).
-Phase 61 complete (2/2 plans). Phase 64 complete (2/2 plans). Phase 63
-complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59 complete
-(2/2 plans). Phase 53 complete (3/3 plans). Phase 51 plans 01-03 complete,
-plan 04 (validation) pending. Phase 56 complete (research). Phase 57-01
-complete (OVH rename). Phase 57-02 pending.
+Progress: Phase 66 in progress (1/3 plans complete). Phase 65 complete
+(3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
+Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
+complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
+(3/3 plans). Phase 51 plans 01-03 complete, plan 04 (validation) pending.
+Phase 56 complete (research). Phase 57-01 complete (OVH rename).
+Phase 57-02 pending.
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 37
-- Average duration: ~19.5min
-- Total execution time: ~720 min
+- Total plans completed: 38
+- Average duration: ~20.4min
+- Total execution time: ~773 min
 
 **By Phase:**
 
@@ -65,8 +67,8 @@ complete (OVH rename). Phase 57-02 pending.
 | 63 | 2/2 | ~83min | ~41.5min |
 
 **Recent Trend:**
-- Last 4 plans: 63-02 (~28min), 63-01 (~55min), 60-02 (~5min), 60-01 (~8min)
-- Trend: Recent work shifted from quick infra increments to moderate MCP package/tooling expansions.
+- Last 4 plans: 66-01 (~53min), 65-03 (~5min), 65-02 (~11min), 65-01 (~7min)
+- Trend: Work has shifted to moderate infrastructure packaging and security-boundary refactors.
 
 *Updated after each plan completion*
 
@@ -76,6 +78,10 @@ complete (OVH rename). Phase 57-02 pending.
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+- [66-01]: Built new Rust `secret-proxy` binary (`axum` + `reqwest`) with plain HTTP localhost ingress and HTTPS upstream forwarding.
+- [66-01]: Upstream destination is fixed to `allowed_domains[0]` for the matched secret; incoming `Host` must match that secret's allowlist or request is denied with HTTP 403.
+- [66-01]: [Rule 3 - Blocking] Nix package needed `pkg-config` + `openssl` build inputs to satisfy `openssl-sys` during `nix build`.
 
 - [65-01]: Moved 4 personal modules (automaton, matrix, openclaw, dm-guide) and 4 package files to private overlay. Import paths rewritten from `${inputs.neurosys}/modules/...` to local `./modules/...`.
 - [65-02]: Stripped personal service references from all core modules: 13 impermanence paths, 12 internalOnlyPorts entries, 10 secret declarations, 2 package exports, 1 eval check removed from public repo. All moved to private overlay.
@@ -478,6 +484,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-04
-Stopped at: Phase 65 complete — public repo stripped to minimal forkable skeleton. All personal modules/packages moved to private overlay. nix flake check passes (19 checks).
-Next: Deploy from private overlay to verify both hosts work with the new module layout. Push private overlay changes.
+Last session: 2026-03-07
+Stopped at: Completed 66-01-PLAN.md — Rust `secret-proxy` crate, Nix package, and flake export verified.
+Next: Execute `66-02-PLAN.md` (generic NixOS module integration) and `66-03-PLAN.md` (validation/rollout).

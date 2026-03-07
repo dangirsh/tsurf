@@ -60,8 +60,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 62: LLM Cost Tracking & Display** - Track LLM API costs at the secret proxy level. Per-request cost estimation from token counts + model pricing tables. Daily/weekly/monthly aggregation. Expose via MCP tool (`llm_cost_summary`) and optional Telegram inline display on parts agent responses.
 - [x] **Phase 61: Nix-Derived Dynamic Dashboard** - Replace homepage-dashboard with Nix-derived dashboard. NixOS option schema `services.dashboard.entries`, build-time JSON manifest, Python HTTP server + dark-theme HTML frontend, systemd service on port 8082. All modules annotated with dashboard entries. Completed 2026-03-04.
 - [x] **Phase 64: Repo Layout Simplification** - Rename hosts/neurosys→services, hosts/ovh→dev. Remove beads, logseq, docs, spacebot port. Delete modules hub; per-host explicit imports. Merge/inline small modules and packages. Completed 2026-03-04.
-- [ ] **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** - Add Google OAuth 2.0 flow to neurosys MCP server (callback via Tailscale Funnel). Token storage + auto-refresh. Gmail tools (read, search, draft, send, archive) and Calendar tools (list events, search, free/busy, create, update, delete) as MCP tools alongside existing HA/Matrix/Logseq. Parts connects via MCP client with approval gating (send email = contact_human).
-- [ ] **Phase 65: Open Source Cleanup (v2)** - Strip public repo to a minimal, forkable skeleton for agentic NixOS servers. Move personal service modules (automaton, matrix, openclaw, dm-guide, home-assistant) to private overlay. Trim host imports and impermanence.nix to core-only. Remove agentic-dev-base.nix (personal repo). Clean up flake.nix exports (drop openclaw package). Add "Example Use Cases" section to README documenting generic versions of real deployments (autonomous agents, chat bridges, home automation, multi-instance SaaS, LLM cost tracking) so users see what's possible without exposing the exact private setup. Result: public repo contains only security hardening, agent sandboxing, secret proxy, deployment infra, backup, dashboard framework, and overlay extension points.
+- [x] **Phase 63: Google OAuth + Gmail/Calendar MCP Tools** - Completed 2026-03-04. Added Google OAuth flow plus Gmail and Calendar MCP tools.
+- [x] **Phase 65: Open Source Cleanup (v2)** - Completed 2026-03-04. Public repo reduced to minimal forkable skeleton with private overlay extension points.
+- [ ] **Phase 66: Secret Placeholder Proxy Module** - Generic NixOS secret placeholder injection module and Rust proxy package refactor (Plan 66-01 complete, 66-02/66-03 pending).
 
 ## Phase Details
 
@@ -1245,7 +1246,9 @@ Plans:
 
 **Goal:** Extract the Phase 22 secret-proxy trick into a generic, well-tested, maximally nix-native NixOS module. Research-heavy: survey ironclaw, gondolin (earendil-works), and all relevant NixOS/nixpkgs secret management approaches to take the best ideas. The module should: (1) let sandboxed agents use placeholder tokens while a proxy transparently re-injects real secrets, (2) tie each secret to a list of allowed destination domains so exfiltration is blocked even if the agent is prompt-injected, (3) decouple from specific secret backends (sops, agenix) and sandbox implementations (bwrap) where possible — surface any mandatory coupling in review, (4) be seamless, performant, and secure — "just work" with minimal configuration. The agent should be able to do everything as if it had real secrets, but never see them.
 **Depends on:** Phase 22 (existing secret-proxy), Phase 65
-**Plans:** 0 plans
+**Plans:** 3 plans (in progress)
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 66 to break down)
+- [x] 66-01-PLAN.md -- Rust `secret-proxy` binary + Nix package + flake export (completed 2026-03-07)
+- [ ] 66-02-PLAN.md -- pending
+- [ ] 66-03-PLAN.md -- pending
