@@ -883,6 +883,7 @@ let
     _cost_cache = {}
     COST_CACHE_PATH = "/run/claw-cost.json"
 
+
     def build_cost_payload():
         cached = _cost_cache.get("data")
         if cached and time.time() - _cost_cache.get("ts", 0) < 300:
