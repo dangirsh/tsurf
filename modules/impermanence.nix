@@ -50,6 +50,7 @@
       #   "/var/lib/my-service"  # My custom service state
       "/var/lib/fail2ban"                  # Ban database (regenerated if lost)
       "/var/lib/private"                   # DynamicUser services (dashboard, etc.)
+      "/var/lib/hass"                      # Home Assistant: .storage/, config-repo/, integrations
 
       # --- User data ---
       "/home/dev"                       # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh

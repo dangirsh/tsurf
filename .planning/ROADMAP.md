@@ -1240,3 +1240,12 @@ Plans:
 - [x] 65-01-PLAN.md -- Move personal modules and packages to private overlay (wave 1)
 - [x] 65-02-PLAN.md -- Clean core modules: remove personal service references (wave 2, depends on 65-01)
 - [x] 65-03-PLAN.md -- README update: example use cases and module table cleanup (wave 3, depends on 65-02)
+
+### Phase 66: Secret Placeholder Proxy Module — Generic NixOS Secret Injection for Sandboxed Agents
+
+**Goal:** Extract the Phase 22 secret-proxy trick into a generic, well-tested, maximally nix-native NixOS module. Research-heavy: survey ironclaw, gondolin (earendil-works), and all relevant NixOS/nixpkgs secret management approaches to take the best ideas. The module should: (1) let sandboxed agents use placeholder tokens while a proxy transparently re-injects real secrets, (2) tie each secret to a list of allowed destination domains so exfiltration is blocked even if the agent is prompt-injected, (3) decouple from specific secret backends (sops, agenix) and sandbox implementations (bwrap) where possible — surface any mandatory coupling in review, (4) be seamless, performant, and secure — "just work" with minimal configuration. The agent should be able to do everything as if it had real secrets, but never see them.
+**Depends on:** Phase 22 (existing secret-proxy), Phase 65
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 66 to break down)

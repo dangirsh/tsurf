@@ -442,6 +442,7 @@ Recent decisions affecting current work:
 - Phase 63 added/executed: Google OAuth + Gmail MCP tools — restored public neurosys-mcp server package, added interactive Google authorization routes, token persistence/refresh, and five Gmail tools.
 - Phase 61 added: Nix-Derived Dynamic Dashboard — investigate generating a live dashboard directly from NixOS module expressions (tree view with status/links), replacing manually-maintained homepage config. May use module annotations (e.g., `meta.dashboard`). Goal: dashboard always reflects deployed Nix source, zero drift.
 - Phase 64 added: Repo Layout Simplification — rename hosts/neurosys→services, hosts/ovh→dev; remove beads, logseq, docs/, spacebot port; delete modules/default.nix hub (explicit imports per host); merge small home modules inline; inline small packages; inline repos.nix; update flake.nix + CLAUDE.md.
+- Phase 66 added: Secret Placeholder Proxy Module — extract the secret-proxy trick (Phase 22) into a generic, well-tested NixOS module. Research ironclaw, gondolin (earendil-works), and all relevant NixOS secret management approaches. Design: placeholder tokens → proxy re-injects real secrets with per-secret allowed-domain lists blocking exfiltration. Decouple from secret backend (sops/agenix) and sandbox (bwrap) where possible. Goal: prompt-injected agents can't exfiltrate but operate seamlessly.
 
 ### Blockers/Concerns
 
