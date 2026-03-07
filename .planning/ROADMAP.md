@@ -1246,9 +1246,9 @@ Plans:
 
 **Goal:** Extract the Phase 22 secret-proxy trick into a generic, well-tested, maximally nix-native NixOS module. Research-heavy: survey ironclaw, gondolin (earendil-works), and all relevant NixOS/nixpkgs secret management approaches to take the best ideas. The module should: (1) let sandboxed agents use placeholder tokens while a proxy transparently re-injects real secrets, (2) tie each secret to a list of allowed destination domains so exfiltration is blocked even if the agent is prompt-injected, (3) decouple from specific secret backends (sops, agenix) and sandbox implementations (bwrap) where possible — surface any mandatory coupling in review, (4) be seamless, performant, and secure — "just work" with minimal configuration. The agent should be able to do everything as if it had real secrets, but never see them.
 **Depends on:** Phase 22 (existing secret-proxy), Phase 65
-**Plans:** 3 plans (in progress)
+**Plans:** 3 plans (completed 2026-03-07)
 
 Plans:
 - [x] 66-01-PLAN.md -- Rust `secret-proxy` binary + Nix package + flake export (completed 2026-03-07)
 - [x] 66-02-PLAN.md -- generic reusable NixOS module (`services.secretProxy.services`) + networking cleanup (completed 2026-03-07)
-- [ ] 66-03-PLAN.md -- pending
+- [x] 66-03-PLAN.md -- private overlay consumer migration + eval/live test updates (completed 2026-03-07)

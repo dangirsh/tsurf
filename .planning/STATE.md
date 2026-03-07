@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 66 in progress. Plans 66-01 and 66-02 are complete:
-Rust `secret-proxy` binary/package plus a generic multi-service NixOS module.
-Remaining work is plan 66-03 consumer migration and rollout validation.
+**Current focus:** Phase 66 complete. Generic secret-proxy module is now wired in
+the private overlay (`claw-swap` on port 9091) with updated eval/live checks.
+Next focus: Phase 67 (OVH dev environment migration planning/execution).
 
 ## Current Position
 
-Phase: 66 (Secret Placeholder Proxy Module) — IN PROGRESS
-Plan: 66-02 — COMPLETE (generic secret-proxy NixOS module)
-Status: Replaced `modules/secret-proxy.nix` hardcoded Python service with a
-generic `services.secretProxy.services.<name>` attrsOf submodule that
-materializes per-service users, hardened units, and TOML config store paths.
-Added eval-time duplicate-port assertions and removed hardcoded `9091`
-internal-only networking mapping.
-Last activity: 2026-03-07 - Plan 66-02 complete (`nix flake check` passes with
-empty default service declarations).
+Phase: 66 (Secret Placeholder Proxy Module) — COMPLETE
+Plan: 66-03 — COMPLETE (private consumer migration + tests)
+Status: Declared `services.secretProxy.services.claw-swap` in private overlay,
+granted `secret-proxy` group read access to `anthropic-api-key`, added public
+`has-secret-proxy-option` eval check, added private
+`secret-proxy-claw-swap-service` eval check, and updated live test debug hints.
+Last activity: 2026-03-07 - Plan 66-03 complete (`nix flake check` passes in
+public repo; private overlay evaluates with local-input override until public
+input pin is advanced from github revision `af29add`).
 
-Progress: Phase 66 in progress (2/3 plans complete). Phase 65 complete
+Progress: Phase 66 complete (3/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -32,9 +32,9 @@ Phase 57-02 pending.
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39
-- Average duration: ~19.9min
-- Total execution time: ~776 min
+- Total plans completed: 40
+- Average duration: ~19.6min
+- Total execution time: ~784 min
 
 **By Phase:**
 
@@ -67,7 +67,7 @@ Phase 57-02 pending.
 | 63 | 2/2 | ~83min | ~41.5min |
 
 **Recent Trend:**
-- Last 4 plans: 66-02 (~3min), 66-01 (~53min), 65-03 (~5min), 65-02 (~11min)
+- Last 4 plans: 66-03 (~8min), 66-02 (~3min), 66-01 (~53min), 65-03 (~5min)
 - Trend: Work has shifted to proxy boundary hardening and modular NixOS integration.
 
 *Updated after each plan completion*
@@ -82,6 +82,9 @@ Recent decisions affecting current work:
 - [66-02]: Rewrote `modules/secret-proxy.nix` into a generic `services.secretProxy.services` attrsOf submodule with per-service users, units, and read-only `bwrapArgs`.
 - [66-02]: Per-service TOML config is generated as a Nix store path via `pkgs.writeText`; runtime secrets remain file-backed via `secretFile` paths.
 - [66-02]: Removed hardcoded `internalOnlyPorts."9091"` mapping; proxy ports are loopback-only and duplicate-port validation now lives in module assertions.
+- [66-03]: Private overlay now declares `services.secretProxy.services.claw-swap` (port `9091`) with `config.sops.secrets."anthropic-api-key".path` as `secretFile`.
+- [66-03]: `anthropic-api-key` remains owned by `dangirsh` while adding `group = "secret-proxy"` and `mode = "0440"` so `secret-proxy-claw-swap` can read it safely.
+- [66-03]: Public eval suite gained `has-secret-proxy-option`; private eval suite gained `secret-proxy-claw-swap-service`; legacy private `anthropic-secret-proxy` references were migrated to `secret-proxy-claw-swap`.
 - [66-01]: Built new Rust `secret-proxy` binary (`axum` + `reqwest`) with plain HTTP localhost ingress and HTTPS upstream forwarding.
 - [66-01]: Upstream destination is fixed to `allowed_domains[0]` for the matched secret; incoming `Host` must match that secret's allowlist or request is denied with HTTP 403.
 - [66-01]: [Rule 3 - Blocking] Nix package needed `pkg-config` + `openssl` build inputs to satisfy `openssl-sys` during `nix build`.
@@ -462,6 +465,7 @@ Recent decisions affecting current work:
 - [NOTE]: Syncthing device IDs are placeholders — user must replace before deploy
 - [NOTE]: home-manager ssh/git options show deprecation warnings (renamed options) — cosmetic, not blocking
 - [NOTE]: OVH root SSH password auth failed during 27-01; recon succeeded via `ubuntu` after forced password-expiry rotation. Confirm preferred admin login path before 27-03 deploy steps.
+- [NOTE]: private-neurosys currently pins `neurosys` input to github `af29add`; until that pin is advanced to include Phase 66 commits, private eval requires `--override-input neurosys /data/projects/neurosys`.
 
 ### Quick Tasks Completed
 
@@ -488,5 +492,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed 66-02-PLAN.md — generic secret-proxy NixOS module integration verified.
-Next: Execute `66-03-PLAN.md` (private overlay consumer migration + validation/rollout).
+Stopped at: Completed 66-03-PLAN.md — private overlay secret-proxy consumer migration and checks.
+Next: Start Phase 67 planning/execution (OVH dev environment migration), and advance private `neurosys` input pin after public Phase 66 commits are published.
