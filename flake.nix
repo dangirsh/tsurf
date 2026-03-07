@@ -96,6 +96,7 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
+        secret-proxy = pkgs.callPackage ./packages/secret-proxy.nix { inherit (pkgs) rustPlatform; };
 
         test-live = pkgs.writeShellApplication {
           name = "test-live";
