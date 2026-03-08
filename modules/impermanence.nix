@@ -8,9 +8,11 @@
   # Impermanence file bind-mounts create parent dirs as 775 (group-writable).
   # sshd rejects authorized_keys if any parent dir in the path is group-writable.
   # This activation script runs after /etc is populated but before services start.
+  # Also fix authorized_keys.d — created inside /etc/ssh after bind-mount sets 775,
+  # so it inherits group-writable, causing sshd StrictModes to reject all keys in it.
   system.activationScripts.fixEtcPermissions = {
     text = ''
-      chmod 755 /etc /etc/ssh 2>/dev/null || true
+      chmod 755 /etc /etc/ssh /etc/ssh/authorized_keys.d 2>/dev/null || true
     '';
     deps = [ "etc" ];
   };
