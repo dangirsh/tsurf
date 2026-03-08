@@ -1262,3 +1262,21 @@ Plans:
 
 Plans:
 - [x] 67-01-PLAN.md -- architecture doc (docs/secret-proxy-architecture.md)
+
+### Phase 68: Extract secret-proxy into standalone nix-secret-proxy flake
+
+**Goal:** [To be planned]
+**Depends on:** Phase 67
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 68 to break down)
+
+### Phase 69: OVH Dev Environment Migration
+
+**Goal:** Migrate daily development workflow from acfs (local machine) to OVH VPS (neurosys-dev). OVH becomes the primary dev host with all project repos, agent sandbox tooling, and secret-proxy for dev agents. Contabo keeps running services (HA, claw-swap, Matrix, MCP, etc.). Success: sandboxed Claude Code session works on OVH, acfs goes unused.
+**Depends on:** Phase 66
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 69 to break down)
