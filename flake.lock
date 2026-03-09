@@ -163,6 +163,23 @@
         "type": "github"
       }
     },
+    "nix-secret-proxy": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1773049903,
+        "narHash": "sha256-CzE5M45cYYdkZ9WNR8jiLnIdODyvEl8f/c28esvGJCk=",
+        "path": "/data/projects/nix-secret-proxy",
+        "type": "path"
+      },
+      "original": {
+        "path": "/data/projects/nix-secret-proxy",
+        "type": "path"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1768564909,
@@ -202,6 +219,7 @@
         "home-manager": "home-manager",
         "impermanence": "impermanence",
         "llm-agents": "llm-agents",
+        "nix-secret-proxy": "nix-secret-proxy",
         "nixpkgs": "nixpkgs_2",
         "sops-nix": "sops-nix",
         "srvos": "srvos",
