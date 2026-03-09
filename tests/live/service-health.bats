@@ -47,6 +47,13 @@ bats_load_library bats-assert/load
   assert_success
 }
 
+@test "${HOST}: secret-proxy-dev.service is active (neurosys-dev only)" {
+  if ! is_ovh; then
+    skip "secret-proxy-dev only on neurosys-dev"
+  fi
+  assert_unit_active "secret-proxy-dev.service"
+}
+
 @test "${HOST}: no systemd units are in failed state" {
   local failed
   failed="$(remote systemctl --failed --no-legend --no-pager 2>&1 | sed '/^$/d')" || true

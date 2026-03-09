@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 68 is in progress. Plan 68-01 extracted secret-proxy into
-standalone flake repo `/data/projects/nix-secret-proxy` with package/module/overlay
-outputs and successful `nix build` verification.
-Next focus: Phase 68 Plan 02 (consume standalone flake input from neurosys).
+**Current focus:** Phase 69 complete. OVH VPS is now the primary dev environment with
+secret-proxy-dev, 12 cloned repos, and working sandboxed Claude Code sessions.
+Phase 68 in progress (standalone secret-proxy extraction).
 
 ## Current Position
 
-Phase: 68 (Extract Secret Proxy into Standalone Flake) — IN PROGRESS
-Plan: 68-01 — COMPLETE (standalone repo extraction + build verification)
-Status: Created new git repo `/data/projects/nix-secret-proxy` with copied Rust
-crate, `package.nix`, `module.nix`, and `flake.nix`; verified
-`nix build /data/projects/nix-secret-proxy#secret-proxy --no-link` succeeds.
-Last activity: 2026-03-09 - Plan 68-01 complete.
+Phase: 69 (OVH Dev Environment Migration) — COMPLETE
+Plan: 69-03 — COMPLETE (eval checks, live tests, state updates)
+Status: OVH (neurosys-dev) deployed with secret-proxy-dev on port 9091,
+12/13 repos cloned (worldcoin/ai needs org-scoped PAT), Claude Code
+acceptance test passed via secret-proxy. Deploy script updated with
+--node all parallel deploy support.
+Last activity: 2026-03-09 - Phase 69 complete.
 
-Progress: Phase 68 in progress (1/3 plans complete). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
+Progress: Phase 69 complete (3/3 plans). Phase 68 in progress (1/3 plans complete). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -76,6 +76,13 @@ Phase 57-02 pending.
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+- [69-01]: Per-host repo lists: OVH gets 13 dev repos (10 standard + 3 custom-target), Contabo gets 4 service repos. `repos.nix` removed from `commonModules`.
+- [69-01]: `services.secretProxy.services.dev` declared in `ovhModules` (port 9091) for sandboxed agent API key injection on dev host.
+- [69-01]: Activation script `clone-repos` depends on `setupSecrets` (not just `users`) so sops-decrypted `github-pat` is available at clone time.
+- [69-02]: deploy.sh supports `--node all` for parallel deployment of both hosts with independent processes and per-node log files.
+- [69-02]: OVH deploy health checks include `secret-proxy-dev` alongside `syncthing` and `tailscaled`.
+- [69-03]: Eval checks added: `secret-proxy-dev-service`, `ovh-clone-repos`, `secret-proxy-dev-user`, `ovh-no-agentd` (locked decision: no agentd on OVH).
 
 - [68-01]: Extracted secret-proxy crate into standalone repo `/data/projects/nix-secret-proxy` with independent git history and root-level Cargo/Nix files.
 - [68-01]: Standalone package derivation uses `src = ./.` and `cargoLock.lockFile = ./Cargo.lock` so flake root is crate root.
@@ -497,5 +504,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed 68-01-PLAN.md — standalone `nix-secret-proxy` flake extracted and build-verified.
-Next: Execute 68-02-PLAN.md to consume `nix-secret-proxy` as an external flake input in neurosys.
+Stopped at: Completed Phase 69 — OVH dev environment fully deployed and validated.
+Next: Continue Phase 68 (68-02: consume `nix-secret-proxy` as external flake input in neurosys).

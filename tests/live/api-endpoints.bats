@@ -17,16 +17,12 @@ bats_load_library bats-assert/load
   assert_http_ok "http://localhost:8082" "Homepage dashboard"
 }
 
-@test "${HOST}: secret-proxy port 9091 is responsive (neurosys only)" {
-  if ! is_neurosys; then
-    skip "secret-proxy only on neurosys"
-  fi
-
+@test "${HOST}: secret-proxy port 9091 is responsive" {
   local status
   status="$(remote curl -so /dev/null -w "%{http_code}" --max-time 10 "http://localhost:9091/" 2>&1)" || true
   if [[ -z "$status" ]] || [[ "$status" == "000" ]]; then
     echo "FAIL: secret-proxy did not return an HTTP response"
-    echo "DEBUG: ssh ${SSH_USER}@${HOST} systemctl status secret-proxy-claw-swap --no-pager"
+    echo "DEBUG: ssh ${SSH_USER}@${HOST} systemctl status 'secret-proxy-*' --no-pager"
     return 1
   fi
 }
