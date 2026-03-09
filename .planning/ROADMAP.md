@@ -1265,12 +1265,14 @@ Plans:
 
 ### Phase 68: Extract secret-proxy into standalone nix-secret-proxy flake
 
-**Goal:** [To be planned]
+**Goal:** Extract the Rust secret-proxy binary + NixOS module from neurosys into a standalone public flake at `/data/projects/nix-secret-proxy`, then migrate both the public neurosys repo and the private-neurosys overlay to consume it as a flake input rather than carrying inline source code.
 **Depends on:** Phase 67
-**Plans:** 0 plans
+**Plans:** 3 plans (completed 2026-03-09)
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 68 to break down)
+- [x] 68-01-PLAN.md -- Standalone nix-secret-proxy flake creation (wave 1)
+- [x] 68-02-PLAN.md -- neurosys consumes nix-secret-proxy as flake input (wave 2)
+- [x] 68-03-PLAN.md -- private-neurosys migrates to nix-secret-proxy via follows (wave 3)
 
 ### Phase 69: OVH Dev Environment Migration
 

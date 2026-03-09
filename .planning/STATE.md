@@ -5,21 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 69 complete. OVH VPS is now the primary dev environment with
-secret-proxy-dev, 12 cloned repos, and working sandboxed Claude Code sessions.
-Phase 68 in progress (standalone secret-proxy extraction).
+**Current focus:** Phase 68 complete. secret-proxy extracted into standalone nix-secret-proxy flake.
+Both neurosys and private-neurosys consume it as a flake input. Phase 69 is next.
 
 ## Current Position
 
-Phase: 69 (OVH Dev Environment Migration) — COMPLETE
-Plan: 69-03 — COMPLETE (eval checks, live tests, state updates)
-Status: OVH (neurosys-dev) deployed with secret-proxy-dev on port 9091,
-12/13 repos cloned (worldcoin/ai needs org-scoped PAT), Claude Code
-acceptance test passed via secret-proxy. Deploy script updated with
---node all parallel deploy support.
-Last activity: 2026-03-09 - Phase 69 complete.
+Phase: 68 (Extract secret-proxy into standalone nix-secret-proxy flake) — COMPLETE
+Plan: 68-03 — COMPLETE (private-neurosys migrated to nix-secret-proxy via follows)
+Status: nix-secret-proxy standalone flake created at /data/projects/nix-secret-proxy.
+neurosys consumes via path: input with follows pin. private-neurosys threads via
+follows = "neurosys/nix-secret-proxy". README.md added. All nix flake check passes.
+Last activity: 2026-03-09 - Phase 68 complete.
 
-Progress: Phase 69 complete (3/3 plans). Phase 68 in progress (1/3 plans complete). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
+Progress: Phase 68 complete (3/3 plans). Phase 69 not yet started. Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -313,6 +311,12 @@ Recent decisions affecting current work:
 
 ### Completed Phases
 
+- **Phase 68: Extract secret-proxy into standalone nix-secret-proxy flake** (3/3 plans, completed 2026-03-09)
+  - 68-01: Standalone `nix-secret-proxy` flake created at `/data/projects/nix-secret-proxy` with `packages.secret-proxy`, `nixosModules.default`, `overlays.default`, `checks.build` exports. `package.nix` uses `src = ./.`; `module.nix` adds `services.secretProxy.package` option.
+  - 68-02: neurosys consumes `nix-secret-proxy` as `path:` flake input with `inputs.nixpkgs.follows = "nixpkgs"`; `nix-secret-proxy.nixosModules.default` in `commonModules`; `modules/secret-proxy.nix` and `packages/secret-proxy/` deleted from neurosys.
+  - 68-03: private-neurosys pins via `follows = "neurosys/nix-secret-proxy"`; `modules/secret-proxy-generic.nix` (180-line Python reimplementation) deleted; `nix flake check` passes on both repos.
+  - README.md added to nix-secret-proxy with sops-nix/agenix/plain-file integration examples.
+
 - **Phase 65: Open Source Cleanup v2 — Minimal Forkable Skeleton** (3/3 plans, completed 2026-03-04)
   - 65-01: Moved 4 personal modules and 4 package files to private overlay; updated import paths from `${inputs.neurosys}/modules/...` to local `./modules/...`.
   - 65-02: Stripped all personal references from core modules (impermanence, networking, secrets, host imports, eval checks, flake packages). Created `impermanence-private.nix` and expanded `secrets-contabo.nix` in private overlay.
@@ -504,5 +508,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed Phase 69 — OVH dev environment fully deployed and validated.
-Next: Continue Phase 68 (68-02: consume `nix-secret-proxy` as external flake input in neurosys).
+Stopped at: Completed Phase 68 — secret-proxy extracted into standalone nix-secret-proxy flake; neurosys and private-neurosys both consume it as a flake input.
+Next: Phase 69 (OVH Dev Environment Migration).
