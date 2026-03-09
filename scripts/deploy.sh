@@ -73,7 +73,7 @@ Usage: $(basename "$0") [OPTIONS]
 Deploy neurosys NixOS config to the selected deploy node.
 
 Options:
-  --node NAME           Deploy flake node (neurosys|ovh, default: neurosys)
+  --node NAME           Deploy flake node (neurosys|ovh|all, default: neurosys)
   --mode remote         Build on target host via deploy-rs --remote-build (default)
   --mode local          Build locally, deploy remotely
   --target U@H          Override SSH target (default by node)
@@ -86,7 +86,8 @@ Options:
 Examples:
   ./scripts/deploy.sh                              # Deploy neurosys (remote build, skip parts update)
   ./scripts/deploy.sh --update-parts               # Deploy and pull latest parts first
-  ./scripts/deploy.sh --node ovh                  # Deploy production node (ovh)
+  ./scripts/deploy.sh --node ovh                  # Deploy OVH dev node only
+  ./scripts/deploy.sh --node all                  # Deploy BOTH nodes in parallel
   ./scripts/deploy.sh --mode local                # Local build (fallback if server unreachable)
   ./scripts/deploy.sh --first-deploy               # First migration deploy from nixos-rebuild
   ./scripts/deploy.sh --no-magic-rollback          # Intentional networking change deploy
@@ -143,9 +144,52 @@ if [[ "$MODE" != "local" && "$MODE" != "remote" ]]; then
   exit 1
 fi
 
-if [[ "$NODE" != "neurosys" && "$NODE" != "ovh" ]]; then
-  echo "Error: --node must be 'neurosys' or 'ovh', got '$NODE'"
+if [[ "$NODE" != "neurosys" && "$NODE" != "ovh" && "$NODE" != "all" ]]; then
+  echo "Error: --node must be 'neurosys', 'ovh', or 'all', got '$NODE'"
   exit 1
+fi
+
+# --- Parallel deploy: --node all spawns independent processes ---
+if [[ "$NODE" == "all" ]]; then
+  echo "==> Deploying ALL nodes in parallel..."
+  PIDS=()
+  LOGS=()
+  for n in neurosys ovh; do
+    LOG="$FLAKE_DIR/tmp/deploy-${n}.log"
+    LOGS+=("$LOG")
+    # Forward all flags except --node
+    EXTRA_ARGS=()
+    [[ "$MODE" != "remote" ]] && EXTRA_ARGS+=(--mode "$MODE")
+    [[ "$FIRST_DEPLOY" == true ]] && EXTRA_ARGS+=(--first-deploy)
+    [[ "$NO_MAGIC_ROLLBACK" == true ]] && EXTRA_ARGS+=(--no-magic-rollback)
+    [[ "$SKIP_UPDATE" == false ]] && EXTRA_ARGS+=(--update-parts)
+    "$0" --node "$n" "${EXTRA_ARGS[@]}" >"$LOG" 2>&1 &
+    PIDS+=($!)
+    echo "  Started $n deploy (PID $!, log: $LOG)"
+  done
+  echo ""
+  FAILED_NODES=()
+  for i in "${!PIDS[@]}"; do
+    n=$( [[ $i -eq 0 ]] && echo "neurosys" || echo "ovh" )
+    if wait "${PIDS[$i]}"; then
+      echo "  ✓ $n deploy succeeded"
+    else
+      echo "  ✗ $n deploy FAILED (see ${LOGS[$i]})"
+      FAILED_NODES+=("$n")
+    fi
+  done
+  echo ""
+  if [[ ${#FAILED_NODES[@]} -eq 0 ]]; then
+    echo "=== All deploys SUCCESS ==="
+  else
+    echo "=== Deploy FAILED for: ${FAILED_NODES[*]} ==="
+    echo "Review logs:"
+    for n in "${FAILED_NODES[@]}"; do
+      echo "  $FLAKE_DIR/tmp/deploy-${n}.log"
+    done
+    exit 1
+  fi
+  exit 0
 fi
 
 # Public IPs for post-deploy connectivity verification (independent of Tailscale).
