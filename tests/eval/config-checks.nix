@@ -242,6 +242,31 @@ in
     echo "PASS: dashboard manifest is valid JSON"
     touch "$out"
   '';
+
+  # --- Remote access safety checks (both hosts) ---
+  # These mirror the NixOS assertions in networking.nix but give named PASS/FAIL visibility
+  # during `nix flake check`. If assertions fire, the eval check fails too, but the check
+  # name makes it obvious which invariant broke.
+
+  remote-access-neurosys = mkCheck
+    "remote-access-neurosys"
+    "neurosys remote access invariants: sshd + tailscale + root SSH keys + port 22"
+    "neurosys remote access broken: sshd=${builtins.toJSON neurosysCfg.services.openssh.enable} tailscale=${builtins.toJSON neurosysCfg.services.tailscale.enable} rootKeys=${builtins.toJSON (neurosysCfg.users.users.root.openssh.authorizedKeys.keys != [])} port22=${builtins.toJSON (builtins.elem 22 neurosysCfg.networking.firewall.allowedTCPPorts)}"
+    (neurosysCfg.services.openssh.enable
+     && neurosysCfg.services.tailscale.enable
+     && neurosysCfg.users.users.root.openssh.authorizedKeys.keys != []
+     && (builtins.elem 22 neurosysCfg.networking.firewall.allowedTCPPorts
+         || neurosysCfg.services.openssh.openFirewall));
+
+  remote-access-ovh = mkCheck
+    "remote-access-ovh"
+    "ovh remote access invariants: sshd + tailscale + root SSH keys + port 22"
+    "ovh remote access broken: sshd=${builtins.toJSON ovhCfg.services.openssh.enable} tailscale=${builtins.toJSON ovhCfg.services.tailscale.enable} rootKeys=${builtins.toJSON (ovhCfg.users.users.root.openssh.authorizedKeys.keys != [])} port22=${builtins.toJSON (builtins.elem 22 ovhCfg.networking.firewall.allowedTCPPorts)}"
+    (ovhCfg.services.openssh.enable
+     && ovhCfg.services.tailscale.enable
+     && ovhCfg.users.users.root.openssh.authorizedKeys.keys != []
+     && (builtins.elem 22 ovhCfg.networking.firewall.allowedTCPPorts
+         || ovhCfg.services.openssh.openFirewall));
 }
 
 # --- Private overlay test extension pattern ---

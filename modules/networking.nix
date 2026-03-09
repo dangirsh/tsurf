@@ -33,6 +33,34 @@ in {
       assertion = exposed == [];
       message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain Tailscale-only (trustedInterfaces).";
     }
+    # --- Remote access safety assertions ---
+    # @decision NET-15: Build-time assertions prevent deploying configs that lock out SSH/Tailscale.
+    # If any of these fail, the config cannot be built, so it cannot be deployed.
+    {
+      assertion = config.services.openssh.enable;
+      message = "LOCKOUT PREVENTION: sshd must be enabled — disabling it removes all remote access.";
+    }
+    {
+      assertion = config.services.openssh.settings.PermitRootLogin != "no";
+      message = "LOCKOUT PREVENTION: PermitRootLogin must not be 'no' — deploy-rs requires root SSH. Use 'prohibit-password' for key-only root login.";
+    }
+    {
+      assertion = config.users.users.root.openssh.authorizedKeys.keys != [];
+      message = "LOCKOUT PREVENTION: root must have at least one SSH authorized key for deploy access.";
+    }
+    {
+      assertion = builtins.elem 22 config.networking.firewall.allowedTCPPorts
+        || config.services.openssh.openFirewall;
+      message = "LOCKOUT PREVENTION: SSH port 22 must be reachable — add to allowedTCPPorts or set services.openssh.openFirewall = true.";
+    }
+    {
+      assertion = config.services.tailscale.enable;
+      message = "LOCKOUT PREVENTION: Tailscale must be enabled — it provides the primary remote access path.";
+    }
+    {
+      assertion = config.services.openssh.hostKeys != [];
+      message = "LOCKOUT PREVENTION: SSH host keys must be configured — sshd fails to start without them.";
+    }
   ];
 
   # --- nftables backend ---
