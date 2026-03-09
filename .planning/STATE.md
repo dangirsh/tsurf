@@ -5,20 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 66 complete. Generic secret-proxy module is now wired in
-the private overlay (`claw-swap` on port 9091) with updated eval/live checks.
-Next focus: Phase 67 (OVH dev environment migration planning/execution).
+**Current focus:** Phase 68 is in progress. Plan 68-01 extracted secret-proxy into
+standalone flake repo `/data/projects/nix-secret-proxy` with package/module/overlay
+outputs and successful `nix build` verification.
+Next focus: Phase 68 Plan 02 (consume standalone flake input from neurosys).
 
 ## Current Position
 
-Phase: 67 (Review and Document Secret Proxy) — COMPLETE
-Plan: 67-01 — COMPLETE (architecture doc)
-Status: Created `docs/secret-proxy-architecture.md` — consumer-facing executive
-summary covering 8 design features, 10 limitations (L1–L10), test coverage gaps,
-and 7 improvement areas (I1–I7). ROADMAP and STATE updated.
-Last activity: 2026-03-07 - Plan 67-01 complete.
+Phase: 68 (Extract Secret Proxy into Standalone Flake) — IN PROGRESS
+Plan: 68-01 — COMPLETE (standalone repo extraction + build verification)
+Status: Created new git repo `/data/projects/nix-secret-proxy` with copied Rust
+crate, `package.nix`, `module.nix`, and `flake.nix`; verified
+`nix build /data/projects/nix-secret-proxy#secret-proxy --no-link` succeeds.
+Last activity: 2026-03-09 - Plan 68-01 complete.
 
-Progress: Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
+Progress: Phase 68 in progress (1/3 plans complete). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -75,6 +76,11 @@ Phase 57-02 pending.
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+- [68-01]: Extracted secret-proxy crate into standalone repo `/data/projects/nix-secret-proxy` with independent git history and root-level Cargo/Nix files.
+- [68-01]: Standalone package derivation uses `src = ./.` and `cargoLock.lockFile = ./Cargo.lock` so flake root is crate root.
+- [68-01]: Standalone module adds `services.secretProxy.package` (default `pkgs.callPackage ./package.nix {}`) and sets `secretProxyPkg = cfg.package` for downstream overrides.
+- [68-01]: Standalone flake exports `packages`, `nixosModules.default`, and `overlays.default`; `nix build /data/projects/nix-secret-proxy#secret-proxy --no-link` passes.
 
 - [66-02]: Rewrote `modules/secret-proxy.nix` into a generic `services.secretProxy.services` attrsOf submodule with per-service users, units, and read-only `bwrapArgs`.
 - [66-02]: Per-service TOML config is generated as a Nix store path via `pkgs.writeText`; runtime secrets remain file-backed via `secretFile` paths.
@@ -453,6 +459,7 @@ Recent decisions affecting current work:
 - Phase 64 added: Repo Layout Simplification — rename hosts/neurosys→services, hosts/ovh→dev; remove beads, logseq, docs/, spacebot port; delete modules/default.nix hub (explicit imports per host); merge small home modules inline; inline small packages; inline repos.nix; update flake.nix + CLAUDE.md.
 - Phase 66 added: Secret Placeholder Proxy Module — extract the secret-proxy trick (Phase 22) into a generic, well-tested NixOS module. Research ironclaw, gondolin (earendil-works), and all relevant NixOS secret management approaches. Design: placeholder tokens → proxy re-injects real secrets with per-secret allowed-domain lists blocking exfiltration. Decouple from secret backend (sops/agenix) and sandbox (bwrap) where possible. Goal: prompt-injected agents can't exfiltrate but operate seamlessly.
 - Phase 67 added: Review and document the secret proxy — read all source, tests, and module code; produce an executive summary of key design features, limitations, and improvement areas
+- Phase 68 added: Extract secret-proxy into standalone nix-secret-proxy flake — new public GitHub repo with flake.nix (packages.secret-proxy + nixosModules.default), README with sops-nix/agenix/plain-file integration examples, neurosys consumes it as a flake input instead of carrying local copies
 
 ### Blockers/Concerns
 
@@ -489,6 +496,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-07
-Stopped at: Completed 66-03-PLAN.md — private overlay secret-proxy consumer migration and checks.
-Next: Start Phase 67 planning/execution (OVH dev environment migration), and advance private `neurosys` input pin after public Phase 66 commits are published.
+Last session: 2026-03-09
+Stopped at: Completed 68-01-PLAN.md — standalone `nix-secret-proxy` flake extracted and build-verified.
+Next: Execute 68-02-PLAN.md to consume `nix-secret-proxy` as an external flake input in neurosys.
