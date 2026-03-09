@@ -35,6 +35,9 @@ SECONDS=0
 
 SYSTEMD_SERVICES=()
 DOCKER_CONTAINERS=()
+DEPLOY_COMPLETED=false
+PREV_SYSTEM=""
+WATCHDOG_PID=""
 mkdir -p "$FLAKE_DIR/tmp"
 
 # @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
@@ -48,6 +51,11 @@ SSH_CTL="$FLAKE_DIR/tmp/deploy-ssh-%r@%h:%p"
 SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$SSH_CTL" -o "ControlPersist=60s")
 
 cleanup() {
+  # Cancel watchdog if deploy hasn't completed (early exit / Ctrl+C before activation)
+  if [[ -n "$WATCHDOG_PID" && "$DEPLOY_COMPLETED" != true ]]; then
+    echo "==> Cancelling rollback watchdog (deploy did not complete)..."
+    ssh "${SSH_OPTS[@]}" "$TARGET" "kill $WATCHDOG_PID 2>/dev/null" || true
+  fi
   if [[ "$REMOTE_LOCK_HELD" == true ]]; then
     ssh "${SSH_OPTS[@]}" "$TARGET" "rm -rf '$REMOTE_LOCK_DIR'" 2>/dev/null || true
   fi
@@ -140,6 +148,12 @@ if [[ "$NODE" != "neurosys" && "$NODE" != "ovh" ]]; then
   exit 1
 fi
 
+# Public IPs for post-deploy connectivity verification (independent of Tailscale).
+case "$NODE" in
+  neurosys) PUBLIC_IP="161.97.74.121" ;;
+  ovh) PUBLIC_IP="135.125.196.143" ;;
+esac
+
 # SAFETY GUARD: All deploys MUST come from the private overlay.
 # @decision DEPLOY-02: Both neurosys and ovh run the private overlay config.
 #   The public flake's nixosConfigurations have placeholder SSH keys, no real
@@ -178,8 +192,8 @@ fi
 # --- Node-specific service health checks ---
 if [[ "$NODE" == "neurosys" ]]; then  # parts-tools parts-agent postgresql claw-swap-app
   SYSTEMD_SERVICES=("parts-tools" "parts-agent" "postgresql" "claw-swap-app")
-elif [[ "$NODE" == "ovh" ]]; then  # syncthing tailscaled
-  SYSTEMD_SERVICES=("syncthing" "tailscaled")
+elif [[ "$NODE" == "ovh" ]]; then  # syncthing tailscaled secret-proxy-dev
+  SYSTEMD_SERVICES=("syncthing" "tailscaled" "secret-proxy-dev")
 fi
 
 LOCAL_LOCK="$FLAKE_DIR/tmp/neurosys-${NODE}-deploy.local.lock"
@@ -231,6 +245,49 @@ if [[ "$NODE" == "neurosys" ]]; then
   echo "==> Parts revision: $PARTS_REV_SHORT"
 fi
 
+# --- Pre-deploy: safety checks when magic rollback is disabled ---
+# @decision DEPLOY-03: When magic rollback is off, schedule a self-managed watchdog process on the
+# server that auto-reverts to the previous NixOS generation after 5 minutes. The watchdog runs as a
+# nohup process (survives systemd reload during activation). deploy.sh cancels it after verifying
+# remote access post-deploy. If SSH breaks, the watchdog fires and restores access automatically.
+if [[ "$FIRST_DEPLOY" == true || "$NO_MAGIC_ROLLBACK" == true ]]; then
+  echo "==> Magic rollback disabled — running pre-deploy safety checks..."
+
+  # Evaluate the target config to trigger NixOS remote-access assertions
+  echo "==> Evaluating $NODE config (remote access assertions)..."
+  if ! nix eval "$FLAKE_DIR#nixosConfigurations.$NODE.config.system.build.toplevel" --raw >/dev/null 2>&1; then
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════════╗"
+    echo "║  BLOCKED: Config evaluation failed                             ║"
+    echo "╚══════════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "  NixOS assertions failed for node '$NODE'."
+    echo "  Cannot deploy without magic rollback when assertions fail."
+    echo "  Run for details:"
+    echo "    nix eval .#nixosConfigurations.$NODE.config.system.build.toplevel"
+    exit 1
+  fi
+  echo "==> Config assertions passed."
+
+  # Save current system path for watchdog rollback
+  PREV_SYSTEM=$(ssh "${SSH_OPTS[@]}" "$TARGET" "readlink -f /nix/var/nix/profiles/system" 2>/dev/null)
+  if [[ -z "$PREV_SYSTEM" ]]; then
+    echo "ERROR: Cannot read current system generation — cannot proceed without magic rollback."
+    exit 1
+  fi
+  echo "==> Previous system: $PREV_SYSTEM"
+
+  # Schedule watchdog: auto-rollback in 5 minutes if not cancelled
+  echo "==> Scheduling rollback watchdog (5 min timeout)..."
+  WATCHDOG_PID=$(ssh "${SSH_OPTS[@]}" "$TARGET" \
+    "nohup bash -c 'sleep 300 && $PREV_SYSTEM/bin/switch-to-configuration switch && nix-env -p /nix/var/nix/profiles/system --set $PREV_SYSTEM && echo \"\$(date -u): WATCHDOG FIRED — rolled back to $PREV_SYSTEM\" >> /tmp/deploy-watchdog.log' </dev/null >>/tmp/deploy-watchdog.log 2>&1 & echo \$!")
+  if [[ -n "$WATCHDOG_PID" ]]; then
+    echo "==> Watchdog PID $WATCHDOG_PID — auto-rollback in 5 min if not cancelled."
+  else
+    echo "WARNING: Failed to schedule watchdog — proceeding without rollback safety net."
+  fi
+fi
+
 # --- Build + deploy ---
 if [[ "$TARGET_SET" == true ]]; then
   echo "WARNING: --target affects SSH locking/health checks only."
@@ -259,6 +316,7 @@ else
   echo "==> Deploying node '$NODE' via remote build on $TARGET with deploy-rs..."
   nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}" --remote-build
 fi
+DEPLOY_COMPLETED=true
 
 # --- Verify services ---
 echo "==> Verifying services (polling up to 30s)..."
@@ -280,6 +338,65 @@ for attempt in $(seq 1 15); do
   fi
   sleep 2
 done
+
+# --- Post-deploy: verify remote access ---
+# @decision DEPLOY-04: After deploy, verify SSH connectivity via both the deploy target (Tailscale)
+# and the public IP (fallback). Uses non-multiplexed connections (-o ControlPath=none) to test real
+# connectivity, not cached SSH channels from before the deploy.
+echo "==> Verifying remote access..."
+REMOTE_ACCESS_OK=true
+
+# Fresh SSH to deploy target (non-multiplexed — tests real path, usually Tailscale)
+if ssh -o ConnectTimeout=15 -o BatchMode=yes -o ControlPath=none "$TARGET" \
+    "systemctl is-active --quiet sshd.service && systemctl is-active --quiet tailscaled.service" 2>/dev/null; then
+  echo "  Deploy target ($TARGET): sshd + tailscaled OK"
+else
+  echo "  Deploy target ($TARGET): UNREACHABLE or critical services down"
+  REMOTE_ACCESS_OK=false
+fi
+
+# Independent SSH to public IP (separate from Tailscale path)
+if ssh -o ConnectTimeout=15 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ControlPath=none \
+    "root@$PUBLIC_IP" "systemctl is-active --quiet sshd.service" 2>/dev/null; then
+  echo "  Public IP ($PUBLIC_IP): SSH + sshd OK"
+else
+  echo "  Public IP ($PUBLIC_IP): UNREACHABLE or sshd down"
+  REMOTE_ACCESS_OK=false
+fi
+
+# Handle watchdog based on remote access results
+if [[ -n "$WATCHDOG_PID" ]]; then
+  if [[ "$REMOTE_ACCESS_OK" == true ]]; then
+    echo "==> Remote access verified — cancelling rollback watchdog..."
+    ssh "${SSH_OPTS[@]}" "$TARGET" "kill $WATCHDOG_PID 2>/dev/null" || \
+      ssh -o ConnectTimeout=10 -o BatchMode=yes -o ControlPath=none "root@$PUBLIC_IP" "kill $WATCHDOG_PID 2>/dev/null" || true
+    WATCHDOG_PID=""
+  else
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════════╗"
+    echo "║  REMOTE ACCESS ISSUES DETECTED                                 ║"
+    echo "╠══════════════════════════════════════════════════════════════════╣"
+    echo "║  Rollback watchdog is active — system will auto-revert in      ║"
+    echo "║  ~5 minutes unless cancelled.                                  ║"
+    echo "║                                                                ║"
+    echo "║  To KEEP the new config (cancel watchdog):                     ║"
+    echo "║    ssh root@$PUBLIC_IP kill $WATCHDOG_PID"
+    echo "║                                                                ║"
+    echo "║  To rollback NOW:                                              ║"
+    echo "║    ssh root@$PUBLIC_IP $PREV_SYSTEM/bin/switch-to-configuration switch"
+    echo "╚══════════════════════════════════════════════════════════════════╝"
+  fi
+elif [[ "$REMOTE_ACCESS_OK" != true ]]; then
+  echo ""
+  echo "╔══════════════════════════════════════════════════════════════════╗"
+  echo "║  WARNING: Remote access issues detected!                       ║"
+  echo "╠══════════════════════════════════════════════════════════════════╣"
+  echo "║  deploy-rs magic rollback should catch SSH failures, but       ║"
+  echo "║  Tailscale may be down while public SSH still works.           ║"
+  echo "║  Manual rollback if needed:                                    ║"
+  echo "║    ssh root@$PUBLIC_IP nixos-rebuild switch --rollback"
+  echo "╚══════════════════════════════════════════════════════════════════╝"
+fi
 
 # --- Report ---
 DURATION=$SECONDS
