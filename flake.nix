@@ -32,10 +32,27 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-secret-proxy = {
+      url = "path:/data/projects/nix-secret-proxy";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Private overlay: add your private inputs (parts, personal services, etc.) in a separate private flake that imports this one.
-  outputs = { self, nixpkgs, home-manager, sops-nix, disko, llm-agents, deploy-rs, impermanence, srvos, treefmt-nix, ... } @ inputs:
+  outputs = {
+    self,
+    nixpkgs,
+    home-manager,
+    sops-nix,
+    disko,
+    llm-agents,
+    deploy-rs,
+    impermanence,
+    srvos,
+    treefmt-nix,
+    nix-secret-proxy,
+    ...
+  } @ inputs:
     let
       system = "x86_64-linux";
       lib = nixpkgs.lib;
@@ -47,6 +64,7 @@
         disko.nixosModules.disko
         impermanence.nixosModules.impermanence
         sops-nix.nixosModules.sops
+        nix-secret-proxy.nixosModules.default
         home-manager.nixosModules.home-manager
         {
           nixpkgs.overlays = [ llm-agents.overlays.default ];
@@ -96,7 +114,6 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
-        secret-proxy = pkgs.callPackage ./packages/secret-proxy.nix { inherit (pkgs) rustPlatform; };
 
         test-live = pkgs.writeShellApplication {
           name = "test-live";

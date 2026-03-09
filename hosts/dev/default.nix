@@ -11,7 +11,6 @@
     ../../modules/docker.nix
     ../../modules/syncthing.nix
     ../../modules/agent-compute.nix
-    ../../modules/secret-proxy.nix
     ../../modules/impermanence.nix
     ../../modules/dashboard.nix
   ];
