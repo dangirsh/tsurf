@@ -234,8 +234,8 @@ if [[ "$TARGET_SET" == false ]]; then
 fi
 
 # --- Node-specific service health checks ---
-if [[ "$NODE" == "neurosys" ]]; then  # parts-tools parts-agent postgresql claw-swap-app
-  SYSTEMD_SERVICES=("parts-tools" "parts-agent" "postgresql" "claw-swap-app")
+if [[ "$NODE" == "neurosys" ]]; then  # parts postgresql claw-swap-app
+  SYSTEMD_SERVICES=("parts" "postgresql" "claw-swap-app")
 elif [[ "$NODE" == "ovh" ]]; then  # syncthing tailscaled secret-proxy-dev
   SYSTEMD_SERVICES=("syncthing" "tailscaled" "secret-proxy-dev")
 fi

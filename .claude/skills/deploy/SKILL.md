@@ -49,7 +49,7 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
      Logs written to `tmp/deploy-neurosys.log` and `tmp/deploy-ovh.log`.
 
 5. **Verify deployment**:
-   - Contabo checks: `parts-tools`, `parts-agent`, `postgresql`, `claw-swap-app`
+   - Contabo checks: `parts`, `postgresql`, `claw-swap-app`
    - OVH checks: `syncthing`, `tailscaled`, `secret-proxy-dev`
    - On success, prints duration and service status.
 
