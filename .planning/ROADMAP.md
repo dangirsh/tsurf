@@ -1297,3 +1297,98 @@ Plans:
 - [x] 70-01: OOB runbook + break-glass SSH key + strengthened assertions
 - [x] 70-02: SSH canary + hardened deploy watchdog
 - [x] 70-03: NixOS VM SSH integration test
+
+### Phase 71: Secret Proxy — Reference Documentation & Issue Audit
+
+**Goal:** Transform `nix-secret-proxy` into a canonical reference for the "API key placeholder substitution proxy" pattern. The NixOS module remains the primary concrete example, but the repo gains thorough conceptual documentation making the pattern adoptable by non-NixOS projects (Docker, systemd, bare-metal, CI). No code changes this phase — audit and document only.
+
+Work breaks into two tracks:
+
+**Track A — Pattern documentation:**
+- Architecture doc: what the pattern is, why it exists (credential isolation for sandboxed agents), what it protects against, what it explicitly does not protect against
+- Conceptual overview diagram: sandbox → placeholder key → proxy → real key → Anthropic API
+- Security model section: threat model, trust boundaries, assumptions
+- Usage guide for three deployment targets: NixOS (current), Docker Compose, plain systemd — each showing how to wire secrets, configure the proxy, and set agent env vars
+- Configuration reference: all knobs, their defaults, and rationale
+
+**Track B — Real-world issue catalogue:**
+Systematically enumerate every known class of issue. For each: describe the problem, classify severity (blocking / degraded / cosmetic / informational), and propose mitigation (fix / doc / accept).
+
+Issue classes to cover:
+
+*Streaming & protocol:*
+- SSE/chunked-transfer passthrough — does Axum proxy buffer the full body before forwarding, or stream incrementally? Buffering breaks token-by-token streaming for long generations.
+- HTTP/1.1 vs HTTP/2 — proxy currently HTTP/1.1 only; upstream Anthropic supports H2; downstream SDK may negotiate H2 and get a 400.
+- `transfer-encoding: chunked` strip behavior — must not be forwarded to HTTP/1.1 upstream if already framed.
+- Large request bodies — multimodal prompts with base64-encoded images can reach 20–50 MB; default Axum body limit is 2 MB.
+- Long-timeout requests — extended thinking / tool-use chains can run 5–10 min; proxy may close the upstream connection on a short read timeout.
+
+*Security:*
+- Bind surface — if proxy binds `0.0.0.0`, it's reachable from all interfaces including public; default should be `127.0.0.1`.
+- Placeholder guessability — `sk-placeholder` or short fixed strings allow an attacker with network access to forge requests using the placeholder and receive real API responses via the proxy.
+- Header injection via real key value — if the real key contains CRLF or whitespace, it could corrupt the forwarded request header. Should be validated/stripped on load.
+- TLS verification of upstream — reqwest default verifies; confirm this is not disabled anywhere in the build.
+- SSRF via upstream URL — if upstream URL is ever runtime-configurable, an attacker could redirect the proxy to internal endpoints (metadata service, internal APIs).
+- Request body logging — if debug logging is enabled, full request bodies (including prompts and user data) may be written to journald. Should warn operators.
+- Replay via intercepted placeholder — a process that observes the placeholder from env vars can replay requests directly through the proxy. Mitigated by binding to loopback only.
+
+*Library / SDK interactions:*
+- Anthropic SDK key format validation — SDK v0.3+ validates that `ANTHROPIC_API_KEY` matches `sk-ant-api03-*` before sending. A random placeholder will cause client-side rejection before the request reaches the proxy. Operators must use a regex-valid placeholder or disable validation.
+- OpenAI-compat clients — Anthropic's OpenAI-compatible endpoint uses `Authorization: Bearer <key>`, not `x-api-key`. The proxy only substitutes `x-api-key`. Agents using the OpenAI SDK against Anthropic's compat URL bypass the proxy entirely.
+- SDK retry behavior — on 429/503 the SDK auto-retries with exponential backoff. Proxy must not swallow retry-after headers.
+- `anthropic-beta` and custom headers — proxy must forward all non-auth headers verbatim; any allowlist-based forwarding would silently drop beta feature flags.
+
+*Operational:*
+- Key rotation — requires service restart to reload the secret from disk. No hot-reload. Acceptable for declarative NixOS (sops-nix activation), but blocks zero-downtime rotation.
+- No health endpoint — no `/health` or `/ready` route; operators cannot health-check the proxy without making a real API call.
+- Opaque upstream errors — if the proxy can't reach Anthropic, raw TCP errors may propagate instead of a structured JSON error in Anthropic's error format, confusing SDK error handling.
+- Graceful shutdown — SIGTERM during an active streaming response; proxy should drain in-flight requests before exiting.
+- Multi-agent rate limiting — all sandboxed agents share one real API key, so one agent's burst consumes rate limit headroom for all others. No per-agent quota enforcement.
+- No per-request audit trail — cannot attribute a given API call to a specific sandbox or agent invocation from proxy logs alone.
+- Proxy chaining — environments behind a corporate HTTP proxy require `HTTP_PROXY`/`HTTPS_PROXY` to be set; reqwest honors them but this is undocumented.
+- Docker/container networking — agents in Docker containers cannot reach `127.0.0.1` on the host; need `host.docker.internal` or explicit bind to the Docker bridge IP.
+- IPv6 — bind and upstream connection behavior on IPv6-only or dual-stack hosts is untested.
+
+**Depends on:** Phase 68
+**Plans:** 2 plans
+
+Plans:
+- [ ] 71-01: Pattern documentation — architecture doc, security model, three-target usage guide, config reference
+- [ ] 71-02: Issue catalogue — structured document covering all issue classes above, each with severity + proposed mitigation
+
+### Phase 72: Secret Proxy — Issue Resolution & Hardening
+
+**Goal:** Address every issue catalogued in Phase 71. For each issue: either implement a fix in `nix-secret-proxy`, or write an explicit "known limitation" entry with rationale for why the current behavior is acceptable. After this phase the proxy is suitable for most common simple use-cases, has a clean pedagogical implementation, and documents its own limits honestly.
+
+Implementation fixes (likely):
+- **Streaming** — integration test for SSE passthrough; fix if body is buffered
+- **Request body size** — raise Axum body limit to 100 MB (covers multimodal); document the knob
+- **Upstream timeout** — add configurable timeout, default 10 min for extended thinking; expose as config option
+- **Bind address** — change default from `0.0.0.0` to `127.0.0.1`; add `bind` config field
+- **Health endpoint** — `GET /health` → `200 OK` with `{"status":"ok"}`
+- **Structured upstream errors** — catch connection errors and emit `{"error":{"type":"proxy_error","message":"..."}}` in Anthropic error format
+- **Header injection** — validate real key on startup: strip whitespace, reject CRLF
+- **Graceful shutdown** — verify Axum's shutdown hook drains in-flight streaming responses; add if missing
+- **Retry-after passthrough** — ensure `retry-after` and `x-ratelimit-*` headers are forwarded verbatim
+
+Documentation / known-limitation entries (for issues that won't be fixed in code):
+- **SDK key format** — document: use a regex-valid placeholder (e.g. `sk-ant-api03-placeholder-...`); or patch the SDK check; note which SDK versions are affected
+- **OpenAI-compat** — document: proxy only covers `x-api-key`; for OpenAI-compat endpoint, run a second proxy instance or add `Authorization: Bearer` substitution support (future)
+- **Key rotation** — document: service restart required; acceptable for NixOS; hot-reload is future work
+- **Rate limiting** — document: one key = shared quota; use per-consumer keys in production multi-agent deployments
+- **Audit trail** — document: no per-agent attribution from proxy alone; rely on Anthropic's usage dashboard or add structured request logging (future)
+- **Placeholder guessability** — document: generate a cryptographically random placeholder (e.g. `openssl rand -hex 32`); never use well-known strings
+- **SSRF** — document: upstream URL is static config only; never accept it from user input or env at runtime
+- **Docker networking** — document: bind to `0.0.0.0` or Docker bridge IP; use `ANTHROPIC_BASE_URL=http://host.docker.internal:<port>`
+- **Corporate proxy** — document: set `HTTP_PROXY`/`HTTPS_PROXY` in the proxy's systemd/NixOS service env
+- **IPv6** — document: untested; bind to `::1` for loopback-only IPv6; report issues
+
+End state: `nix-secret-proxy` README serves as the definitive reference for the pattern. Someone adopting it for a non-NixOS project can read the docs, understand the security model, identify which issues apply to their deployment, and wire it up confidently.
+
+**Depends on:** Phase 71
+**Plans:** 3 plans
+
+Plans:
+- [ ] 72-01: Implementation fixes — streaming, body size, timeout, bind address, health endpoint, structured errors, header validation, graceful shutdown
+- [ ] 72-02: Known-limitation documentation — one entry per catalogued issue that isn't fixed in code; integrated into README
+- [ ] 72-03: Integration test suite — automated tests for streaming passthrough, error shapes, bind behavior, and health endpoint

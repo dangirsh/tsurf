@@ -5,9 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 70 complete. Multi-layer SSH resilience deployed: break-glass key,
-6 new assertions, SSH canary with auto-rollback, systemd-run watchdog, VM integration test,
-OOB recovery runbook. nix flake check passes (31 checks). Next phase TBD.
+**Current focus:** Phase 70 complete. Phases 71–72 added: secret-proxy reference documentation + issue audit (71), then resolution + hardening (72). Next: run /gsd:discuss-phase 71 or /gsd:plan-phase 71.
 
 ## Current Position
 
