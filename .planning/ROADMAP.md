@@ -1358,7 +1358,7 @@ Plans:
 - [x] 71-01: Pattern documentation — architecture doc, security model, three-target usage guide, config reference
 - [x] 71-02: Issue catalogue — structured document covering all issue classes above, each with severity + proposed mitigation
 
-### Phase 72: Secret Proxy — Issue Resolution & Hardening
+### Phase 72: Secret Proxy — Issue Resolution & Hardening *(planned)*
 
 **Goal:** Address every issue catalogued in Phase 71. For each issue: either implement a fix in `nix-secret-proxy`, or write an explicit "known limitation" entry with rationale for why the current behavior is acceptable. After this phase the proxy is suitable for most common simple use-cases, has a clean pedagogical implementation, and documents its own limits honestly.
 

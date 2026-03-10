@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 71 complete. Plan 71-02 complete: known-issues catalogue delivered for nix-secret-proxy. Next: begin Phase 72 code fixes for BLOCKING/DEGRADED items.
+**Current focus:** Phase 72 planned (3 plans: code fixes, doc updates, integration tests). Ready to execute Phase 72.
 
 ## Current Position
 
-Phase: 71 (Secret-Proxy Reference Documentation + Issue Audit) — COMPLETE
-Plan: 71-02 — COMPLETE (known-issues audit documentation)
-Status: Plan 71-02 executed. Documentation-only updates committed in /data/projects/nix-secret-proxy and summaries/state updated in /data/projects/neurosys.
-Last activity: 2026-03-10 - Phase 71 plan 02 complete.
+Phase: 72 (Secret-Proxy Issue Resolution & Hardening) — PLANNED
+Plan: 72-01 to 72-03 — READY TO EXECUTE
+Status: All 3 plans verified and committed. 72-01 (code fixes), 72-02 (doc updates), 72-03 (integration tests). Wave 1: 72-01; Wave 2: 72-02 + 72-03 in parallel.
+Last activity: 2026-03-10 - Phase 72 plans committed (5f2d8e6).
 
-Progress: Phase 71 complete (2/2 plans complete). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
+Progress: Phase 72 planned (3 plans, ready to execute). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
