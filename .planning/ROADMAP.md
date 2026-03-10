@@ -1302,6 +1302,8 @@ Plans:
 
 **Goal:** Transform `nix-secret-proxy` into a canonical reference for the "API key placeholder substitution proxy" pattern. The NixOS module remains the primary concrete example, but the repo gains thorough conceptual documentation making the pattern adoptable by non-NixOS projects (Docker, systemd, bare-metal, CI). No code changes this phase — audit and document only.
 
+**Attribution:** The placeholder-proxy pattern was independently described by Stanislas Polu in his February 2026 post "Netclode: Self-Hosted Cloud Coding Agent" (https://stanislas.blog/2026/02/netclode-self-hosted-cloud-coding-agent/#secret-proxy-api-keys-never-enter-the-sandbox). His implementation (Netclode) adds HTTPS MITM + ServiceAccount identity validation on top; this repo's implementation is a simpler variant (HTTP-only, no caller identity check). Both the README and architecture doc must credit this post.
+
 Work breaks into two tracks:
 
 **Track A — Pattern documentation:**
