@@ -115,6 +115,12 @@
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
 
+        # VM integration test — requires KVM (local dev or KVM-capable CI only).
+        # Run with: nix build .#vm-test-ssh
+        # @decision TEST-70-01: exposed as a package (not a check) so nix flake check
+        # continues to work on Contabo/OVH VPS which lack nested KVM.
+        vm-test-ssh = import ./tests/vm/ssh-reachability.nix { inherit self pkgs lib; };
+
         test-live = pkgs.writeShellApplication {
           name = "test-live";
           runtimeInputs = with pkgs; [

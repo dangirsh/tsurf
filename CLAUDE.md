@@ -59,13 +59,19 @@ secrets/
 
 ## Testing
 
-Two-layer test architecture: Nix eval checks (offline) + BATS live tests (SSH).
+Three-layer test architecture: Nix eval checks (offline) + VM integration test (KVM) + BATS live tests (SSH).
 
 ### Eval Checks (offline, fast)
 ```bash
 nix flake check
 ```
 Validates config evaluation and expected security/service invariants for `neurosys` and `ovh`.
+
+### VM Integration Test (requires KVM — local dev / CI only, NOT on VPS)
+```bash
+nix build .#vm-test-ssh
+```
+Boots a NixOS VM with core modules, verifies sshd starts, port 22 binds, break-glass key is present, and SSH loopback succeeds. Does not test impermanence or sops (no BTRFS/age key in VM). Cannot run on Contabo/OVH VPS (no nested KVM). Exposed as a package (not a check) so `nix flake check` continues to work everywhere.
 
 ### Live Tests (SSH to running hosts)
 ```bash
@@ -102,6 +108,7 @@ vhosts, ACME cert domains, and private service stacks.
   ```
 - **`scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `neurosys.url` guard detects public repo)
 - **NEVER run `nixos-rebuild switch --flake .#neurosys`** or `.#ovh` from this repo — the public flake has placeholder SSH keys and no private services; it will break the server
+- **NEVER run `nixos-rebuild switch` from ANY repo** (parts, home-assistant-config, or any other) — even with the correct flake, this bypasses deploy.sh's safety guard, watchdog, and shared deploy lock. The ONLY safe deploy path is `./scripts/deploy.sh` from the private overlay
 - For first-time OVH bootstrap: `scripts/bootstrap-ovh.sh` installs base NixOS, then follow with private overlay deploy
 
 ## Security Conventions
@@ -119,6 +126,7 @@ Rules that agents MUST follow when modifying any module:
 - All new modules MUST include `@decision` annotations for security-relevant choices
 - Pre-built binaries (packages/*.nix) use SHA256 hash verification -- accepted risk, no signature verification available (SEC11)
 - **Never** add packages via `nix-env`, `nix profile install`, or any other imperative mechanism -- this system enforces purely declarative package management. All packages MUST be declared in a `.nix` file (`environment.systemPackages`, `home.packages`, etc.). The system intentionally has `nix.channel.enable = false` and an empty `nix.nixPath`; do not re-enable either.
+- **Always** ensure `modules/break-glass-ssh.nix` is imported in both host configs — this key is the last-resort recovery path when sops, Tailscale, and normal keys are all unavailable. Never remove or rename this module.
 
 ### Accepted Risks (documented, not actionable)
 
@@ -134,6 +142,7 @@ Rules that agents MUST follow when modifying any module:
 - **Sandbox design choices:** Cross-project read access (deliberate for sibling repo reference), no network sandboxing (agents need API/git access), metadata endpoint blocked at nftables level
 - **SEC50-01:** Public template `users.allowNoPasswordLogin = true` — required for the public template to evaluate without real credential hashes. Private overlay replaces `users.nix` entirely and does NOT set this. The setting only affects the public template, never the deployed config.
 - **SEC50-02:** `srvos.nixosModules.server` imports numerous server defaults (fail2ban, SSH hardening, systemd-networkd) that are relied upon implicitly. Specific overrides are documented per-host with `mkForce`. A full audit of srvos defaults is deferred to a future phase.
+- **SEC70-01:** Break-glass key in public repo uses a placeholder (identical to the bootstrap key, different comment). Private overlay must replace it with a dedicated offline-stored key before deploying. Placeholder allows `nix flake check` to pass without exposing a real emergency key in the public repo.
 
 ## Simplicity Conventions
 

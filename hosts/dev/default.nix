@@ -12,6 +12,8 @@
     ../../modules/syncthing.nix
     ../../modules/agent-compute.nix
     ../../modules/impermanence.nix
+    ../../modules/break-glass-ssh.nix
+    ../../modules/ssh-canary.nix
     ../../modules/dashboard.nix
   ];
 

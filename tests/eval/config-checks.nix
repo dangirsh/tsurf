@@ -267,6 +267,50 @@ in
      && ovhCfg.users.users.root.openssh.authorizedKeys.keys != []
      && (builtins.elem 22 ovhCfg.networking.firewall.allowedTCPPorts
          || ovhCfg.services.openssh.openFirewall));
+
+  # --- Phase 70: Lockout prevention checks ---
+
+  break-glass-key-neurosys = mkCheck
+    "break-glass-key-neurosys"
+    "neurosys root has break-glass emergency SSH key"
+    "neurosys root is missing break-glass emergency SSH key (import modules/break-glass-ssh.nix)"
+    (builtins.any (k: lib.hasInfix "break-glass-emergency" k)
+      neurosysCfg.users.users.root.openssh.authorizedKeys.keys);
+
+  break-glass-key-ovh = mkCheck
+    "break-glass-key-ovh"
+    "ovh root has break-glass emergency SSH key"
+    "ovh root is missing break-glass emergency SSH key (import modules/break-glass-ssh.nix)"
+    (builtins.any (k: lib.hasInfix "break-glass-emergency" k)
+      ovhCfg.users.users.root.openssh.authorizedKeys.keys);
+
+  ssh-authorized-keys-fallback = mkCheck
+    "ssh-authorized-keys-fallback"
+    "neurosys sshd checks .ssh/authorized_keys (NET-14 impermanence fallback)"
+    "neurosys authorizedKeysFiles is missing .ssh/authorized_keys — NET-14 fallback broken"
+    (builtins.any (f: f == ".ssh/authorized_keys")
+      neurosysCfg.services.openssh.authorizedKeysFiles);
+
+  ssh-host-key-persisted = mkCheck
+    "ssh-host-key-persisted"
+    "neurosys SSH host key is declared in impermanence persistence"
+    "neurosys SSH host key not found in impermanence files — sshd may fail on reboot"
+    (let
+      source = builtins.readFile ../../modules/impermanence.nix;
+    in
+      lib.hasInfix "\"/etc/ssh/ssh_host_ed25519_key\"" source);
+
+  ssh-canary-neurosys = mkCheck
+    "ssh-canary-neurosys"
+    "neurosys ssh-canary timer is defined"
+    "neurosys ssh-canary timer is missing — import modules/ssh-canary.nix"
+    (builtins.hasAttr "ssh-canary" neurosysCfg.systemd.timers);
+
+  ssh-canary-ovh = mkCheck
+    "ssh-canary-ovh"
+    "ovh ssh-canary timer is defined"
+    "ovh ssh-canary timer is missing — import modules/ssh-canary.nix"
+    (builtins.hasAttr "ssh-canary" ovhCfg.systemd.timers);
 }
 
 # --- Private overlay test extension pattern ---

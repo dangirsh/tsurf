@@ -53,6 +53,7 @@
       "/var/lib/fail2ban"                  # Ban database (regenerated if lost)
       "/var/lib/private"                   # DynamicUser services (dashboard, etc.)
       "/var/lib/hass"                      # Home Assistant: .storage/, config-repo/, integrations
+      "/var/lib/ssh-canary"               # SSH canary failure counter + last-rollback timestamp
 
       # --- User data ---
       "/home/dev"                       # Full home dir: .config/syncthing, Sync/, .claude.json, .bash_history, .ssh

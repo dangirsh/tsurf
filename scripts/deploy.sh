@@ -37,7 +37,7 @@ SYSTEMD_SERVICES=()
 DOCKER_CONTAINERS=()
 DEPLOY_COMPLETED=false
 PREV_SYSTEM=""
-WATCHDOG_PID=""
+WATCHDOG_ACTIVE=false
 mkdir -p "$FLAKE_DIR/tmp"
 
 # @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
@@ -52,9 +52,9 @@ SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$SSH_CTL" -o "ControlPersist=6
 
 cleanup() {
   # Cancel watchdog if deploy hasn't completed (early exit / Ctrl+C before activation)
-  if [[ -n "$WATCHDOG_PID" && "$DEPLOY_COMPLETED" != true ]]; then
+  if [[ "$WATCHDOG_ACTIVE" == true && "$DEPLOY_COMPLETED" != true ]]; then
     echo "==> Cancelling rollback watchdog (deploy did not complete)..."
-    ssh "${SSH_OPTS[@]}" "$TARGET" "kill $WATCHDOG_PID 2>/dev/null" || true
+    ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl stop deploy-watchdog.timer deploy-watchdog.service 2>/dev/null" || true
   fi
   if [[ "$REMOTE_LOCK_HELD" == true ]]; then
     ssh "${SSH_OPTS[@]}" "$TARGET" "rm -rf '$REMOTE_LOCK_DIR'" 2>/dev/null || true
@@ -321,14 +321,44 @@ if [[ "$FIRST_DEPLOY" == true || "$NO_MAGIC_ROLLBACK" == true ]]; then
   fi
   echo "==> Previous system: $PREV_SYSTEM"
 
-  # Schedule watchdog: auto-rollback in 5 minutes if not cancelled
-  echo "==> Scheduling rollback watchdog (5 min timeout)..."
-  WATCHDOG_PID=$(ssh "${SSH_OPTS[@]}" "$TARGET" \
-    "nohup bash -c 'sleep 300 && $PREV_SYSTEM/bin/switch-to-configuration switch && nix-env -p /nix/var/nix/profiles/system --set $PREV_SYSTEM && echo \"\$(date -u): WATCHDOG FIRED — rolled back to $PREV_SYSTEM\" >> /tmp/deploy-watchdog.log' </dev/null >>/tmp/deploy-watchdog.log 2>&1 & echo \$!")
-  if [[ -n "$WATCHDOG_PID" ]]; then
-    echo "==> Watchdog PID $WATCHDOG_PID — auto-rollback in 5 min if not cancelled."
+  # Schedule watchdog: auto-rollback in 5 minutes if not cancelled.
+  # @decision DEPLOY-05: Uses systemd-run transient timer instead of nohup bash.
+  # nohup processes are killed by systemd cgroup cleanup when sshd restarts during
+  # activation (deploy-rs issue #153). systemd-run creates an independent unit that
+  # survives sshd restarts, cgroup kills, and session cleanup.
+  echo "==> Scheduling rollback watchdog (5 min timeout via systemd-run)..."
+  if ssh "${SSH_OPTS[@]}" "$TARGET" \
+    "systemd-run --on-active=300 --timer-property=AccuracySec=5s \
+      --unit=deploy-watchdog --description='Deploy rollback watchdog (300s)' -- \
+      /bin/bash -c '$PREV_SYSTEM/bin/switch-to-configuration switch && \
+        nix-env -p /nix/var/nix/profiles/system --set $PREV_SYSTEM && \
+        echo \"\$(date -u): WATCHDOG FIRED -- rolled back to $PREV_SYSTEM\" >> /tmp/deploy-watchdog.log'" \
+    2>/dev/null; then
+    WATCHDOG_ACTIVE=true
+    echo "==> Watchdog scheduled — auto-rollback in 5 min if not cancelled."
   else
     echo "WARNING: Failed to schedule watchdog — proceeding without rollback safety net."
+  fi
+fi
+
+# --- Belt-and-suspenders watchdog for magic-rollback deploys ---
+# @decision DEPLOY-06: Even with magic rollback enabled, schedule a longer watchdog (10 min)
+# as a safety net. Magic rollback can fail if activate-rs is killed by cgroup cleanup
+# (deploy-rs issue #153). The 600s timeout is well beyond the 120s confirm timeout,
+# so it only fires if magic rollback itself failed.
+if [[ "$WATCHDOG_ACTIVE" != true && "$FIRST_DEPLOY" != true ]]; then
+  PREV_SYSTEM=$(ssh "${SSH_OPTS[@]}" "$TARGET" "readlink -f /nix/var/nix/profiles/system" 2>/dev/null || true)
+  if [[ -n "$PREV_SYSTEM" ]]; then
+    if ssh "${SSH_OPTS[@]}" "$TARGET" \
+      "systemd-run --on-active=600 --timer-property=AccuracySec=5s \
+        --unit=deploy-watchdog --description='Deploy rollback watchdog (600s, belt-and-suspenders)' -- \
+        /bin/bash -c '$PREV_SYSTEM/bin/switch-to-configuration switch && \
+          nix-env -p /nix/var/nix/profiles/system --set $PREV_SYSTEM && \
+          echo \"\$(date -u): BELT-AND-SUSPENDERS WATCHDOG FIRED -- rolled back to $PREV_SYSTEM\" >> /tmp/deploy-watchdog.log'" \
+      2>/dev/null; then
+      WATCHDOG_ACTIVE=true
+      echo "==> Belt-and-suspenders watchdog scheduled (10 min)."
+    fi
   fi
 fi
 
@@ -409,12 +439,13 @@ else
 fi
 
 # Handle watchdog based on remote access results
-if [[ -n "$WATCHDOG_PID" ]]; then
+if [[ "$WATCHDOG_ACTIVE" == true ]]; then
   if [[ "$REMOTE_ACCESS_OK" == true ]]; then
     echo "==> Remote access verified — cancelling rollback watchdog..."
-    ssh "${SSH_OPTS[@]}" "$TARGET" "kill $WATCHDOG_PID 2>/dev/null" || \
-      ssh -o ConnectTimeout=10 -o BatchMode=yes -o ControlPath=none "root@$PUBLIC_IP" "kill $WATCHDOG_PID 2>/dev/null" || true
-    WATCHDOG_PID=""
+    ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl stop deploy-watchdog.timer deploy-watchdog.service 2>/dev/null" || \
+      ssh -o ConnectTimeout=10 -o BatchMode=yes -o ControlPath=none "root@$PUBLIC_IP" \
+        "systemctl stop deploy-watchdog.timer deploy-watchdog.service 2>/dev/null" || true
+    WATCHDOG_ACTIVE=false
   else
     echo ""
     echo "╔══════════════════════════════════════════════════════════════════╗"
@@ -424,7 +455,7 @@ if [[ -n "$WATCHDOG_PID" ]]; then
     echo "║  ~5 minutes unless cancelled.                                  ║"
     echo "║                                                                ║"
     echo "║  To KEEP the new config (cancel watchdog):                     ║"
-    echo "║    ssh root@$PUBLIC_IP kill $WATCHDOG_PID"
+    echo "║    ssh root@$PUBLIC_IP systemctl stop deploy-watchdog.timer    ║"
     echo "║                                                                ║"
     echo "║  To rollback NOW:                                              ║"
     echo "║    ssh root@$PUBLIC_IP $PREV_SYSTEM/bin/switch-to-configuration switch"
