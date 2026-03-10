@@ -64,6 +64,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 65: Open Source Cleanup (v2)** - Completed 2026-03-04. Public repo reduced to minimal forkable skeleton with private overlay extension points.
 - [x] **Phase 66: Secret Placeholder Proxy Module** - Generic NixOS secret placeholder injection module and Rust proxy package (axum + reqwest). Per-service systemd isolation, bwrapArgs derived attr, port-collision assertion. Completed 2026-03-07.
 - [x] **Phase 67: Review and Document Secret Proxy** - Consumer-facing architecture doc (`docs/secret-proxy-architecture.md`): 8 design features, 10 limitations, test coverage gaps, 7 improvement areas. Completed 2026-03-07.
+- [x] **Phase 68: Extract secret-proxy into standalone nix-secret-proxy flake** - Standalone `nix-secret-proxy` flake with Rust binary + NixOS module. neurosys and private-neurosys consume via flake input. Completed 2026-03-09.
+- [x] **Phase 69: OVH Dev Environment Migration** - OVH VPS configured as primary dev host. secret-proxy-dev service, per-host repo clone scripts, real sops secrets, setupSecrets dep fix. Deploy infrastructure: `--node all` parallel deploy. Acceptance test: Claude Code works via secret-proxy on OVH. Completed 2026-03-10.
 
 ## Phase Details
 
@@ -1278,7 +1280,18 @@ Plans:
 
 **Goal:** Migrate daily development workflow from acfs (local machine) to OVH VPS (neurosys-dev). OVH becomes the primary dev host with all project repos, agent sandbox tooling, and secret-proxy for dev agents. Contabo keeps running services (HA, claw-swap, Matrix, MCP, etc.). Success: sandboxed Claude Code session works on OVH, acfs goes unused.
 **Depends on:** Phase 66
+**Plans:** 3 plans (completed 2026-03-10)
+
+Plans:
+- [x] 69-01: private-neurosys ovhModules — secret-proxy-dev + per-host clone scripts (wave 1)
+- [x] 69-02: Deploy to OVH; populate sops secrets; verify acceptance test (wave 2)
+- [x] 69-03: Deploy infrastructure — `--node all` parallel deploy, skill update, eval/live tests (wave 3)
+
+### Phase 70: Deployment Lockout Prevention
+
+**Goal:** Make it structurally impossible for a normal deploy to permanently break remote access. Cover: (1) OOB recovery runbook — Contabo KVM console + OVH rescue mode documented as a 5-minute procedure; (2) break-glass emergency SSH key — hardcoded in users.nix independently of sops-managed keys, so a sops failure can never lock out root; (3) strengthened pre-deploy assertions — catch more lockout scenarios (sshd not in PATH, impermanence mount races, Tailscale auth key expiry, empty authorized_keys after sops failure); (4) SSH canary systemd timer — runs every 5 minutes post-deploy, confirms inbound SSH works from loopback, triggers nixos-rebuild --rollback if it fails three times consecutively; (5) hardened watchdog reliability in deploy.sh — ensure nohup watchdog survives systemd activation reliably and verify rollback path; (6) NixOS VM test — `nixos-test` that activates the config in a VM and asserts SSH is reachable before any deploy touches prod. Goal: even a broken agent-authored config cannot strand the server.
+**Depends on:** Phase 69
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 69 to break down)
+- [ ] TBD (run /gsd:plan-phase 70 to break down)

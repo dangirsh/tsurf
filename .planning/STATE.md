@@ -5,19 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 68 complete. secret-proxy extracted into standalone nix-secret-proxy flake.
-Both neurosys and private-neurosys consume it as a flake input. Phase 69 is next.
+**Current focus:** Phase 69 complete. OVH VPS configured as primary dev host with secret-proxy-dev,
+per-host repo clone scripts, real sops secrets, and working Claude Code via secret-proxy.
+Deploy infrastructure updated: --node all parallel deploy added to deploy.sh. Phase 70 is next.
 
 ## Current Position
 
-Phase: 68 (Extract secret-proxy into standalone nix-secret-proxy flake) — COMPLETE
-Plan: 68-03 — COMPLETE (private-neurosys migrated to nix-secret-proxy via follows)
-Status: nix-secret-proxy standalone flake created at /data/projects/nix-secret-proxy.
-neurosys consumes via path: input with follows pin. private-neurosys threads via
-follows = "neurosys/nix-secret-proxy". README.md added. All nix flake check passes.
-Last activity: 2026-03-09 - Phase 68 complete.
+Phase: 69 (OVH Dev Environment Migration) — COMPLETE
+Plan: 69-03 — COMPLETE (deploy infrastructure, parallel deploy, skill update, eval/live tests)
+Status: OVH deployed via deploy-rs --skip-checks to 135.125.196.143. Services active:
+secret-proxy-dev, syncthing, tailscaled. 12/13 repos cloned (worldcoin/ai needs PAT scope).
+Acceptance test passed: Claude Code works end-to-end via secret-proxy on OVH.
+Last activity: 2026-03-10 - Phase 69 complete.
 
-Progress: Phase 68 complete (3/3 plans). Phase 69 not yet started. Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
+Progress: Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -471,6 +472,7 @@ Recent decisions affecting current work:
 - Phase 66 added: Secret Placeholder Proxy Module — extract the secret-proxy trick (Phase 22) into a generic, well-tested NixOS module. Research ironclaw, gondolin (earendil-works), and all relevant NixOS secret management approaches. Design: placeholder tokens → proxy re-injects real secrets with per-secret allowed-domain lists blocking exfiltration. Decouple from secret backend (sops/agenix) and sandbox (bwrap) where possible. Goal: prompt-injected agents can't exfiltrate but operate seamlessly.
 - Phase 67 added: Review and document the secret proxy — read all source, tests, and module code; produce an executive summary of key design features, limitations, and improvement areas
 - Phase 68 added: Extract secret-proxy into standalone nix-secret-proxy flake — new public GitHub repo with flake.nix (packages.secret-proxy + nixosModules.default), README with sops-nix/agenix/plain-file integration examples, neurosys consumes it as a flake input instead of carrying local copies
+- Phase 70 added: Deployment Lockout Prevention — OOB recovery runbook (Contabo KVM + OVH rescue mode), break-glass emergency SSH key (hardcoded, independent of sops), strengthened pre-deploy assertions, SSH canary systemd timer with auto-rollback, hardened watchdog reliability in deploy.sh, NixOS VM test that validates SSH before prod deploy
 
 ### Blockers/Concerns
 
