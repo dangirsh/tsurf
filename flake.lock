@@ -170,7 +170,7 @@
         ]
       },
       "locked": {
-        "lastModified": 1773163176,
+        "lastModified": 1773163208,
         "narHash": "sha256-0jToj7JMI8zpAgkRxjdSCsfAnuoToeIEZXb8fSU8Tbo=",
         "path": "/data/projects/nix-secret-proxy",
         "type": "path"
