@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 71 in progress. Plan 71-01 complete: canonical reference documentation for nix-secret-proxy delivered. Next: execute Phase 71-02 (known-issues.md + issue audit).
+**Current focus:** Phase 71 complete. Plan 71-02 complete: known-issues catalogue delivered for nix-secret-proxy. Next: begin Phase 72 code fixes for BLOCKING/DEGRADED items.
 
 ## Current Position
 
-Phase: 71 (Secret-Proxy Reference Documentation + Issue Audit) — IN PROGRESS
-Plan: 71-01 — COMPLETE (canonical pattern documentation + deployment guides)
-Status: Plan 71-01 executed. Documentation-only updates committed in /data/projects/nix-secret-proxy.
-Last activity: 2026-03-10 - Phase 71 plan 01 complete.
+Phase: 71 (Secret-Proxy Reference Documentation + Issue Audit) — COMPLETE
+Plan: 71-02 — COMPLETE (known-issues audit documentation)
+Status: Plan 71-02 executed. Documentation-only updates committed in /data/projects/nix-secret-proxy and summaries/state updated in /data/projects/neurosys.
+Last activity: 2026-03-10 - Phase 71 plan 02 complete.
 
-Progress: Phase 71 in progress (1/2 plans complete). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
+Progress: Phase 71 complete (2/2 plans complete). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -75,6 +75,7 @@ Recent decisions affecting current work:
 - [71-01]: README rewritten as canonical entry point for the API key placeholder substitution proxy pattern with explicit Stanislas Polu Netclode attribution.
 - [71-01]: Added docs set: `architecture.md` (pattern, trust model, Netclode comparison), `deployment-nixos.md`, `deployment-docker.md`, and `deployment-systemd.md`.
 - [71-01]: Standardized placeholder guidance on `sk-ant-api03-placeholder` for Anthropic SDK compatibility and documented Docker host-network workaround for loopback bind.
+- [71-02]: Added `docs/known-issues.md` with 12 code-verified entries (2 BLOCKING, 4 DEGRADED, 6 INFORMATIONAL) and explicit Phase 72 mitigation queue.
 
 - [69-01]: Per-host repo lists: OVH gets 13 dev repos (10 standard + 3 custom-target), Contabo gets 4 service repos. `repos.nix` removed from `commonModules`.
 - [69-01]: `services.secretProxy.services.dev` declared in `ovhModules` (port 9091) for sandboxed agent API key injection on dev host.
