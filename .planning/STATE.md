@@ -474,6 +474,7 @@ Recent decisions affecting current work:
 - Phase 67 added: Review and document the secret proxy — read all source, tests, and module code; produce an executive summary of key design features, limitations, and improvement areas
 - Phase 68 added: Extract secret-proxy into standalone nix-secret-proxy flake — new public GitHub repo with flake.nix (packages.secret-proxy + nixosModules.default), README with sops-nix/agenix/plain-file integration examples, neurosys consumes it as a flake input instead of carrying local copies
 - Phase 70 added: Deployment Lockout Prevention — OOB recovery runbook (Contabo KVM + OVH rescue mode), break-glass emergency SSH key (hardcoded, independent of sops), strengthened pre-deploy assertions, SSH canary systemd timer with auto-rollback, hardened watchdog reliability in deploy.sh, NixOS VM test that validates SSH before prod deploy
+- Phase 73 added: OVH Agent Sandbox Enforcement — aliases and shell-level interception so `claude`/`codex` always run sandboxed on OVH by default; hard block on `--no-sandbox` without explicit override (`AGENT_ALLOW_NOSANDBOX=1`); audit logging of sandboxed/unsandboxed invocations; NixOS `agent-compute.nix` changes for OVH; secret-proxy placeholder wired into sandboxed sessions
 
 ### Blockers/Concerns
 

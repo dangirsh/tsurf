@@ -66,6 +66,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 67: Review and Document Secret Proxy** - Consumer-facing architecture doc (`docs/secret-proxy-architecture.md`): 8 design features, 10 limitations, test coverage gaps, 7 improvement areas. Completed 2026-03-07.
 - [x] **Phase 68: Extract secret-proxy into standalone nix-secret-proxy flake** - Standalone `nix-secret-proxy` flake with Rust binary + NixOS module. neurosys and private-neurosys consume via flake input. Completed 2026-03-09.
 - [x] **Phase 69: OVH Dev Environment Migration** - OVH VPS configured as primary dev host. secret-proxy-dev service, per-host repo clone scripts, real sops secrets, setupSecrets dep fix. Deploy infrastructure: `--node all` parallel deploy. Acceptance test: Claude Code works via secret-proxy on OVH. Completed 2026-03-10.
+- [ ] **Phase 73: OVH Agent Sandbox Enforcement** - Aliases and shell-level interception so `claude`/`codex` always run sandboxed on OVH by default. Hard block on `--no-sandbox` without explicit override. Audit logging. NixOS `agent-compute.nix` changes for OVH. Secret-proxy placeholder wired into sandboxed sessions.
 
 ## Phase Details
 
@@ -1394,3 +1395,12 @@ Plans:
 - [x] 72-01: Implementation fixes — configurable bind, upstream timeout, graceful shutdown, JSON 502, /health endpoint, sk-ant-api03-placeholder default
 - [x] 72-02: Documentation updates — known-issues.md updated with fix status, deployment docs updated for bind/health
 - [x] 72-03: Integration test suite — 8 tests covering all fixes (streaming, body size, 502 shape, health, bind, graceful shutdown)
+
+### Phase 73: OVH Agent Sandbox Enforcement
+
+**Goal:** Ensure dev agents running on OVH are always sandboxed by default. Sandboxed execution should be the easy path, and unsandboxed execution should require an explicit override with a visible warning. Covers: (1) default agent-launch aliases (`claude`, `codex`, etc.) that always invoke the bubblewrap sandbox wrapper on OVH; (2) shell-level interception so bare `claude` or `codex` in an interactive shell runs sandboxed — no unsafe shortcut; (3) a warning or hard block when `--no-sandbox` is passed without an explicit override env var (`AGENT_ALLOW_NOSANDBOX=1`) or flag; (4) audit logging of sandboxed vs unsandboxed invocations to a persistent log file; (5) NixOS `agent-compute.nix` changes declaratively enforcing this on OVH (not Contabo, which already has agentd); (6) verify secret-proxy placeholder key is wired into sandboxed sessions so agents can reach the Anthropic API through the proxy without seeing the real key.
+**Depends on:** Phase 69
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 73 to break down)
