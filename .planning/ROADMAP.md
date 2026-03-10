@@ -1298,7 +1298,7 @@ Plans:
 - [x] 70-02: SSH canary + hardened deploy watchdog
 - [x] 70-03: NixOS VM SSH integration test
 
-### Phase 71: Secret Proxy — Reference Documentation & Issue Audit
+### Phase 71: Secret Proxy — Reference Documentation & Issue Audit ✓
 
 **Goal:** Transform `nix-secret-proxy` into a canonical reference for the "API key placeholder substitution proxy" pattern. The NixOS module remains the primary concrete example, but the repo gains thorough conceptual documentation making the pattern adoptable by non-NixOS projects (Docker, systemd, bare-metal, CI). No code changes this phase — audit and document only.
 
@@ -1352,11 +1352,11 @@ Issue classes to cover:
 - IPv6 — bind and upstream connection behavior on IPv6-only or dual-stack hosts is untested.
 
 **Depends on:** Phase 68
-**Plans:** 2 plans
+**Plans:** 2 plans (completed 2026-03-10)
 
 Plans:
-- [ ] 71-01: Pattern documentation — architecture doc, security model, three-target usage guide, config reference
-- [ ] 71-02: Issue catalogue — structured document covering all issue classes above, each with severity + proposed mitigation
+- [x] 71-01: Pattern documentation — architecture doc, security model, three-target usage guide, config reference
+- [x] 71-02: Issue catalogue — structured document covering all issue classes above, each with severity + proposed mitigation
 
 ### Phase 72: Secret Proxy — Issue Resolution & Hardening
 
