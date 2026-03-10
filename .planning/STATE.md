@@ -5,20 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 69 complete. OVH VPS configured as primary dev host with secret-proxy-dev,
-per-host repo clone scripts, real sops secrets, and working Claude Code via secret-proxy.
-Deploy infrastructure updated: --node all parallel deploy added to deploy.sh. Phase 70 is next.
+**Current focus:** Phase 70 complete. Multi-layer SSH resilience deployed: break-glass key,
+6 new assertions, SSH canary with auto-rollback, systemd-run watchdog, VM integration test,
+OOB recovery runbook. nix flake check passes (31 checks). Next phase TBD.
 
 ## Current Position
 
-Phase: 69 (OVH Dev Environment Migration) — COMPLETE
-Plan: 69-03 — COMPLETE (deploy infrastructure, parallel deploy, skill update, eval/live tests)
-Status: OVH deployed via deploy-rs --skip-checks to 135.125.196.143. Services active:
-secret-proxy-dev, syncthing, tailscaled. 12/13 repos cloned (worldcoin/ai needs PAT scope).
-Acceptance test passed: Claude Code works end-to-end via secret-proxy on OVH.
-Last activity: 2026-03-10 - Phase 69 complete.
+Phase: 70 (Deployment Lockout Prevention) — COMPLETE
+Plan: 70-03 — COMPLETE (NixOS VM SSH integration test + all fixes)
+Status: All 3 plans executed. nix flake check passes (31 checks). Committed as 4eaec5b.
+Last activity: 2026-03-10 - Phase 70 complete.
 
-Progress: Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
+Progress: Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans complete). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -509,6 +507,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09
-Stopped at: Completed Phase 68 — secret-proxy extracted into standalone nix-secret-proxy flake; neurosys and private-neurosys both consume it as a flake input.
-Next: Phase 69 (OVH Dev Environment Migration).
+Last session: 2026-03-10
+Stopped at: Completed Phase 70 — deployment lockout prevention (break-glass key, SSH canary, systemd-run watchdog, VM test, OOB runbook, 6 new eval assertions).
+Next: TBD.

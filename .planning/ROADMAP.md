@@ -1287,11 +1287,13 @@ Plans:
 - [x] 69-02: Deploy to OVH; populate sops secrets; verify acceptance test (wave 2)
 - [x] 69-03: Deploy infrastructure — `--node all` parallel deploy, skill update, eval/live tests (wave 3)
 
-### Phase 70: Deployment Lockout Prevention
+### Phase 70: Deployment Lockout Prevention ✓
 
 **Goal:** Make it structurally impossible for a normal deploy to permanently break remote access. Cover: (1) OOB recovery runbook — Contabo KVM console + OVH rescue mode documented as a 5-minute procedure; (2) break-glass emergency SSH key — hardcoded in users.nix independently of sops-managed keys, so a sops failure can never lock out root; (3) strengthened pre-deploy assertions — catch more lockout scenarios (sshd not in PATH, impermanence mount races, Tailscale auth key expiry, empty authorized_keys after sops failure); (4) SSH canary systemd timer — runs every 5 minutes post-deploy, confirms inbound SSH works from loopback, triggers nixos-rebuild --rollback if it fails three times consecutively; (5) hardened watchdog reliability in deploy.sh — ensure nohup watchdog survives systemd activation reliably and verify rollback path; (6) NixOS VM test — `nixos-test` that activates the config in a VM and asserts SSH is reachable before any deploy touches prod. Goal: even a broken agent-authored config cannot strand the server.
 **Depends on:** Phase 69
-**Plans:** 0 plans
+**Plans:** 3 plans (all complete)
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 70 to break down)
+- [x] 70-01: OOB runbook + break-glass SSH key + strengthened assertions
+- [x] 70-02: SSH canary + hardened deploy watchdog
+- [x] 70-03: NixOS VM SSH integration test
