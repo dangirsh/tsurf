@@ -1358,7 +1358,7 @@ Plans:
 - [x] 71-01: Pattern documentation — architecture doc, security model, three-target usage guide, config reference
 - [x] 71-02: Issue catalogue — structured document covering all issue classes above, each with severity + proposed mitigation
 
-### Phase 72: Secret Proxy — Issue Resolution & Hardening *(planned)*
+### Phase 72: Secret Proxy — Issue Resolution & Hardening ✓
 
 **Goal:** Address every issue catalogued in Phase 71. For each issue: either implement a fix in `nix-secret-proxy`, or write an explicit "known limitation" entry with rationale for why the current behavior is acceptable. After this phase the proxy is suitable for most common simple use-cases, has a clean pedagogical implementation, and documents its own limits honestly.
 
@@ -1391,6 +1391,6 @@ End state: `nix-secret-proxy` README serves as the definitive reference for the 
 **Plans:** 3 plans
 
 Plans:
-- [ ] 72-01: Implementation fixes — streaming, body size, timeout, bind address, health endpoint, structured errors, header validation, graceful shutdown
-- [ ] 72-02: Known-limitation documentation — one entry per catalogued issue that isn't fixed in code; integrated into README
-- [ ] 72-03: Integration test suite — automated tests for streaming passthrough, error shapes, bind behavior, and health endpoint
+- [x] 72-01: Implementation fixes — configurable bind, upstream timeout, graceful shutdown, JSON 502, /health endpoint, sk-ant-api03-placeholder default
+- [x] 72-02: Documentation updates — known-issues.md updated with fix status, deployment docs updated for bind/health
+- [x] 72-03: Integration test suite — 8 tests covering all fixes (streaming, body size, 502 shape, health, bind, graceful shutdown)
