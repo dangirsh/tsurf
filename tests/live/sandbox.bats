@@ -3,8 +3,8 @@
 # @decision TEST-48-02: Isolation tests assert secret path inaccessibility with minimal, deterministic bwrap invocations.
 
 load "../lib/common"
-bats_load_library bats-support/load
-bats_load_library bats-assert/load
+bats_load_library bats-support
+bats_load_library bats-assert
 
 @test "${HOST}: bubblewrap binary is available" {
   remote command -v bwrap >/dev/null 2>&1 || {

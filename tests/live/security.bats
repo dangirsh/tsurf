@@ -3,8 +3,8 @@
 # @decision TEST-48-01: Runtime checks validate hardening assumptions against live host state.
 
 load "../lib/common"
-bats_load_library bats-support/load
-bats_load_library bats-assert/load
+bats_load_library bats-support
+bats_load_library bats-assert
 
 @test "${HOST}: SSH rejects password authentication" {
   local result

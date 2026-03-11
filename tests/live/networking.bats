@@ -3,8 +3,8 @@
 # @decision TEST-48-02: Networking tests focus on concrete connectivity and metadata endpoint blocking guarantees.
 
 load "../lib/common"
-bats_load_library bats-support/load
-bats_load_library bats-assert/load
+bats_load_library bats-support
+bats_load_library bats-assert
 
 @test "${HOST}: tailscale has at least one peer" {
   local status_json

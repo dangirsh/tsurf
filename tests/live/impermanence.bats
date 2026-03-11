@@ -3,8 +3,8 @@
 # @decision TEST-48-02: Impermanence assertions must skip cleanly on hosts where /persist is not activated.
 
 load "../lib/common"
-bats_load_library bats-support/load
-bats_load_library bats-assert/load
+bats_load_library bats-support
+bats_load_library bats-assert
 
 # Skip helper for hosts without impermanence activation.
 require_impermanence() {

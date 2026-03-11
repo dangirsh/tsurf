@@ -3,8 +3,8 @@
 # @decision TEST-48-01: Tests assert existence and permissions only, never secret values.
 
 load "../lib/common"
-bats_load_library bats-support/load
-bats_load_library bats-assert/load
+bats_load_library bats-support
+bats_load_library bats-assert
 
 @test "${HOST}: /run/secrets exists and contains at least one file" {
   local count

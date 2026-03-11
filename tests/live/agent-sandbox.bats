@@ -3,8 +3,8 @@
 # @decision TEST-73-01: Wrapper tests verify bwrap invocation, secret hiding, and audit logging.
 
 load "../lib/common"
-bats_load_library bats-support/load
-bats_load_library bats-assert/load
+bats_load_library bats-support
+bats_load_library bats-assert
 
 @test "${HOST}: sandboxed claude wrapper exists in PATH" {
   if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
