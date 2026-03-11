@@ -55,8 +55,8 @@ bats_load_library bats-assert
     skip "detailed secret-proxy tests on neurosys-dev only"
   fi
   local http_code
-  http_code="$(remote curl -so /dev/null -w "%{http_code}" --max-time 10 \
-    -H "Host: evil.example.com" "http://localhost:9091/v1/test" 2>&1)" || true
+  # Pass as single string so SSH preserves -H quoting on the remote side.
+  http_code="$(remote "curl -so /dev/null -w '%{http_code}' --max-time 10 -H 'Host: evil.example.com' http://localhost:9091/v1/test" 2>&1)" || true
   if [[ "$http_code" != "403" ]]; then
     echo "FAIL: expected 403 for disallowed host, got '$http_code'"
     echo "DEBUG: ssh ${SSH_USER}@${HOST} curl -sv -H 'Host: evil.example.com' http://localhost:9091/v1/test"

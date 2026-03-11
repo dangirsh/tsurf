@@ -9,18 +9,18 @@ bats_load_library bats-assert
 @test "${HOST}: sandboxed claude wrapper exists in PATH" {
   if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
   local claude_path
-  claude_path="$(remote command -v claude)"
+  # readlink -f resolves /run/current-system/sw/bin/claude → /nix/store/…/bin/claude
+  claude_path="$(remote "readlink -f \$(command -v claude)")"
   # The wrapper is a writeShellApplication — its path contains /nix/store
   [[ "$claude_path" == /nix/store/* ]]
   # The wrapper script should reference bwrap
-  remote "grep -q bwrap $(command -v claude 2>/dev/null)" || \
-    remote "grep -q bwrap ${claude_path}"
+  remote "grep -q bwrap ${claude_path}"
 }
 
 @test "${HOST}: sandboxed codex wrapper exists in PATH" {
   if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
   local codex_path
-  codex_path="$(remote command -v codex)"
+  codex_path="$(remote "readlink -f \$(command -v codex)")"
   [[ "$codex_path" == /nix/store/* ]]
   remote "grep -q bwrap ${codex_path}"
 }
@@ -28,7 +28,7 @@ bats_load_library bats-assert
 @test "${HOST}: sandboxed claude hides /run/secrets" {
   if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
   local claude_path script_content
-  claude_path="$(remote command -v claude)"
+  claude_path="$(remote "readlink -f \$(command -v claude)")"
   script_content="$(remote cat "${claude_path}")"
   # Must NOT contain --ro-bind /run/secrets or --bind /run/secrets
   if echo "$script_content" | grep -q 'bind.*/run/secrets'; then
@@ -40,7 +40,7 @@ bats_load_library bats-assert
 @test "${HOST}: sandboxed claude hides ~/.ssh" {
   if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
   local claude_path script_content
-  claude_path="$(remote command -v claude)"
+  claude_path="$(remote "readlink -f \$(command -v claude)")"
   script_content="$(remote cat "${claude_path}")"
   # Must NOT contain --bind .*/.ssh
   if echo "$script_content" | grep -q 'bind.*/\.ssh'; then
