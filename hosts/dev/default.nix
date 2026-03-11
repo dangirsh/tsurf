@@ -15,6 +15,7 @@
     ../../modules/break-glass-ssh.nix
     ../../modules/ssh-canary.nix
     ../../modules/dashboard.nix
+    ../../modules/agent-sandbox.nix
   ];
 
   networking.hostName = "neurosys-dev";
@@ -72,6 +73,8 @@
   services.openssh.hostKeys = lib.mkForce [
     { type = "ed25519"; path = "/persist/etc/ssh/ssh_host_ed25519_key"; }
   ];
+
+  services.agentSandbox.enable = true;
 
   # --- srvos overrides ---
   networking.useNetworkd = lib.mkForce false;
