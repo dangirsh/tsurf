@@ -166,6 +166,44 @@ let
             white-space: nowrap;
           }
 
+          .deploy-banner {
+            padding: 0.7rem 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+          }
+
+          .deploy-success {
+            background: rgba(51, 209, 122, 0.08);
+            border-color: rgba(51, 209, 122, 0.3);
+          }
+
+          .deploy-failed {
+            background: rgba(255, 107, 107, 0.08);
+            border-color: rgba(255, 107, 107, 0.3);
+          }
+
+          .deploy-rolled-back {
+            background: rgba(248, 228, 92, 0.08);
+            border-color: rgba(248, 228, 92, 0.3);
+          }
+
+          .deploy-status-line {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+          }
+
+          .deploy-summary {
+            margin-top: 0.35rem;
+            color: var(--muted);
+            font-size: 0.88rem;
+            white-space: pre-line;
+            line-height: 1.5;
+          }
+
           .host-badge {
             font-size: 0.7rem;
             padding: 0.05rem 0.35rem;
@@ -326,6 +364,7 @@ let
         <main>
           <h1>Neurosys</h1>
           <div id="subtitle" class="subtitle">Loading manifest...</div>
+          <div id="deploy-banner" class="deploy-banner hidden"></div>
           <div class="filters">
             <input type="text" id="search" class="search-input"
               placeholder="Filter services..." autocomplete="off">
@@ -600,11 +639,75 @@ let
             updateStatusUi();
           }
 
+          function escapeHtml(s) {
+            return s.replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+          }
+
+          function timeAgo(ts) {
+            var now = Date.now();
+            var then = new Date(ts).getTime();
+            var diff = Math.floor((now - then) / 1000);
+            if (diff < 60) return "just now";
+            if (diff < 3600) {
+              return Math.floor(diff / 60) + "m ago";
+            }
+            if (diff < 86400) {
+              return Math.floor(diff / 3600) + "h ago";
+            }
+            return Math.floor(diff / 86400) + "d ago";
+          }
+
+          async function fetchDeployStatus() {
+            try {
+              var r = await fetch("/api/deploy-status");
+              if (!r.ok) return;
+              var d = await r.json();
+              if (!d.status || d.status === "unknown") return;
+
+              var banner = document.getElementById("deploy-banner");
+              var isOk = d.status === "success";
+              var isRolled = d.status === "rolled-back";
+              var cls = isOk ? "deploy-success"
+                : isRolled ? "deploy-rolled-back"
+                : "deploy-failed";
+              banner.className = "deploy-banner " + cls;
+
+              var color = isOk ? "var(--ok)"
+                : isRolled ? "var(--warn)" : "var(--bad)";
+              var label = d.status.toUpperCase()
+                .replace("-", " ");
+              var ago = timeAgo(d.timestamp);
+
+              var html = "<div class=\"deploy-status-line\">"
+                + "<span style=\"color:" + color + "\">●</span> "
+                + "Deploy " + label + " — " + ago;
+              if (d.sha) {
+                html += " <span style=\"color:var(--muted);"
+                  + "font-weight:400\">(" + d.sha + ")</span>";
+              }
+              html += "</div>";
+
+              if (d.summary) {
+                html += "<div class=\"deploy-summary\">"
+                  + escapeHtml(d.summary) + "</div>";
+              }
+
+              banner.innerHTML = html;
+              banner.classList.remove("hidden");
+            } catch (e) {
+              // deploy status unavailable — banner stays hidden
+            }
+          }
+
           async function run() {
             try {
               await fetchManifest();
               await fetchStatus();
+              await fetchDeployStatus();
               setInterval(fetchStatus, 10000);
+              setInterval(fetchDeployStatus, 60000);
             } catch (error) {
               document.getElementById("subtitle").textContent =
                 "Failed to load dashboard data";
@@ -880,6 +983,19 @@ let
             return b"<h1>Dashboard HTML missing</h1>"
 
 
+    DEPLOY_STATUS_PATH = "/var/lib/deploy-status/status.json"
+
+
+    def build_deploy_payload():
+        try:
+            text = Path(DEPLOY_STATUS_PATH).read_text(
+                encoding="utf-8"
+            )
+            return json.loads(text)
+        except Exception:
+            return {"status": "unknown"}
+
+
     _cost_cache = {}
     COST_CACHE_PATH = "/run/claw-cost.json"
 
@@ -937,6 +1053,9 @@ let
                     return
                 if route == "/api/cost-data":
                     self._send_json(build_cost_payload())
+                    return
+                if route == "/api/deploy-status":
+                    self._send_json(build_deploy_payload())
                     return
                 self._send_json({"error": "not_found"}, status=404)
 
@@ -1051,6 +1170,10 @@ in
       order = 99;
     };
 
+    systemd.tmpfiles.rules = [
+      "d /var/lib/deploy-status 0755 root root -"
+    ];
+
     systemd.services.nix-dashboard = {
       description = "Nix-derived dynamic dashboard";
       wantedBy = [ "multi-user.target" ];
@@ -1080,7 +1203,10 @@ in
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
         CapabilityBoundingSet = "";
-        ReadOnlyPaths = [ "/run/claw-cost.json" ];
+        ReadOnlyPaths = [
+          "/run/claw-cost.json"
+          "/var/lib/deploy-status"
+        ];
       };
     };
     })

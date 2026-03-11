@@ -38,7 +38,37 @@ DOCKER_CONTAINERS=()
 DEPLOY_COMPLETED=false
 PREV_SYSTEM=""
 WATCHDOG_ACTIVE=false
+DEPLOY_SUMMARY=""
 mkdir -p "$FLAKE_DIR/tmp"
+
+# Write deploy status JSON to remote host for dashboard consumption.
+# Called from success, failure, and rollback paths.
+write_deploy_status() {
+  local status="$1"
+  local ts
+  ts=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+  local json
+  if command -v python3 &>/dev/null; then
+    json=$(python3 -c "
+import json,sys
+print(json.dumps({
+    'status': sys.argv[1],
+    'timestamp': sys.argv[2],
+    'sha': sys.argv[3],
+    'node': sys.argv[4],
+    'duration_seconds': int(sys.argv[5]),
+    'summary': sys.argv[6]
+}))" "$status" "$ts" "$GIT_SHA" "$NODE" "$SECONDS" "$DEPLOY_SUMMARY")
+  else
+    # Fallback: basic escaping for git log output
+    local esc
+    esc=$(printf '%s' "$DEPLOY_SUMMARY" | sed 's/\\/\\\\/g;s/"/\\"/g' | tr '\n' '|' | sed 's/|/\\n/g;s/\\n$//')
+    json=$(printf '{"status":"%s","timestamp":"%s","sha":"%s","node":"%s","duration_seconds":%d,"summary":"%s"}' \
+      "$status" "$ts" "$GIT_SHA" "$NODE" "$SECONDS" "$esc")
+  fi
+  printf '%s\n' "$json" | ssh "${SSH_OPTS[@]}" "$TARGET" \
+    "mkdir -p /var/lib/deploy-status && cat > /var/lib/deploy-status/status.json" 2>/dev/null || true
+}
 
 # @decision Two-level deploy locking: local flock + remote mkdir (adapted from parts deploy.sh)
 LOCAL_LOCK=""
@@ -274,6 +304,18 @@ fi
 REMOTE_LOCK_HELD=true
 printf '%s\n' "$LOCK_INFO" | ssh "${SSH_OPTS[@]}" "$TARGET" "cat > '$REMOTE_LOCK_DIR/info.txt'" 2>/dev/null || true
 
+# --- Compute deploy summary from git log ---
+PREV_DEPLOY_SHA=$(ssh "${SSH_OPTS[@]}" "$TARGET" \
+  "cat /var/lib/deploy-status/status.json 2>/dev/null" 2>/dev/null \
+  | grep -o '"sha":"[^"]*"' | cut -d'"' -f4 \
+  || echo "")
+
+if [[ -n "$PREV_DEPLOY_SHA" ]] && git -C "$FLAKE_DIR" cat-file -t "$PREV_DEPLOY_SHA" &>/dev/null; then
+  DEPLOY_SUMMARY=$(git -C "$FLAKE_DIR" log --oneline "${PREV_DEPLOY_SHA}..HEAD" -- 2>/dev/null | head -5)
+else
+  DEPLOY_SUMMARY=$(git -C "$FLAKE_DIR" log --oneline -1 HEAD 2>/dev/null || echo "unknown")
+fi
+
 # --- Update parts input ---
 if [[ "$SKIP_UPDATE" == false && "$NODE" == "neurosys" ]]; then
   echo "==> Updating parts flake input..."
@@ -385,12 +427,19 @@ if [[ "$NO_MAGIC_ROLLBACK" == true ]]; then
   echo "==> Magic rollback disabled for this deploy (intentional networking/SSH changes)."
 fi
 
+DEPLOY_RS_EXIT=0
 if [[ "$MODE" == "local" ]]; then
   echo "==> Deploying node '$NODE' to $TARGET with deploy-rs (confirm timeout: 300s)..."
-  nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}"
+  nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}" || DEPLOY_RS_EXIT=$?
 else
   echo "==> Deploying node '$NODE' via remote build on $TARGET with deploy-rs..."
-  nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}" --remote-build
+  nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}" --remote-build || DEPLOY_RS_EXIT=$?
+fi
+
+if [[ "$DEPLOY_RS_EXIT" -ne 0 ]]; then
+  echo "=== Deploy-rs FAILED (exit $DEPLOY_RS_EXIT) — likely rolled back ==="
+  write_deploy_status "rolled-back"
+  exit 1
 fi
 DEPLOY_COMPLETED=true
 
@@ -509,6 +558,8 @@ if [[ "$FAILED" -eq 0 ]]; then
     echo ""
   fi
 
+  write_deploy_status "success"
+
   if [[ "$SKIP_UPDATE" == false && -n "${PARTS_REV_SHORT:-}" ]]; then
     echo "NOTE: flake.lock was updated. Remember to commit when ready:"
     echo "  git add flake.lock && git commit -m \"chore: update parts input to $PARTS_REV_SHORT\""
@@ -528,6 +579,8 @@ else
     echo "  ${s}: ${STATUS}"
   done
   echo ""
+  write_deploy_status "failed"
+
   echo "Connectivity failures auto-rollback with deploy-rs magic rollback."
   echo "For non-connectivity issues (for example containers failing after deploy), use manual rollback:"
   echo "  ssh $TARGET nixos-rebuild switch --rollback"
