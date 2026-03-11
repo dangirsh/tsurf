@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 73 complete. Plan 73-02 added OVH live wrapper verification tests plus eval coverage for the audit tmpfiles rule. Next: Phase 72.1 planning/deploy validation.
+**Current focus:** Phase 72.1 in progress. Plan 72.1-01 added OVH secret-proxy live BATS acceptance tests and passed flake validation. Next: Plan 72.1-02 deploy + live verification on OVH.
 
 ## Current Position
 
-Phase: 73 (OVH Agent Sandbox Enforcement) — COMPLETE
-Plan: 73-02 — COMPLETE
-Status: Plan 73-02 executed with 4 atomic commits (live BATS wrapper tests + eval audit-dir check + flake validation + docs/state updates). `nix flake check` passes including `agent-sandbox-ovh-enabled`, `agent-sandbox-module-has-bwrap`, and `agent-audit-dir`.
-Last activity: 2026-03-11 - Phase 73-02 complete.
+Phase: 72.1 (OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests) — IN PROGRESS
+Plan: 72.1-01 — COMPLETE
+Status: Plan 72.1-01 executed with 3 atomic commits adding five OVH-only secret-proxy acceptance tests (`/health`, host-reject 403, opt-in e2e proxy call, systemd User, journal err scan). `nix flake check` passes and `.test-status` is updated.
+Last activity: 2026-03-11 - Plan 72.1-01 complete, 72.1-02 pending.
 
-Progress: Phase 73 complete (2/2 plans, 73-01 and 73-02 complete). Phase 72 complete (3/3 plans). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
+Progress: Phase 72.1 in progress (1/2 plans, 72.1-01 complete). Phase 73 complete (2/2 plans, 73-01 and 73-02 complete). Phase 72 complete (3/3 plans). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -25,9 +25,9 @@ Phase 57-02 pending.
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41
-- Average duration: ~19.6min
-- Total execution time: ~784 min
+- Total plans completed: 42
+- Average duration: ~18.8min
+- Total execution time: ~791 min
 
 **By Phase:**
 
@@ -64,6 +64,7 @@ Phase 57-02 pending.
 - Trend: Work has shifted to proxy boundary hardening and modular NixOS integration.
 
 *Updated after each plan completion*
+- Phase 72.1 P01 | 7 min | 3 tasks | 3 files
 
 ## Accumulated Context
 
@@ -316,6 +317,7 @@ Recent decisions affecting current work:
 - [53-03]: DASH-05: Sudoers rule for automaton user — 3 lifecycle commands (start/stop/restart conway-automaton) with absolute paths, NOPASSWD.
 - [53-03]: DASH-06: `security.sudo.execWheelOnly = lib.mkForce false` — NixOS asserts when non-wheel users in sudo.extraRules while execWheelOnly is true.
 - [53-03]: WEB-14: conway.dangirsh.org vhost with ACME DNS-01 (Cloudflare), token auth via nginx map $arg_token, limit_req 10r/s burst=20.
+- [Phase 72.1]: Added OVH-only BATS live tests for secret-proxy /health, 403 host reject, service user binding, and journal error cleanliness. — Plan 72.1-01 establishes acceptance coverage before OVH deploy validation in 72.1-02.
 
 ### Completed Phases
 

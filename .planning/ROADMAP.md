@@ -67,7 +67,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 68: Extract secret-proxy into standalone nix-secret-proxy flake** - Standalone `nix-secret-proxy` flake with Rust binary + NixOS module. neurosys and private-neurosys consume via flake input. Completed 2026-03-09.
 - [x] **Phase 69: OVH Dev Environment Migration** - OVH VPS configured as primary dev host. secret-proxy-dev service, per-host repo clone scripts, real sops secrets, setupSecrets dep fix. Deploy infrastructure: `--node all` parallel deploy. Acceptance test: Claude Code works via secret-proxy on OVH. Completed 2026-03-10.
 - [x] **Phase 72: Secret Proxy — Issue Resolution & Hardening** - Phase 72 nix-secret-proxy fixes: /health endpoint, large-body support (DefaultBodyLimit removed), JSON-structured 502 errors, configurable bind address, upstream timeout, graceful shutdown. 8 integration tests. Completed 2026-03-10.
-- [ ] **Phase 72.1: OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests** (INSERTED) - Deploy Phase 72 nix-secret-proxy to OVH; BATS live tests for /health, 403 host-reject, service user, journal errors; end-to-end agent smoke test; prerequisite for Phase 73.
+- [ ] **Phase 72.1: OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests** (INSERTED) - Deploy Phase 72 nix-secret-proxy to OVH; BATS live tests for /health, 403 host-reject, service user, journal errors; end-to-end agent smoke test; prerequisite for Phase 73. Progress: 72.1-01 complete, 72.1-02 pending.
 - [x] **Phase 73: OVH Agent Sandbox Enforcement** - OVH wrappers now enforce bubblewrap sandboxing by default for `claude`/`codex`, gate `--no-sandbox` behind `AGENT_ALLOW_NOSANDBOX=1`, log launch audits, and include eval/live test coverage (`agent-audit-dir`, OVH wrapper BATS). Completed 2026-03-11.
 - [ ] **Phase 74: Open Source Release Prep v3** - Final hardcore cleanup for public release. (1) Remove all personal/sensitive/unnecessary content — move to private overlay or gitignore, reset git history clean. (2) Rewrite README for maximum first-impression impact — concise, immediately communicates value and differentiators. (3) Hardcore minimalism pass — ruthlessly examine every file, module, and line; remove/simplify anything extraneous. Confirm each major removal with user.
 
@@ -1401,12 +1401,13 @@ Plans:
 
 ### Phase 72.1: OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
+**Goal:** Deploy Phase 72 nix-secret-proxy updates to OVH and verify live acceptance behavior before sandbox enforcement rollout.
 **Depends on:** Phase 72
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 72.1 to break down)
+- [x] 72.1-01: Add OVH live BATS acceptance tests (/health, host reject 403, service user, journal errors, opt-in e2e proxy)
+- [ ] 72.1-02: Push/bump lock chain, deploy OVH, run live tests and manual e2e verification
 
 ### Phase 73: OVH Agent Sandbox Enforcement
 
