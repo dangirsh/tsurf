@@ -311,6 +311,22 @@ in
     "ovh ssh-canary timer is defined"
     "ovh ssh-canary timer is missing — import modules/ssh-canary.nix"
     (builtins.hasAttr "ssh-canary" ovhCfg.systemd.timers);
+
+  agent-sandbox-ovh-enabled = mkCheck
+    "agent-sandbox-ovh-enabled"
+    "ovh agent sandbox wrappers are enabled"
+    "ovh services.agentSandbox.enable is false — dev agents run unsandboxed"
+    ovhCfg.services.agentSandbox.enable;
+
+  agent-sandbox-module-has-bwrap =
+    let
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "agent-sandbox-module-has-bwrap"
+      "agent-sandbox module references bubblewrap"
+      "agent-sandbox module does not reference bubblewrap — sandbox is broken"
+      (lib.hasInfix "bubblewrap" source);
 }
 
 # --- Private overlay test extension pattern ---
