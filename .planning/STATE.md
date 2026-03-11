@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 73 underway. Plan 73-01 completed: OVH agent sandbox wrappers now enforce bubblewrap by default for `claude`/`codex`, with guarded `--no-sandbox`, audit logging, and eval coverage. Next: Plan 73-02.
+**Current focus:** Phase 73 complete. Plan 73-02 added OVH live wrapper verification tests plus eval coverage for the audit tmpfiles rule. Next: Phase 72.1 planning/deploy validation.
 
 ## Current Position
 
-Phase: 73 (OVH Agent Sandbox Enforcement) — IN PROGRESS
-Plan: 73-01 — COMPLETE
-Status: Plan 73-01 executed with 4 atomic commits (module + host enablement + eval checks + test-status). `nix flake check` passes with new agent sandbox module imported on OVH.
-Last activity: 2026-03-11 - Phase 73-01 complete.
+Phase: 73 (OVH Agent Sandbox Enforcement) — COMPLETE
+Plan: 73-02 — COMPLETE
+Status: Plan 73-02 executed with 4 atomic commits (live BATS wrapper tests + eval audit-dir check + flake validation + docs/state updates). `nix flake check` passes including `agent-sandbox-ovh-enabled`, `agent-sandbox-module-has-bwrap`, and `agent-audit-dir`.
+Last activity: 2026-03-11 - Phase 73-02 complete.
 
-Progress: Phase 73 in progress (1/2 plans, 73-01 complete). Phase 72 complete (3/3 plans). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
+Progress: Phase 73 complete (2/2 plans, 73-01 and 73-02 complete). Phase 72 complete (3/3 plans). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -25,7 +25,7 @@ Phase 57-02 pending.
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 40
+- Total plans completed: 41
 - Average duration: ~19.6min
 - Total execution time: ~784 min
 
@@ -75,6 +75,8 @@ Recent decisions affecting current work:
 - [73-01]: SANDBOX-73-01: Added `modules/agent-sandbox.nix` with `services.agentSandbox.enable`; wrappers replace bare `claude`/`codex` via `meta.priority = 4` and enforce bubblewrap by default.
 - [73-01]: SANDBOX-73-02: All wrapper launches append TSV audit records to `/data/projects/.agent-audit/agent-launches.log` (timestamp, user, pid, mode, workdir, binary, args).
 - [73-01]: SANDBOX-73-03: `--no-sandbox` path requires `AGENT_ALLOW_NOSANDBOX=1`; otherwise wrapper exits 1. Secret-proxy env vars are only injected when `secretProxyPort` is configured.
+- [73-02]: Added `tests/live/agent-sandbox.bats` with six OVH-only `${HOST}:` tests validating wrapper presence, bwrap reference, source-level mount exclusions, `--no-sandbox` rejection messaging, and audit-dir permissions.
+- [73-02]: Added eval check `agent-audit-dir` in `tests/eval/config-checks.nix` to ensure `.agent-audit` tmpfiles rule remains declared in OVH config.
 
 - [71-01]: README rewritten as canonical entry point for the API key placeholder substitution proxy pattern with explicit Stanislas Polu Netclode attribution.
 - [71-01]: Added docs set: `architecture.md` (pattern, trust model, Netclode comparison), `deployment-nixos.md`, `deployment-docker.md`, and `deployment-systemd.md`.
@@ -479,6 +481,8 @@ Recent decisions affecting current work:
 - Phase 68 added: Extract secret-proxy into standalone nix-secret-proxy flake — new public GitHub repo with flake.nix (packages.secret-proxy + nixosModules.default), README with sops-nix/agenix/plain-file integration examples, neurosys consumes it as a flake input instead of carrying local copies
 - Phase 70 added: Deployment Lockout Prevention — OOB recovery runbook (Contabo KVM + OVH rescue mode), break-glass emergency SSH key (hardcoded, independent of sops), strengthened pre-deploy assertions, SSH canary systemd timer with auto-rollback, hardened watchdog reliability in deploy.sh, NixOS VM test that validates SSH before prod deploy
 - Phase 73 added: OVH Agent Sandbox Enforcement — aliases and shell-level interception so `claude`/`codex` always run sandboxed on OVH by default; hard block on `--no-sandbox` without explicit override (`AGENT_ALLOW_NOSANDBOX=1`); audit logging of sandboxed/unsandboxed invocations; NixOS `agent-compute.nix` changes for OVH; secret-proxy placeholder wired into sandboxed sessions
+- Phase 72.1 inserted after Phase 72: OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests (URGENT) — deploy Phase 72 nix-secret-proxy features (/health, large-body, JSON 502, graceful shutdown) to OVH; add BATS live tests for all new behaviors; verify end-to-end agent-proxy connectivity; prerequisite foundation for Phase 73 sandbox enforcement
+- Phase 74 added: Open Source Release Prep v3 — final hardcore cleanup for public release: remove personal/sensitive/unnecessary content (move to private or gitignore), reset git history, rewrite README for impact, hardcore minimalism pass on all code with user confirmation on each major removal
 
 ### Blockers/Concerns
 

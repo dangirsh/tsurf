@@ -66,7 +66,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 67: Review and Document Secret Proxy** - Consumer-facing architecture doc (`docs/secret-proxy-architecture.md`): 8 design features, 10 limitations, test coverage gaps, 7 improvement areas. Completed 2026-03-07.
 - [x] **Phase 68: Extract secret-proxy into standalone nix-secret-proxy flake** - Standalone `nix-secret-proxy` flake with Rust binary + NixOS module. neurosys and private-neurosys consume via flake input. Completed 2026-03-09.
 - [x] **Phase 69: OVH Dev Environment Migration** - OVH VPS configured as primary dev host. secret-proxy-dev service, per-host repo clone scripts, real sops secrets, setupSecrets dep fix. Deploy infrastructure: `--node all` parallel deploy. Acceptance test: Claude Code works via secret-proxy on OVH. Completed 2026-03-10.
-- [ ] **Phase 73: OVH Agent Sandbox Enforcement** - Aliases and shell-level interception so `claude`/`codex` always run sandboxed on OVH by default. Hard block on `--no-sandbox` without explicit override. Audit logging. NixOS `agent-compute.nix` changes for OVH. Secret-proxy placeholder wired into sandboxed sessions.
+- [x] **Phase 72: Secret Proxy — Issue Resolution & Hardening** - Phase 72 nix-secret-proxy fixes: /health endpoint, large-body support (DefaultBodyLimit removed), JSON-structured 502 errors, configurable bind address, upstream timeout, graceful shutdown. 8 integration tests. Completed 2026-03-10.
+- [ ] **Phase 72.1: OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests** (INSERTED) - Deploy Phase 72 nix-secret-proxy to OVH; BATS live tests for /health, 403 host-reject, service user, journal errors; end-to-end agent smoke test; prerequisite for Phase 73.
+- [x] **Phase 73: OVH Agent Sandbox Enforcement** - OVH wrappers now enforce bubblewrap sandboxing by default for `claude`/`codex`, gate `--no-sandbox` behind `AGENT_ALLOW_NOSANDBOX=1`, log launch audits, and include eval/live test coverage (`agent-audit-dir`, OVH wrapper BATS). Completed 2026-03-11.
+- [ ] **Phase 74: Open Source Release Prep v3** - Final hardcore cleanup for public release. (1) Remove all personal/sensitive/unnecessary content — move to private overlay or gitignore, reset git history clean. (2) Rewrite README for maximum first-impression impact — concise, immediately communicates value and differentiators. (3) Hardcore minimalism pass — ruthlessly examine every file, module, and line; remove/simplify anything extraneous. Confirm each major removal with user.
 
 ## Phase Details
 
@@ -1396,11 +1399,36 @@ Plans:
 - [x] 72-02: Documentation updates — known-issues.md updated with fix status, deployment docs updated for bind/health
 - [x] 72-03: Integration test suite — 8 tests covering all fixes (streaming, body size, 502 shape, health, bind, graceful shutdown)
 
+### Phase 72.1: OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Depends on:** Phase 72
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 72.1 to break down)
+
 ### Phase 73: OVH Agent Sandbox Enforcement
 
 **Goal:** Ensure dev agents running on OVH are always sandboxed by default. Sandboxed execution should be the easy path, and unsandboxed execution should require an explicit override with a visible warning. Covers: (1) default agent-launch aliases (`claude`, `codex`, etc.) that always invoke the bubblewrap sandbox wrapper on OVH; (2) shell-level interception so bare `claude` or `codex` in an interactive shell runs sandboxed — no unsafe shortcut; (3) a warning or hard block when `--no-sandbox` is passed without an explicit override env var (`AGENT_ALLOW_NOSANDBOX=1`) or flag; (4) audit logging of sandboxed vs unsandboxed invocations to a persistent log file; (5) NixOS `agent-compute.nix` changes declaratively enforcing this on OVH (not Contabo, which already has agentd); (6) verify secret-proxy placeholder key is wired into sandboxed sessions so agents can reach the Anthropic API through the proxy without seeing the real key.
 **Depends on:** Phase 69
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 73 to break down)
+- [x] 73-01: Module + OVH enablement + eval checks (`agent-sandbox-ovh-enabled`, `agent-sandbox-module-has-bwrap`)
+- [x] 73-02: OVH live BATS wrapper verification + eval check `agent-audit-dir`
+
+### Phase 74: Open Source Release Prep v3
+**Goal**: Public repo is clean, minimal, impressive, and ready for strangers to discover. Zero personal identifiers, zero dead code, maximum signal-to-noise ratio. Git history reset.
+**Depends on**: None (can run independently)
+**Success Criteria** (what must be TRUE):
+  1. `grep -r "dangirsh\|worldcoin\|161.97.74\|135.125.196\|100.104.43\|100.113.72" modules/ home/ scripts/ src/ docs/ README.md flake.nix` returns zero matches
+  2. Every file in the repo justifies its existence — no stubs, no empty modules, no unused code
+  3. README gives a stranger an immediate "this is cool, I want to fork this" reaction in <30 seconds
+  4. `nix flake check` passes after all changes
+  5. Git history is clean (single squashed commit or fresh init)
+  6. Private overlay continues to work with the cleaned public repo
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 74 to break down)
