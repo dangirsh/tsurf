@@ -327,6 +327,12 @@ in
       "agent-sandbox module references bubblewrap"
       "agent-sandbox module does not reference bubblewrap — sandbox is broken"
       (lib.hasInfix "bubblewrap" source);
+
+  agent-audit-dir = mkCheck
+    "agent-audit-dir"
+    "agent-audit tmpfiles directory is declared"
+    "agent-audit tmpfiles directory missing — /data/projects/.agent-audit won't be created"
+    (builtins.any (r: lib.hasInfix ".agent-audit" r) ovhCfg.systemd.tmpfiles.rules);
 }
 
 # --- Private overlay test extension pattern ---
