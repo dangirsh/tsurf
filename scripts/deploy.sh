@@ -16,7 +16,7 @@
 #
 # @decision Manual deploy only — no CI/CD. NixOS handles incrementality.
 # @decision Full deploy-rs system activation every deploy — no partial/container-only.
-# @decision Magic rollback enabled by default with 120s confirm timeout.
+# @decision Magic rollback enabled by default with 300s confirm timeout.
 # @decision Service health polling (30s) — systemd for parts, postgresql, claw-swap-app.
 # @decision No auto-commit of flake.lock — print reminder instead.
 # @decision Remote build default (DEPLOY-01): neurosys has 18 vCPU / 96 GB RAM — faster than
@@ -346,6 +346,8 @@ fi
 # as a safety net. Magic rollback can fail if activate-rs is killed by cgroup cleanup
 # (deploy-rs issue #153). The 600s timeout is well beyond the 120s confirm timeout,
 # so it only fires if magic rollback itself failed.
+# @decision DEPLOY-07: confirmTimeout bumped 120→300 — activation takes >120s on OVH due to
+# repo cloning + dbus session startup during NixOS switch-to-configuration.
 if [[ "$WATCHDOG_ACTIVE" != true && "$FIRST_DEPLOY" != true ]]; then
   PREV_SYSTEM=$(ssh "${SSH_OPTS[@]}" "$TARGET" "readlink -f /nix/var/nix/profiles/system" 2>/dev/null || true)
   if [[ -n "$PREV_SYSTEM" ]]; then
@@ -370,7 +372,7 @@ fi
 
 DEPLOY_ARGS=(
   "$FLAKE_DIR#$NODE"
-  --confirm-timeout 120
+  --confirm-timeout 300
 )
 if [[ "$FIRST_DEPLOY" == true || "$NO_MAGIC_ROLLBACK" == true ]]; then
   DEPLOY_ARGS+=(--magic-rollback false)
@@ -384,7 +386,7 @@ if [[ "$NO_MAGIC_ROLLBACK" == true ]]; then
 fi
 
 if [[ "$MODE" == "local" ]]; then
-  echo "==> Deploying node '$NODE' to $TARGET with deploy-rs (confirm timeout: 120s)..."
+  echo "==> Deploying node '$NODE' to $TARGET with deploy-rs (confirm timeout: 300s)..."
   nix run "$FLAKE_DIR#deploy-rs" -- "${DEPLOY_ARGS[@]}"
 else
   echo "==> Deploying node '$NODE' via remote build on $TARGET with deploy-rs..."
