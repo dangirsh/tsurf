@@ -8,3 +8,5 @@ secrets/
 .worktrees/
 result
 *.png
+.test-status
+src/

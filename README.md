@@ -6,7 +6,7 @@ Agents greatly expand the amount of compute an individual can make use of. Neuro
 
 ## Design Principles
 
-- **Secure by Default**: Least priviledge, defense in depth, regular audits (by agents).
+- **Secure by Default**: Least privilege, defense in depth, regular audits (by agents).
 - **Agents are the Users**: Optimize everything to be driven by agents. Humans interact with the system through the agents.
 - **Declarative and Reproducible**: State is maximally tracked in git. Undeclared system state is cleared on boot.
 
@@ -14,7 +14,7 @@ Agents greatly expand the amount of compute an individual can make use of. Neuro
 ## What's Included
 
 - **Agent sandboxing**: bubblewrap + systemd slice isolation for agents
-  - [`agent-compute.nix`](modules/agent-compute.nix), [`secret-proxy.nix`](modules/secret-proxy.nix)
+  - [`agent-compute.nix`](modules/agent-compute.nix), [`agent-sandbox.nix`](modules/agent-sandbox.nix)
   - PID/cgroup/user/IPC namespace isolation.
   - Real keys are never accessible in the sandbox. 
 - **Server hardening**: locked-down defaults for a public-facing VPS
@@ -66,6 +66,17 @@ Examples based on real deployments:
 2. Generate age key from SSH host key (`ssh-to-age`). Encrypt secrets with `sops`.
 3. Deploy: `nixos-anywhere` for first install; `nix run .#deploy-rs` for updates.
 4. Launch agents: `claude` or `codex` from any project directory.
+
+## Testing
+
+```bash
+# Offline eval checks (validates config, security assertions, service invariants)
+nix flake check
+
+# Live tests against a deployed host
+nix run .#test-live -- --host neurosys
+nix run .#test-live -- --host neurosys-dev
+```
 
 ## License
 
