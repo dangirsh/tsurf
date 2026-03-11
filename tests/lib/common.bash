@@ -11,6 +11,7 @@ SSH_OPTS=(
   -o StrictHostKeyChecking=no
   -o BatchMode=yes
   -o LogLevel=ERROR
+  -F /dev/null
 )
 HOST="${NEUROSYS_TEST_HOST:-neurosys}"
 SSH_USER="${NEUROSYS_TEST_USER:-root}"
