@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 72 complete. nix-secret-proxy: configurable bind, timeout, graceful shutdown, JSON 502, /health, 8 integration tests. Docs updated. Next phase TBD.
+**Current focus:** Phase 73 underway. Plan 73-01 completed: OVH agent sandbox wrappers now enforce bubblewrap by default for `claude`/`codex`, with guarded `--no-sandbox`, audit logging, and eval coverage. Next: Plan 73-02.
 
 ## Current Position
 
-Phase: 72 (Secret-Proxy Issue Resolution & Hardening) — COMPLETE
-Plan: 72-03 — COMPLETE
-Status: All 3 plans executed. nix-secret-proxy commits: d26293f (72-01), 5947257 (72-03 + 72-02). neurosys flake.lock bumped 3x.
-Last activity: 2026-03-10 - Phase 72 complete.
+Phase: 73 (OVH Agent Sandbox Enforcement) — IN PROGRESS
+Plan: 73-01 — COMPLETE
+Status: Plan 73-01 executed with 4 atomic commits (module + host enablement + eval checks + test-status). `nix flake check` passes with new agent sandbox module imported on OVH.
+Last activity: 2026-03-11 - Phase 73-01 complete.
 
-Progress: Phase 72 complete (3/3 plans). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
+Progress: Phase 73 in progress (1/2 plans, 73-01 complete). Phase 72 complete (3/3 plans). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete
@@ -71,6 +71,10 @@ Phase 57-02 pending.
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+- [73-01]: SANDBOX-73-01: Added `modules/agent-sandbox.nix` with `services.agentSandbox.enable`; wrappers replace bare `claude`/`codex` via `meta.priority = 4` and enforce bubblewrap by default.
+- [73-01]: SANDBOX-73-02: All wrapper launches append TSV audit records to `/data/projects/.agent-audit/agent-launches.log` (timestamp, user, pid, mode, workdir, binary, args).
+- [73-01]: SANDBOX-73-03: `--no-sandbox` path requires `AGENT_ALLOW_NOSANDBOX=1`; otherwise wrapper exits 1. Secret-proxy env vars are only injected when `secretProxyPort` is configured.
 
 - [71-01]: README rewritten as canonical entry point for the API key placeholder substitution proxy pattern with explicit Stanislas Polu Netclode attribution.
 - [71-01]: Added docs set: `architecture.md` (pattern, trust model, Netclode comparison), `deployment-nixos.md`, `deployment-docker.md`, and `deployment-systemd.md`.
