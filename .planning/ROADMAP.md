@@ -1429,7 +1429,9 @@ Plans:
   4. `nix flake check` passes after all changes
   5. Git history is clean (single squashed commit or fresh init)
   6. Private overlay continues to work with the cleaned public repo
-**Plans**: 0 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 74 to break down)
+- [ ] 74-01: Identifier scrub + flake input fix (wave 1, autonomous)
+- [ ] 74-02: Dead code removal + README polish (wave 1, autonomous)
+- [ ] 74-03: Git history reset + final verification (wave 2, requires user confirmation)
