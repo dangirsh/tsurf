@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** One command to deploy a fully working development server with all services running, all tools installed, and all infrastructure repos cloned -- no manual setup steps.
-**Current focus:** Phase 72.1 in progress. Plan 72.1-01 added OVH secret-proxy live BATS acceptance tests and passed flake validation. Next: Plan 72.1-02 deploy + live verification on OVH.
+**Current focus:** Phase 72.1 COMPLETE. Both plans executed: live BATS tests written (72.1-01) and OVH deployed + verified (72.1-02). Phase 74 is next per ROADMAP.
 
 ## Current Position
 
-Phase: 72.1 (OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests) — IN PROGRESS
-Plan: 72.1-01 — COMPLETE
-Status: Plan 72.1-01 executed with 3 atomic commits adding five OVH-only secret-proxy acceptance tests (`/health`, host-reject 403, opt-in e2e proxy call, systemd User, journal err scan). `nix flake check` passes and `.test-status` is updated.
-Last activity: 2026-03-11 - Plan 72.1-01 complete, 72.1-02 pending.
+Phase: 72.1 (OVH Secret Proxy — Deploy Phase 72 & Live Acceptance Tests) — COMPLETE
+Plan: 72.1-02 — COMPLETE
+Status: Both plans complete. OVH generation 4 deployed with nix-secret-proxy Phase 72 features (Rust proxy, /health, 403 host-reject). All 7 Phase 72.1 BATS tests pass (Tests A, B, C, D, E2E-skip). Phase 73 agent-sandbox tests also all pass (6/6). Test infrastructure fixed: bats_load_library format, SSH GSSAPIAuthentication warning, SSH quoting, symlink resolution.
+Last activity: 2026-03-11 - Phase 72.1 complete.
 
-Progress: Phase 72.1 in progress (1/2 plans, 72.1-01 complete). Phase 73 complete (2/2 plans, 73-01 and 73-02 complete). Phase 72 complete (3/3 plans). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
+Progress: Phase 72.1 complete (2/2 plans, 72.1-01 and 72.1-02 complete). Phase 73 complete (2/2 plans, 73-01 and 73-02 complete). Phase 72 complete (3/3 plans). Phase 71 complete (2/2 plans). Phase 70 complete (3/3 plans). Phase 69 complete (3/3 plans). Phase 68 complete (3/3 plans). Phase 67 complete (1/1 plans). Phase 66 complete (3/3 plans). Phase 65 complete
 (3/3 plans). Phase 64 complete (2/2 plans). Phase 63 complete (2/2 plans).
 Phase 61 complete (2/2 plans). Phase 60 complete (2/2 plans). Phase 59
 complete (2/2 plans). Phase 58 complete (1/1 plans). Phase 53 complete

@@ -104,7 +104,7 @@ vhosts, ACME cert domains, and private service stacks.
 
 - **ALL deploys MUST come from the PRIVATE overlay** — both hosts run private config:
   ```
-  cd /data/projects/private-neurosys && ./scripts/deploy.sh [--node neurosys|ovh]
+  cd /path/to/private-neurosys && ./scripts/deploy.sh [--node neurosys|ovh]
   ```
 - **`scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `neurosys.url` guard detects public repo)
 - **NEVER run `nixos-rebuild switch --flake .#neurosys`** or `.#ovh` from this repo — the public flake has placeholder SSH keys and no private services; it will break the server

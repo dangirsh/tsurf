@@ -17,14 +17,14 @@
     auto-optimise-store = true;
     # @decision CACHE-66: Binary caches for faster builds.
     # Numtide: llm-agents overlay (claude-code, codex, etc.)
-    # dan-testing: own Cachix cache pushed by deploy.sh after each successful deploy.
+    # your-cache: own Cachix cache pushed by deploy.sh after each successful deploy.
     extra-substituters = [
       "https://cache.numtide.com"
-      "https://dan-testing.cachix.org"
+      "https://your-cache.cachix.org"
     ];
     extra-trusted-public-keys = [
       "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
-      "dan-testing.cachix.org-1:3o+6K+4nP7KTTZobTF+bhC25LPIG4mDjd5wXegRIdQ4="
+      "your-cache.cachix.org-1:REPLACE_WITH_YOUR_CACHIX_PUBLIC_KEY"
     ];
   };
 

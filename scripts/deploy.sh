@@ -224,14 +224,14 @@ fi
 
 # Public IPs for post-deploy connectivity verification (independent of Tailscale).
 case "$NODE" in
-  neurosys) PUBLIC_IP="161.97.74.121" ;;
-  ovh) PUBLIC_IP="135.125.196.143" ;;
+  neurosys) PUBLIC_IP="<CONTABO_PUBLIC_IP>" ;;
+  ovh) PUBLIC_IP="<OVH_PUBLIC_IP>" ;;
 esac
 
 # SAFETY GUARD: All deploys MUST come from the private overlay.
 # @decision DEPLOY-02: Both neurosys and ovh run the private overlay config.
 #   The public flake's nixosConfigurations have placeholder SSH keys, no real
-#   users (dev instead of dangirsh), and no private services (nginx, parts,
+#   users (dev instead of your-user), and no private services (nginx, parts,
 #   openclaw, HA, etc.). Deploying from the public repo to EITHER host strips
 #   all private config and can LOCK YOU OUT.
 #
@@ -544,12 +544,12 @@ if [[ "$FAILED" -eq 0 ]]; then
 
   # --- Push system closure to Cachix (Contabo-only) ---
   if [[ "$NODE" == "neurosys" ]]; then
-    echo "==> Pushing system closure to dan-testing.cachix.org..."
+    echo "==> Pushing system closure to your-cache.cachix.org..."
     if ssh "${SSH_OPTS[@]}" "$TARGET" 'command -v cachix &>/dev/null' 2>/dev/null; then
       ssh "${SSH_OPTS[@]}" "$TARGET" \
         'CACHIX_AUTH_TOKEN=$(cat /run/secrets/cachix-auth-token) \
          nix path-info --recursive /nix/var/nix/profiles/system \
-         | cachix push dan-testing' \
+         | cachix push your-cache' \
         && echo "==> Cachix push complete." \
         || echo "WARNING: Cachix push failed (non-fatal)."
     else

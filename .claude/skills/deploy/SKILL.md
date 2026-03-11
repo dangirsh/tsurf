@@ -17,7 +17,7 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
 
 1. **Always use the private overlay**:
    ```bash
-   cd /data/projects/private-neurosys
+   cd /path/to/private-neurosys
    ```
 
 2. **If public neurosys was updated**, refresh the input first:
@@ -49,8 +49,8 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
      Logs written to `tmp/deploy-neurosys.log` and `tmp/deploy-ovh.log`.
 
 5. **Verify deployment**:
-   - Contabo checks: `parts`, `postgresql`, `claw-swap-app`
-   - OVH checks: `syncthing`, `tailscaled`, `secret-proxy-dev`
+   - Contabo checks: `your-service-a`, `postgresql`, `your-service-b`
+   - OVH checks: `syncthing`, `tailscaled`, `your-service-c`
    - On success, prints duration and service status.
 
 6. **Commit flake.lock if updated**:

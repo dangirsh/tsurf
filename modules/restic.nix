@@ -10,7 +10,7 @@
   services.restic.backups.b2 = {
     initialize = true;
 
-    repository = "s3:s3.eu-central-003.backblazeb2.com/SyncBkp";
+    repository = "s3:s3.eu-central-003.backblazeb2.com/your-bucket-name";
 
     passwordFile = config.sops.secrets."restic-password".path;
     environmentFile = config.sops.templates."restic-b2-env".path;

@@ -118,7 +118,7 @@ in
     homeDir = lib.mkOption {
       type = lib.types.str;
       default = "/home/dev";
-      description = "Home directory for the dev user (private overlay overrides to /home/dangirsh).";
+      description = "Home directory for the dev user (private overlay overrides as needed).";
     };
 
     secretProxyPort = lib.mkOption {

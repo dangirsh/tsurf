@@ -32,10 +32,10 @@
 set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-VPS_IP="161.97.74.121"
+VPS_IP="<CONTABO_PUBLIC_IP>"
 DEPLOY_KEY="$FLAKE_DIR/tmp/contabo_deploy_key"
 EXTRA_FILES="$FLAKE_DIR/tmp/neurosys-host-keys"
-FLAKE_TARGET="/data/projects/private-neurosys#neurosys"
+FLAKE_TARGET="/path/to/private-neurosys#neurosys"
 TAILSCALE_HOSTNAME="neurosys"
 
 # ────────────────────────────────────────────────────────────────────────────

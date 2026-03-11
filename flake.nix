@@ -33,6 +33,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-secret-proxy = {
+      # NOTE: This uses a local path input. Clone https://github.com/dangirsh/nix-secret-proxy
+      # (or your own fork) to /data/projects/nix-secret-proxy before using.
+      # Private overlay can override via: inputs.nix-secret-proxy.follows = "your-fork"
       url = "path:/data/projects/nix-secret-proxy";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -89,7 +92,7 @@
       nixosConfigurations.ovh = mkHost ./hosts/dev;
 
       deploy.nodes.neurosys = {
-        hostname = "100.104.43.26"; # temp: SSH config maps "neurosys" to stale IP 100.113.239.14
+        hostname = "neurosys"; # Tailscale MagicDNS hostname; private overlay may override with IP
         sshUser = "root";
         magicRollback = true;
         autoRollback = true;

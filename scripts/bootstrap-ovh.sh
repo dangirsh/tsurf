@@ -26,7 +26,7 @@
 set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-VPS_IP="135.125.196.143"
+VPS_IP="<OVH_PUBLIC_IP>"
 # DEPLOY_KEY: override with OVH_DEPLOY_KEY env var if the OVH wizard used a different key
 # than the auto-generated one (e.g. a pre-registered key from your OVH account).
 # Example: OVH_DEPLOY_KEY=~/.ssh/id_ed25519 bash scripts/bootstrap-ovh.sh
@@ -300,7 +300,7 @@ echo "╚═══════════════════════�
 echo ""
 echo "  The server has the PUBLIC base config (no private services)."
 echo "  You MUST now deploy the private overlay to get:"
-echo "    - Real SSH keys + dangirsh user"
+echo "    - Real SSH keys + your-user user"
 echo "    - nginx, Matrix/Conduit, private agents, etc."
 echo ""
 echo "    cd /data/projects/private-neurosys"

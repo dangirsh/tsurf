@@ -6,8 +6,8 @@
 
 | Host | Provider | Public IP | Recovery Method |
 |------|----------|-----------|-----------------|
-| neurosys (Contabo) | Contabo | 161.97.74.121 | KVM VNC Console |
-| neurosys-dev (OVH) | OVH | 135.125.196.143 | Rescue Mode SSH |
+| neurosys (Contabo) | Contabo | \<CONTABO_PUBLIC_IP\> | KVM VNC Console |
+| neurosys-dev (OVH) | OVH | \<OVH_PUBLIC_IP\> | Rescue Mode SSH |
 
 ---
 
@@ -90,7 +90,7 @@ ls /mnt/etc/ssh/             # SSH host key (age key derivation chain)
 ### SSH Into Rescue
 
 ```bash
-ssh root@135.125.196.143
+ssh root@<OVH_PUBLIC_IP>
 # Use the password from the email
 ```
 
@@ -147,7 +147,7 @@ Once SSH access is restored:
 1. **Identify root cause**: `journalctl -b -1 -p err` (previous boot errors)
 2. **Always deploy via private overlay**:
    ```bash
-   cd /data/projects/private-neurosys
+   cd /path/to/private-neurosys
    ./scripts/deploy.sh [--node neurosys|ovh]
    ```
 3. **Never use `nixos-rebuild switch` directly** — it bypasses all safety guards
