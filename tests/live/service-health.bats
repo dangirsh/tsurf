@@ -54,6 +54,40 @@ bats_load_library bats-assert/load
   assert_unit_active "secret-proxy-dev.service"
 }
 
+@test "${HOST}: secret-proxy-dev runs as dedicated service user (neurosys-dev only)" {
+  if ! is_ovh; then
+    skip "secret-proxy-dev only on neurosys-dev"
+  fi
+
+  local user
+  user="$(remote systemctl show secret-proxy-dev --property=User --value 2>&1)" || {
+    echo "FAIL: could not query secret-proxy-dev service user"
+    echo "DEBUG: ssh ${SSH_USER}@${HOST} systemctl show secret-proxy-dev --property=User"
+    return 1
+  }
+  if [[ "$user" != "secret-proxy-dev" ]]; then
+    echo "FAIL: secret-proxy-dev User='$user', expected 'secret-proxy-dev'"
+    echo "DEBUG: ssh ${SSH_USER}@${HOST} systemctl show secret-proxy-dev --property=User"
+    return 1
+  fi
+}
+
+@test "${HOST}: secret-proxy-dev journal has no error-level entries since boot (neurosys-dev only)" {
+  if ! is_ovh; then
+    skip "secret-proxy-dev only on neurosys-dev"
+  fi
+
+  local errors
+  errors="$(remote journalctl -u secret-proxy-dev -b --priority=err --no-pager 2>&1)" || true
+  errors="$(echo "$errors" | grep -v "^-- No entries --$" | grep -v "^-- end --$" | sed '/^$/d')" || true
+  if [[ -n "$errors" ]]; then
+    echo "FAIL: secret-proxy-dev has error-level journal entries"
+    echo "DEBUG: $errors"
+    echo "DEBUG: ssh ${SSH_USER}@${HOST} journalctl -u secret-proxy-dev -b --priority=err --no-pager"
+    return 1
+  fi
+}
+
 @test "${HOST}: no systemd units are in failed state" {
   local failed
   failed="$(remote systemctl --failed --no-legend --no-pager 2>&1 | sed '/^$/d')" || true
