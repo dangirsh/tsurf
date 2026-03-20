@@ -142,10 +142,12 @@ in
       description = "Dashboard entries declared across modules";
     };
 
-    # Multi-host aggregation: wire another host's manifest JSON into this dashboard
-    # for a single-pane-of-glass view. In your private overlay:
+    # Multi-host aggregation: merge a remote host's /etc/dashboard/manifest.json
+    # into this dashboard's manifest for a combined view. In your private overlay:
     #   services.dashboard.extraManifests."other-host" =
-    #     other-host-nixosConfiguration.config.services.dashboard.manifestJSON;
+    #     builtins.readFile "${other-config}/etc/dashboard/manifest.json";
+    # Note: status polling is local-only — remote host status requires querying
+    # that host's own dashboard status endpoint.
     extraManifests = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };

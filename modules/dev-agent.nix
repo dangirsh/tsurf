@@ -21,6 +21,10 @@ in
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
+        # Type=oneshot + RemainAfterExit: zmx run launches the agent in a detached
+        # session and exits immediately. The long-running process lives inside the
+        # zmx session, not as a direct systemd child. RemainAfterExit keeps the
+        # unit "active" so systemctl status reflects that the session was launched.
         Type = "oneshot";
         RemainAfterExit = true;
         User = "dev";

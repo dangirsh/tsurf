@@ -32,7 +32,8 @@ VPS_IP="<OVH_PUBLIC_IP>"
 # Example: OVH_DEPLOY_KEY=~/.ssh/id_ed25519 bash examples/bootstrap/bootstrap-ovh.sh
 DEPLOY_KEY="${OVH_DEPLOY_KEY:-$FLAKE_DIR/tmp/ovh_deploy_key}"
 EXTRA_FILES="$FLAKE_DIR/tmp/ovh-host-keys"
-FLAKE_TARGET="$FLAKE_DIR#ovh"
+# REPLACE: Use your host name from flake.nix nixosConfigurations (e.g. neurosys-dev).
+FLAKE_TARGET="$FLAKE_DIR#neurosys-dev"
 TAILSCALE_HOSTNAME="neurosys-dev"
 
 # Ephemeral random password for Ubuntu PAM change (Ubuntu is wiped by nixos-anywhere).

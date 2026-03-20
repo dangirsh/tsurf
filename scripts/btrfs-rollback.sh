@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # scripts/btrfs-rollback.sh — BTRFS root subvolume rollback (runs in initrd)
 # Moves current root to old_roots/<timestamp>, prunes snapshots >30d, creates fresh root.
-set -euo pipefail
+#
+# Environment: NixOS traditional (non-systemd) initrd via boot.initrd.postResumeCommands.
+# Requires: bash, mount, btrfs, stat, date, find, mkdir, mv (all available in NixOS initrd).
 
-mkdir /btrfs_tmp
-mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp
+mkdir /btrfs_tmp || { echo "btrfs-rollback: failed to create /btrfs_tmp"; }
+mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp || { echo "btrfs-rollback: failed to mount root"; }
 if [[ -e /btrfs_tmp/root ]]; then
   mkdir -p /btrfs_tmp/old_roots
   timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")

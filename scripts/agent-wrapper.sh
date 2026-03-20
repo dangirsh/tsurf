@@ -52,8 +52,17 @@ for pair in "${cred_pairs[@]}"; do
   fi
 done
 
-# Scope sandbox read access to the current git repository root
-git_root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)" || git_root="$cwd"
+# Scope sandbox read access to the current git repository root.
+# Fail closed: refuse to run outside a git worktree (no silent fallback to $cwd).
+git_root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "ERROR: $AGENT_NAME must run inside a git worktree beneath $AGENT_PROJECT_ROOT" >&2
+  exit 1
+}
+git_root="$(readlink -f "$git_root")"
+if [[ "$git_root" == "$AGENT_PROJECT_ROOT" ]]; then
+  echo "ERROR: refusing to grant read access to the entire project root ($AGENT_PROJECT_ROOT)" >&2
+  exit 1
+fi
 
 # Build nono arguments
 nono_args=(run --profile "$AGENT_NONO_PROFILE" --net-allow --no-rollback --read "$git_root")
