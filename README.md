@@ -61,7 +61,7 @@ Personal services, real credentials, and host-specific config go in a separate p
 
 > Point your agent at [CLAUDE.md](CLAUDE.md) and ask nicely for what you want to do.
 
-- **Requirements:** A Linux VPS (QEMU-compatible), NixOS installed, an age key for sops secrets. No KVM needed — all checks are eval-based.
+- **Requirements:** A Linux VPS (QEMU-compatible), NixOS installed, an age key for sops secrets. No KVM needed — sandboxing uses Landlock, not VMs.
 - **Deploys from this repo are intentionally blocked.** Real deployments require a [private overlay](#private-overlay) with your credentials and host config.
 - **Bootstrap a new host:** start with [`examples/bootstrap/`](examples/bootstrap/).
 - **Add your services:** fork [`examples/private-overlay/`](examples/private-overlay/) and import the modules you want.
