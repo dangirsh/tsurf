@@ -8,6 +8,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentSandbox;
+  agentCfg = config.tsurf.agent;
 
   # Build a sandboxed wrapper for an agent binary.
   # The Nix stub sets env vars consumed by scripts/agent-wrapper.sh.
@@ -41,7 +42,7 @@ in
 
     projectRoot = lib.mkOption {
       type = lib.types.str;
-      default = "/data/projects";
+      default = config.tsurf.agent.projectRoot;
       description = "Root directory for sandboxed agent execution. PWD must be inside this path.";
     };
 
@@ -54,15 +55,21 @@ in
         default = [ 53 80 443 22 9418 ];
         description = "TCP destination ports the agent user may connect to.";
       };
+      # @decision SEC-115-03: Egress control defaults to agent user, not operator.
       user = lib.mkOption {
         type = lib.types.str;
-        default = "dev";
+        default = config.tsurf.agent.user;
         description = "Username whose egress is restricted.";
       };
     };
   };
 
   config = lib.mkIf cfg.enable {
+    # Ensure API key secrets are readable by the agent user.
+    # mkDefault so private overlay can override ownership.
+    sops.secrets."anthropic-api-key".owner = lib.mkDefault agentCfg.user;
+    sops.secrets."openai-api-key".owner = lib.mkDefault agentCfg.user;
+
     # Replace bare agent binaries with sandboxed wrappers (meta.priority = 4 wins over default 5).
     environment.systemPackages = [
       (mkWrapper { name = "claude"; realPkg = pkgs.claude-code;      realBin = "claude"; credentials = [ "ANTHROPIC_API_KEY:anthropic-api-key" ]; })

@@ -70,6 +70,15 @@
       "/home/dev/.config/git"             # Git config (global ignore, etc.)
       "/home/dev/.local/share/direnv"     # Direnv allowed envs
 
+      # --- Agent user home (no .ssh — agent has no SSH access) ---
+      # @decision IMP-115-01: Agent home persisted separately from operator home.
+      "/home/agent/.claude"
+      "/home/agent/.config/claude"
+      "/home/agent/.codex"
+      "/home/agent/.pi"
+      "/home/agent/.config/git"
+      "/home/agent/.local/share/direnv"
+
       # --- Root home (explicit paths instead of whole /root) ---
       "/root/.ssh"                        # SSH keys, known_hosts, authorized_keys
       "/root/.cache/restic"               # Restic chunk cache (performance)
@@ -87,6 +96,8 @@
       "/etc/ssh/ssh_host_ed25519_key.pub"  # SSH host key (public)
       "/home/dev/.gitconfig"               # Git identity
       "/home/dev/.bash_history"            # Shell history
+      "/home/agent/.gitconfig"             # Agent git identity
+      "/home/agent/.bash_history"          # Agent shell history
       "/root/.gitconfig"                   # Root git identity
     ];
   };

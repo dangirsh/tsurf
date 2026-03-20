@@ -480,6 +480,43 @@ in
       "deploy.sh sources repo-controlled scripts — remove source calls for deploy-post.sh or similar"
       (!(lib.hasInfix "source \"$FLAKE_DIR" deploySrc));
 
+  # --- Phase 115: operator/agent user split ---
+
+  agent-user-exists-ovh = mkCheck
+    "agent-user-exists-ovh"
+    "ovh agent user exists and is a normal user"
+    "ovh agent user missing or not a normal user"
+    (builtins.hasAttr "agent" devCfg.users.users
+     && devCfg.users.users.agent.isNormalUser);
+
+  agent-user-no-wheel = mkCheck
+    "agent-user-no-wheel"
+    "agent user is not in wheel group"
+    "SECURITY: agent user is in wheel group — must not have sudo"
+    (!(builtins.elem "wheel" devCfg.users.users.agent.extraGroups));
+
+  agent-user-no-docker = mkCheck
+    "agent-user-no-docker"
+    "agent user is not in docker group"
+    "SECURITY: agent user is in docker group — must not have docker access"
+    (!(builtins.elem "docker" devCfg.users.users.agent.extraGroups));
+
+  agent-egress-targets-agent-user = mkCheck
+    "agent-egress-targets-agent-user"
+    "ovh agent egress control targets agent user"
+    "ovh agent egress control targets wrong user"
+    (devCfg.services.agentSandbox.egressControl.user == "agent");
+
+  impermanence-agent-home =
+    let
+      source = builtins.readFile ../../modules/impermanence.nix;
+    in
+    mkCheck
+      "impermanence-agent-home"
+      "agent home paths declared in impermanence"
+      "agent home paths missing from impermanence.nix"
+      (lib.hasInfix "/home/agent/.claude" source);
+
 }
 
 # --- Private overlay test extension pattern ---

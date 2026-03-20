@@ -1,6 +1,7 @@
 # modules/dev-agent.nix
 # Persistent autonomous Claude Code agent running in zmx session
-# @decision DEV-AGENT-89: Systemd user service for dev user running claude in zmx
+# @decision SEC-115-04: dev-agent runs as agent user, not operator.
+# @decision DEV-AGENT-89: Systemd service running claude in zmx
 #   with nono sandbox (via agent-sandbox.nix wrapper). Auto-restart on failure.
 # @decision DEV-AGENT-98: bypassPermissions is enabled only inside nono sandbox;
 #   nono is the real permission boundary, so auto-approval in-sandbox is accepted risk (SEC98-01).
@@ -8,6 +9,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.devAgent;
+  agentCfg = config.tsurf.agent;
 in
 {
   options.services.devAgent.enable = lib.mkEnableOption
@@ -27,8 +29,10 @@ in
         # unit "active" so systemctl status reflects that the session was launched.
         Type = "oneshot";
         RemainAfterExit = true;
-        User = "dev";
-        WorkingDirectory = "/data/projects/tsurf";
+        User = agentCfg.user;
+        # Template default: tsurf repo. Production should use a workspace repo path
+        # (not the control-plane repo) — see SECURITY.md control-plane separation.
+        WorkingDirectory = "${agentCfg.projectRoot}/tsurf";
         Restart = "on-failure";
         RestartSec = "30s";
 

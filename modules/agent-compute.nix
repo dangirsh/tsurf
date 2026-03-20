@@ -9,6 +9,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentCompute;
+  agentCfg = config.tsurf.agent;
 in
 {
   options.services.agentCompute.enable = lib.mkEnableOption "Agent CLI tools (claude, codex, pi, zmx)";
@@ -58,13 +59,11 @@ in
     defaultNetwork.settings.dns_enabled = true;
   };
 
+  # @decision SEC-115-02: Audit dir and linger owned by agent user, not operator.
   # Convenience audit log directory (user-owned, not tamper-proof).
   # Trustworthy audit trail: journalctl -t agent-launch
   systemd.tmpfiles.rules = [
-    "d /data/projects/.agent-audit 0750 dev users -"
+    "d /data/projects/.agent-audit 0750 ${agentCfg.user} users -"
   ];
-
-  # User linger for persistent systemd user instance
-  users.users.dev.linger = true;
   }; # end lib.mkIf
 }
