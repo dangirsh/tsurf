@@ -60,11 +60,16 @@ run via nono sandbox; no sudo is needed for agent workloads.
 ## Template Safety
 
 The public repo ships with `tsurf.template.allowUnsafePlaceholders` (default: `false`).
-When false, build-time assertions reject:
-- Placeholder bootstrap SSH keys
-- Placeholder break-glass emergency keys
-- `users.allowNoPasswordLogin = true`
-- `security.sudo.wheelNeedsPassword = false`
+
+When enabled (`true`), the flag:
+- Allows placeholder bootstrap and break-glass SSH keys (build-time assertions
+  reject these placeholders when the flag is `false`)
+- Sets `users.allowNoPasswordLogin = true` and `security.sudo.wheelNeedsPassword = false`
+  (these are directly configured based on the flag value, not assertion-guarded)
+
+When disabled (`false`, the default), the flag:
+- Rejects placeholder SSH keys via build-time assertions
+- Sets `users.allowNoPasswordLogin = false` and `security.sudo.wheelNeedsPassword = true`
 
 The public host configs set `allowUnsafePlaceholders = true` so `nix flake check` works.
 Real deployments via private overlay must not set this flag.

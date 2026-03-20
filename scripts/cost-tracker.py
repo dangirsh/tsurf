@@ -55,8 +55,8 @@ def fetch_anthropic_period(key, days):
     return round(total_cost / 100, 2)
 
 
-def fetch_anthropic_all(key):
-    # ~2 years back; older than most accounts
+def fetch_anthropic_730d(key):
+    # 730 days back; covers most account histories
     return fetch_anthropic_period(key, 730)
 
 
@@ -70,11 +70,11 @@ def fetch_anthropic(key, extra):
             usage["error_" + period_key] = str(exc)
         time.sleep(2)
     try:
-        usage["cost_all"] = fetch_anthropic_all(key)
+        usage["cost_730d"] = fetch_anthropic_730d(key)
     except Exception as exc:
-        usage["cost_all"] = 0
-        usage["error_all"] = str(exc)
-    usage["total_cost"] = usage.get("cost_24h", 0)
+        usage["cost_730d"] = 0
+        usage["error_730d"] = str(exc)
+    usage["total_cost"] = usage.get("cost_730d", 0)
     return usage
 
 
@@ -121,15 +121,15 @@ def fetch_openai(key, extra):
             usage[period_key] = 0
             usage["error_" + period_key] = str(exc)
     try:
-        # All time: 2 years back
-        since_all = now - timedelta(days=730)
-        usage["cost_all"] = openai_cost_query(
-            key, int(since_all.timestamp()), extra
+        # 730 days back; covers most account histories
+        since_730d = now - timedelta(days=730)
+        usage["cost_730d"] = openai_cost_query(
+            key, int(since_730d.timestamp()), extra
         )
     except Exception as exc:
-        usage["cost_all"] = 0
-        usage["error_all"] = str(exc)
-    usage["total_cost"] = usage.get("cost_24h", 0)
+        usage["cost_730d"] = 0
+        usage["error_730d"] = str(exc)
+    usage["total_cost"] = usage.get("cost_730d", 0)
     return usage
 
 
@@ -161,7 +161,7 @@ def main():
 
     for name, pcfg in sorted(providers.items()):
         ptype = pcfg["type"]
-        label = LABELS.get(ptype, name)
+        label = pcfg.get("label", name)
         try:
             key = read_key(pcfg["key_file"])
             fetcher = FETCHERS.get(ptype)

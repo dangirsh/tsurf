@@ -72,7 +72,7 @@
         sshUser = "root";
         magicRollback = true;
         autoRollback = true;
-        confirmTimeout = 120;
+        confirmTimeout = 300; # Keep in sync with scripts/deploy.sh --confirm-timeout
         profiles.system = {
           user = "root";
           path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.example;

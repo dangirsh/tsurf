@@ -5,8 +5,8 @@
 #   entry with type + keyFile. Private overlay adds admin keys to sops.
 # @decision COST-03: Write JSON to /run/ — ephemeral, dashboard reads it.
 #   Timer repopulates daily. Manual refresh via systemctl restart.
-# @decision COST-04: Multi-period costs (24h, 7d, 30d, 365d, all-time).
-#   Each provider fetched once per period. OpenAI supports api_key_ids filter.
+# @decision COST-04: Multi-period costs (24h, 7d, 30d, 365d, 730d).
+#   Each provider fetched once per period. OpenAI supports project_ids filter.
 {
   config,
   lib,
@@ -32,7 +32,7 @@ let
       extraConfig = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
-        description = "Extra config (e.g. api_key_ids as comma-separated)";
+        description = "Extra config (e.g. project_ids as comma-separated)";
       };
     };
   };
