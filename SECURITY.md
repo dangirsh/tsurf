@@ -24,8 +24,8 @@ and network model of tsurf. It is the authoritative source for security claims.
 - **Sandbox escape via `--no-sandbox`**: any user with `AGENT_ALLOW_NOSANDBOX=1` in
   their environment can bypass the sandbox entirely.
 - **`dev` user has effective root access**: `dev` is in `wheel` with passwordless sudo
-  in the public template. Production deployments must replace `users.nix` with proper
-  user separation.
+  in the public template. Agent tools run as the separate `agent` user (no wheel,
+  no docker). The operator/agent split is enforced by build-time assertions.
 
 ## Secret Flow
 
@@ -37,25 +37,112 @@ variables. There is no credential proxy or token exchange.
 
 ## Privilege Model
 
-The public template uses a single `dev` user with `wheel` + `docker` groups and
-passwordless sudo. This is intentionally insecure for template evaluation purposes.
+The public template ships an operator/agent user split:
 
-For production deployments:
-- Replace `users.nix` entirely in your private overlay
-- Split into operator (human admin, `wheel`) and agent (runs wrappers, no `wheel`,
-  no `docker`) users
-- Remove `tsurf.template.allowUnsafePlaceholders = true`
+| User | Groups | Purpose | Build-time assertions |
+|------|--------|---------|----------------------|
+| `dev` (operator) | wheel, docker | Human admin, deploy, maintenance | — |
+| `agent` | users | Runs sandboxed agent tools, owns workspaces | NOT in wheel, NOT in docker |
+| service-specific | (varies) | Long-lived services (optional) | — |
 
-### Recommended Production Split
+Parameterized via `tsurf.agent.{user, home, projectRoot}` (default: `agent`,
+`/home/agent`, `/data/projects`). Build-time assertions reject agent user in
+wheel or docker groups.
 
-| User | Groups | Purpose |
-|------|--------|---------|
-| operator | wheel | Human admin, deploy, maintenance |
-| agent | (none) | Runs agent wrappers, owns /data/projects |
-| service-specific | (varies) | Long-lived services (optional) |
+The `dev` user retains `wheel` + `docker` because the public template needs
+`allowUnsafePlaceholders = true` for eval. Private overlay can replace
+`users.nix` entirely (`disabledModules`) or override `tsurf.agent.*` options.
 
-The `agent` user should NOT have `wheel` or `docker` access. Agent wrappers
-run via nono sandbox; no sudo is needed for agent workloads.
+## Control-Plane vs Workspace Separation
+
+### Zones
+
+- **Control plane** (`/data/projects/tsurf` or private overlay): NixOS config,
+  deployment scripts, sops-encrypted secrets, `flake.lock`. Write access =
+  ability to modify the system config that gets deployed.
+- **Workspace** (`/data/projects/<other-repos>`): Application code repos where
+  agents do their work. Write access is expected and normal.
+
+### Current enforcement
+
+- Both zones live under `/data/projects` (persisted as a single impermanence directory)
+- The sandbox scopes read access to the current git repo root — agents cannot read sibling repos
+- `agent-wrapper.sh` refuses to grant read access to the entire `/data/projects` root
+- `scripts/deploy.sh` runs as operator, not agent — agent user cannot deploy
+
+### Recommended production hardening
+
+- Set control-plane repo ownership to `dev:dev` (operator-only write)
+- Set workspace repos ownership to `agent:users`
+- Consider separate directories: `/data/infra` (operator) and `/data/workspace` (agent)
+- Add systemd tmpfiles rules for ownership enforcement
+- The `dev-agent.nix` service uses `WorkingDirectory = /data/projects/tsurf` as a
+  template example — production should point to a workspace repo, not the control-plane
+
+## Credential Flow Architecture
+
+```
+sops-encrypted YAML (secrets/*.yaml)
+  │
+  ▼  sops-nix activation (age key from SSH host key)
+/run/secrets/<secret-name>  (mode 0400, owner: agent user via sops.secrets.*.owner)
+  │
+  ▼  agent-wrapper.sh reads at launch (runs as agent user)
+Shell env var (e.g., ANTHROPIC_API_KEY=sk-...)
+  │
+  ▼  nono --env-credential-map (Landlock sandbox applied)
+Sandboxed child process env var
+```
+
+**Stage details:**
+1. **sops-nix** decrypts at system activation using age key derived from SSH host key
+2. **agent-wrapper.sh** reads `/run/secrets/*` files (secret files must be owned by the
+   agent user — set `sops.secrets."<name>".owner = config.tsurf.agent.user`)
+3. Wrapper exports env vars, then nono `--env-credential-map` re-injects them into the
+   sandboxed child
+4. The child receives real API keys as env vars — no proxy, no token exchange
+
+**Security implications:**
+- API keys exist in process env for the lifetime of the agent process
+- `/run/secrets/` files are NOT accessible from inside the sandbox (denied by Landlock)
+- The wrapper process briefly holds all configured keys before exec'ing nono
+- `dev-agent.sh` parent env does NOT hold API keys (fixed in Phase 114)
+
+**Recommended upgrade path:**
+- Local API proxy (e.g., litellm, envoy) that issues short-lived tokens
+- Agents talk to `http://127.0.0.1:<port>/v1/...`, proxy injects real token server-side
+- Not implemented — requires org.freedesktop.secrets or equivalent for headless credential storage
+- See accepted risk SEC114-02
+
+## Tailnet Segmentation
+
+### Current state
+
+`tailscale0` is in `trustedInterfaces` — any device on the tailnet can reach all
+internal services. All internal services bind `127.0.0.1` and are reachable via
+Tailscale because the trusted interface bypasses the firewall. This is a **flat
+trust model**: every tailnet device is equally trusted.
+
+### Recommendations for production
+
+- **Tailscale ACL tags**: Assign `tag:server` to hosts, `tag:admin` to operator
+  devices, `tag:agent` to agent identities. Restrict service access to `tag:admin` only.
+- **Tailscale Grants/ACLs**: Use ACL policies to restrict which tagged devices can
+  reach which ports. Example: only `tag:admin` can reach port 8082 (dashboard).
+- **Consider removing `tailscale0` from trustedInterfaces**: Bind services to specific
+  IPs and use Tailscale Serve for access control. Trade-off: more configuration, better
+  segmentation.
+- **Per-host segmentation**: Agent-running host should have tighter tailnet ACLs than
+  the services host.
+- **Tailnet Lock**: Enable for higher-assurance node enrollment.
+
+### Implementation notes
+
+- Tailscale ACLs are configured in the Tailscale admin console, not NixOS config
+- NixOS can set `tailscale.extraUpFlags` with tags (requires pre-authorized tag in admin)
+- Removing `tailscale0` from `trustedInterfaces` requires binding each service to the
+  Tailscale IP explicitly — significant refactoring, recommended as a future phase
+- See accepted risk SEC115-01
 
 ## Template Safety
 
@@ -90,7 +177,7 @@ Real deployments via private overlay must not set this flag.
 UID-based nftables egress filtering is available as opt-in via
 `services.agentSandbox.egressControl.enable`. When enabled:
 
-- The configured user (default: `dev`) is restricted to a whitelist of TCP
+- The configured user (default: `agent`, via `tsurf.agent.user`) is restricted to a whitelist of TCP
   destination ports (default: 53, 80, 443, 22, 9418 -- DNS, HTTP/S, SSH, git).
 - UDP port 53 (DNS) is always allowed regardless of the TCP port list.
 - Loopback and established/related connections are always allowed.

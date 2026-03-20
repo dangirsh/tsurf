@@ -27,6 +27,24 @@
 
   home-manager.users.dev = import ../../home;
 
+  # Agent user home-manager config (minimal — git + direnv only, no SSH)
+  home-manager.users.agent = { ... }: {
+    home.username = "agent";
+    home.homeDirectory = "/home/agent";
+    home.stateVersion = "25.11";
+    programs.home-manager.enable = true;
+    programs.git = {
+      enable = true;
+      settings.user.name = "Agent";
+      settings.user.email = "agent@localhost";
+    };
+    programs.direnv = {
+      enable = true;
+      enableBashIntegration = true;
+      nix-direnv.enable = true;
+    };
+  };
+
   networking.hostName = "neurosys-dev";
   time.timeZone = "Europe/Berlin";
   i18n.defaultLocale = "C.UTF-8";

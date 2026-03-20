@@ -3,9 +3,13 @@
 # @decision SEC-106-01: allowUnsafePlaceholders gates insecure template defaults.
 #   When false (default), assertions reject placeholder SSH keys and passwordless login.
 #   Public template hosts set this to true for eval; real deploys must not.
+# @decision SEC-115-01: Operator/agent user split. 'dev' is the operator (wheel, docker,
+#   human admin). tsurf.agent.user (default 'agent') runs sandboxed agent tools with
+#   no wheel, no docker. Assertions enforce these invariants at build time.
 { config, lib, pkgs, ... }:
 let
   cfg = config.tsurf.template;
+  agentCfg = config.tsurf.agent;
 
   # Placeholder key material — assertions detect these exact strings
   bootstrapKeyComment = "bootstrap-key";
@@ -15,9 +19,28 @@ in
   options.tsurf.template.allowUnsafePlaceholders = lib.mkEnableOption
     "unsafe public-template placeholders (NEVER enable for real deployments)";
 
+  options.tsurf.agent = {
+    user = lib.mkOption {
+      type = lib.types.str;
+      default = "agent";
+      description = "Username for the agent user (runs sandboxed agent tools)";
+    };
+    home = lib.mkOption {
+      type = lib.types.str;
+      default = "/home/agent";
+      description = "Home directory for the agent user";
+    };
+    projectRoot = lib.mkOption {
+      type = lib.types.str;
+      default = "/data/projects";
+      description = "Root directory for agent workspaces";
+    };
+  };
+
   config = {
     users.mutableUsers = false;
 
+    # Operator user — human admin with wheel + docker
     users.users.dev = {
       isNormalUser = true;
       extraGroups = [ "wheel" "docker" ];
@@ -26,6 +49,17 @@ in
       openssh.authorizedKeys.keys = [
         # Replace with your SSH public key
       ];
+    };
+
+    # Agent user — runs sandboxed agent tools, no wheel, no docker
+    users.users.${agentCfg.user} = {
+      isNormalUser = true;
+      home = agentCfg.home;
+      extraGroups = [ "users" ];
+      subUidRanges = [{ startUid = 200000; count = 65536; }];
+      subGidRanges = [{ startGid = 200000; count = 65536; }];
+      shell = pkgs.bashInteractive;
+      linger = true;
     };
 
     users.users.root = {
@@ -40,7 +74,21 @@ in
     security.sudo.wheelNeedsPassword = !cfg.allowUnsafePlaceholders;
     security.sudo.execWheelOnly = true;
 
-    assertions = lib.mkIf (!cfg.allowUnsafePlaceholders) [
+    # Agent user security invariants (unconditional — always enforced)
+    assertions = [
+      {
+        assertion = !(builtins.elem "wheel" config.users.users.${agentCfg.user}.extraGroups);
+        message = "SECURITY: agent user '${agentCfg.user}' must not be in wheel group.";
+      }
+      {
+        assertion = !(builtins.elem "docker" config.users.users.${agentCfg.user}.extraGroups);
+        message = "SECURITY: agent user '${agentCfg.user}' must not be in docker group.";
+      }
+      {
+        assertion = agentCfg.user != "dev";
+        message = "SECURITY: tsurf.agent.user must differ from the operator user 'dev'.";
+      }
+    ] ++ lib.optionals (!cfg.allowUnsafePlaceholders) [
       {
         assertion = !builtins.any (k: lib.hasInfix bootstrapKeyComment k)
           config.users.users.root.openssh.authorizedKeys.keys;

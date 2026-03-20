@@ -29,7 +29,7 @@ modules/
   secrets.nix          # sops-nix secret declarations
   sshd-liveness-check.nix # sshd liveness check with auto-rollback
   syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
-  users.nix            # User accounts, sudo, SSH authorized keys
+  users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
 home/
   default.nix          # home-manager: git/ssh/direnv inlined
   cass.nix             # CASS indexer timer (opt-in)
@@ -57,7 +57,7 @@ tests/
 - **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, nix daemon socket opt-in. Per-wrapper credential allowlists (least privilege). Env injection — real keys enter the child process (proxy mode requires org.freedesktop.secrets, unavailable on headless servers).
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
 - **Network model**: Only ports 22 + 22000 on public firewall by default. Ports 80/443 conditional on nginx. All internal services bind 127.0.0.1 (dashboard, syncthing GUI). Tailscale for internal access.
-- **Privilege model**: Template uses single `dev` user with wheel + passwordless sudo. Production deployments should split into operator/agent/service users in the private overlay.
+- **Privilege model**: `dev` is the operator (wheel, docker, human admin). `agent` runs sandboxed tools (no wheel, no docker). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
 
 ## Module Conventions & Patterns
@@ -179,15 +179,16 @@ Run before every module or service commit:
 - **SEC105-02:** Unrestricted network egress for sandboxed agents (`--net-allow`). nono upstream does not yet support allowlist-based outbound filtering on headless servers. UID-based nftables egress filtering is now available as opt-in via `services.agentSandbox.egressControl.enable` (restricts agent user to whitelisted TCP destination ports).
 - **SEC105-03:** Public repo size (dashboard, cost-tracker, restic, syncthing, dev-agent, deploy.sh in core). Moving to `examples/` is large structural work; current modules serve both public template and private overlay.
 - **SEC105-04:** Service modules coupled to dashboard via `services.dashboard.entries.*`. Catalog abstraction is YAGNI at current scale.
-- **SEC105-05:** Hard-coded `dev` username, `/home/dev`, `/data/projects` paths. Option namespace adds indirection without clear benefit for a template repo.
+- **SEC105-05:** Hard-coded `dev` username, `/home/dev`, `/data/projects` paths for the operator user. Agent-specific paths (`/home/agent`, agent user) are parameterized via `tsurf.agent.*` options. `dev` remains hard-coded as the operator user.
 - **SEC105-06:** (RESOLVED in Phase 106) `home-manager.users.dev` moved to per-host config.
 - **SEC105-07:** `deploy.sh` is 558 lines with custom logic. Serves its purpose for private overlay deployment; public users can use bare `deploy-rs`.
 - **SEC114-01:** File-based agent audit log (`/data/projects/.agent-audit/agent-launches.log`) is owned by the same user that runs agents. Mitigated by dual-logging to journald (root-owned, append-only). File log kept as grep-friendly convenience; journald is the trustworthy audit source.
 - **SEC114-02:** `dev-agent.sh` parent env no longer exports raw API keys. Wrapper handles credential injection via `AGENT_CREDENTIALS` + nono `--env-credential-map`. Raw keys still reach the sandboxed child process as env vars — full broker/proxy model is future work (see security review #5).
+- **SEC115-01:** Flat tailnet trust model — `tailscale0` in trustedInterfaces means all tailnet devices reach all internal services. Mitigated by binding services to 127.0.0.1 and relying on Tailscale device authentication. Production should use Tailscale ACL tags. See SECURITY.md "Tailnet Segmentation".
 
 ## Sandbox Awareness
 
-When running inside the nono sandbox:
+When running inside the nono sandbox (as the `agent` user — no wheel, no docker):
 
 - Launch from inside `/data/projects`; wrapper scripts reject sandboxed launches outside that root.
 - Read access is scoped to the current git repo root, not all of `/data/projects`.

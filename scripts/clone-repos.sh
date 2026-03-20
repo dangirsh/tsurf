@@ -17,6 +17,6 @@ for repo in "${repos[@]}"; do
       -c "http.https://github.com/.extraheader=Authorization: Bearer $GH_TOKEN" \
       clone "https://github.com/$repo.git" "$target" \
       || echo "WARNING: Failed to clone $repo (will retry on next activation)"
-    chown -R dev:users "$target" 2>/dev/null || true
+    chown -R agent:users "$target" 2>/dev/null || true
   fi
 done

@@ -129,7 +129,7 @@ in
 
     homeDir = lib.mkOption {
       type = lib.types.str;
-      default = "/home/dev";
+      default = config.tsurf.agent.home;
       description = "Home directory for the agent user. Used in profile filesystem allow-list.";
     };
 

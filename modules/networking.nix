@@ -10,6 +10,9 @@
 #   (22000) and nginx (80/443). All other services are Tailscale-only.
 # @decision NET-06: Tailscale reverse path filtering set to loose
 # @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
+# @decision NET-115-01: tailscale0 in trustedInterfaces is a flat trust model (all tailnet
+#   devices reach all internal services). Production should use Tailscale ACL tags for
+#   segmentation. See SECURITY.md "Tailnet Segmentation" section. Accepted risk SEC115-01.
 { config, lib, pkgs, ... }:
 let
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
