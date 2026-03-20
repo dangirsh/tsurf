@@ -1,5 +1,7 @@
 # tsurf
 
+An agent-centric NixOS configuration. See [example use cases](#example-use-cases).
+
 A [NixOS](https://nixos.org/) configuration optimized for agentic computing — deploy and manage AI agents across remote hosts, alongside the services they build and maintain.
 
 > This public repo is the base configuration. Personal services live in a [private overlay](#private-overlay).
