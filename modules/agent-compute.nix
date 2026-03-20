@@ -58,7 +58,8 @@ in
     defaultNetwork.settings.dns_enabled = true;
   };
 
-  # Pre-create audit log directory for agent spawn logging.
+  # Convenience audit log directory (user-owned, not tamper-proof).
+  # Trustworthy audit trail: journalctl -t agent-launch
   systemd.tmpfiles.rules = [
     "d /data/projects/.agent-audit 0750 dev users -"
   ];

@@ -647,12 +647,17 @@
         return state.active + "/" + state.sub;
       }
 
-      function makeDetailRow(label, value, cls) {
+      function makeDetailRow(dl, label, value, cls) {
         if (!value && value !== 0) {
-          return "";
+          return;
         }
-        var ddAttr = cls ? ' class="' + cls + '"' : "";
-        return "<dt>" + label + "</dt><dd" + ddAttr + ">" + value + "</dd>";
+        var dt = document.createElement("dt");
+        dt.textContent = label;
+        dl.appendChild(dt);
+        var dd = document.createElement("dd");
+        if (cls) dd.className = cls;
+        dd.textContent = value;
+        dl.appendChild(dd);
       }
 
       function makeIcon(iconId) {
@@ -704,12 +709,18 @@
           else unknown++;
         });
         var total = ok + warn + bad + unknown;
-        bar.innerHTML =
-          '<span class="count">' + total + ' services</span>' +
-          (ok ? '<span class="count count-ok">' + ok + ' ok</span>' : "") +
-          (warn ? '<span class="count count-warn">' + warn + ' warn</span>' : "") +
-          (bad ? '<span class="count count-bad">' + bad + ' failed</span>' : "") +
-          (unknown ? '<span class="count">' + unknown + " unknown</span>" : "");
+        bar.textContent = "";
+        function addCount(text, cls) {
+          var s = document.createElement("span");
+          s.className = "count" + (cls ? " " + cls : "");
+          s.textContent = text;
+          bar.appendChild(s);
+        }
+        addCount(total + " services");
+        if (ok) addCount(ok + " ok", "count-ok");
+        if (warn) addCount(warn + " warn", "count-warn");
+        if (bad) addCount(bad + " failed", "count-bad");
+        if (unknown) addCount(unknown + " unknown");
       }
 
       function renderTree() {
@@ -718,7 +729,7 @@
         }
 
         const tree = document.getElementById("tree");
-        tree.innerHTML = "";
+        tree.textContent = "";
 
         const primary = currentManifest.primary || "";
         const hosts = currentManifest.hosts || {};
@@ -836,20 +847,33 @@
             details.dataset.status =
               entry.systemdUnit || entry.id;
 
-            const link = entry.url
-              ? "<a href=\"" + entry.url + "\" target=\"_blank\" " +
-                "rel=\"noreferrer\">open</a>"
-              : "";
-
-            details.innerHTML =
-              "<dl>" +
-              makeDetailRow("Desc", entry.description) +
-              makeDetailRow("Host", entry.host) +
-              makeDetailRow("Port", entry.port) +
-              makeDetailRow("Unit", entry.systemdUnit) +
-              makeDetailRow("Status", "loading...", "status-val") +
-              makeDetailRow("URL", link) +
-              "</dl>";
+            var dl = document.createElement("dl");
+            makeDetailRow(dl, "Desc", entry.description);
+            makeDetailRow(dl, "Host", entry.host);
+            makeDetailRow(dl, "Port", entry.port);
+            makeDetailRow(dl, "Unit", entry.systemdUnit);
+            makeDetailRow(dl, "Status", "loading...", "status-val");
+            if (entry.url) {
+              var dt = document.createElement("dt");
+              dt.textContent = "URL";
+              dl.appendChild(dt);
+              var dd = document.createElement("dd");
+              var a = document.createElement("a");
+              try {
+                var parsed = new URL(entry.url, window.location.origin);
+                if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+                  a.href = parsed.toString();
+                }
+              } catch (e) {
+                // invalid URL — render as text only
+              }
+              a.target = "_blank";
+              a.rel = "noopener noreferrer";
+              a.textContent = "open";
+              dd.appendChild(a);
+              dl.appendChild(dd);
+            }
+            details.appendChild(dl);
 
             row.appendChild(details);
 
@@ -1002,21 +1026,30 @@
             .replace("-", " ");
           var ago = timeAgo(d.timestamp);
 
-          var html = "<div class=\"deploy-status-line\">"
-            + "<span style=\"color:" + color + "\">●</span> "
-            + "Deploy " + label + " — " + ago;
+          banner.textContent = "";
+          var statusLine = document.createElement("div");
+          statusLine.className = "deploy-status-line";
+          var dot = document.createElement("span");
+          dot.style.color = color;
+          dot.textContent = "\u25cf ";
+          statusLine.appendChild(dot);
+          statusLine.appendChild(
+            document.createTextNode("Deploy " + label + " \u2014 " + ago)
+          );
           if (d.sha) {
-            html += " <span style=\"color:var(--ns-muted);"
-              + "font-weight:400\">(" + d.sha + ")</span>";
+            var shaSpan = document.createElement("span");
+            shaSpan.style.cssText = "color:var(--ns-muted);font-weight:400";
+            shaSpan.textContent = " (" + d.sha + ")";
+            statusLine.appendChild(shaSpan);
           }
-          html += "</div>";
+          banner.appendChild(statusLine);
 
           if (d.summary) {
-            html += "<div class=\"deploy-summary\">"
-              + escapeHtml(d.summary) + "</div>";
+            var summaryDiv = document.createElement("div");
+            summaryDiv.className = "deploy-summary";
+            summaryDiv.textContent = d.summary;
+            banner.appendChild(summaryDiv);
           }
-
-          banner.innerHTML = html;
           banner.classList.remove("hidden");
         } catch (e) {
           // deploy status unavailable -- banner stays hidden
@@ -1049,27 +1082,30 @@
       }
 
       function loadCost() {
-        var periods = ["cost_24h","cost_7d","cost_30d","cost_365d","cost_all"];
+        var periods = ["cost_24h","cost_7d","cost_30d","cost_365d","cost_730d"];
         var footIds = ["cost-f24h","cost-f7d","cost-f30d","cost-f1y","cost-fall"];
         fetch("/api/cost-data").then(function(r) {
           if (!r.ok) throw new Error("HTTP " + r.status);
           return r.json();
         }).then(function(d) {
           var rows = document.getElementById("cost-rows");
-          rows.innerHTML = "";
+          rows.textContent = "";
           var tots = [0,0,0,0,0];
           (d.instances || []).forEach(function(inst) {
             var u = inst.usage || {};
             var tr = document.createElement("tr");
-            var html = "<td>" + inst.user + "</td>";
+            var userTd = document.createElement("td");
+            userTd.textContent = inst.user;
+            tr.appendChild(userTd);
             for (var i = 0; i < periods.length; i++) {
               var v = u[periods[i]] || 0;
               tots[i] += v;
               var cl = costCls(v);
-              html += '<td class="r' + (cl ? " " + cl : "") + '">'
-                + fmtCost(v) + "</td>";
+              var td = document.createElement("td");
+              td.className = "r" + (cl ? " " + cl : "");
+              td.textContent = fmtCost(v);
+              tr.appendChild(td);
             }
-            tr.innerHTML = html;
             rows.appendChild(tr);
           });
           for (var i = 0; i < footIds.length; i++) {
