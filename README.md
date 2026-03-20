@@ -67,6 +67,7 @@ Personal services, real credentials, and host-specific config go in a separate p
 - **Deploys from this repo are intentionally blocked.** Real deployments require a [private overlay](#private-overlay) with your credentials and host config.
 - **Bootstrap a new host:** start with [`examples/bootstrap/`](examples/bootstrap/).
 - **Add your services:** fork [`examples/private-overlay/`](examples/private-overlay/) and import the modules you want.
+- **Add a custom agent:** see the [agent walkthrough](examples/private-overlay/README.md#adding-a-custom-agent) for how to define a nono profile, launch script, and systemd unit — with a minimal example (`greeter.nix`) and a more complex one (`janitor.nix`).
 
 ## Related projects
 
