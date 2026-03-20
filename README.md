@@ -1,10 +1,10 @@
 # tsurf
 
-> **Warning:** This project is not yet stable. Use it as a reference only — do not deploy it directly to production.
-
 An agent-centric [NixOS](https://nixos.org/) configuration. See [example use cases](#example-use-cases).
 
-> This public repo is the base configuration. Personal services live in a [private overlay](#private-overlay).
+> This public repo is the base configuration. Personal services live in a [private overlay](#private-overlay)
+
+> **Warning:** This project is not yet stable. Use it as a reference only — do not deploy it directly to production.
 
 ## Design Principles
 
