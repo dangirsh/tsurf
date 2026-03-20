@@ -38,25 +38,9 @@
   system.activationScripts.clone-repos = {
     deps = [ "users" ];
     text = ''
-      # Add repos to clone on activation. Example:
-      #   repos=("your-org/your-repo")
-      repos=()
-      CLONE_DIR="/data/projects"
-      GH_TOKEN="$(cat ${config.sops.secrets."github-pat".path} 2>/dev/null || true)"
-      mkdir -p "$CLONE_DIR"
-      for repo in "''${repos[@]}"; do
-        name="$(basename "$repo")"
-        target="$CLONE_DIR/$name"
-        if [ ! -d "$target" ]; then
-          echo "Cloning $repo to $target..."
-          GIT_TERMINAL_PROMPT=0 ${pkgs.git}/bin/git \
-            -c "http.https://github.com/.extraheader=Authorization: Bearer $GH_TOKEN" \
-            clone "https://github.com/$repo.git" "$target" \
-            || echo "WARNING: Failed to clone $repo (will retry on next activation)"
-          chown -R dev:users "$target" 2>/dev/null || true
-        fi
-      done
-    '';
+      GIT_BIN="${pkgs.git}/bin/git"
+      GITHUB_PAT_FILE="${config.sops.secrets."github-pat".path}"
+    '' + builtins.readFile ../../scripts/clone-repos.sh;
   };
 
   # --- Host-specific shared module settings ---
