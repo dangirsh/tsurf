@@ -1,0 +1,11 @@
+# REPLACE with your real age public keys (`age-keygen -y <keyfile>`).
+keys:
+  - &admin age1xxxadminpublickeyreplacexxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  - &host age1xxxhostpublickeyreplacexxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+creation_rules:
+  - path_regex: ^secrets/example\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host

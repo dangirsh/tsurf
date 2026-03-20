@@ -1,0 +1,172 @@
+# modules/networking.nix
+# @decision NET-01: port 22 open on public interface with key-only auth (srvos SSH hardening defaults).
+#   fail2ban is disabled (see NET-12). Brute-force mitigation via MaxAuthTries 3 + key-only auth.
+#   Deliberate: Tailscale-preferred deploy, but public SSH enables bootstrap/recovery when
+#   Tailscale is unavailable (e.g., first boot, Tailscale misconfiguration).
+# @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
+# @decision NET-03: Tailscale VPN connected to tailnet
+# @decision NET-04: ports 22, 80, 443, 22000 on public interface; all other services internal
+# @decision NET-16: Public interface exposes SSH (22) + conditionally Syncthing BEP
+#   (22000) and nginx (80/443). All other services are Tailscale-only.
+# @decision NET-06: Tailscale reverse path filtering set to loose
+# @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
+{ config, lib, pkgs, ... }:
+let
+  # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
+  # Manual port-to-label map — kept in sync with dashboard-visible internal services.
+  internalOnlyPorts = {
+    "8082" = "Dashboard";
+    "8384" = "Syncthing";
+    "9200" = "Restic status server";
+  };
+  exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
+  exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;
+in {
+  assertions = [
+    {
+      assertion = exposed == [];
+      message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain Tailscale-only (trustedInterfaces).";
+    }
+    # --- Remote access safety assertions ---
+    # @decision NET-15: Build-time assertions prevent deploying configs that lock out SSH/Tailscale.
+    # If any of these fail, the config cannot be built, so it cannot be deployed.
+    {
+      assertion = config.services.openssh.enable;
+      message = "LOCKOUT PREVENTION: sshd must be enabled — disabling it removes all remote access.";
+    }
+    {
+      assertion = config.services.openssh.settings.PermitRootLogin != "no";
+      message = "LOCKOUT PREVENTION: PermitRootLogin must not be 'no' — this deployment setup uses root SSH for deploy-rs. Use 'prohibit-password' for key-only root login.";
+    }
+    {
+      assertion = config.users.users.root.openssh.authorizedKeys.keys != [];
+      message = "LOCKOUT PREVENTION: root must have at least one SSH authorized key for deploy access.";
+    }
+    {
+      assertion = builtins.elem 22 config.networking.firewall.allowedTCPPorts
+        || config.services.openssh.openFirewall;
+      message = "LOCKOUT PREVENTION: SSH port 22 must be reachable — add to allowedTCPPorts or set services.openssh.openFirewall = true.";
+    }
+    {
+      assertion = config.services.tailscale.enable;
+      message = "LOCKOUT PREVENTION: Tailscale must be enabled — it provides the primary remote access path.";
+    }
+    {
+      assertion = config.services.openssh.hostKeys != [];
+      message = "LOCKOUT PREVENTION: SSH host keys must be configured — sshd fails to start without them.";
+    }
+    # --- Additional lockout prevention assertions (Phase 70) ---
+    {
+      assertion = builtins.any (f: f == ".ssh/authorized_keys")
+        config.services.openssh.authorizedKeysFiles;
+      message = "LOCKOUT PREVENTION: .ssh/authorized_keys must be in AuthorizedKeysFile for impermanence fallback (NET-14). Without this, persisted keys in /persist/root/.ssh/ are ignored by sshd.";
+    }
+    {
+      assertion = builtins.any (k: lib.hasPrefix "ssh-ed25519 " k || lib.hasPrefix "ssh-rsa " k)
+        config.users.users.root.openssh.authorizedKeys.keys;
+      message = "LOCKOUT PREVENTION: root authorized keys must contain at least one real SSH public key (starts with 'ssh-ed25519' or 'ssh-rsa').";
+    }
+    {
+      assertion = builtins.any (k: lib.hasInfix "break-glass-emergency" k)
+        config.users.users.root.openssh.authorizedKeys.keys;
+      message = "LOCKOUT PREVENTION: root must have the break-glass emergency SSH key (comment contains 'break-glass-emergency'). Import modules/break-glass-ssh.nix in both host configs.";
+    }
+    {
+      # impermanence coerces strings to { file = ...; } attrsets, so check .file attribute.
+      # Also accept OVH-02 pattern: hostKey path directly under /persist/.
+      assertion =
+        (config.environment ? persistence
+          && builtins.hasAttr "/persist" config.environment.persistence
+          && builtins.any (f: f.file == "/etc/ssh/ssh_host_ed25519_key")
+            config.environment.persistence."/persist".files)
+        || builtins.any (k: lib.hasPrefix "/persist" k.path)
+          config.services.openssh.hostKeys;
+      message = "LOCKOUT PREVENTION: SSH host key must be persisted — either in impermanence files or via a /persist/ hostKey path (OVH-02). Without persistence, sshd regenerates the host key on every boot and sops-nix age key derivation fails.";
+    }
+  ];
+
+  # --- nftables backend ---
+  networking.nftables.enable = true;
+  networking.nftables.tables.agent-metadata-block = {
+    family = "ip";
+    content = ''
+      chain output {
+        type filter hook output priority 0; policy accept;
+        ip daddr 169.254.169.254 drop
+      }
+    '';
+  };
+
+  # --- Firewall: per-interface trust ---
+  networking.firewall = {
+    enable = true;
+    allowPing = true;
+    # @decision NET-10: ports 80/443 conditionally opened when nginx is enabled (ACME HTTP-01 + TLS)
+    # @decision NET-11: port 22000 for Syncthing BEP (encrypted, certificate-authenticated)
+    allowedTCPPorts = [ 22 ]
+      ++ lib.optionals config.services.syncthing.enable [ 22000 ]
+      ++ lib.optionals config.services.nginx.enable [ 80 443 ];
+    allowedUDPPorts = [ config.services.tailscale.port ];
+    trustedInterfaces = [ "tailscale0" ];
+  };
+
+  # --- fail2ban: temporarily disabled (caused lockout during active dev sessions) ---
+  services.fail2ban.enable = false;
+
+  # --- SSH hardening ---
+  # @decision NET-12: fail2ban disabled (see above); re-enable when active dev sessions are done.
+  # @decision NET-13: SSH hardened beyond key-auth — X11 off, MaxAuthTries 3, 30s grace window,
+  #   client keepalive 5min to detect stale connections.
+  services.openssh = {
+    enable = true;
+    openFirewall = false;
+    hostKeys = [
+      { type = "ed25519"; path = "/etc/ssh/ssh_host_ed25519_key"; }
+    ];
+    settings = {
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      PermitRootLogin = "prohibit-password";  # key-only root access for deploy pipeline
+      X11Forwarding = false;
+      MaxAuthTries = 3;
+      LoginGraceTime = 30;
+      ClientAliveInterval = 300;
+      ClientAliveCountMax = 3;
+    };
+    # @decision NET-14: Check .ssh/authorized_keys BEFORE /etc/ssh/authorized_keys.d/%u.
+    # NixOS with mutableUsers=false only generates /etc/ssh/authorized_keys.d/%u.
+    # On impermanence hosts, if activation fails (or StrictModes rejects /etc/ssh/),
+    # sshd falls back to .ssh/authorized_keys which persists via /persist/root/.ssh/.
+    # NOTE: extraConfig mkAfter is IGNORED by OpenSSH (first directive wins).
+    # Use authorizedKeysFiles to override the generated AuthorizedKeysFile directive.
+    # Impermanence persists /root/.ssh/ via /persist/root/.ssh/; keys placed there survive reboots.
+    authorizedKeysFiles = lib.mkForce [ ".ssh/authorized_keys" "/etc/ssh/authorized_keys.d/%u" ];
+  };
+
+  # --- Tailscale VPN ---
+  services.tailscale = {
+    enable = true;
+    authKeyFile = config.sops.secrets."tailscale-authkey".path;
+    useRoutingFeatures = "client";   # auto-sets checkReversePath = "loose"
+    extraUpFlags = [
+      "--accept-routes"
+    ];
+  };
+
+  services.dashboard.entries.tailscale = {
+    name = "Tailscale";
+    description = "VPN mesh network";
+    systemdUnit = "tailscaled.service";
+    icon = "tailscale";
+    order = 5;
+    module = "networking.nix";
+  };
+
+  services.dashboard.entries.sshd = {
+    name = "SSH";
+    description = "Key-only, hardened (port 22)";
+    systemdUnit = "sshd.service";
+    order = 6;
+    module = "networking.nix";
+  };
+}

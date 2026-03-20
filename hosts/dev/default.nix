@@ -1,0 +1,97 @@
+# hosts/dev/default.nix — dev host (e.g. OVH VPS)
+# Role: agent development and sandboxed execution via agent-sandbox.nix + nono.nix.
+# Clone-repos activation script initializes project directories on first boot.
+# Private overlay adds repo lists, agent fleet config, and host-specific service wiring.
+{ config, inputs, lib, pkgs, ... }: {
+  imports = [
+    ../hardware.nix
+    ../disko-config.nix
+    # Shared modules
+    ../../modules/base.nix
+    ../../modules/boot.nix
+    ../../modules/users.nix
+    ../../modules/networking.nix
+    ../../modules/secrets.nix
+    ../../modules/docker.nix
+    ../../modules/syncthing.nix
+    ../../modules/agent-compute.nix
+    ../../modules/impermanence.nix
+    ../../modules/break-glass-ssh.nix
+    ../../modules/sshd-liveness-check.nix
+    ../../modules/dashboard.nix
+    ../../modules/cost-tracker.nix
+    ../../modules/agent-sandbox.nix
+    ../../modules/nono.nix
+    # dev-agent.nix: import in private overlay with services.devAgent.enable = true
+  ];
+
+  home-manager.users.dev = import ../../home;
+
+  networking.hostName = "neurosys-dev";
+  time.timeZone = "Europe/Berlin";
+  i18n.defaultLocale = "C.UTF-8";
+
+  # OVH uses DHCP for static assignment.
+  networking.useDHCP = true;
+
+  # @decision AGENT-01, AGENT-02: Idempotent repo cloning on activation (clone-only, never pull)
+  system.activationScripts.clone-repos = {
+    deps = [ "users" ];
+    text = ''
+      # Add repos to clone on activation. Example:
+      #   repos=("your-org/your-repo")
+      repos=()
+      CLONE_DIR="/data/projects"
+      GH_TOKEN="$(cat ${config.sops.secrets."github-pat".path} 2>/dev/null || true)"
+      mkdir -p "$CLONE_DIR"
+      for repo in "''${repos[@]}"; do
+        name="$(basename "$repo")"
+        target="$CLONE_DIR/$name"
+        if [ ! -d "$target" ]; then
+          echo "Cloning $repo to $target..."
+          GIT_TERMINAL_PROMPT=0 ${pkgs.git}/bin/git \
+            -c "http.https://github.com/.extraheader=Authorization: Bearer $GH_TOKEN" \
+            clone "https://github.com/$repo.git" "$target" \
+            || echo "WARNING: Failed to clone $repo (will retry on next activation)"
+          chown -R dev:users "$target" 2>/dev/null || true
+        fi
+      done
+    '';
+  };
+
+  # --- Host-specific shared module settings ---
+  boot.loader.grub.device = "/dev/sda";
+  networking.nat.externalInterface = "ens3";
+  sops.defaultSopsFile = ../../secrets/ovh.yaml;
+  sops.age.sshKeyPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
+
+  # @decision OVH-01: Port 22 open on public interface for bootstrap and deploy access.
+  # OVH VPS has no Tailscale pre-installed; SSH must be public until Tailscale is up.
+  # Key-only auth enforced by networking.nix. fail2ban is disabled (SEC83-01).
+  services.openssh.openFirewall = lib.mkForce true;
+
+  # @decision OVH-02: Explicit hostKeys path points directly to /persist/ to avoid
+  # impermanence mount timing races on first boot. The etc-ssh.mount unit mounts
+  # /persist/etc/ssh/ over /etc/ssh/, but if sshd starts before the mount completes,
+  # it fails with "no such file". By pointing sshd directly at /persist/etc/ssh/,
+  # we bypass sshd_config entirely — nixos-anywhere always places the host key there.
+  services.openssh.hostKeys = lib.mkForce [
+    { type = "ed25519"; path = "/persist/etc/ssh/ssh_host_ed25519_key"; }
+  ];
+
+  # WARNING: Template mode — replace keys and disable this flag before deploying.
+  # See SECURITY.md.
+  tsurf.template.allowUnsafePlaceholders = true;
+
+  services.dockerStarter.enable = true;
+  services.syncthingStarter.enable = true;
+  services.agentCompute.enable = true;
+  services.agentSandbox.enable = true;
+  services.nonoSandbox.enable = true;
+  services.agentSandbox.allowNixDaemon = true;
+  services.agentSandbox.egressControl.enable = true;
+
+  networking.useNetworkd = lib.mkForce false;
+
+  system.stateVersion = "25.11";
+}

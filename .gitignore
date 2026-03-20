@@ -1,0 +1,15 @@
+tmp/
+.planning/
+.solutions/
+.pytest_cache/
+.claude/*
+!.claude/skills/
+!.claude/CLAUDE.md
+.worktrees/
+result
+*.png
+Screenshot*
+.test-status
+src/
+secrets/*.yaml
+neurosys_code_review*.md

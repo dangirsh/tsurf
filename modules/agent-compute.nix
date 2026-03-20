@@ -1,0 +1,69 @@
+# modules/agent-compute.nix
+# @decision: Package names are `claude-code` and `codex` from llm-agents overlay
+#   (not `llm-agents-claude-code` — the overlay adds packages directly to pkgs namespace)
+# @decision SANDBOX-11-01: Podman is enabled rootless; dockerCompat=false (conflicts with Docker)
+#   — sandbox uses a PATH-local docker->podman symlink derivation.
+# @decision SEC47-13: --no-sandbox agent = effective root access (accepted risk)
+# @rationale: --no-sandbox -> dev -> wheel -> passwordless sudo -> root.
+#   Mitigated by default sandbox-on, audit log, operator awareness.
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.services.agentCompute;
+in
+{
+  options.services.agentCompute.enable = lib.mkEnableOption "Agent CLI tools (claude, codex, pi, zmx)";
+
+  config = lib.mkIf cfg.enable {
+  # @decision: zmx pre-built static binary from zmx.sh (a zig2nix flake build
+  #   fails under apparmor-restricted user namespaces). Exposed via pkgs overlay
+  #   so all modules use one canonical zmx derivation.
+  nixpkgs.overlays = [
+    (final: prev: {
+      zmx = final.stdenv.mkDerivation rec {
+        pname = "zmx";
+        version = "0.3.0";
+        src = final.fetchurl {
+          url = "https://zmx.sh/a/zmx-${version}-linux-x86_64.tar.gz";
+          hash = "sha256-/K/xWB61pqPll4Gq13qMoGm0Q1vC/sQT3TI7RaTf3zI=";
+        };
+        sourceRoot = ".";
+        installPhase = ''
+          runHook preInstall
+          install -m755 -D zmx $out/bin/zmx
+          runHook postInstall
+        '';
+        meta = with final.lib; {
+          description = "Session persistence for terminal processes";
+          homepage = "https://github.com/neurosnap/zmx";
+          platforms = [ "x86_64-linux" ];
+        };
+      };
+    })
+  ];
+
+  # Agent CLI packages from llm-agents.nix overlay
+  environment.systemPackages = [
+    pkgs.claude-code
+    pkgs.codex
+    pkgs.pi-coding-agent
+    pkgs.zmx
+  ];
+
+  # Rootless Podman for sandboxed agent container workflows.
+  # dockerCompat = false because virtualisation.docker.enable = true in docker.nix —
+  # NixOS asserts they cannot coexist.
+  virtualisation.podman = {
+    enable = true;
+    dockerCompat = false;
+    defaultNetwork.settings.dns_enabled = true;
+  };
+
+  # Pre-create audit log directory for agent spawn logging.
+  systemd.tmpfiles.rules = [
+    "d /data/projects/.agent-audit 0750 dev users -"
+  ];
+
+  # User linger for persistent systemd user instance
+  users.users.dev.linger = true;
+  }; # end lib.mkIf
+}

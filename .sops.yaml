@@ -1,0 +1,16 @@
+# Example SOPS configuration — replace with your real age keys.
+# See examples/private-overlay/ for a complete setup example.
+keys:
+  - &admin       age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  - &host_main   age1yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+creation_rules:
+  - path_regex: secrets/neurosys\.yaml$
+    key_groups:
+      - age:
+        - *admin
+        - *host_main
+  - path_regex: secrets/ovh\.yaml$
+    key_groups:
+      - age:
+        - *admin
+        - *host_main
