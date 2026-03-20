@@ -2,6 +2,9 @@
 # @decision SVC-02: Syncthing runs as user dev with fully declarative devices/folders.
 # @decision SVC-03: GUI binds 127.0.0.1 — access via Tailscale Serve or SSH tunnel only.
 # @decision SYNC-84-01: openDefaultPorts disabled to avoid exposing LAN discovery ports on VPS hosts.
+# @decision SYNC-116-01: Disable global announce, local announce, relays, and NAT by default.
+#   Tailnet-only mesh is the intended deployment model. Opt-in to public discovery via
+#   services.syncthingStarter.publicBep = true.
 # @decision SYNC-93-01: tsurf.syncthing.mesh option for cross-host sync via device registry.
 #   When mesh.devices is populated, peer devices and shared folders are auto-wired.
 #   Placeholder devices/folders only appear when mesh is empty (unconfigured template).
@@ -41,7 +44,10 @@ let
   }) meshCfg.folders;
 in
 {
-  options.services.syncthingStarter.enable = lib.mkEnableOption "Syncthing file sync";
+  options.services.syncthingStarter = {
+    enable = lib.mkEnableOption "Syncthing file sync";
+    publicBep = lib.mkEnableOption "public BEP port 22000 on the firewall (for non-Tailscale peers)";
+  };
 
   options.tsurf.syncthing.mesh = {
     devices = lib.mkOption {
@@ -154,6 +160,10 @@ in
 
         options = {
           urAccepted = -1;
+          globalAnnounceEnabled = false;
+          localAnnounceEnabled = false;
+          relaysEnabled = false;
+          natEnabled = false;
         };
       };
     };

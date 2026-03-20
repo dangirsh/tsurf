@@ -6,8 +6,8 @@
 # @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
 # @decision NET-03: Tailscale VPN connected to tailnet
 # @decision NET-04: ports 22, 80, 443, 22000 on public interface; all other services internal
-# @decision NET-16: Public interface exposes SSH (22) + conditionally Syncthing BEP
-#   (22000) and nginx (80/443). All other services are Tailscale-only.
+# @decision NET-16: Public interface exposes SSH (22) + conditionally nginx (80/443).
+#   Syncthing BEP (22000) requires explicit publicBep opt-in. All other services Tailscale-only.
 # @decision NET-06: Tailscale reverse path filtering set to loose
 # @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
 # @decision NET-115-01: tailscale0 in trustedInterfaces is a flat trust model (all tailnet
@@ -105,9 +105,10 @@ in {
     enable = true;
     allowPing = true;
     # @decision NET-10: ports 80/443 conditionally opened when nginx is enabled (ACME HTTP-01 + TLS)
-    # @decision NET-11: port 22000 for Syncthing BEP (encrypted, certificate-authenticated)
+    # @decision NET-11: port 22000 for Syncthing BEP — conditional on publicBep opt-in
+    #   (default: off; tailnet-only mesh does not need public BEP port).
     allowedTCPPorts = [ 22 ]
-      ++ lib.optionals config.services.syncthing.enable [ 22000 ]
+      ++ lib.optionals config.services.syncthingStarter.publicBep [ 22000 ]
       ++ lib.optionals config.services.nginx.enable [ 80 443 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
     trustedInterfaces = [ "tailscale0" ];

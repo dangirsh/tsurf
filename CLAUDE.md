@@ -185,6 +185,8 @@ Run before every module or service commit:
 - **SEC114-01:** File-based agent audit log (`/data/projects/.agent-audit/agent-launches.log`) is owned by the same user that runs agents. Mitigated by dual-logging to journald (root-owned, append-only). File log kept as grep-friendly convenience; journald is the trustworthy audit source.
 - **SEC114-02:** `dev-agent.sh` parent env no longer exports raw API keys. Wrapper handles credential injection via `AGENT_CREDENTIALS` + nono `--env-credential-map`. Raw keys still reach the sandboxed child process as env vars — full broker/proxy model is future work (see security review #5).
 - **SEC115-01:** Flat tailnet trust model — `tailscale0` in trustedInterfaces means all tailnet devices reach all internal services. Mitigated by binding services to 127.0.0.1 and relying on Tailscale device authentication. Production should use Tailscale ACL tags. See SECURITY.md "Tailnet Segmentation".
+- **SEC116-01:** Agent resource limits via `tsurf-agents.slice` set aggregate ceilings (8G/300%/1024 tasks). Per-unit limits on dev-agent (4G/200%/256 tasks, OOMPolicy=kill). Limits are conservative defaults; production may need tuning based on workload.
+- **SEC116-02:** Syncthing defaults to tailnet-only operation (global announce, local announce, relays, NAT all disabled). Public BEP port 22000 requires explicit `publicBep` opt-in. Private overlay should enable `publicBep` only if non-Tailscale peers are needed.
 
 ## Sandbox Awareness
 

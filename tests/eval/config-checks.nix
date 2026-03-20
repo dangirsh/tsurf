@@ -28,18 +28,18 @@ in
     touch "$out"
   '';
 
-  # Ports are conditional: 22000 on syncthing.enable, 80/443 on nginx.enable.
-  # Public template has no nginx; syncthing is imported by both hosts.
+  # Ports are conditional: 22000 on publicBep opt-in, 80/443 on nginx.enable.
+  # Public template has no nginx and publicBep defaults to false.
   firewall-ports-neurosys =
     let
       actual = builtins.sort builtins.lessThan neurosysCfg.networking.firewall.allowedTCPPorts;
       expected = [ 22 ]
-        ++ lib.optionals neurosysCfg.services.syncthing.enable [ 22000 ]
+        ++ lib.optionals neurosysCfg.services.syncthingStarter.publicBep [ 22000 ]
         ++ lib.optionals neurosysCfg.services.nginx.enable [ 80 443 ];
     in
     mkCheck
       "firewall-ports-neurosys"
-      "neurosys firewall ports match syncthing/nginx state"
+      "neurosys firewall ports match publicBep/nginx state"
       "neurosys allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
@@ -47,12 +47,12 @@ in
     let
       actual = builtins.sort builtins.lessThan devCfg.networking.firewall.allowedTCPPorts;
       expected = [ 22 ]
-        ++ lib.optionals devCfg.services.syncthing.enable [ 22000 ]
+        ++ lib.optionals devCfg.services.syncthingStarter.publicBep [ 22000 ]
         ++ lib.optionals devCfg.services.nginx.enable [ 80 443 ];
     in
     mkCheck
       "firewall-ports-ovh"
-      "ovh firewall ports match syncthing/nginx state"
+      "ovh firewall ports match publicBep/nginx state"
       "ovh allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
@@ -350,12 +350,17 @@ in
       "agent-sandbox module does not reference nono — sandbox is broken"
       (lib.hasInfix "nono" source);
 
-  pi-coding-agent-in-packages = mkCheck
-    "pi-coding-agent-in-packages"
-    "pi-coding-agent is in ovh systemPackages"
-    "pi-coding-agent missing from ovh systemPackages — check agent-compute.nix"
-    (builtins.any (p: (p.pname or "") == "pi-coding-agent")
-      devCfg.environment.systemPackages);
+  # Phase 116: raw agent binaries removed from PATH (SEC-116-01).
+  # Verify the pi *wrapper* exists (writeShellApplication named "pi"), not the raw package.
+  pi-sandbox-wrapper-in-packages =
+    let
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "pi-sandbox-wrapper-in-packages"
+      "pi sandboxed wrapper defined in agent-sandbox.nix"
+      "pi sandboxed wrapper missing from agent-sandbox.nix"
+      (lib.hasInfix "pi-sandboxed" source);
 
   pi-sandbox-wrapper-exists =
     let
@@ -516,6 +521,53 @@ in
       "agent home paths declared in impermanence"
       "agent home paths missing from impermanence.nix"
       (lib.hasInfix "/home/agent/.claude" source);
+
+  # --- Phase 116: structural hardening regression guards ---
+
+  syncthing-discovery-disabled = mkCheck
+    "syncthing-discovery-disabled"
+    "Syncthing global announce and relays disabled by default"
+    "Syncthing global announce or relays still enabled"
+    (neurosysCfg.services.syncthing.settings.options.globalAnnounceEnabled == false
+     && neurosysCfg.services.syncthing.settings.options.relaysEnabled == false);
+
+  syncthing-no-public-bep =
+    let
+      ports = neurosysCfg.networking.firewall.allowedTCPPorts;
+    in
+    mkCheck
+      "syncthing-no-public-bep"
+      "Port 22000 not in allowedTCPPorts (publicBep is off)"
+      "Port 22000 in allowedTCPPorts but publicBep is false"
+      (!(builtins.elem 22000 ports));
+
+  agent-binaries-not-in-path =
+    let
+      source = builtins.readFile ../../modules/agent-compute.nix;
+    in
+    mkCheck
+      "agent-binaries-not-in-path"
+      "Raw agent binaries not in agent-compute.nix systemPackages"
+      "SECURITY: raw agent binaries found in agent-compute.nix systemPackages — use sandboxed wrappers only"
+      (!(lib.hasInfix "pkgs.claude-code" source)
+       && !(lib.hasInfix "pkgs.codex" source)
+       && !(lib.hasInfix "pkgs.pi-coding-agent" source));
+
+  agent-slice-exists-ovh = mkCheck
+    "agent-slice-exists-ovh"
+    "tsurf-agents systemd slice defined on dev host"
+    "tsurf-agents slice missing from dev host"
+    (builtins.hasAttr "tsurf-agents" devCfg.systemd.slices);
+
+  restic-status-dynamic-user =
+    let
+      source = builtins.readFile ../../modules/restic.nix;
+    in
+    mkCheck
+      "restic-status-dynamic-user"
+      "restic-status-server uses DynamicUser"
+      "restic-status-server should use DynamicUser for least privilege"
+      (lib.hasInfix "DynamicUser = true" source);
 
 }
 
