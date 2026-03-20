@@ -17,6 +17,7 @@
 # @decision Magic rollback enabled by default with 300s confirm timeout.
 # @decision Service health polling (30s) — checks core systemd services per node.
 # @decision No auto-commit of flake.lock — print reminder instead.
+# @decision DEPLOY-114-01: No repo-controlled post-deploy hooks — require explicit --post-hook.
 # @decision Remote build default (DEPLOY-01): neurosys has 18 vCPU / 96 GB RAM — faster than
 #   local build + closure upload. Use --mode local for first deploys or when server is unreachable.
 set -euo pipefail
@@ -29,6 +30,7 @@ MODE="remote"
 FAST_MODE=false
 FIRST_DEPLOY=false
 NO_MAGIC_ROLLBACK=false
+POST_HOOK=""
 SKIP_UPDATE=true
 SECONDS=0
 
@@ -109,6 +111,7 @@ Options:
   --first-deploy        Disable magic rollback for one-time migration
   --fast                Local build, single evaluation (no --remote-build)
   --no-magic-rollback   Disable magic rollback for this deploy
+  --post-hook PATH      Run script at absolute PATH after successful deploy (subprocess, not sourced)
   --update-inputs       Pull latest flake inputs before building
   --help                Show this help
 
@@ -157,6 +160,10 @@ while [[ $# -gt 0 ]]; do
       SKIP_UPDATE=false
       shift
       ;;
+    --post-hook)
+      POST_HOOK="$2"
+      shift 2
+      ;;
     --skip-update)
       # no-op: input update is skipped by default; use --update-inputs to enable
       shift
@@ -181,6 +188,17 @@ fi
 if [[ "$NODE" != "neurosys" && "$NODE" != "neurosys-dev" && "$NODE" != "all" ]]; then
   echo "Error: --node must be 'neurosys', 'neurosys-dev', or 'all', got '$NODE'"
   exit 1
+fi
+
+if [[ -n "$POST_HOOK" ]]; then
+  if [[ "$POST_HOOK" != /* ]]; then
+    echo "Error: --post-hook must be an absolute path, got '$POST_HOOK'"
+    exit 1
+  fi
+  if [[ ! -f "$POST_HOOK" ]]; then
+    echo "Error: --post-hook path does not exist: $POST_HOOK"
+    exit 1
+  fi
 fi
 
 # --- Parallel deploy: --node all spawns independent processes ---
@@ -540,9 +558,15 @@ if [[ "$FAILED" -eq 0 ]]; then
   done
   echo ""
 
-  # --- Post-deploy hook (optional, provided by private overlay) ---
-  if [[ -f "$FLAKE_DIR/scripts/deploy-post.sh" ]]; then
-    source "$FLAKE_DIR/scripts/deploy-post.sh"
+  # --- Post-deploy hook (optional, explicit opt-in via --post-hook) ---
+  # @decision DEPLOY-114-01: No repo-controlled post-deploy hooks.
+  #   Sourcing repo-controlled scripts is a local code execution vector
+  #   (agent edits repo -> operator runs deploy -> arbitrary code runs).
+  #   Post-hooks must be an absolute path outside the mutable repo,
+  #   executed as a subprocess (not sourced).
+  if [[ -n "$POST_HOOK" ]]; then
+    echo "==> Running post-deploy hook: $POST_HOOK"
+    bash --noprofile --norc "$POST_HOOK"
   fi
 
   write_deploy_status "success"

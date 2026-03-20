@@ -449,6 +449,37 @@ in
       (!(lib.hasInfix "phantom token" source)
        && !(lib.hasInfix "sibling repos readable" source));
 
+  dashboard-security-headers =
+    let
+      serverSrc = builtins.readFile ../../scripts/dashboard-server.py;
+      hasHeader = header: lib.hasInfix header serverSrc;
+    in
+    mkCheck
+      "dashboard-security-headers"
+      "dashboard server includes security response headers"
+      "dashboard-server.py missing security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)"
+      (hasHeader "X-Content-Type-Options" && hasHeader "X-Frame-Options" && hasHeader "Referrer-Policy");
+
+  dashboard-no-innerhtml-xss =
+    let
+      htmlSrc = builtins.readFile ../../scripts/dashboard-frontend.html;
+    in
+    mkCheck
+      "dashboard-no-innerhtml-xss"
+      "dashboard frontend has no innerHTML XSS sinks"
+      "dashboard-frontend.html still uses innerHTML — use textContent/createElement instead"
+      (!(lib.hasInfix ".innerHTML =" htmlSrc));
+
+  deploy-no-repo-source =
+    let
+      deploySrc = builtins.readFile ../../scripts/deploy.sh;
+    in
+    mkCheck
+      "deploy-no-repo-source"
+      "deploy.sh has no repo-controlled source calls"
+      "deploy.sh sources repo-controlled scripts — remove source calls for deploy-post.sh or similar"
+      (!(lib.hasInfix "source \"$FLAKE_DIR" deploySrc));
+
 }
 
 # --- Private overlay test extension pattern ---

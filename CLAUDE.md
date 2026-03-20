@@ -182,6 +182,8 @@ Run before every module or service commit:
 - **SEC105-05:** Hard-coded `dev` username, `/home/dev`, `/data/projects` paths. Option namespace adds indirection without clear benefit for a template repo.
 - **SEC105-06:** (RESOLVED in Phase 106) `home-manager.users.dev` moved to per-host config.
 - **SEC105-07:** `deploy.sh` is 558 lines with custom logic. Serves its purpose for private overlay deployment; public users can use bare `deploy-rs`.
+- **SEC114-01:** File-based agent audit log (`/data/projects/.agent-audit/agent-launches.log`) is owned by the same user that runs agents. Mitigated by dual-logging to journald (root-owned, append-only). File log kept as grep-friendly convenience; journald is the trustworthy audit source.
+- **SEC114-02:** `dev-agent.sh` parent env no longer exports raw API keys. Wrapper handles credential injection via `AGENT_CREDENTIALS` + nono `--env-credential-map`. Raw keys still reach the sandboxed child process as env vars — full broker/proxy model is future work (see security review #5).
 
 ## Sandbox Awareness
 
@@ -192,7 +194,7 @@ When running inside the nono sandbox:
 - API keys are loaded from `/run/secrets/` by the wrapper and injected as environment variables into the sandboxed child via nono `--env-credential-map`.
 - Denied paths include `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`, `~/.aws`, and `~/.docker`.
 - `--no-sandbox` escape is blocked unless `AGENT_ALLOW_NOSANDBOX=1` is set.
-- Launch audit entries are written to `/data/projects/.agent-audit/agent-launches.log` (mode, args, timestamp).
+- Launch audit entries are sent to journald (`journalctl -t agent-launch`) and also written to `/data/projects/.agent-audit/agent-launches.log` as a convenience log. The journald log is the trustworthy source (root-owned, append-only); the file log is user-owned and not tamper-proof.
 - For guided workflows, use `/nix-module` for module authoring and `/nix-test` for test execution + `.test-status`.
 
 ## Deployment Rules

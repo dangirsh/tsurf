@@ -8,6 +8,15 @@
 #   AGENT_NONO_PROFILE      — full path to nono profile JSON
 #   AGENT_CREDENTIALS       — space-separated "ENV_VAR:secret-file-name" pairs
 #   AGENT_ALLOW_NIX_DAEMON  — non-empty to grant /nix/var/nix/daemon-socket access
+#
+# Audit logging:
+#   - journald: structured launch events via logger -t agent-launch (trustworthy, root-owned)
+#   - file: TSV convenience log at $AGENT_AUDIT_LOG (user-owned, not tamper-proof)
+#
+# @decision AUDIT-114-01: Dual audit logging — journald (trustworthy) + file (convenience).
+#   File log is user-owned and can be tampered with. Journald is root-owned and append-only
+#   from the agent user's perspective. Full arguments are NOT logged to avoid storing
+#   sensitive prompts/paths in the audit trail.
 
 set -euo pipefail
 
@@ -18,6 +27,13 @@ audit_log() {
     >> "$AGENT_AUDIT_LOG" 2>/dev/null || true
 }
 
+journal_log() {
+  local mode="$1"; shift
+  logger -t "agent-launch" --id=$$ \
+    "mode=$mode agent=$AGENT_NAME user=$(whoami) cwd=$PWD git_root=${git_root:-unknown}" \
+    2>/dev/null || true
+}
+
 # --no-sandbox escape hatch: requires AGENT_ALLOW_NOSANDBOX=1
 if [[ "${1:-}" == "--no-sandbox" ]]; then
   if [[ "${AGENT_ALLOW_NOSANDBOX:-}" != "1" ]]; then
@@ -26,6 +42,7 @@ if [[ "${1:-}" == "--no-sandbox" ]]; then
   fi
   echo "WARNING: Running $AGENT_NAME WITHOUT sandbox. All secrets accessible." >&2
   audit_log "nosandbox" "${@:2}"
+  journal_log "nosandbox"
   shift
   exec "$AGENT_REAL_BINARY" "$@"
 fi
@@ -79,4 +96,5 @@ done
 
 nono_args+=(-- "$AGENT_REAL_BINARY" "$@")
 audit_log "sandboxed" "$@"
+journal_log "sandboxed"
 exec nono "${nono_args[@]}"

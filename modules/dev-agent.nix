@@ -43,9 +43,8 @@ in
         RestrictRealtime = true;
         NoNewPrivileges = true;
 
-        Environment = [
-          "ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic-api-key"
-        ];
+        # API key loading handled by agent-wrapper.sh (AGENT_CREDENTIALS),
+        # not by parent env. No secrets needed in this unit's environment.
       };
 
       # zmx wraps claude (which is already sandboxed via agent-sandbox.nix)

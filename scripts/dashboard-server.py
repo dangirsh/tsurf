@@ -135,10 +135,29 @@ def build_cost_payload():
 
 def make_handler(manifest_path, html_path):
     class Handler(BaseHTTPRequestHandler):
+        def _security_headers(self):
+            self.send_header(
+                "X-Content-Type-Options", "nosniff"
+            )
+            self.send_header(
+                "Referrer-Policy", "no-referrer"
+            )
+            self.send_header(
+                "Permissions-Policy",
+                "camera=(), microphone=(), geolocation=()"
+            )
+            self.send_header(
+                "Cross-Origin-Opener-Policy", "same-origin"
+            )
+            self.send_header(
+                "X-Frame-Options", "DENY"
+            )
+
         def _send_bytes(self, payload, content_type, status=200):
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(payload)))
+            self._security_headers()
             self.end_headers()
             self.wfile.write(payload)
 
