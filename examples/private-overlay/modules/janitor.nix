@@ -40,58 +40,15 @@ let
 
   janitorScript = pkgs.writeShellScript "janitor-agent" ''
     set -euo pipefail
-
-    if [ -f "$ANTHROPIC_API_KEY_FILE" ]; then
-      export ANTHROPIC_API_KEY
-      ANTHROPIC_API_KEY="$(cat "$ANTHROPIC_API_KEY_FILE")"
-    else
-      echo "ERROR: ANTHROPIC_API_KEY_FILE not found: $ANTHROPIC_API_KEY_FILE" >&2
-      timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-      cat > "${cfg.reportPath}" <<REPORT
-    {
-      "timestamp": "$timestamp",
-      "diskBefore": "unknown",
-      "diskAfter": "unknown",
-      "zombieCount": -1,
-      "filesCleaned": -1,
-      "tmpMaxAgeDays": ${toString cfg.tmpMaxAgeDays},
-      "nixGcOlderThan": "${cfg.nixGcOlderThan}",
-      "error": "missing ANTHROPIC_API_KEY_FILE"
-    }
-REPORT
-      exit 1
-    fi
-
-    prompt_text="$(cat ${systemPromptFile})"
-
-    set +e
-    nono run \
+    export ANTHROPIC_API_KEY="$(cat "$ANTHROPIC_API_KEY_FILE")"
+    exec nono run \
       --profile /etc/nono/profiles/janitor.json \
       --net-allow \
       -- claude -p \
       --permission-mode=bypassPermissions \
       ${modelArg} \
-      --system-prompt "$prompt_text" \
+      --system-prompt "$(cat ${systemPromptFile})" \
       "Run the maintenance tasks now and write the report."
-    exit_code=$?
-    set -e
-
-    if [ "$exit_code" -ne 0 ]; then
-      timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-      cat > "${cfg.reportPath}" <<REPORT
-    {
-      "timestamp": "$timestamp",
-      "diskBefore": "unknown",
-      "diskAfter": "unknown",
-      "zombieCount": -1,
-      "filesCleaned": -1,
-      "tmpMaxAgeDays": ${toString cfg.tmpMaxAgeDays},
-      "nixGcOlderThan": "${cfg.nixGcOlderThan}",
-      "error": "claude janitor failed with exit code $exit_code"
-    }
-REPORT
-      exit "$exit_code"
-    fi
   '';
 in {
   options.services.janitor = {
