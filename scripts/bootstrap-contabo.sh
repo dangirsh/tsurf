@@ -35,7 +35,7 @@ FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 VPS_IP="${VPS_IP:?ERROR: Set VPS_IP env var to the Contabo VPS public IP}"
 DEPLOY_KEY="$FLAKE_DIR/tmp/contabo_deploy_key"
 EXTRA_FILES="$FLAKE_DIR/tmp/neurosys-host-keys"
-FLAKE_TARGET="${FLAKE_TARGET:?ERROR: Set FLAKE_TARGET env var to your private overlay flake target (e.g. /path/to/private-neurosys#neurosys)}"
+FLAKE_TARGET="${FLAKE_TARGET:?ERROR: Set FLAKE_TARGET env var to your private overlay flake target (e.g. /path/to/private-tsurf#neurosys)}"
 TAILSCALE_HOSTNAME="neurosys"
 
 # ────────────────────────────────────────────────────────────────────────────

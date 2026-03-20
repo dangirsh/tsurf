@@ -12,4 +12,4 @@ Screenshot*
 .test-status
 src/
 secrets/*.yaml
-neurosys_code_review*.md
+tsurf_code_review*.md

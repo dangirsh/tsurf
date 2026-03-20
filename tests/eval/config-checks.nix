@@ -453,13 +453,13 @@ in
 
 # --- Private overlay test extension pattern ---
 #
-# The private overlay (private-neurosys) extends these checks by importing
+# The private overlay (private-tsurf) extends these checks by importing
 # this file and appending private-specific assertions, for example:
 #
-#   # In private-neurosys/tests/eval/private-checks.nix:
+#   # In private-tsurf/tests/eval/private-checks.nix:
 #   # { self, pkgs, lib, inputs }:
 #   # let
-#   #   publicChecks = import "${inputs.neurosys}/tests/eval/config-checks.nix" { inherit self pkgs lib; };
+#   #   publicChecks = import "${inputs.tsurf}/tests/eval/config-checks.nix" { inherit self pkgs lib; };
 #   #   privateCfg = self.nixosConfigurations.neurosys.config;
 #   # in publicChecks // {
 #   #   agent-fleet-ports = ...; # private agent fleet/proxy assertions
@@ -467,4 +467,4 @@ in
 #   #   acme-domains = ...;      # private certificate domain coverage
 #   # };
 #
-# Private live tests follow the same pattern under private-neurosys/tests/live/.
+# Private live tests follow the same pattern under private-tsurf/tests/live/.

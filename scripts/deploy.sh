@@ -276,8 +276,8 @@ elif [[ "$NODE" == "neurosys-dev" ]]; then
   SYSTEMD_SERVICES=("tailscaled" "sshd" "syncthing")
 fi
 
-LOCAL_LOCK="$FLAKE_DIR/tmp/neurosys-${NODE}-deploy.local.lock"
-REMOTE_LOCK_DIR="/var/lock/neurosys-${NODE}-deploy.lock"
+LOCAL_LOCK="$FLAKE_DIR/tmp/tsurf-${NODE}-deploy.local.lock"
+REMOTE_LOCK_DIR="/var/lock/tsurf-${NODE}-deploy.lock"
 
 # --- Local lock (prevent concurrent deploys from same machine) ---
 exec 9>"$LOCAL_LOCK"

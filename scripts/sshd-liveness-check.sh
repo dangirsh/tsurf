@@ -11,8 +11,8 @@ LAST_ROLLBACK_FILE="$STATE_DIR/last-rollback"
 mkdir -p "$STATE_DIR"
 
 # Skip during active deploys — deploy-rs has its own rollback mechanism.
-if [ -d /var/lock/neurosys-neurosys-deploy.lock ] || \
-   [ -d /var/lock/neurosys-ovh-deploy.lock ]; then
+if [ -d /var/lock/tsurf-neurosys-deploy.lock ] || \
+   [ -d /var/lock/tsurf-ovh-deploy.lock ]; then
   echo "sshd-liveness: deploy in progress — skipping check"
   exit 0
 fi

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# tests/lib/common.bash — Shared helpers for neurosys BATS live tests
+# tests/lib/common.bash — Shared helpers for tsurf BATS live tests
 # @decision TEST-48-01: Shared SSH + assertion helpers keep BATS cases single-assertion and readable.
 #
 # Usage: load '../lib/common' at the top of each .bats file
-# Requires: NEUROSYS_TEST_HOST env var (default: neurosys)
+# Requires: TSURF_TEST_HOST env var (default: neurosys)
 
 # --- Configuration ---
 SSH_OPTS=(
@@ -13,8 +13,8 @@ SSH_OPTS=(
   -o LogLevel=ERROR
   -F /dev/null
 )
-HOST="${NEUROSYS_TEST_HOST:-neurosys}"
-SSH_USER="${NEUROSYS_TEST_USER:-root}"
+HOST="${TSURF_TEST_HOST:-neurosys}"
+SSH_USER="${TSURF_TEST_USER:-root}"
 
 # --- SSH helpers ---
 ssh_cmd() {

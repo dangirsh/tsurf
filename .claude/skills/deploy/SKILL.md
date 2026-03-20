@@ -95,9 +95,9 @@ Hosts are independent — deploy only what changed.
 - **Lock stuck**: If a previous deploy crashed, remove the remote lock:
   ```bash
   # Contabo:
-  ssh root@neurosys rm -rf /var/lock/neurosys-neurosys-deploy.lock
+  ssh root@neurosys rm -rf /var/lock/tsurf-neurosys-deploy.lock
   # OVH:
-  ssh root@neurosys-dev rm -rf /var/lock/neurosys-ovh-deploy.lock
+  ssh root@neurosys-dev rm -rf /var/lock/tsurf-ovh-deploy.lock
   ```
 - **Build failures**: Check Nix build output for derivation errors.
 - **Stale tsurf input**: Run `nix flake lock --update-input tsurf` in the private overlay.
