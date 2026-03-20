@@ -84,11 +84,29 @@ in
       Restart = "always";
       StandardOutput = "null";
       StandardError = "null";
-      # Phase 83 hardening — runs as root to read /var/lib/restic-status (owned by root)
+      # @decision SEC-116-04: DynamicUser for status server — no persistent state needed,
+      #   only reads /var/lib/restic-status (root-owned). Full hardening baseline applied.
+      DynamicUser = true;
       NoNewPrivileges = true;
       ProtectSystem = "strict";
       ProtectHome = true;
       PrivateTmp = true;
+      PrivateDevices = true;
+      ProtectClock = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectProc = "invisible";
+      ProcSubset = "pid";
+      RestrictSUIDSGID = true;
+      LockPersonality = true;
+      RestrictRealtime = true;
+      RestrictNamespaces = true;
+      RestrictAddressFamilies = [ "AF_INET" "AF_INET6" ];
+      CapabilityBoundingSet = "";
+      UMask = "0077";
+      ReadOnlyPaths = [ "/var/lib/restic-status" ];
     };
   };
 

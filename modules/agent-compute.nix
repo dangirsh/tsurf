@@ -42,11 +42,11 @@ in
     })
   ];
 
-  # Agent CLI packages from llm-agents.nix overlay
+  # @decision SEC-116-01: Raw agent binaries (claude-code, codex, pi-coding-agent) are NOT
+  #   installed in PATH. They are only accessible via sandboxed wrappers in agent-sandbox.nix
+  #   which reference full store paths (AGENT_REAL_BINARY). This makes the sandbox launcher
+  #   the enforcement boundary, not PATH priority.
   environment.systemPackages = [
-    pkgs.claude-code
-    pkgs.codex
-    pkgs.pi-coding-agent
     pkgs.zmx
   ];
 
@@ -65,5 +65,17 @@ in
   systemd.tmpfiles.rules = [
     "d /data/projects/.agent-audit 0750 ${agentCfg.user} users -"
   ];
+
+  # @decision SEC-116-02: Dedicated cgroup slice for agent workloads.
+  #   Aggregate resource ceiling prevents runaway agents from starving critical services.
+  #   Individual agent units set tighter per-service limits within this slice.
+  systemd.slices.tsurf-agents = {
+    description = "Agent workload resource slice";
+    sliceConfig = {
+      MemoryMax = "8G";
+      CPUQuota = "300%";
+      TasksMax = 1024;
+    };
+  };
   }; # end lib.mkIf
 }

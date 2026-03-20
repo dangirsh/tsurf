@@ -42,10 +42,22 @@ in
         ProtectClock = true;
         ProtectKernelTunables = true;
         ProtectKernelModules = true;
+        ProtectKernelLogs = true;
         ProtectControlGroups = true;
         LockPersonality = true;
         RestrictRealtime = true;
+        RestrictSUIDSGID = true;
         NoNewPrivileges = true;
+        # NOTE: ProtectHome, ProtectSystem=strict, PrivateDevices omitted — agent needs home
+        #   dir write, project dir write, and PTY access for zmx sessions.
+
+        # @decision SEC-116-03: Per-unit resource limits within the agent slice.
+        #   Prevents a single agent from consuming the entire slice budget.
+        Slice = "tsurf-agents.slice";
+        MemoryMax = "4G";
+        CPUQuota = "200%";
+        TasksMax = 256;
+        OOMPolicy = "kill";
 
         # API key loading handled by agent-wrapper.sh (AGENT_CREDENTIALS),
         # not by parent env. No secrets needed in this unit's environment.

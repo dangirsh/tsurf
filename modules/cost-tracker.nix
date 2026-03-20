@@ -99,6 +99,15 @@ in
         ProtectControlGroups = true;
         RestrictNamespaces = true;
         LockPersonality = true;
+        # @decision SEC-116-05: Hardening baseline applied. MemoryDenyWriteExecute omitted
+        #   (Python runtime may need W+X pages for imports).
+        PrivateDevices = true;
+        ProtectProc = "invisible";
+        ProcSubset = "pid";
+        RestrictSUIDSGID = true;
+        RestrictRealtime = true;
+        RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+        UMask = "0077";
         CapabilityBoundingSet = [ "CAP_DAC_READ_SEARCH" ];
         RuntimeDirectory = "tsurf-cost-tracker";
         ReadWritePaths = [ (builtins.dirOf cfg.outputPath) ];
