@@ -340,6 +340,11 @@ in
     "ovh agent-egress nftables table missing"
     (builtins.hasAttr "agent-egress" devCfg.networking.nftables.tables);
 
+  # --- Source-text regression guards ---
+  # These checks verify module source contains expected strings. They catch
+  # accidental removal of security-critical code but do NOT prove runtime
+  # behavior. Runtime behavioral tests are in tests/live/sandbox-behavioral.bats.
+
   agent-sandbox-module-has-nono =
     let
       source = builtins.readFile ../../modules/agent-sandbox.nix;
@@ -360,16 +365,6 @@ in
       "pi-sandbox-wrapper-in-packages"
       "pi sandboxed wrapper defined in agent-sandbox.nix"
       "pi sandboxed wrapper missing from agent-sandbox.nix"
-      (lib.hasInfix "pi-sandboxed" source);
-
-  pi-sandbox-wrapper-exists =
-    let
-      source = builtins.readFile ../../modules/agent-sandbox.nix;
-    in
-    mkCheck
-      "pi-sandbox-wrapper-exists"
-      "agent-sandbox module defines pi-sandboxed wrapper"
-      "agent-sandbox module does not define pi-sandboxed — pi is unsandboxed"
       (lib.hasInfix "pi-sandboxed" source);
 
   nono-profile-has-pi =

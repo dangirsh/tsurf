@@ -43,7 +43,7 @@ scripts/
 secrets/               # sops-encrypted secrets (age keys, gitignored)
 tests/
   eval/config-checks.nix  # 47 offline eval assertions
-  vm/ssh-reachability.nix # NixOS VM integration test
+  vm/sandbox-behavioral.nix # NixOS VM sandbox test (requires KVM)
   live/*.bats              # Live BATS tests over SSH
 ```
 
@@ -110,9 +110,15 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
 | Layer | Command | When |
 |-------|---------|------|
 | Eval checks (50+ assertions, fast) | `nix flake check` | Before every commit |
-| VM integration (requires KVM) | `nix build .#vm-test-ssh` | Not available on VPS |
+| VM sandbox (requires KVM) | `nix build .#vm-test-sandbox` | Requires KVM |
 | Live tests over SSH | `nix run .#test-live -- --host tsurf` | After deploy only |
+| Live sandbox behavioral | `nix run .#test-live -- --host tsurf-dev tests/live/sandbox-behavioral.bats` | After deploy, OVH only |
 | JSON output | `scripts/run-tests.sh --live --json` | After deploy only |
+
+Sandbox testing has three tiers:
+- **Eval checks**: Source-text regression guards (fast, every commit) — catch structural regressions
+- **Live behavioral**: Runtime probes as agent user inside nono sandbox (after deploy, OVH only)
+- **VM test**: Reproducible user privilege separation smoke test (requires KVM, not in CI)
 
 ### Test conventions
 

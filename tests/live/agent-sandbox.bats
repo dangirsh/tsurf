@@ -1,6 +1,11 @@
 #!/usr/bin/env bats
-# tests/live/agent-sandbox.bats — Agent sandbox wrapper verification on OVH.
-# @decision TEST-73-01: Wrapper tests verify nono invocation, secret hiding, and journald launch logging.
+# tests/live/agent-sandbox.bats — Source-text regression guards for wrapper structure.
+# These tests verify that wrapper scripts CONTAIN expected strings (nono invocation,
+# journald logging, no secret mounts). They are cheap structural guards, NOT runtime
+# behavioral security tests. For actual sandbox behavior verification, see
+# sandbox-behavioral.bats which runs probes inside the sandbox as the agent user.
+# @decision TEST-73-01: Source-text regression guards verify wrapper structure (nono
+#   invocation, journald logging). Behavioral security tests are in sandbox-behavioral.bats.
 
 load "../lib/common"
 bats_load_library bats-support
@@ -47,13 +52,6 @@ bats_load_library bats-assert
     echo "FAIL: wrapper script mounts .ssh into sandbox"
     return 1
   fi
-}
-
-@test "${HOST}: --no-sandbox blocked without AGENT_ALLOW_NOSANDBOX" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
-  # Running with --no-sandbox but without AGENT_ALLOW_NOSANDBOX should exit non-zero
-  run remote "unset AGENT_ALLOW_NOSANDBOX; claude --no-sandbox --version 2>&1 || true"
-  assert_output --partial "AGENT_ALLOW_NOSANDBOX=1"
 }
 
 @test "${HOST}: wrapper includes logger (util-linux) for journald logging" {

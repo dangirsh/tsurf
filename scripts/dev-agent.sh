@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Set XDG_RUNTIME_DIR from actual UID (systemd %U resolves to root in system units)
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export XDG_RUNTIME_DIR
 
 # API key loading handled by agent-wrapper.sh via AGENT_CREDENTIALS.
 # @decision DEV-AGENT-118-01: No raw API keys reach the child process — wrapper reads

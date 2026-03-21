@@ -57,6 +57,15 @@ retry() {
   return 1
 }
 
+# Run a command on the remote host as the agent user.
+# Root SSH is required to reach the host (agent user has no SSH key in the public template).
+# We sudo to the agent user for the test so the command runs under the correct principal.
+remote_as_agent() {
+  local escaped_cmd
+  escaped_cmd="$(printf '%q ' "$@")"
+  ssh_cmd "sudo -u agent bash -c ${escaped_cmd}"
+}
+
 # --- Assertion helpers ---
 # Assert a systemd unit is active.
 assert_unit_active() {

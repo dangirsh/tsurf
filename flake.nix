@@ -121,6 +121,12 @@
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
 
+        # NixOS VM test for sandbox user privilege separation (requires KVM).
+        # Run: nix build .#vm-test-sandbox
+        vm-test-sandbox = import ./tests/vm/sandbox-behavioral.nix {
+          inherit pkgs lib;
+        };
+
         test-live = pkgs.writeShellApplication {
           name = "test-live";
           runtimeInputs = with pkgs; [
@@ -160,7 +166,7 @@
               esac
             done
 
-            export NEUROSYS_TEST_HOST="$HOST"
+            export TSURF_TEST_HOST="$HOST"
             export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
 
             tests_dir="${builtins.toString ./tests/live}"
@@ -207,7 +213,7 @@
             nativeBuildInputs = [ pkgs.shellcheck ];
             src = ./.;
           } ''
-            shellcheck "$src"/tests/lib/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/sshd-liveness-check.sh
+            shellcheck "$src"/tests/lib/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/sshd-liveness-check.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/clone-repos.sh "$src"/scripts/dev-agent.sh "$src"/scripts/sandbox-probe.sh
             # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
             # SC2317: BATS @test blocks appear unreachable to shellcheck
             shellcheck --exclude=SC2317 "$src"/tests/live/*.bats
