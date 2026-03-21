@@ -434,6 +434,8 @@ in
 
   # Stale-phrase check: banned phrases must not appear in key docs.
   # Prevents reintroduction of outdated security claims.
+  # Note: "phantom token" and "credential proxy" removed from banned list —
+  # proxy credential mode with phantom tokens is now implemented (Phase 118).
   stale-phrases-claude-md =
     let
       source = builtins.readFile ../../CLAUDE.md;
@@ -441,10 +443,8 @@ in
     mkCheck
       "stale-phrases-claude-md"
       "CLAUDE.md contains no banned stale phrases"
-      "CLAUDE.md contains stale phrase (phantom token / credential proxy / sibling repos readable)"
-      (!(lib.hasInfix "phantom token" source)
-       && !(lib.hasInfix "sibling repos readable" source)
-       && !(lib.hasInfix "credential proxy" source));
+      "CLAUDE.md contains stale phrase (sibling repos readable)"
+      (!(lib.hasInfix "sibling repos readable" source));
 
   stale-phrases-readme =
     let
@@ -453,9 +453,25 @@ in
     mkCheck
       "stale-phrases-readme"
       "README.md contains no banned stale phrases"
-      "README.md contains stale phrase (phantom token / sibling repos readable)"
-      (!(lib.hasInfix "phantom token" source)
-       && !(lib.hasInfix "sibling repos readable" source));
+      "README.md contains stale phrase (sibling repos readable)"
+      (!(lib.hasInfix "sibling repos readable" source));
+
+  # Phase 118: Proxy credential mode (phantom token pattern)
+  proxy-credential-wrapper = mkCheck
+    "proxy-credential-wrapper"
+    "agent wrapper uses --credential (proxy mode), not --env-credential-map"
+    "agent-wrapper.sh uses --env-credential-map — must switch to --credential for proxy mode"
+    (let src = builtins.readFile ../../scripts/agent-wrapper.sh;
+     in lib.hasInfix "--credential" src
+        && !lib.hasInfix "--env-credential-map" src);
+
+  proxy-credential-profile = mkCheck
+    "proxy-credential-profile"
+    "nono profile contains custom_credentials with env:// URIs"
+    "nono.nix profile missing custom_credentials or env:// — proxy mode not configured"
+    (let src = builtins.readFile ../../modules/nono.nix;
+     in lib.hasInfix "custom_credentials" src
+        && lib.hasInfix "env://" src);
 
   dashboard-security-headers =
     let
