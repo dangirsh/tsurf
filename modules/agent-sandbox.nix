@@ -82,20 +82,20 @@ in
     # @decision SANDBOX-NET-01: UID-based nftables egress filtering restricts the agent
     #   user to a whitelist of TCP destination ports. DNS (UDP 53) is always allowed.
     #   Tailscale traffic is unrestricted. All other outbound traffic is dropped.
-    # checkRuleset disabled: `meta skuid` with symbolic usernames fails in the nix build
-    # sandbox (no /etc/passwd). Rules are correct and work at runtime.
-    networking.nftables.checkRuleset = lib.mkIf cfg.egressControl.enable false;
+    # @decision SEC-115-03: Egress control uses numeric UIDs (agentCfg.uid) in nftables
+    #   rules so checkRuleset can remain enabled. Symbolic usernames require /etc/passwd
+    #   at build time (unavailable in nix sandbox) — numeric UIDs do not.
 
     networking.nftables.tables.agent-egress = lib.mkIf cfg.egressControl.enable {
       family = "inet";
       content =
         let
           portList = lib.concatMapStringsSep ", " toString cfg.egressControl.allowedPorts;
-          user = cfg.egressControl.user;
+          agentUid = toString agentCfg.uid;
         in ''
           chain output {
             type filter hook output priority 0; policy accept;
-            meta skuid != "${user}" accept
+            meta skuid != ${agentUid} accept
             oifname "lo" accept
             ct state established,related accept
             meta l4proto udp th dport 53 accept

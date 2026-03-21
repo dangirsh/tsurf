@@ -515,6 +515,18 @@ in
     "ovh agent egress control targets wrong user"
     (devCfg.services.agentSandbox.egressControl.user == "agent");
 
+  agent-uid-explicit = mkCheck
+    "agent-uid-explicit"
+    "agent user has explicit UID defined"
+    "agent user uid is not set (required for nftables egress rules)"
+    (devCfg.users.users.${devCfg.tsurf.agent.user}.uid != null);
+
+  egress-ruleset-check-enabled = mkCheck
+    "egress-ruleset-check-enabled"
+    "nftables ruleset validation is not disabled"
+    "nftables.checkRuleset is false — egress UID model not fixed"
+    (devCfg.networking.nftables.checkRuleset != false);
+
   impermanence-agent-home =
     let
       source = builtins.readFile ../../modules/impermanence.nix;
