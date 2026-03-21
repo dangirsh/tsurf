@@ -5,7 +5,7 @@
 #   — sandbox uses a PATH-local docker->podman symlink derivation.
 # @decision SEC47-13: --no-sandbox agent = effective root access (accepted risk)
 # @rationale: --no-sandbox -> dev -> wheel -> passwordless sudo -> root.
-#   Mitigated by default sandbox-on, audit log, operator awareness.
+#   Mitigated by default sandbox-on, journald launch logging, operator awareness.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentCompute;
@@ -58,13 +58,6 @@ in
     dockerCompat = false;
     defaultNetwork.settings.dns_enabled = true;
   };
-
-  # @decision SEC-115-02: Audit dir and linger owned by agent user, not operator.
-  # Convenience audit log directory (user-owned, not tamper-proof).
-  # Trustworthy audit trail: journalctl -t agent-launch
-  systemd.tmpfiles.rules = [
-    "d /data/projects/.agent-audit 0750 ${agentCfg.user} users -"
-  ];
 
   # @decision SEC-116-02: Dedicated cgroup slice for agent workloads.
   #   Aggregate resource ceiling prevents runaway agents from starving critical services.

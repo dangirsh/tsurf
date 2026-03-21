@@ -23,7 +23,7 @@ modules/
   docker.nix           # Docker engine (--iptables=false), NAT
   impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
   networking.nix       # nftables, SSH (hardened), Tailscale, firewall assertions
-  nono.nix             # nono profile + env credential injection
+  nono.nix             # nono profile + proxy credential injection (phantom tokens)
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
   restic.nix           # Restic backup to B2 + status server
   secrets.nix          # sops-nix secret declarations
@@ -54,7 +54,7 @@ tests/
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
 - **Agent tooling**: llm-agents overlay provides claude-code + codex; nono sandbox via `nono.nix` and `agent-sandbox.nix`
-- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, nix daemon socket opt-in. Per-wrapper credential allowlists (least privilege). Env injection — real keys enter the child process (proxy mode requires org.freedesktop.secrets, unavailable on headless servers).
+- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, nix daemon socket opt-in. Per-wrapper credential allowlists (least privilege). Proxy credential injection — nono generates per-session phantom tokens; real keys never reach the child process.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
 - **Network model**: Only ports 22 + 22000 on public firewall by default. Ports 80/443 conditional on nginx. All internal services bind 127.0.0.1 (dashboard, syncthing GUI). Tailscale for internal access.
 - **Privilege model**: `dev` is the operator (wheel, docker, human admin). `agent` runs sandboxed tools (no wheel, no docker). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
@@ -166,13 +166,13 @@ Run before every module or service commit:
 
 - **Docker containers:** External service containers lack hardening (read-only rootfs, cap-drop). NixOS-managed containers inherit module defaults.
 - **Pre-built binaries:** zmx and cass lack signature verification — mitigated by SHA256 hash pinning.
-- **No-sandbox agents:** `--no-sandbox` = effective root access (dev → wheel → sudo). Mitigated by default sandbox-on, audit logging, operator awareness.
+- **No-sandbox agents:** `--no-sandbox` = effective root access (dev → wheel → sudo). Mitigated by default sandbox-on, journald launch logging, operator awareness.
 - **Sandbox read access:** Sandboxed agents have read-only access to the current git repo root (not all of `/data/projects`). No `.env` files on server (sops-nix handles secrets). Unrestricted network egress (agents need API/git access; nono allowlist filtering not yet available on headless servers). Metadata endpoint blocked at nftables level.
 - **Public template users:** `users.allowNoPasswordLogin = true` required for eval without real credential hashes. Private overlay replaces `users.nix` entirely.
 - **srvos defaults:** Relied upon implicitly (fail2ban, SSH hardening, systemd-networkd). Specific overrides documented per-host with `mkForce`.
 - **Break-glass key:** Public repo uses a placeholder. Private overlay MUST replace with a dedicated offline-stored key before deploying.
 - **fail2ban disabled:** SSH brute-force protection relies on key-only auth, MaxAuthTries 3, and srvos defaults. Re-enable if brute-force attempts become problematic.
-- **nono proxy_credentials:** Disabled — nono v0.16.0 requires a system keystore unavailable on headless servers. API keys pass through wrapper env directly.
+- **nono proxy_credentials:** (RESOLVED in Phase 118) Proxy credential mode now active using `env://` URIs — no system keystore needed. Child processes receive only phantom tokens.
 - **dev-agent bypassPermissions:** `dev-agent.nix` runs claude with `--permission-mode=bypassPermissions` inside nono sandbox. Sandbox provides the actual permission boundary.
 - **Manual internalOnlyPorts:** Must be kept in sync with actual service ports. Mitigated by existing firewall assertion.
 - **SEC105-01:** Template ships insecure defaults (placeholder SSH keys, passwordless sudo, empty-password login). Required for public template to evaluate without real credentials. Private overlay replaces `users.nix` entirely.
@@ -183,7 +183,7 @@ Run before every module or service commit:
 - **SEC105-06:** (RESOLVED in Phase 106) `home-manager.users.dev` moved to per-host config.
 - **SEC105-07:** `deploy.sh` is 558 lines with custom logic. Serves its purpose for private overlay deployment; public users can use bare `deploy-rs`.
 - **SEC114-01:** File-based agent audit log (`/data/projects/.agent-audit/agent-launches.log`) is owned by the same user that runs agents. Mitigated by dual-logging to journald (root-owned, append-only). File log kept as grep-friendly convenience; journald is the trustworthy audit source.
-- **SEC114-02:** `dev-agent.sh` parent env no longer exports raw API keys. Wrapper handles credential injection via `AGENT_CREDENTIALS` + nono `--env-credential-map`. Raw keys still reach the sandboxed child process as env vars — full broker/proxy model is future work (see security review #5).
+- **SEC114-02:** (RESOLVED in Phase 118) Proxy credential mode active. Real API keys no longer reach the sandboxed child process — only per-session phantom tokens via nono's reverse proxy. Real keys stay in the parent (nono proxy) process, stored in `Zeroizing<String>` (wiped on drop).
 - **SEC115-01:** Flat tailnet trust model — `tailscale0` in trustedInterfaces means all tailnet devices reach all internal services. Mitigated by binding services to 127.0.0.1 and relying on Tailscale device authentication. Production should use Tailscale ACL tags. See SECURITY.md "Tailnet Segmentation".
 - **SEC116-01:** Agent resource limits via `tsurf-agents.slice` set aggregate ceilings (8G/300%/1024 tasks). Per-unit limits on dev-agent (4G/200%/256 tasks, OOMPolicy=kill). Limits are conservative defaults; production may need tuning based on workload.
 - **SEC116-02:** Syncthing defaults to tailnet-only operation (global announce, local announce, relays, NAT all disabled). Public BEP port 22000 requires explicit `publicBep` opt-in. Private overlay should enable `publicBep` only if non-Tailscale peers are needed.
@@ -194,7 +194,7 @@ When running inside the nono sandbox (as the `agent` user — no wheel, no docke
 
 - Launch from inside `/data/projects`; wrapper scripts reject sandboxed launches outside that root.
 - Read access is scoped to the current git repo root, not all of `/data/projects`.
-- API keys are loaded from `/run/secrets/` by the wrapper and injected as environment variables into the sandboxed child via nono `--env-credential-map`.
+- API keys are loaded from `/run/secrets/` by the wrapper into the parent env. nono's reverse proxy reads them via `env://` URIs and passes only per-session phantom tokens to the sandboxed child (`--credential` flag).
 - Denied paths include `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`, `~/.aws`, and `~/.docker`.
 - `--no-sandbox` escape is blocked unless `AGENT_ALLOW_NOSANDBOX=1` is set.
 - Launch audit entries are sent to journald (`journalctl -t agent-launch`) and also written to `/data/projects/.agent-audit/agent-launches.log` as a convenience log. The journald log is the trustworthy source (root-owned, append-only); the file log is user-owned and not tamper-proof.

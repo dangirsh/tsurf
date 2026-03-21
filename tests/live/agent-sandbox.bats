@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # tests/live/agent-sandbox.bats — Agent sandbox wrapper verification on OVH.
-# @decision TEST-73-01: Wrapper tests verify nono invocation, secret hiding, and audit logging.
+# @decision TEST-73-01: Wrapper tests verify nono invocation, secret hiding, and journald launch logging.
 
 load "../lib/common"
 bats_load_library bats-support
@@ -56,10 +56,21 @@ bats_load_library bats-assert
   assert_output --partial "AGENT_ALLOW_NOSANDBOX=1"
 }
 
-@test "${HOST}: audit log directory exists with correct permissions" {
+@test "${HOST}: wrapper includes logger (util-linux) for journald logging" {
   if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
-  remote test -d /data/projects/.agent-audit
-  local perms
-  perms="$(remote stat -c '%a' /data/projects/.agent-audit)"
-  [[ "$perms" == "750" ]]
+  local claude_path
+  claude_path="$(remote "readlink -f \$(command -v claude)")"
+  # The wrapper's runtimeInputs should include util-linux (provides logger)
+  remote "grep -q util-linux ${claude_path}"
+}
+
+@test "${HOST}: wrapper does not contain file audit log path" {
+  if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
+  local claude_path script_content
+  claude_path="$(remote "readlink -f \$(command -v claude)")"
+  script_content="$(remote cat "${claude_path}")"
+  if echo "$script_content" | grep -q 'AGENT_AUDIT_LOG'; then
+    echo "FAIL: wrapper still exports AGENT_AUDIT_LOG — file audit not removed"
+    return 1
+  fi
 }

@@ -3,32 +3,47 @@
 #   Installs nono system-wide and writes the tsurf profile JSON to
 #   /etc/nono/profiles/tsurf.json so wrapper scripts reference the profile
 #   by full path (agent-sandbox.nix uses /etc/nono/profiles/tsurf.json).
-# @decision NONO-89-02: Credentials are passed via env injection
-#   (--env-credential-map in the wrapper script, see agent-sandbox.nix).
-#   The wrapper reads /run/secrets/* into env vars, then nono injects them into
-#   the sandboxed child as environment variables. The child receives real API keys.
-#   nono proxy credential mode is not used (requires org.freedesktop.secrets,
-#   unavailable on headless servers). Env injection is used instead.
+# @decision NONO-118-01: Proxy credential mode with env:// URIs.
+#   The wrapper reads /run/secrets/* into env vars in the parent process.
+#   nono's reverse proxy loads credentials via env:// URIs, generates a
+#   per-session 256-bit phantom token, and passes only the phantom token
+#   to the sandboxed child. The child never sees real API keys.
+#   No system keystore (org.freedesktop.secrets) is required — env:// bypasses it.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.nonoSandbox;
 
-  # Credential definitions: env var name -> secret file name in /run/secrets/
-  # The wrapper script exports these before calling nono; the profile maps
-  # them (via env://) into the child as the same env var name.
+  # Credential definitions: service name -> sops secret + env var + API upstream.
+  # The wrapper reads /run/secrets/<secretName> into the parent env.
+  # nono's proxy loads credentials via env://<envVar>, generates a phantom
+  # token, and the child only receives the phantom token + a localhost base URL.
   credentialDefs = {
-    anthropic   = { secretName = "anthropic-api-key";   envVar = "ANTHROPIC_API_KEY"; };
-    openai      = { secretName = "openai-api-key";      envVar = "OPENAI_API_KEY"; };
-    google      = { secretName = "google-api-key";      envVar = "GOOGLE_API_KEY"; };
-    xai         = { secretName = "xai-api-key";         envVar = "XAI_API_KEY"; };
-    openrouter  = { secretName = "openrouter-api-key";  envVar = "OPENROUTER_API_KEY"; };
+    anthropic   = { secretName = "anthropic-api-key";   envVar = "ANTHROPIC_API_KEY";
+                    upstream = "https://api.anthropic.com";
+                    inject_header = "x-api-key"; credential_format = "{}"; };
+    openai      = { secretName = "openai-api-key";      envVar = "OPENAI_API_KEY";
+                    upstream = "https://api.openai.com";
+                    inject_header = "Authorization"; credential_format = "Bearer {}"; };
+    google      = { secretName = "google-api-key";      envVar = "GOOGLE_API_KEY";
+                    upstream = "https://generativelanguage.googleapis.com";
+                    inject_header = "x-goog-api-key"; credential_format = "{}"; };
+    xai         = { secretName = "xai-api-key";         envVar = "XAI_API_KEY";
+                    upstream = "https://api.x.ai";
+                    inject_header = "Authorization"; credential_format = "Bearer {}"; };
+    openrouter  = { secretName = "openrouter-api-key";  envVar = "OPENROUTER_API_KEY";
+                    upstream = "https://openrouter.ai/api";
+                    inject_header = "Authorization"; credential_format = "Bearer {}"; };
   };
 
-  # env_credentials section: maps "env://ENV_VAR" -> "DEST_ENV_VAR"
-  # When both source and destination are the same, the child receives the same
-  # env var name but populated from the nono proxy, not the real parent env.
-  envCredentials = lib.mapAttrs'
-    (_name: cred: lib.nameValuePair "env://${cred.envVar}" cred.envVar)
+  # custom_credentials for nono proxy mode: each service gets a custom
+  # credential definition with env:// URI so nono reads from the parent
+  # process env (populated by the wrapper from /run/secrets/).
+  customCredentials = lib.mapAttrs
+    (_name: cred: {
+      inherit (cred) upstream inject_header credential_format;
+      credential_key = "env://${cred.envVar}";
+      env_var = cred.envVar;
+    })
     credentialDefs;
 
   # The tsurf profile JSON.
@@ -40,8 +55,8 @@ let
   # Key design decisions:
   # - extends "claude-code": inherits base groups (nix_runtime, claude_cache_linux, etc.)
   # - workdir.access = "readwrite": CWD is always writable
-  # - env_credentials section defined but unused (proxy mode requires system keystore)
-  # - credentials injected via --env-credential-map in agent-sandbox.nix wrapper
+  # - custom_credentials with env:// URIs: proxy mode without system keystore
+  # - credentials injected via --credential in agent-sandbox.nix wrapper
   tsurfProfile = {
     extends = "claude-code";
     meta = {
@@ -110,6 +125,7 @@ let
     };
     network = {
       block = false;
+      custom_credentials = customCredentials;
     };
     workdir = { access = "readwrite"; };
     undo = {
