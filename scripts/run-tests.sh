@@ -5,7 +5,7 @@
 #
 # Usage:
 #   ./scripts/run-tests.sh                            # Eval checks only
-#   ./scripts/run-tests.sh --live                     # Eval + live tests against neurosys
+#   ./scripts/run-tests.sh --live                     # Eval + live tests against tsurf
 #   ./scripts/run-tests.sh --live --host ovh          # Eval + live tests against ovh
 #   ./scripts/run-tests.sh --live-only                # Live tests only
 #   ./scripts/run-tests.sh --live --json              # Live tests + JSON summary
@@ -18,7 +18,7 @@ cd "$FLAKE_DIR"
 RUN_EVAL=true
 RUN_LIVE=false
 JSON_OUTPUT=false
-HOST="neurosys"
+HOST="tsurf"
 FAILURES=0
 
 # Convert BATS TAP output to newline-delimited JSON.
@@ -124,7 +124,7 @@ Usage: ./scripts/run-tests.sh [--live] [--live-only] [--json] [--host HOST]
   --live        Run eval checks + live tests
   --live-only   Run live tests only (skip nix flake check)
   --json        Emit one JSON object per live test from BATS TAP output
-  --host HOST   Target host for live tests (default: neurosys)
+  --host HOST   Target host for live tests (default: tsurf)
 USAGE
       exit 0
       ;;

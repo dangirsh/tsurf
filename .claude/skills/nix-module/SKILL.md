@@ -60,7 +60,7 @@ sops.templates."<name>-env" = {
 Then encrypt the real value:
 
 ```bash
-sops secrets/neurosys.yaml
+sops secrets/tsurf.yaml
 # or
 sops secrets/ovh.yaml
 ```
@@ -99,7 +99,7 @@ In `tests/eval/config-checks.nix`, add a check with `mkCheck`:
   "<name>-service-defined"
   "<name> systemd service is defined"
   "<name> service missing — check modules/<name>.nix import"
-  (builtins.hasAttr "<name>" neurosysCfg.systemd.services);
+  (builtins.hasAttr "<name>" tsurfCfg.systemd.services);
 ```
 
 ## Checklist before committing

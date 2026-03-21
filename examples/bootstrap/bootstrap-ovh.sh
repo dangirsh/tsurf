@@ -32,9 +32,9 @@ VPS_IP="<OVH_PUBLIC_IP>"
 # Example: OVH_DEPLOY_KEY=~/.ssh/id_ed25519 bash examples/bootstrap/bootstrap-ovh.sh
 DEPLOY_KEY="${OVH_DEPLOY_KEY:-$FLAKE_DIR/tmp/ovh_deploy_key}"
 EXTRA_FILES="$FLAKE_DIR/tmp/ovh-host-keys"
-# REPLACE: Use your host name from flake.nix nixosConfigurations (e.g. neurosys-dev).
-FLAKE_TARGET="$FLAKE_DIR#neurosys-dev"
-TAILSCALE_HOSTNAME="neurosys-dev"
+# REPLACE: Use your host name from flake.nix nixosConfigurations (e.g. tsurf-dev).
+FLAKE_TARGET="$FLAKE_DIR#tsurf-dev"
+TAILSCALE_HOSTNAME="tsurf-dev"
 
 # Ephemeral random password for Ubuntu PAM change (Ubuntu is wiped by nixos-anywhere).
 OVH_NEW_PASS="$(openssl rand -base64 16)"
@@ -305,9 +305,9 @@ echo "    - Real SSH keys + your-user user"
 echo "    - nginx, Matrix/Conduit, private agents, etc."
 echo ""
 echo "    cd /data/projects/private-tsurf"
-echo "    ./scripts/deploy.sh --node neurosys-dev --first-deploy"
+echo "    ./scripts/deploy.sh --node tsurf-dev --first-deploy"
 echo ""
-echo "  WARNING: Do NOT run ./scripts/deploy.sh --node neurosys-dev from the"
+echo "  WARNING: Do NOT run ./scripts/deploy.sh --node tsurf-dev from the"
 echo "  PUBLIC repo (tsurf) — it will strip private services and"
-echo "  lock you out. The public deploy.sh hard-refuses --node neurosys-dev."
+echo "  lock you out. The public deploy.sh hard-refuses --node tsurf-dev."
 echo ""
