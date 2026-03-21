@@ -76,9 +76,9 @@ Parameterized via `tsurf.agent.{user, home, projectRoot}` (default: `agent`,
 `/home/agent`, `/data/projects`). Build-time assertions reject agent user in
 wheel or docker groups.
 
-The `dev` user retains `wheel` + `docker` because the public template needs
-`allowUnsafePlaceholders = true` for eval. Private overlay can replace
-`users.nix` entirely (`disabledModules`) or override `tsurf.agent.*` options.
+The `dev` user retains `wheel` + `docker` because the public template uses
+`allowUnsafePlaceholders = true` (injected at flake level for eval fixtures).
+Private overlay uses `mkHost` directly and never sets this flag.
 
 ## Control-Plane vs Workspace Separation
 
@@ -211,8 +211,9 @@ When disabled (`false`, the default), the flag:
 - Rejects placeholder SSH keys via build-time assertions
 - Sets `users.allowNoPasswordLogin = false` and `security.sudo.wheelNeedsPassword = true`
 
-The public host configs set `allowUnsafePlaceholders = true` so `nix flake check` works.
-Real deployments via private overlay must not set this flag.
+Host source files (`hosts/*/default.nix`) are secure by default and do NOT set
+`allowUnsafePlaceholders`. The public flake injects it at the flake level via
+`mkEvalFixture` for CI eval only. Private overlay uses `mkHost` directly.
 
 ## Network Model
 
