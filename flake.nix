@@ -77,10 +77,22 @@
         modules = commonModules ++ [ hostDir ];
       };
 
+      # Eval fixtures: inject allowUnsafePlaceholders so public template evaluates
+      # without real credentials. Host source files are secure by default (flag not set).
+      # Private overlay uses mkHost directly and never sets this flag.
+      mkEvalFixture = hostDir: nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; };
+        modules = commonModules ++ [
+          hostDir
+          { tsurf.template.allowUnsafePlaceholders = true; }
+        ];
+      };
+
       evalChecks = import ./tests/eval/config-checks.nix { inherit self pkgs lib; };
     in {
-      nixosConfigurations.neurosys = mkHost ./hosts/services;
-      nixosConfigurations.neurosys-dev = mkHost ./hosts/dev;
+      nixosConfigurations.neurosys = mkEvalFixture ./hosts/services;
+      nixosConfigurations.neurosys-dev = mkEvalFixture ./hosts/dev;
 
       deploy.nodes.neurosys = {
         hostname = "neurosys"; # Tailscale MagicDNS hostname; private overlay may override with IP
