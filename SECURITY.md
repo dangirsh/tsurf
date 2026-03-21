@@ -169,12 +169,17 @@ Parent process env var (e.g., ANTHROPIC_API_KEY=sk-...)
 
 ## Tailnet Segmentation
 
-### Current state
+### Localhost-first model
 
-`tailscale0` is in `trustedInterfaces` — any device on the tailnet can reach all
-internal services. All internal services bind `127.0.0.1` and are reachable via
-Tailscale because the trusted interface bypasses the firewall. This is a **flat
-trust model**: every tailnet device is equally trusted.
+`tailscale0` is **not** in `trustedInterfaces`. Internal services bind `127.0.0.1`
+and are not reachable from the tailnet by default. Access to internal services is via
+SSH tunnel (`ssh -L`) or Tailscale Serve. `--accept-routes` is not set by default.
+
+If a private overlay needs direct tailnet access to a service, it should:
+1. Change the service's bind address to `0.0.0.0`
+2. Add the port to `networking.firewall.interfaces.tailscale0.allowedTCPPorts`
+
+No blanket interface trust is required.
 
 ### Recommendations for production
 
@@ -182,20 +187,11 @@ trust model**: every tailnet device is equally trusted.
   devices, `tag:agent` to agent identities. Restrict service access to `tag:admin` only.
 - **Tailscale Grants/ACLs**: Use ACL policies to restrict which tagged devices can
   reach which ports. Example: only `tag:admin` can reach port 8082 (dashboard).
-- **Consider removing `tailscale0` from trustedInterfaces**: Bind services to specific
-  IPs and use Tailscale Serve for access control. Trade-off: more configuration, better
-  segmentation.
 - **Per-host segmentation**: Agent-running host should have tighter tailnet ACLs than
   the services host.
 - **Tailnet Lock**: Enable for higher-assurance node enrollment.
-
-### Implementation notes
-
-- Tailscale ACLs are configured in the Tailscale admin console, not NixOS config
-- NixOS can set `tailscale.extraUpFlags` with tags (requires pre-authorized tag in admin)
-- Removing `tailscale0` from `trustedInterfaces` requires binding each service to the
-  Tailscale IP explicitly — significant refactoring, recommended as a future phase
-- See accepted risk SEC115-01
+- **`--accept-routes`**: Only add to `extraUpFlags` if you need to accept subnet
+  routes from other tailnet nodes. Disabled by default to prevent route hijacking.
 
 ## Template Safety
 
@@ -218,10 +214,12 @@ Host source files (`hosts/*/default.nix`) are secure by default and do NOT set
 ## Network Model
 
 - **Default**: SSH (22) on public interface (key-only auth, hardened).
-- **Conditional**: Syncthing BEP (22000) when `services.syncthing.enable` is true.
+- **Conditional**: Syncthing BEP (22000) when `publicBep` opt-in is enabled.
 - **Conditional**: HTTP/HTTPS (80/443) when `services.nginx.enable` is true.
-- **Everything else**: Tailscale-only. Internal services bind `127.0.0.1`,
-  accessible only via `tailscale0` trusted interface.
+- **Everything else**: Localhost-only. Internal services bind `127.0.0.1`.
+  Access via SSH tunnel or Tailscale Serve. No blanket `trustedInterfaces`.
+  Private overlay can expose specific ports on `tailscale0` via
+  `networking.firewall.interfaces.tailscale0.allowedTCPPorts`.
 - **Metadata endpoint**: `169.254.169.254` blocked at nftables level.
 - **fail2ban**: disabled. SSH brute-force mitigation relies on key-only auth,
   MaxAuthTries 3, and srvos defaults.
@@ -235,7 +233,9 @@ UID-based nftables egress filtering is available as opt-in via
   destination ports (default: 53, 80, 443, 22, 9418 -- DNS, HTTP/S, SSH, git).
 - UDP port 53 (DNS) is always allowed regardless of the TCP port list.
 - Loopback and established/related connections are always allowed.
-- Traffic on the `tailscale0` interface is unrestricted (internal service access).
+- Traffic on the `tailscale0` interface is unrestricted for agent egress (outbound
+  to tailnet peers, e.g., syncthing, other hosts). This is separate from the host's
+  ingress firewall rules (which no longer trust `tailscale0` as an interface).
 - All other outbound traffic from the agent user is logged with prefix
   `agent-egress-deny:` and dropped.
 - Non-agent users are unaffected (policy accept for other UIDs).
