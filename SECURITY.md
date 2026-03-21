@@ -14,7 +14,7 @@ and network model of tsurf. It is the authoritative source for security claims.
 - **Denied paths**: `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`,
   `~/.aws`, `~/.docker`, `~/.config/syncthing`.
 - **`--no-sandbox` blocked** unless `AGENT_ALLOW_NOSANDBOX=1` is set in the environment.
-- **Launch audit logging** to `/data/projects/.agent-audit/agent-launches.log`.
+- **Launch logging** to journald (`journalctl -t agent-launch`) — structured metadata only, no raw arguments.
 
 ### What the sandbox does NOT guarantee
 

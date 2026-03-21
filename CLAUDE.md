@@ -182,7 +182,7 @@ Run before every module or service commit:
 - **SEC105-05:** Hard-coded `dev` username, `/home/dev`, `/data/projects` paths for the operator user. Agent-specific paths (`/home/agent`, agent user) are parameterized via `tsurf.agent.*` options. `dev` remains hard-coded as the operator user.
 - **SEC105-06:** (RESOLVED in Phase 106) `home-manager.users.dev` moved to per-host config.
 - **SEC105-07:** `deploy.sh` is 558 lines with custom logic. Serves its purpose for private overlay deployment; public users can use bare `deploy-rs`.
-- **SEC114-01:** File-based agent audit log (`/data/projects/.agent-audit/agent-launches.log`) is owned by the same user that runs agents. Mitigated by dual-logging to journald (root-owned, append-only). File log kept as grep-friendly convenience; journald is the trustworthy audit source.
+- **SEC114-01:** (RESOLVED in Phase 117) File-based audit log removed. Launch logging is now journald-only (`journalctl -t agent-launch`), root-owned and append-only. Only structured metadata is logged — no raw arguments or prompts.
 - **SEC114-02:** (RESOLVED in Phase 118) Proxy credential mode active. Real API keys no longer reach the sandboxed child process — only per-session phantom tokens via nono's reverse proxy. Real keys stay in the parent (nono proxy) process, stored in `Zeroizing<String>` (wiped on drop).
 - **SEC115-01:** Flat tailnet trust model — `tailscale0` in trustedInterfaces means all tailnet devices reach all internal services. Mitigated by binding services to 127.0.0.1 and relying on Tailscale device authentication. Production should use Tailscale ACL tags. See SECURITY.md "Tailnet Segmentation".
 - **SEC116-01:** Agent resource limits via `tsurf-agents.slice` set aggregate ceilings (8G/300%/1024 tasks). Per-unit limits on dev-agent (4G/200%/256 tasks, OOMPolicy=kill). Limits are conservative defaults; production may need tuning based on workload.
@@ -197,7 +197,7 @@ When running inside the nono sandbox (as the `agent` user — no wheel, no docke
 - API keys are loaded from `/run/secrets/` by the wrapper into the parent env. nono's reverse proxy reads them via `env://` URIs and passes only per-session phantom tokens to the sandboxed child (`--credential` flag).
 - Denied paths include `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`, `~/.aws`, and `~/.docker`.
 - `--no-sandbox` escape is blocked unless `AGENT_ALLOW_NOSANDBOX=1` is set.
-- Launch audit entries are sent to journald (`journalctl -t agent-launch`) and also written to `/data/projects/.agent-audit/agent-launches.log` as a convenience log. The journald log is the trustworthy source (root-owned, append-only); the file log is user-owned and not tamper-proof.
+- Launch events are logged to journald only (`journalctl -t agent-launch`). Structured metadata (mode, agent, user, uid, cwd, git_root) — no raw arguments or prompts.
 - For guided workflows, use `/nix-module` for module authoring and `/nix-test` for test execution + `.test-status`.
 
 ## Deployment Rules
