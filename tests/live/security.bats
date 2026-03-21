@@ -94,11 +94,11 @@ bats_load_library bats-assert
     return 1
   }
 
-  # Must match internalOnlyPorts in modules/networking.nix
+  # Must match internalOnlyPorts in modules/networking.nix (localhost-only, no firewall accept rules)
   local internal_ports="8082 8384 9200"
   local port
   for port in $internal_ports; do
-    if echo "$nft_output" | grep -E "tcp dport.*\\b${port}\\b.*accept" | grep -v "tailscale0" > /dev/null 2>&1; then
+    if echo "$nft_output" | grep -E "tcp dport.*\\b${port}\\b.*accept" > /dev/null 2>&1; then
       echo "FAIL: internal port '$port' appears in public accept rule"
       echo "DEBUG: ssh ${SSH_USER}@${HOST} nft list ruleset | grep -n ${port}"
       return 1
