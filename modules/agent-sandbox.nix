@@ -1,10 +1,12 @@
 # modules/agent-sandbox.nix
 # @decision SANDBOX-73-01: Wrapper scripts replace bare agent binaries on dev hosts.
 #   nono sandbox is the default; --no-sandbox requires AGENT_ALLOW_NOSANDBOX=1.
-# @decision SANDBOX-73-02: Audit log at /data/projects/.agent-audit/agent-launches.log.
-# @decision NONO-89-03: API keys loaded from /run/secrets/ by scripts/agent-wrapper.sh
-#   and passed to nono via --env-credential-map (env injection; proxy mode requires
-#   org.freedesktop.secrets, unavailable on headless servers).
+# @decision AUDIT-117-01: Launch logging via journald only (logger -t agent-launch).
+#   File-based audit log removed — was user-owned/tamperable and leaked raw arguments.
+# @decision NONO-118-02: API keys loaded from /run/secrets/ by scripts/agent-wrapper.sh
+#   into the parent env. nono's reverse proxy reads them via env:// URIs and injects
+#   per-session phantom tokens into the sandboxed child (--credential flag).
+#   The child never sees real API keys.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentSandbox;
@@ -12,16 +14,16 @@ let
 
   # Build a sandboxed wrapper for an agent binary.
   # The Nix stub sets env vars consumed by scripts/agent-wrapper.sh.
-  # credentials: list of "ENV_VAR:secret-file-name" strings (per-wrapper allowlist).
+  # credentials: list of "SERVICE:ENV_VAR:secret-file-name" triples (per-wrapper allowlist).
+  #   SERVICE matches custom_credentials key in nono profile (proxy mode).
   mkWrapper = { name, realPkg, realBin, credentials }:
     (pkgs.writeShellApplication {
       inherit name;
-      runtimeInputs = [ pkgs.nono pkgs.git pkgs.coreutils ];
+      runtimeInputs = [ pkgs.nono pkgs.git pkgs.coreutils pkgs.util-linux ];
       text = ''
         export AGENT_NAME="${name}"
         export AGENT_REAL_BINARY="${realPkg}/bin/${realBin}"
         export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
-        export AGENT_AUDIT_LOG="/data/projects/.agent-audit/agent-launches.log"
         export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
         export AGENT_CREDENTIALS="${lib.concatStringsSep " " credentials}"
         ${lib.optionalString cfg.allowNixDaemon "export AGENT_ALLOW_NIX_DAEMON=1"}
@@ -33,7 +35,7 @@ let
     name = "pi";
     realPkg = pkgs.pi-coding-agent;
     realBin = "pi";
-    credentials = [ "ANTHROPIC_API_KEY:anthropic-api-key" ];
+    credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
   };
 in
 {
@@ -72,8 +74,8 @@ in
 
     # Replace bare agent binaries with sandboxed wrappers (meta.priority = 4 wins over default 5).
     environment.systemPackages = [
-      (mkWrapper { name = "claude"; realPkg = pkgs.claude-code;      realBin = "claude"; credentials = [ "ANTHROPIC_API_KEY:anthropic-api-key" ]; })
-      (mkWrapper { name = "codex";  realPkg = pkgs.codex;            realBin = "codex";  credentials = [ "OPENAI_API_KEY:openai-api-key" ]; })
+      (mkWrapper { name = "claude"; realPkg = pkgs.claude-code;      realBin = "claude"; credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ]; })
+      (mkWrapper { name = "codex";  realPkg = pkgs.codex;            realBin = "codex";  credentials = [ "openai:OPENAI_API_KEY:openai-api-key" ]; })
       pi-sandboxed
     ];
 

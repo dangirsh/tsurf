@@ -388,11 +388,14 @@ in
     "ovh services.nonoSandbox.enable is false — nono not active"
     devCfg.services.nonoSandbox.enable;
 
-  agent-audit-dir = mkCheck
-    "agent-audit-dir"
-    "agent-audit tmpfiles directory is declared"
-    "agent-audit tmpfiles directory missing — /data/projects/.agent-audit won't be created"
-    (builtins.any (r: lib.hasInfix ".agent-audit" r) devCfg.systemd.tmpfiles.rules);
+  agent-journald-logging = mkCheck
+    "agent-journald-logging"
+    "agent wrapper uses journald-only launch logging (no file audit log)"
+    "agent-wrapper.sh still contains audit_log or AGENT_AUDIT_LOG — file audit not fully removed"
+    (let src = builtins.readFile ../../scripts/agent-wrapper.sh;
+     in lib.hasInfix "journal_log" src
+        && !lib.hasInfix "audit_log" src
+        && !lib.hasInfix "AGENT_AUDIT_LOG" src);
 
   syncthing-mesh-option = mkCheck
     "syncthing-mesh-option"

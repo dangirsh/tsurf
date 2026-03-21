@@ -31,9 +31,10 @@ and network model of tsurf. It is the authoritative source for security claims.
 
 API keys are stored as sops-nix secrets, decrypted at activation to `/run/secrets/`.
 The agent wrapper scripts (in `agent-sandbox.nix`) load secrets from `/run/secrets/`
-and inject them as environment variables into the sandboxed child via nono
-`--env-credential-map`. The sandboxed process receives real API keys as environment
-variables. There is no credential proxy or token exchange.
+into the parent process environment. nono's reverse proxy reads them via `env://` URIs,
+generates per-session 256-bit phantom tokens, and passes only the phantom tokens to
+the sandboxed child. The child process never sees real API keys — it receives a
+worthless session token that only works with nono's localhost proxy.
 
 ## Privilege Model
 
@@ -88,30 +89,34 @@ sops-encrypted YAML (secrets/*.yaml)
 /run/secrets/<secret-name>  (mode 0400, owner: agent user via sops.secrets.*.owner)
   │
   ▼  agent-wrapper.sh reads at launch (runs as agent user)
-Shell env var (e.g., ANTHROPIC_API_KEY=sk-...)
+Parent process env var (e.g., ANTHROPIC_API_KEY=sk-...)
   │
-  ▼  nono --env-credential-map (Landlock sandbox applied)
-Sandboxed child process env var
+  ▼  nono --credential (proxy mode, Landlock sandbox applied)
+  │
+  ├─ nono proxy: reads env://ANTHROPIC_API_KEY, holds real key in Zeroizing<String>
+  │  Starts localhost reverse proxy, generates 256-bit phantom token
+  │
+  ▼  Sandboxed child receives:
+     ANTHROPIC_API_KEY=<64-char-hex-phantom-token>  (worthless outside session)
+     ANTHROPIC_BASE_URL=http://127.0.0.1:<port>/anthropic
 ```
 
 **Stage details:**
 1. **sops-nix** decrypts at system activation using age key derived from SSH host key
-2. **agent-wrapper.sh** reads `/run/secrets/*` files (secret files must be owned by the
-   agent user — set `sops.secrets."<name>".owner = config.tsurf.agent.user`)
-3. Wrapper exports env vars, then nono `--env-credential-map` re-injects them into the
-   sandboxed child
-4. The child receives real API keys as env vars — no proxy, no token exchange
+2. **agent-wrapper.sh** reads `/run/secrets/*` files into parent env (secret files must
+   be owned by the agent user — set `sops.secrets."<name>".owner = config.tsurf.agent.user`)
+3. nono's reverse proxy loads real keys from parent env via `env://` URIs (no system
+   keystore needed), generates per-session phantom tokens
+4. The child receives only phantom tokens + localhost base URLs — real keys never enter
+   the child's environment or memory
 
-**Security implications:**
-- API keys exist in process env for the lifetime of the agent process
+**Security properties:**
+- Real API keys exist only in the nono proxy process (parent), stored in `Zeroizing<String>`
+  (memory wiped on drop)
+- Child process env (`/proc/PID/environ`) contains only worthless phantom tokens
+- Phantom tokens are validated via constant-time comparison
+- The proxy enforces TLS for upstream connections
 - `/run/secrets/` files are NOT accessible from inside the sandbox (denied by Landlock)
-- The wrapper process briefly holds all configured keys before exec'ing nono
-- `dev-agent.sh` parent env does NOT hold API keys (fixed in Phase 114)
-
-**Recommended upgrade path:**
-- Local API proxy (e.g., litellm, envoy) that issues short-lived tokens
-- Agents talk to `http://127.0.0.1:<port>/v1/...`, proxy injects real token server-side
-- Not implemented — requires org.freedesktop.secrets or equivalent for headless credential storage
 - See accepted risk SEC114-02
 
 ## Tailnet Segmentation

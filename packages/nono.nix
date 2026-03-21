@@ -2,10 +2,10 @@
 { pkgs }:
 pkgs.stdenv.mkDerivation rec {
   pname = "nono";
-  version = "0.16.0";
+  version = "0.22.0";
   src = pkgs.fetchurl {
     url = "https://github.com/always-further/nono/releases/download/v${version}/nono-v${version}-x86_64-unknown-linux-gnu.tar.gz";
-    hash = "sha256-nQ/SBtU26fU/UZr0SNsIBCRr7qUeayYOKdG70h2/RYc=";
+    hash = "sha256-z8Bk7ylg1GPAoPEa3f8IoflnkyDPw2VtlK7wiqQD6Jo=";
   };
   sourceRoot = ".";
   nativeBuildInputs = [ pkgs.autoPatchelfHook ];
