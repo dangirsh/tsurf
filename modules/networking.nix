@@ -10,9 +10,10 @@
 #   Syncthing BEP (22000) requires explicit publicBep opt-in. All other services Tailscale-only.
 # @decision NET-06: Tailscale reverse path filtering set to loose
 # @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
-# @decision NET-115-01: tailscale0 in trustedInterfaces is a flat trust model (all tailnet
-#   devices reach all internal services). Production should use Tailscale ACL tags for
-#   segmentation. See SECURITY.md "Tailnet Segmentation" section. Accepted risk SEC115-01.
+# @decision NET-122-01: No trustedInterfaces — localhost-first network model. Internal
+#   services bind 127.0.0.1 by default. Tailnet access via SSH tunnel, Tailscale Serve,
+#   or overlay adding ports to networking.firewall.interfaces.tailscale0.allowedTCPPorts.
+#   See SECURITY.md "Network Model" section.
 { config, lib, pkgs, ... }:
 let
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
@@ -28,7 +29,7 @@ in {
   assertions = [
     {
       assertion = exposed == [];
-      message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain Tailscale-only (trustedInterfaces).";
+      message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain localhost-only. Use networking.firewall.interfaces.tailscale0.allowedTCPPorts in overlay if tailnet access is needed.";
     }
     # --- Remote access safety assertions ---
     # @decision NET-15: Build-time assertions prevent deploying configs that lock out SSH/Tailscale.
@@ -111,7 +112,7 @@ in {
       ++ lib.optionals config.services.syncthingStarter.publicBep [ 22000 ]
       ++ lib.optionals config.services.nginx.enable [ 80 443 ];
     allowedUDPPorts = [ config.services.tailscale.port ];
-    trustedInterfaces = [ "tailscale0" ];
+    trustedInterfaces = [ ];
   };
 
   # --- fail2ban: temporarily disabled (caused lockout during active dev sessions) ---
@@ -152,9 +153,7 @@ in {
     enable = true;
     authKeyFile = config.sops.secrets."tailscale-authkey".path;
     useRoutingFeatures = "client";   # auto-sets checkReversePath = "loose"
-    extraUpFlags = [
-      "--accept-routes"
-    ];
+    extraUpFlags = [ ];
   };
 
   services.dashboard.entries.tailscale = {
