@@ -20,7 +20,7 @@ cat > "$TASK_SCRIPT" << 'TASK'
 # Change to the project directory so nono workdir = /data/projects/tsurf,
 # granting write access via workdir.access="readwrite" in the nono profile.
 cd /data/projects/tsurf
-exec claude -p --permission-mode=bypassPermissions \
+exec claude --model claude-opus-4-6 -p --permission-mode=bypassPermissions \
   'Conduct a literature search for projects similar to tsurf - NixOS configurations combined with AI agent infrastructure. Focus on projects with commits in the last few weeks. Check GitHub for recent activity. Document findings in /data/projects/tsurf/RESEARCH.md with: project name, repo URL, last commit date, key features, relevance score 1-10, and adoption recommendations. Use WebSearch and WebFetch tools.'
 TASK
 

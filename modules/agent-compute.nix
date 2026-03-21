@@ -44,8 +44,9 @@ in
 
   # @decision SEC-116-01: Raw agent binaries (claude-code, codex, pi-coding-agent) are NOT
   #   installed in PATH. They are only accessible via sandboxed wrappers in agent-sandbox.nix
-  #   which reference full store paths (AGENT_REAL_BINARY). This makes the sandbox launcher
-  #   the enforcement boundary, not PATH priority.
+  #   which reference full store paths (AGENT_REAL_BINARY). Combined with the brokered launch
+  #   model (SEC-119-01), interactive sessions run as the agent user — the operator cannot
+  #   exec the raw binary with agent credentials.
   environment.systemPackages = [
     pkgs.zmx
   ];

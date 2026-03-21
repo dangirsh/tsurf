@@ -7,6 +7,12 @@ and network model of tsurf. It is the authoritative source for security claims.
 
 ### What the sandbox guarantees
 
+- **Brokered execution**: Interactive agent sessions run as the `agent` user, not the
+  calling operator. The wrapper uses `sudo` + `systemd-run --uid=agent` to drop
+  privileges before executing the agent binary. The operator never directly execs
+  agent binaries with agent credentials.
+- **Per-session cgroup limits**: Each interactive session runs in a transient systemd
+  unit under `tsurf-agents.slice` with MemoryMax=4G, CPUQuota=200%, TasksMax=256.
 - **Filesystem isolation**: [nono](https://github.com/always-further/nono) uses
   [Landlock](https://docs.kernel.org/userspace-api/landlock.html) (kernel-level,
   irreversible per-process) to restrict agent filesystem access.
@@ -20,31 +26,51 @@ and network model of tsurf. It is the authoritative source for security claims.
 
 - **No egress filtering**: agents have unrestricted outbound network access. nono does
   not yet support allowlist-based outbound filtering on headless servers.
-- **No memory/CPU isolation**: agents share host resources. No cgroup limits enforced.
 - **Sandbox escape via `--no-sandbox`**: any user with `AGENT_ALLOW_NOSANDBOX=1` in
-  their environment can bypass the sandbox entirely.
+  their environment can bypass the sandbox entirely. Under the brokered model, the
+  unsandboxed binary still runs as `agent` (not operator).
 - **`dev` user has effective root access**: `dev` is in `wheel` with passwordless sudo
-  in the public template. Agent tools run as the separate `agent` user (no wheel,
-  no docker). The operator/agent split is enforced by build-time assertions.
+  in the public template. The brokered launch model prevents casual privilege leaks,
+  but `dev` can always escalate via `sudo`. The operator/agent split is enforced by
+  build-time assertions and the brokered launcher.
 
 ## Secret Flow
 
 API keys are stored as sops-nix secrets, decrypted at activation to `/run/secrets/`.
-The agent wrapper scripts (in `agent-sandbox.nix`) load secrets from `/run/secrets/`
-into the parent process environment. nono's reverse proxy reads them via `env://` URIs,
+The brokered launcher runs `agent-wrapper.sh` as the `agent` user (via `systemd-run
+--uid=agent`). The wrapper loads secrets from `/run/secrets/` (agent-owned) into the
+parent process environment. nono's reverse proxy reads them via `env://` URIs,
 generates per-session 256-bit phantom tokens, and passes only the phantom tokens to
 the sandboxed child. The child process never sees real API keys — it receives a
 worthless session token that only works with nono's localhost proxy.
 
+The operator (`dev`) never has agent credentials in their shell. Secrets are only
+readable by the `agent` user, and the brokered launcher ensures the wrapper runs as
+`agent` even when invoked by `dev`.
+
 ## Privilege Model
 
-The public template ships an operator/agent user split:
+The public template ships an operator/agent user split with brokered execution:
 
 | User | Groups | Purpose | Build-time assertions |
 |------|--------|---------|----------------------|
 | `dev` (operator) | wheel, docker | Human admin, deploy, maintenance | — |
 | `agent` | users | Runs sandboxed agent tools, owns workspaces | NOT in wheel, NOT in docker |
 | service-specific | (varies) | Long-lived services (optional) | — |
+
+### Execution flow
+
+```
+dev runs "claude ..."
+  → wrapper stub (as dev): sets AGENT_* env vars
+    → sudo tsurf-agent-launch (as root): validates inputs, Nix store path check
+      → systemd-run --uid=agent --pty --slice=tsurf-agents.slice
+        → agent-wrapper.sh (as agent): reads /run/secrets/*, applies nono sandbox
+          → nono → real agent binary (as agent, sandboxed, phantom tokens only)
+```
+
+When already running as `agent` (e.g. `dev-agent.nix` systemd unit), the wrapper
+skips the brokered path and execs `agent-wrapper.sh` directly.
 
 Parameterized via `tsurf.agent.{user, home, projectRoot}` (default: `agent`,
 `/home/agent`, `/data/projects`). Build-time assertions reject agent user in
@@ -86,12 +112,17 @@ The `dev` user retains `wheel` + `docker` because the public template needs
 sops-encrypted YAML (secrets/*.yaml)
   │
   ▼  sops-nix activation (age key from SSH host key)
-/run/secrets/<secret-name>  (mode 0400, owner: agent user via sops.secrets.*.owner)
+/run/secrets/<secret-name>  (mode 0400, owner: agent user)
+  │  Ownership set by agent-sandbox.nix (mkDefault agentCfg.user).
   │
-  ▼  agent-wrapper.sh reads at launch (runs as agent user)
+  ▼  Brokered privilege drop (interactive: sudo → systemd-run --uid=agent)
+  │  agent-wrapper.sh always runs as the agent user (see "Execution flow" above).
+  │
+  ▼  agent-wrapper.sh reads secrets from per-wrapper AGENT_CREDENTIALS allowlist
 Parent process env var (e.g., ANTHROPIC_API_KEY=sk-...)
+  │  PLACEHOLDER-prefixed values skip credential injection.
   │
-  ▼  nono --credential (proxy mode, Landlock sandbox applied)
+  ▼  nono --credential <service> (proxy mode, Landlock sandbox applied)
   │
   ├─ nono proxy: reads env://ANTHROPIC_API_KEY, holds real key in Zeroizing<String>
   │  Starts localhost reverse proxy, generates 256-bit phantom token
@@ -101,22 +132,39 @@ Parent process env var (e.g., ANTHROPIC_API_KEY=sk-...)
      ANTHROPIC_BASE_URL=http://127.0.0.1:<port>/anthropic
 ```
 
+**Who runs the wrapper:**
+- **Interactive use** (operator typing `claude`): brokered launch drops to `agent` user
+  via `sudo` + `systemd-run --uid=agent` before the wrapper runs. Secret files are
+  agent-owned (`mkDefault`), which matches this path.
+- **dev-agent.nix** (systemd service): wrapper runs as `agentCfg.user` (default: `agent`)
+  directly — the wrapper detects it's already `agent` and skips the brokered path.
+
 **Stage details:**
-1. **sops-nix** decrypts at system activation using age key derived from SSH host key
-2. **agent-wrapper.sh** reads `/run/secrets/*` files into parent env (secret files must
-   be owned by the agent user — set `sops.secrets."<name>".owner = config.tsurf.agent.user`)
-3. nono's reverse proxy loads real keys from parent env via `env://` URIs (no system
-   keystore needed), generates per-session phantom tokens
-4. The child receives only phantom tokens + localhost base URLs — real keys never enter
-   the child's environment or memory
+1. **sops-nix** decrypts at system activation using age key derived from SSH host key.
+   Secret files land at `/run/secrets/<name>` with mode 0400.
+2. **Ownership** is declared in `agent-sandbox.nix` via `mkDefault` — both
+   `anthropic-api-key` and `openai-api-key` default to `config.tsurf.agent.user`.
+   No separate `secrets.nix` module exists in the public template for API keys.
+   The brokered launch model ensures the wrapper always runs as `agent`, so the
+   default ownership is correct for both interactive and daemon paths.
+3. **agent-wrapper.sh** reads only the secrets named in `AGENT_CREDENTIALS` (a per-wrapper
+   allowlist set by the Nix wrapper stub). Each triple is `SERVICE:ENV_VAR:secret-file-name`.
+   Missing files produce a warning; `PLACEHOLDER`-prefixed values skip credential injection.
+4. **nono's reverse proxy** loads real keys from parent env via `env://` URIs (no system
+   keystore needed), generates per-session 256-bit phantom tokens.
+5. The child receives only phantom tokens + localhost base URLs — real keys never enter
+   the child's environment or memory.
 
 **Security properties:**
+- The operator (`dev`) never has agent API keys in their shell environment
 - Real API keys exist only in the nono proxy process (parent), stored in `Zeroizing<String>`
   (memory wiped on drop)
 - Child process env (`/proc/PID/environ`) contains only worthless phantom tokens
 - Phantom tokens are validated via constant-time comparison
 - The proxy enforces TLS for upstream connections
 - `/run/secrets/` files are NOT accessible from inside the sandbox (denied by Landlock)
+- Each wrapper loads only its own credential allowlist — `claude` loads only Anthropic,
+  `codex` loads only OpenAI (least-privilege per wrapper)
 - See accepted risk SEC114-02
 
 ## Tailnet Segmentation
