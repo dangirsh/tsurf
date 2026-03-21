@@ -662,6 +662,15 @@ in
       "agent-sandbox.nix missing agent-user fallback — dev-agent.nix would double-sudo"
       (lib.hasInfix "id -un" source);
 
+  # --- Phase 120: agent API key ownership (SEC-04) ---
+
+  agent-api-key-ownership-ovh = mkCheck
+    "agent-api-key-ownership-ovh"
+    "anthropic-api-key and openai-api-key owned by agent user on dev host"
+    "SECURITY: anthropic-api-key or openai-api-key not owned by agent user — wrapper cannot read secrets"
+    (devCfg.sops.secrets."anthropic-api-key".owner == devCfg.tsurf.agent.user
+     && devCfg.sops.secrets."openai-api-key".owner == devCfg.tsurf.agent.user);
+
 }
 
 # --- Private overlay test extension pattern ---

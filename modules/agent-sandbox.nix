@@ -126,11 +126,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Ensure API key secrets are readable by the agent user.
-    # mkDefault so private overlay can override ownership.
-    sops.secrets."anthropic-api-key".owner = lib.mkDefault agentCfg.user;
-    sops.secrets."openai-api-key".owner = lib.mkDefault agentCfg.user;
-
     # Replace bare agent binaries with sandboxed wrappers (meta.priority = 4 wins over default 5).
     environment.systemPackages = [
       (mkWrapper { name = "claude"; realPkg = pkgs.claude-code;      realBin = "claude"; credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ]; })

@@ -1,8 +1,7 @@
-# @decision SEC-04: API key secrets owned by 'dev' in public template.
-# @rationale: Private overlay overrides owner to the real username via
-#   lib.mkForce in its own secrets.nix. This two-layer pattern is inherent
-#   to the public/private split — public declares secrets with template
-#   ownership, private overrides to actual user.
+# @decision SEC-04: Agent API keys (anthropic, openai) are owned by the agent user
+#   so the sandboxed wrapper process can read them at runtime. Other secrets
+#   (backup keys, tailscale, github-pat) remain owner 'dev' (default).
+#   Private overlay may override via lib.mkForce in its own secrets.nix.
 { config, lib, ... }: {
   sops = {
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
@@ -14,8 +13,8 @@
     secrets."b2-account-id" = {};
     secrets."b2-account-key" = {};
     secrets."restic-password" = {};
-    secrets."anthropic-api-key" = { owner = "dev"; };
-    secrets."openai-api-key" = { owner = "dev"; };
+    secrets."anthropic-api-key" = { owner = config.tsurf.agent.user; };
+    secrets."openai-api-key" = { owner = config.tsurf.agent.user; };
     secrets."google-api-key" = { owner = "dev"; };
     secrets."xai-api-key" = { owner = "dev"; };
     secrets."openrouter-api-key" = { owner = "dev"; };

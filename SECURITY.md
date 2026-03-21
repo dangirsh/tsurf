@@ -112,8 +112,8 @@ Private overlay uses `mkHost` directly and never sets this flag.
 sops-encrypted YAML (secrets/*.yaml)
   │
   ▼  sops-nix activation (age key from SSH host key)
-/run/secrets/<secret-name>  (mode 0400, owner: agent user)
-  │  Ownership set by agent-sandbox.nix (mkDefault agentCfg.user).
+/run/secrets/<secret-name>  (mode 0400, owner: agent user for API keys)
+  │  Ownership declared in secrets.nix (owner = config.tsurf.agent.user).
   │
   ▼  Brokered privilege drop (interactive: sudo → systemd-run --uid=agent)
   │  agent-wrapper.sh always runs as the agent user (see "Execution flow" above).
@@ -135,18 +135,17 @@ Parent process env var (e.g., ANTHROPIC_API_KEY=sk-...)
 **Who runs the wrapper:**
 - **Interactive use** (operator typing `claude`): brokered launch drops to `agent` user
   via `sudo` + `systemd-run --uid=agent` before the wrapper runs. Secret files are
-  agent-owned (`mkDefault`), which matches this path.
+  agent-owned (declared in `secrets.nix`), which matches this path.
 - **dev-agent.nix** (systemd service): wrapper runs as `agentCfg.user` (default: `agent`)
   directly — the wrapper detects it's already `agent` and skips the brokered path.
 
 **Stage details:**
 1. **sops-nix** decrypts at system activation using age key derived from SSH host key.
    Secret files land at `/run/secrets/<name>` with mode 0400.
-2. **Ownership** is declared in `agent-sandbox.nix` via `mkDefault` — both
-   `anthropic-api-key` and `openai-api-key` default to `config.tsurf.agent.user`.
-   No separate `secrets.nix` module exists in the public template for API keys.
-   The brokered launch model ensures the wrapper always runs as `agent`, so the
-   default ownership is correct for both interactive and daemon paths.
+2. **Ownership** is declared in `secrets.nix` — `anthropic-api-key` and
+   `openai-api-key` are owned by `config.tsurf.agent.user`. The brokered launch
+   model ensures the wrapper always runs as `agent`, so ownership matches both
+   interactive and daemon execution paths.
 3. **agent-wrapper.sh** reads only the secrets named in `AGENT_CREDENTIALS` (a per-wrapper
    allowlist set by the Nix wrapper stub). Each triple is `SERVICE:ENV_VAR:secret-file-name`.
    Missing files produce a warning; `PLACEHOLDER`-prefixed values skip credential injection.
