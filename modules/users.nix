@@ -19,11 +19,27 @@ in
   options.tsurf.template.allowUnsafePlaceholders = lib.mkEnableOption
     "unsafe public-template placeholders (NEVER enable for real deployments)";
 
+  options.tsurf.template.devUid = lib.mkOption {
+    type = lib.types.int;
+    default = 1000;
+    description = "Numeric UID for the dev operator user (used in nftables rules)";
+  };
+
   options.tsurf.agent = {
     user = lib.mkOption {
       type = lib.types.str;
       default = "agent";
       description = "Username for the agent user (runs sandboxed agent tools)";
+    };
+    uid = lib.mkOption {
+      type = lib.types.int;
+      default = 1001;
+      description = "Numeric UID for the agent user (used in nftables rules)";
+    };
+    gid = lib.mkOption {
+      type = lib.types.int;
+      default = 1001;
+      description = "Numeric GID for the agent group";
     };
     home = lib.mkOption {
       type = lib.types.str;
@@ -43,6 +59,8 @@ in
     # Operator user — human admin with wheel + docker
     users.users.dev = {
       isNormalUser = true;
+      uid = cfg.devUid;
+      group = "dev";
       extraGroups = [ "wheel" "docker" ];
       subUidRanges = [{ startUid = 100000; count = 65536; }];
       subGidRanges = [{ startGid = 100000; count = 65536; }];
@@ -51,15 +69,25 @@ in
       ];
     };
 
+    users.groups.dev = {
+      gid = cfg.devUid;
+    };
+
     # Agent user — runs sandboxed agent tools, no wheel, no docker
     users.users.${agentCfg.user} = {
       isNormalUser = true;
+      uid = agentCfg.uid;
+      group = agentCfg.user;
       home = agentCfg.home;
       extraGroups = [ "users" ];
       subUidRanges = [{ startUid = 200000; count = 65536; }];
       subGidRanges = [{ startGid = 200000; count = 65536; }];
       shell = pkgs.bashInteractive;
       linger = true;
+    };
+
+    users.groups.${agentCfg.user} = {
+      gid = agentCfg.gid;
     };
 
     users.users.root = {

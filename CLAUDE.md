@@ -1,11 +1,11 @@
 # CLAUDE.md — tsurf
 
-NixOS configuration template for declarative server management with flakes + home-manager. Hosts: `neurosys` (services) and `neurosys-dev` (agent/dev).
+NixOS configuration template for declarative server management with flakes + home-manager. Hosts: `tsurf` (services) and `tsurf-dev` (agent/dev).
 
 ## Project Structure
 
 ```
-flake.nix              # Entrypoint — inputs, outputs, nixosConfigurations.neurosys + neurosys-dev
+flake.nix              # Entrypoint — inputs, outputs, nixosConfigurations.tsurf + tsurf-dev
 flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-nix, disko, etc.)
 hosts/
   hardware.nix         # Shared QEMU VPS hardware config (both hosts)
@@ -111,12 +111,12 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
 |-------|---------|------|
 | Eval checks (50+ assertions, fast) | `nix flake check` | Before every commit |
 | VM integration (requires KVM) | `nix build .#vm-test-ssh` | Not available on VPS |
-| Live tests over SSH | `nix run .#test-live -- --host neurosys` | After deploy only |
+| Live tests over SSH | `nix run .#test-live -- --host tsurf` | After deploy only |
 | JSON output | `scripts/run-tests.sh --live --json` | After deploy only |
 
 ### Test conventions
 
-- One assertion per test, host-prefixed names (`neurosys: tailscaled.service is active`).
+- One assertion per test, host-prefixed names (`tsurf: tailscaled.service is active`).
 - Tests are idempotent and read-only.
 - Helpers in `tests/lib/common.bash`.
 
@@ -124,7 +124,7 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
 
 In `tests/eval/config-checks.nix`:
 - Copy the `mkCheck` pattern already used in the file.
-- Use `neurosysCfg` for the services host and `devCfg` for the dev host.
+- Use `tsurfCfg` for the services host and `devCfg` for the dev host.
 - For source checks on modules not imported directly, use `builtins.readFile` + `lib.hasInfix`.
 
 ### Debugging eval failures
@@ -210,10 +210,10 @@ When running inside the nono sandbox (as the `agent` user — no wheel, no docke
 
 - **ALL deploys MUST come from the PRIVATE overlay** — both hosts run private config:
   ```
-  cd /path/to/private-tsurf && ./scripts/deploy.sh [--node neurosys|neurosys-dev]
+  cd /path/to/private-tsurf && ./scripts/deploy.sh [--node tsurf|tsurf-dev]
   ```
 - **`scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `tsurf.url` guard detects public repo)
-- **NEVER run `nixos-rebuild switch --flake .#neurosys`** or `.#neurosys-dev` from this repo — the public flake has placeholder SSH keys and no private services; it will break the server
+- **NEVER run `nixos-rebuild switch --flake .#tsurf`** or `.#tsurf-dev` from this repo — the public flake has placeholder SSH keys and no private services; it will break the server
 - **NEVER run `nixos-rebuild switch` from ANY repo** (parts, home-assistant-config, or any other) — even with the correct flake, this bypasses deploy.sh's safety guard, watchdog, and shared deploy lock. The ONLY safe deploy path is `./scripts/deploy.sh` from the private overlay
 - For first-time OVH bootstrap: `examples/bootstrap/bootstrap-ovh.sh` installs base NixOS, then follow with private overlay deploy
 

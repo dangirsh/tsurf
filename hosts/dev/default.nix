@@ -45,7 +45,7 @@
     };
   };
 
-  networking.hostName = "neurosys-dev";
+  networking.hostName = "tsurf-dev";
   time.timeZone = "Europe/Berlin";
   i18n.defaultLocale = "C.UTF-8";
 

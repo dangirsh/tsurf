@@ -6,7 +6,7 @@
 #   --mode local   Build locally, deploy remotely via deploy-rs
 #
 # Flags:
-#   --node NAME         Flake node to deploy (default: neurosys; choices: neurosys, neurosys-dev)
+#   --node NAME         Flake node to deploy (default: tsurf; choices: tsurf, tsurf-dev)
 #   --target USER@HOST  Override SSH target (default depends on --node)
 #   --first-deploy  Disable magic rollback once for migration from nixos-rebuild
 #   --no-magic-rollback  Disable magic rollback for intentional network/SSH changes
@@ -18,12 +18,12 @@
 # @decision Service health polling (30s) — checks core systemd services per node.
 # @decision No auto-commit of flake.lock — print reminder instead.
 # @decision DEPLOY-114-01: No repo-controlled post-deploy hooks — require explicit --post-hook.
-# @decision Remote build default (DEPLOY-01): neurosys has 18 vCPU / 96 GB RAM — faster than
+# @decision Remote build default (DEPLOY-01): tsurf has 18 vCPU / 96 GB RAM — faster than
 #   local build + closure upload. Use --mode local for first deploys or when server is unreachable.
 set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-NODE="neurosys"
+NODE="tsurf"
 TARGET=""
 TARGET_SET=false
 MODE="remote"
@@ -104,7 +104,7 @@ Usage: $(basename "$0") [OPTIONS]
 Deploy tsurf NixOS config to the selected deploy node.
 
 Options:
-  --node NAME           Deploy flake node (neurosys|neurosys-dev|all, default: neurosys)
+  --node NAME           Deploy flake node (tsurf|tsurf-dev|all, default: tsurf)
   --mode remote         Build on target host via deploy-rs --remote-build (default)
   --mode local          Build locally, deploy remotely
   --target U@H          Override SSH target (default by node)
@@ -116,10 +116,10 @@ Options:
   --help                Show this help
 
 Examples:
-  ./scripts/deploy.sh                              # Deploy neurosys (remote build)
+  ./scripts/deploy.sh                              # Deploy tsurf (remote build)
   ./scripts/deploy.sh --fast                       # Fast mode: local build, single eval (<90s for trivial changes)
   ./scripts/deploy.sh --update-inputs              # Deploy and update flake inputs first
-  ./scripts/deploy.sh --node neurosys-dev          # Deploy OVH dev node only
+  ./scripts/deploy.sh --node tsurf-dev          # Deploy OVH dev node only
   ./scripts/deploy.sh --node all                  # Deploy BOTH nodes in parallel
   ./scripts/deploy.sh --mode local                # Local build (fallback if server unreachable)
   ./scripts/deploy.sh --first-deploy               # First migration deploy from nixos-rebuild
@@ -185,8 +185,8 @@ if [[ "$MODE" != "local" && "$MODE" != "remote" ]]; then
   exit 1
 fi
 
-if [[ "$NODE" != "neurosys" && "$NODE" != "neurosys-dev" && "$NODE" != "all" ]]; then
-  echo "Error: --node must be 'neurosys', 'neurosys-dev', or 'all', got '$NODE'"
+if [[ "$NODE" != "tsurf" && "$NODE" != "tsurf-dev" && "$NODE" != "all" ]]; then
+  echo "Error: --node must be 'tsurf', 'tsurf-dev', or 'all', got '$NODE'"
   exit 1
 fi
 
@@ -206,7 +206,7 @@ if [[ "$NODE" == "all" ]]; then
   echo "==> Deploying ALL nodes in parallel..."
   PIDS=()
   LOGS=()
-  for n in neurosys neurosys-dev; do
+  for n in tsurf tsurf-dev; do
     LOG="$FLAKE_DIR/tmp/deploy-${n}.log"
     LOGS+=("$LOG")
     # Forward all flags except --node
@@ -223,7 +223,7 @@ if [[ "$NODE" == "all" ]]; then
   echo ""
   FAILED_NODES=()
   for i in "${!PIDS[@]}"; do
-    n=$( [[ $i -eq 0 ]] && echo "neurosys" || echo "neurosys-dev" )
+    n=$( [[ $i -eq 0 ]] && echo "tsurf" || echo "tsurf-dev" )
     if wait "${PIDS[$i]}"; then
       echo "  ✓ $n deploy succeeded"
     else
@@ -247,12 +247,12 @@ fi
 
 # Public IPs for post-deploy connectivity verification (independent of Tailscale).
 case "$NODE" in
-  neurosys) PUBLIC_IP="<CONTABO_PUBLIC_IP>" ;;
-  neurosys-dev) PUBLIC_IP="<OVH_PUBLIC_IP>" ;;
+  tsurf) PUBLIC_IP="<CONTABO_PUBLIC_IP>" ;;
+  tsurf-dev) PUBLIC_IP="<OVH_PUBLIC_IP>" ;;
 esac
 
 # SAFETY GUARD: All deploys MUST come from the private overlay.
-# @decision DEPLOY-02: Both neurosys and ovh run the private overlay config.
+# @decision DEPLOY-02: Both tsurf and ovh run the private overlay config.
 #   The public flake's nixosConfigurations have placeholder SSH keys, no real
 #   users (dev instead of your-user), and no private services. Deploying from
 #   the public repo to EITHER host strips
@@ -266,31 +266,31 @@ if ! grep -q 'tsurf\.url' "$FLAKE_DIR/flake.nix" 2>/dev/null; then
   echo "║  BLOCKED: Deploy refused from public repo                      ║"
   echo "╚══════════════════════════════════════════════════════════════════╝"
   echo ""
-  echo "  Both hosts (neurosys + neurosys-dev) run the PRIVATE overlay config."
+  echo "  Both hosts (tsurf + tsurf-dev) run the PRIVATE overlay config."
   echo "  Deploying from the public repo strips private services, users,"
   echo "  and SSH keys — potentially locking you out."
   echo ""
   echo "  Always deploy from the PRIVATE overlay:"
   echo ""
   echo "    cd /data/projects/private-tsurf"
-  echo "    ./scripts/deploy.sh [--node neurosys|neurosys-dev]"
+  echo "    ./scripts/deploy.sh [--node tsurf|tsurf-dev]"
   echo ""
   exit 1
 fi
 
 if [[ "$TARGET_SET" == false ]]; then
-  if [[ "$NODE" == "neurosys-dev" ]]; then
-    TARGET="root@neurosys-dev"
+  if [[ "$NODE" == "tsurf-dev" ]]; then
+    TARGET="root@tsurf-dev"
   else
-    TARGET="root@neurosys"
+    TARGET="root@tsurf"
   fi
 fi
 
 # --- Node-specific service health checks ---
 # Generic services only. Private overlay should extend this in its own deploy.sh.
-if [[ "$NODE" == "neurosys" ]]; then
+if [[ "$NODE" == "tsurf" ]]; then
   SYSTEMD_SERVICES=("tailscaled" "sshd")
-elif [[ "$NODE" == "neurosys-dev" ]]; then
+elif [[ "$NODE" == "tsurf-dev" ]]; then
   SYSTEMD_SERVICES=("tailscaled" "sshd" "syncthing")
 fi
 

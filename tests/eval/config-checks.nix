@@ -1,9 +1,9 @@
-# tests/eval/config-checks.nix — Nix eval-time assertions for tsurf (neurosys and neurosys-dev hosts).
+# tests/eval/config-checks.nix — Nix eval-time assertions for tsurf (tsurf and tsurf-dev hosts).
 # @decision TEST-48-01: Keep checks purely eval-time with runCommandNoCC to catch regressions offline.
 { self, pkgs, lib }:
 let
-  neurosysCfg = self.nixosConfigurations.neurosys.config;
-  devCfg = self.nixosConfigurations.neurosys-dev.config;
+  tsurfCfg = self.nixosConfigurations.tsurf.config;
+  devCfg = self.nixosConfigurations.tsurf-dev.config;
   jq = "${pkgs.jq}/bin/jq";
 
   mkCheck = name: passMessage: failMessage: condition:
@@ -18,29 +18,29 @@ let
     '';
 in
 {
-  eval-neurosys = pkgs.runCommandNoCC "eval-neurosys" { } ''
-    echo "neurosys config evaluates: ${self.nixosConfigurations.neurosys.config.system.build.toplevel}"
+  eval-tsurf = pkgs.runCommandNoCC "eval-tsurf" { } ''
+    echo "tsurf config evaluates: ${self.nixosConfigurations.tsurf.config.system.build.toplevel}"
     touch "$out"
   '';
 
-  eval-neurosys-dev = pkgs.runCommandNoCC "eval-neurosys-dev" { } ''
-    echo "neurosys-dev config evaluates: ${self.nixosConfigurations.neurosys-dev.config.system.build.toplevel}"
+  eval-tsurf-dev = pkgs.runCommandNoCC "eval-tsurf-dev" { } ''
+    echo "tsurf-dev config evaluates: ${self.nixosConfigurations.tsurf-dev.config.system.build.toplevel}"
     touch "$out"
   '';
 
   # Ports are conditional: 22000 on publicBep opt-in, 80/443 on nginx.enable.
   # Public template has no nginx and publicBep defaults to false.
-  firewall-ports-neurosys =
+  firewall-ports-tsurf =
     let
-      actual = builtins.sort builtins.lessThan neurosysCfg.networking.firewall.allowedTCPPorts;
+      actual = builtins.sort builtins.lessThan tsurfCfg.networking.firewall.allowedTCPPorts;
       expected = [ 22 ]
-        ++ lib.optionals neurosysCfg.services.syncthingStarter.publicBep [ 22000 ]
-        ++ lib.optionals neurosysCfg.services.nginx.enable [ 80 443 ];
+        ++ lib.optionals tsurfCfg.services.syncthingStarter.publicBep [ 22000 ]
+        ++ lib.optionals tsurfCfg.services.nginx.enable [ 80 443 ];
     in
     mkCheck
-      "firewall-ports-neurosys"
-      "neurosys firewall ports match publicBep/nginx state"
-      "neurosys allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
+      "firewall-ports-tsurf"
+      "tsurf firewall ports match publicBep/nginx state"
+      "tsurf allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
   firewall-ports-ovh =
@@ -56,8 +56,8 @@ in
       "ovh allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
-  trusted-interfaces-neurosys = pkgs.runCommandNoCC "trusted-interfaces-neurosys" { } ''
-    actual='${builtins.toJSON neurosysCfg.networking.firewall.trustedInterfaces}'
+  trusted-interfaces-tsurf = pkgs.runCommandNoCC "trusted-interfaces-tsurf" { } ''
+    actual='${builtins.toJSON tsurfCfg.networking.firewall.trustedInterfaces}'
     require_iface() {
       iface="$1"
       if ! echo "$actual" | ${jq} -e "index(\"$iface\")" > /dev/null 2>&1; then
@@ -71,19 +71,19 @@ in
     touch "$out"
   '';
 
-  expected-services-neurosys =
+  expected-services-tsurf =
     let
       expectedServices = [
         "tailscaled"
         "syncthing"
         "nix-dashboard"
       ];
-      missing = builtins.filter (name: !(builtins.hasAttr name neurosysCfg.systemd.services)) expectedServices;
+      missing = builtins.filter (name: !(builtins.hasAttr name tsurfCfg.systemd.services)) expectedServices;
     in
     mkCheck
-      "expected-services-neurosys"
-      "all expected neurosys services are defined"
-      "missing neurosys services: ${builtins.concatStringsSep ", " missing}"
+      "expected-services-tsurf"
+      "all expected tsurf services are defined"
+      "missing tsurf services: ${builtins.concatStringsSep ", " missing}"
       (missing == [ ]);
 
   expected-services-ovh =
@@ -101,9 +101,9 @@ in
       "missing ovh services: ${builtins.concatStringsSep ", " missing}"
       (missing == [ ]);
 
-  expected-packages-neurosys =
+  expected-packages-tsurf =
     let
-      sysPkgs = neurosysCfg.environment.systemPackages;
+      sysPkgs = tsurfCfg.environment.systemPackages;
       expectedPkgs = {
         git = pkgs.git;
         curl = pkgs.curl;
@@ -116,8 +116,8 @@ in
       missingNames = builtins.attrNames missing;
     in
     mkCheck
-      "expected-packages-neurosys"
-      "required packages are present in neurosys systemPackages"
+      "expected-packages-tsurf"
+      "required packages are present in tsurf systemPackages"
       "missing packages: ${builtins.concatStringsSep ", " missingNames}"
       (missingNames == [ ]);
 
@@ -125,11 +125,11 @@ in
     "ssh-no-password"
     "SSH PasswordAuthentication is disabled"
     "SSH PasswordAuthentication is enabled"
-    (neurosysCfg.services.openssh.settings.PasswordAuthentication == false);
+    (tsurfCfg.services.openssh.settings.PasswordAuthentication == false);
 
   ssh-ed25519-only =
     let
-      hostKeyTypes = map (k: k.type) neurosysCfg.services.openssh.hostKeys;
+      hostKeyTypes = map (k: k.type) tsurfCfg.services.openssh.hostKeys;
     in
     mkCheck
       "ssh-ed25519-only"
@@ -141,13 +141,13 @@ in
     "docker-no-iptables"
     "Docker daemon uses iptables=false"
     "Docker daemon iptables is not false"
-    (neurosysCfg.virtualisation.docker.daemon.settings.iptables == false);
+    (tsurfCfg.virtualisation.docker.daemon.settings.iptables == false);
 
   tailscale-enabled = mkCheck
     "tailscale-enabled"
     "Tailscale service is enabled"
     "Tailscale service is disabled"
-    neurosysCfg.services.tailscale.enable;
+    tsurfCfg.services.tailscale.enable;
 
   # Keep this source-based so we do not force full evaluation of the deprecated
   # impermanence option internals on this branch.
@@ -188,27 +188,27 @@ in
     "nftables-enabled"
     "nftables backend is enabled"
     "nftables backend is disabled"
-    neurosysCfg.networking.nftables.enable;
+    tsurfCfg.networking.nftables.enable;
 
   metadata-block = mkCheck
     "metadata-block"
     "agent-metadata-block nftables table is defined"
     "agent-metadata-block nftables table not found"
-    (builtins.hasAttr "agent-metadata-block" neurosysCfg.networking.nftables.tables);
+    (builtins.hasAttr "agent-metadata-block" tsurfCfg.networking.nftables.tables);
 
   oci-backend-docker = mkCheck
     "oci-backend-docker"
     "OCI containers backend is docker"
-    "OCI containers backend is ${neurosysCfg.virtualisation.oci-containers.backend}, expected docker"
-    (neurosysCfg.virtualisation.oci-containers.backend == "docker");
+    "OCI containers backend is ${tsurfCfg.virtualisation.oci-containers.backend}, expected docker"
+    (tsurfCfg.virtualisation.oci-containers.backend == "docker");
 
   dashboard-enabled = mkCheck
     "dashboard-enabled"
     "nix-dashboard is enabled on port 8082"
     "nix-dashboard disabled or wrong port"
     (
-      neurosysCfg.services.dashboard.enable
-      && neurosysCfg.services.dashboard.listenPort == 8082
+      tsurfCfg.services.dashboard.enable
+      && tsurfCfg.services.dashboard.listenPort == 8082
     );
 
   has-nono-sandbox-option = mkCheck
@@ -220,7 +220,7 @@ in
   dashboard-entries =
     let
       entryCount =
-        builtins.length (builtins.attrNames neurosysCfg.services.dashboard.entries);
+        builtins.length (builtins.attrNames tsurfCfg.services.dashboard.entries);
     in
     mkCheck
       "dashboard-entries"
@@ -229,7 +229,7 @@ in
       (entryCount >= 5);
 
   dashboard-manifest = pkgs.runCommandNoCC "dashboard-manifest" { } ''
-    echo '${builtins.toJSON (builtins.fromJSON neurosysCfg.environment.etc."dashboard/manifest.json".text)}' \
+    echo '${builtins.toJSON (builtins.fromJSON tsurfCfg.environment.etc."dashboard/manifest.json".text)}' \
       | ${jq} . > /dev/null
     echo "PASS: dashboard manifest is valid JSON"
     touch "$out"
@@ -240,15 +240,15 @@ in
   # during `nix flake check`. If assertions fire, the eval check fails too, but the check
   # name makes it obvious which invariant broke.
 
-  remote-access-neurosys = mkCheck
-    "remote-access-neurosys"
-    "neurosys remote access invariants: sshd + tailscale + root SSH keys + port 22"
-    "neurosys remote access broken: sshd=${builtins.toJSON neurosysCfg.services.openssh.enable} tailscale=${builtins.toJSON neurosysCfg.services.tailscale.enable} rootKeys=${builtins.toJSON (neurosysCfg.users.users.root.openssh.authorizedKeys.keys != [])} port22=${builtins.toJSON (builtins.elem 22 neurosysCfg.networking.firewall.allowedTCPPorts)}"
-    (neurosysCfg.services.openssh.enable
-     && neurosysCfg.services.tailscale.enable
-     && neurosysCfg.users.users.root.openssh.authorizedKeys.keys != []
-     && (builtins.elem 22 neurosysCfg.networking.firewall.allowedTCPPorts
-         || neurosysCfg.services.openssh.openFirewall));
+  remote-access-tsurf = mkCheck
+    "remote-access-tsurf"
+    "tsurf remote access invariants: sshd + tailscale + root SSH keys + port 22"
+    "tsurf remote access broken: sshd=${builtins.toJSON tsurfCfg.services.openssh.enable} tailscale=${builtins.toJSON tsurfCfg.services.tailscale.enable} rootKeys=${builtins.toJSON (tsurfCfg.users.users.root.openssh.authorizedKeys.keys != [])} port22=${builtins.toJSON (builtins.elem 22 tsurfCfg.networking.firewall.allowedTCPPorts)}"
+    (tsurfCfg.services.openssh.enable
+     && tsurfCfg.services.tailscale.enable
+     && tsurfCfg.users.users.root.openssh.authorizedKeys.keys != []
+     && (builtins.elem 22 tsurfCfg.networking.firewall.allowedTCPPorts
+         || tsurfCfg.services.openssh.openFirewall));
 
   remote-access-ovh = mkCheck
     "remote-access-ovh"
@@ -262,12 +262,12 @@ in
 
   # --- Phase 70: Lockout prevention checks ---
 
-  break-glass-key-neurosys = mkCheck
-    "break-glass-key-neurosys"
-    "neurosys root has break-glass emergency SSH key"
-    "neurosys root is missing break-glass emergency SSH key (import modules/break-glass-ssh.nix)"
+  break-glass-key-tsurf = mkCheck
+    "break-glass-key-tsurf"
+    "tsurf root has break-glass emergency SSH key"
+    "tsurf root is missing break-glass emergency SSH key (import modules/break-glass-ssh.nix)"
     (builtins.any (k: lib.hasInfix "break-glass-emergency" k)
-      neurosysCfg.users.users.root.openssh.authorizedKeys.keys);
+      tsurfCfg.users.users.root.openssh.authorizedKeys.keys);
 
   break-glass-key-ovh = mkCheck
     "break-glass-key-ovh"
@@ -276,16 +276,16 @@ in
     (builtins.any (k: lib.hasInfix "break-glass-emergency" k)
       devCfg.users.users.root.openssh.authorizedKeys.keys);
 
-  break-glass-key-unique-neurosys =
+  break-glass-key-unique-tsurf =
     let
-      keys = neurosysCfg.users.users.root.openssh.authorizedKeys.keys;
+      keys = tsurfCfg.users.users.root.openssh.authorizedKeys.keys;
       keyMaterials = map (k: builtins.elemAt (lib.splitString " " k) 1) keys;
       unique = lib.unique keyMaterials;
     in
     mkCheck
-      "break-glass-key-unique-neurosys"
-      "neurosys root SSH keys all have distinct key material"
-      "neurosys root has duplicate SSH key material — break-glass must differ from bootstrap"
+      "break-glass-key-unique-tsurf"
+      "tsurf root SSH keys all have distinct key material"
+      "tsurf root has duplicate SSH key material — break-glass must differ from bootstrap"
       (builtins.length keyMaterials == builtins.length unique);
 
   break-glass-key-unique-ovh =
@@ -302,25 +302,25 @@ in
 
   ssh-authorized-keys-fallback = mkCheck
     "ssh-authorized-keys-fallback"
-    "neurosys sshd checks .ssh/authorized_keys (NET-14 impermanence fallback)"
-    "neurosys authorizedKeysFiles is missing .ssh/authorized_keys — NET-14 fallback broken"
+    "tsurf sshd checks .ssh/authorized_keys (NET-14 impermanence fallback)"
+    "tsurf authorizedKeysFiles is missing .ssh/authorized_keys — NET-14 fallback broken"
     (builtins.any (f: f == ".ssh/authorized_keys")
-      neurosysCfg.services.openssh.authorizedKeysFiles);
+      tsurfCfg.services.openssh.authorizedKeysFiles);
 
   ssh-host-key-persisted = mkCheck
     "ssh-host-key-persisted"
-    "neurosys SSH host key is declared in impermanence persistence"
-    "neurosys SSH host key not found in impermanence files — sshd may fail on reboot"
+    "tsurf SSH host key is declared in impermanence persistence"
+    "tsurf SSH host key not found in impermanence files — sshd may fail on reboot"
     (let
       source = builtins.readFile ../../modules/impermanence.nix;
     in
       lib.hasInfix "\"/etc/ssh/ssh_host_ed25519_key\"" source);
 
-  sshd-liveness-check-neurosys = mkCheck
-    "sshd-liveness-check-neurosys"
-    "neurosys sshd-liveness-check timer is defined"
-    "neurosys sshd-liveness-check timer is missing — import modules/sshd-liveness-check.nix"
-    (builtins.hasAttr "sshd-liveness-check" neurosysCfg.systemd.timers);
+  sshd-liveness-check-tsurf = mkCheck
+    "sshd-liveness-check-tsurf"
+    "tsurf sshd-liveness-check timer is defined"
+    "tsurf sshd-liveness-check timer is missing — import modules/sshd-liveness-check.nix"
+    (builtins.hasAttr "sshd-liveness-check" tsurfCfg.systemd.timers);
 
   sshd-liveness-check-ovh = mkCheck
     "sshd-liveness-check-ovh"
@@ -378,8 +378,8 @@ in
     in
     mkCheck
       "nono-profile-has-pi"
-      "nono neurosys profile includes ~/.pi in filesystem allow list"
-      "nono neurosys profile missing ~/.pi — pi config inaccessible in sandbox"
+      "nono tsurf profile includes ~/.pi in filesystem allow list"
+      "nono tsurf profile missing ~/.pi — pi config inaccessible in sandbox"
       (lib.hasInfix ".pi" source);
 
   nono-sandbox-ovh-enabled = mkCheck
@@ -401,8 +401,8 @@ in
     "syncthing-mesh-option"
     "tsurf.syncthing.mesh option exists on both hosts"
     "tsurf.syncthing.mesh option missing — import modules/syncthing.nix"
-    (builtins.hasAttr "syncthing" neurosysCfg.tsurf
-     && builtins.hasAttr "mesh" neurosysCfg.tsurf.syncthing
+    (builtins.hasAttr "syncthing" tsurfCfg.tsurf
+     && builtins.hasAttr "mesh" tsurfCfg.tsurf.syncthing
      && builtins.hasAttr "syncthing" devCfg.tsurf
      && builtins.hasAttr "mesh" devCfg.tsurf.syncthing);
 
@@ -423,11 +423,11 @@ in
     (!(lib.hasInfix "allowUnsafePlaceholders" (builtins.readFile ../../hosts/dev/default.nix)));
 
   # Regression guard: eval fixtures must have the flag enabled (proves mkEvalFixture works)
-  fixture-mode-neurosys = mkCheck
-    "fixture-mode-neurosys"
-    "neurosys eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
-    "eval fixture neurosys missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
-    neurosysCfg.tsurf.template.allowUnsafePlaceholders;
+  fixture-mode-tsurf = mkCheck
+    "fixture-mode-tsurf"
+    "tsurf eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
+    "eval fixture tsurf missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
+    tsurfCfg.tsurf.template.allowUnsafePlaceholders;
 
   fixture-mode-ovh = mkCheck
     "fixture-mode-ovh"
@@ -443,9 +443,9 @@ in
 
   restic-opt-in = mkCheck
     "restic-opt-in"
-    "restic backup not active in public neurosys config (opt-in works)"
+    "restic backup not active in public tsurf config (opt-in works)"
     "restic backup active in public template — services.resticStarter.enable should be false"
-    (!neurosysCfg.services.resticStarter.enable);
+    (!tsurfCfg.services.resticStarter.enable);
 
   # Stale-phrase check: banned phrases must not appear in key docs.
   # Prevents reintroduction of outdated security claims.
@@ -546,6 +546,18 @@ in
     "ovh agent egress control targets wrong user"
     (devCfg.services.agentSandbox.egressControl.user == "agent");
 
+  agent-uid-explicit = mkCheck
+    "agent-uid-explicit"
+    "agent user has explicit UID defined"
+    "agent user uid is not set (required for nftables egress rules)"
+    (devCfg.users.users.${devCfg.tsurf.agent.user}.uid != null);
+
+  egress-ruleset-check-enabled = mkCheck
+    "egress-ruleset-check-enabled"
+    "nftables ruleset validation is not disabled"
+    "nftables.checkRuleset is false — egress UID model not fixed"
+    (devCfg.networking.nftables.checkRuleset != false);
+
   impermanence-agent-home =
     let
       source = builtins.readFile ../../modules/impermanence.nix;
@@ -562,12 +574,12 @@ in
     "syncthing-discovery-disabled"
     "Syncthing global announce and relays disabled by default"
     "Syncthing global announce or relays still enabled"
-    (neurosysCfg.services.syncthing.settings.options.globalAnnounceEnabled == false
-     && neurosysCfg.services.syncthing.settings.options.relaysEnabled == false);
+    (tsurfCfg.services.syncthing.settings.options.globalAnnounceEnabled == false
+     && tsurfCfg.services.syncthing.settings.options.relaysEnabled == false);
 
   syncthing-no-public-bep =
     let
-      ports = neurosysCfg.networking.firewall.allowedTCPPorts;
+      ports = tsurfCfg.networking.firewall.allowedTCPPorts;
     in
     mkCheck
       "syncthing-no-public-bep"
@@ -656,7 +668,7 @@ in
 #   # { self, pkgs, lib, inputs }:
 #   # let
 #   #   publicChecks = import "${inputs.tsurf}/tests/eval/config-checks.nix" { inherit self pkgs lib; };
-#   #   privateCfg = self.nixosConfigurations.neurosys.config;
+#   #   privateCfg = self.nixosConfigurations.tsurf.config;
 #   # in publicChecks // {
 #   #   agent-fleet-ports = ...; # private agent fleet/proxy assertions
 #   #   nginx-vhosts = ...;      # private reverse-proxy checks

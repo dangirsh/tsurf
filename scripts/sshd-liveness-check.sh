@@ -11,7 +11,7 @@ LAST_ROLLBACK_FILE="$STATE_DIR/last-rollback"
 mkdir -p "$STATE_DIR"
 
 # Skip during active deploys — deploy-rs has its own rollback mechanism.
-# deploy.sh uses /var/lock/tsurf-${NODE}-deploy.lock (e.g. neurosys, neurosys-dev).
+# deploy.sh uses /var/lock/tsurf-${NODE}-deploy.lock (e.g. tsurf, tsurf-dev).
 if ls /var/lock/tsurf-*-deploy.lock 1>/dev/null 2>&1; then
   echo "sshd-liveness: deploy in progress — skipping check"
   exit 0

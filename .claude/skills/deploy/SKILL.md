@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Deploy tsurf NixOS config to neurosys server
+description: Deploy tsurf NixOS config to tsurf server
 user_invocable: true
 ---
 
@@ -28,7 +28,7 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
 3. **Execute the deploy script**:
    ```bash
    # Deploy Contabo (services host) only:
-   ./scripts/deploy.sh --node neurosys
+   ./scripts/deploy.sh --node tsurf
 
    # Deploy OVH (dev host) only:
    ./scripts/deploy.sh --node ovh
@@ -37,7 +37,7 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
    ./scripts/deploy.sh --node all
 
    # Pull latest parts first (Contabo only):
-   ./scripts/deploy.sh --node neurosys --update-parts
+   ./scripts/deploy.sh --node tsurf --update-parts
 
    # Local build fallback (if server unreachable):
    ./scripts/deploy.sh --node ovh --mode local
@@ -46,7 +46,7 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
 4. **Monitor output**:
    - Single node: shows progress inline (build → activate → health check).
    - `--node all`: spawns parallel processes, shows per-node success/failure summary.
-     Logs written to `tmp/deploy-neurosys.log` and `tmp/deploy-ovh.log`.
+     Logs written to `tmp/deploy-tsurf.log` and `tmp/deploy-ovh.log`.
 
 5. **Verify deployment**:
    - deploy.sh runs service health checks automatically (private overlay defines which services).
@@ -61,7 +61,7 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
 |-----------|--------|
 | "deploy" (no qualifier) | Ask which node, or deploy the node relevant to current work |
 | "deploy to OVH" / "deploy dev" | `--node ovh` |
-| "deploy to Contabo" / "deploy services" | `--node neurosys` |
+| "deploy to Contabo" / "deploy services" | `--node tsurf` |
 | "deploy both" / "deploy all" / "deploy everything" | `--node all` |
 
 **Never deploy Contabo when only OVH changes were made, and vice versa.**
@@ -71,12 +71,12 @@ Hosts are independent — deploy only what changed.
 
 | Flag | Description |
 |------|-------------|
-| `--node NAME` | Deploy flake node (`neurosys`, `ovh`, or `all`; default: `neurosys`) |
+| `--node NAME` | Deploy flake node (`tsurf`, `ovh`, or `all`; default: `tsurf`) |
 | `--update-parts` | Pull latest `parts` flake input before building (Contabo only) |
 | `--skip-update` | No-op (parts update is skipped by default) |
 | `--mode remote` | (default) Build on target host via deploy-rs `--remote-build` |
 | `--mode local` | Build locally, push closure + switch remotely |
-| `--target USER@HOST` | Override SSH target (default: `root@neurosys` or `root@neurosys-dev`) |
+| `--target USER@HOST` | Override SSH target (default: `root@tsurf` or `root@tsurf-dev`) |
 | `--first-deploy` | Disable magic rollback for one-time migration |
 | `--no-magic-rollback` | Disable magic rollback for this deploy |
 
@@ -90,15 +90,15 @@ Hosts are independent — deploy only what changed.
 
 ## Troubleshooting
 
-- **Rollback**: `ssh root@neurosys nixos-rebuild switch --rollback` (or `root@neurosys-dev`)
-- **Service logs**: `ssh root@neurosys journalctl -u <service> -n 50`
+- **Rollback**: `ssh root@tsurf nixos-rebuild switch --rollback` (or `root@tsurf-dev`)
+- **Service logs**: `ssh root@tsurf journalctl -u <service> -n 50`
 - **Lock stuck**: If a previous deploy crashed, remove the remote lock:
   ```bash
   # Contabo:
-  ssh root@neurosys rm -rf /var/lock/tsurf-neurosys-deploy.lock
+  ssh root@tsurf rm -rf /var/lock/tsurf-tsurf-deploy.lock
   # OVH:
-  ssh root@neurosys-dev rm -rf /var/lock/tsurf-ovh-deploy.lock
+  ssh root@tsurf-dev rm -rf /var/lock/tsurf-ovh-deploy.lock
   ```
 - **Build failures**: Check Nix build output for derivation errors.
 - **Stale tsurf input**: Run `nix flake lock --update-input tsurf` in the private overlay.
-- **Parallel deploy logs**: Check `tmp/deploy-neurosys.log` and `tmp/deploy-ovh.log`.
+- **Parallel deploy logs**: Check `tmp/deploy-tsurf.log` and `tmp/deploy-ovh.log`.
