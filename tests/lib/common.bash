@@ -92,9 +92,11 @@ assert_http_ok() {
 }
 
 # Assert a secret file exists with correct ownership.
+# Default owner varies by secret type — agent API keys are agent-owned (agent-sandbox.nix
+# mkDefault), other secrets may be root-owned. Callers should pass the expected owner explicitly.
 assert_secret_exists() {
   local path="$1"
-  local expected_owner="${2:-root}"
+  local expected_owner="${2:?expected_owner required}"
   remote test -f "$path" || {
     echo "FAIL: secret file '$path' does not exist"
     echo "DEBUG: ssh ${SSH_USER}@${HOST} ls -la /run/secrets/"

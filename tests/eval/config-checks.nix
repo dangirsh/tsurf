@@ -588,6 +588,48 @@ in
       "restic-status-server should use DynamicUser for least privilege"
       (lib.hasInfix "DynamicUser = true" source);
 
+  # --- Phase 119: brokered launch model (SEC-119-01) ---
+
+  brokered-launch-launcher =
+    let
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "brokered-launch-launcher"
+      "agent-sandbox.nix defines tsurf-agent-launch brokered launcher"
+      "agent-sandbox.nix missing tsurf-agent-launch — brokered launch model not implemented"
+      (lib.hasInfix "tsurf-agent-launch" source);
+
+  brokered-launch-systemd-run =
+    let
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "brokered-launch-systemd-run"
+      "agent-sandbox.nix uses systemd-run for privilege drop to agent user"
+      "agent-sandbox.nix missing systemd-run — wrapper runs as calling user (no privilege drop)"
+      (lib.hasInfix "systemd-run" source);
+
+  brokered-launch-sudoers =
+    let
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "brokered-launch-sudoers"
+      "agent-sandbox.nix configures sudo extraRules for brokered launcher"
+      "agent-sandbox.nix missing sudo.extraRules — operator cannot invoke brokered launcher"
+      (lib.hasInfix "security.sudo.extraRules" source);
+
+  brokered-launch-agent-fallback =
+    let
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "brokered-launch-agent-fallback"
+      "agent-sandbox.nix has direct-exec fallback when already running as agent"
+      "agent-sandbox.nix missing agent-user fallback — dev-agent.nix would double-sudo"
+      (lib.hasInfix "id -un" source);
+
 }
 
 # --- Private overlay test extension pattern ---

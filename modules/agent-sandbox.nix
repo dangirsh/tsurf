@@ -7,10 +7,60 @@
 #   into the parent env. nono's reverse proxy reads them via env:// URIs and injects
 #   per-session phantom tokens into the sandboxed child (--credential flag).
 #   The child never sees real API keys.
+# @decision SEC-119-01: Brokered launch model — interactive agent sessions run as the
+#   agent user via systemd-run, not as the calling operator. Eliminates same-user
+#   sandbox bypass. Operator invokes wrapper → sudo tsurf-agent-launch → systemd-run
+#   --uid=agent → agent-wrapper.sh. When already running as agent (e.g. dev-agent.nix),
+#   the wrapper execs agent-wrapper.sh directly (no double privilege drop).
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentSandbox;
   agentCfg = config.tsurf.agent;
+
+  # Brokered launcher: runs as root (via sudo), drops to agent user via systemd-run.
+  # Validates inputs, applies per-session cgroup limits, and passes through the terminal.
+  agentLauncher = pkgs.writeShellApplication {
+    name = "tsurf-agent-launch";
+    runtimeInputs = [ pkgs.systemd pkgs.coreutils pkgs.nono pkgs.git pkgs.util-linux ];
+    text = ''
+      # Validate required env vars (set by wrapper stub)
+      : "''${AGENT_NAME:?must be set by wrapper}"
+      : "''${AGENT_REAL_BINARY:?must be set by wrapper}"
+      : "''${AGENT_PROJECT_ROOT:?must be set by wrapper}"
+
+      # AGENT_REAL_BINARY must be a Nix store path (prevent arbitrary command execution)
+      case "$AGENT_REAL_BINARY" in
+        /nix/store/*) ;;
+        *) echo "ERROR: AGENT_REAL_BINARY must be in /nix/store" >&2; exit 1 ;;
+      esac
+
+      # Use --pty for interactive terminals, --pipe for non-interactive (scripts, pipes)
+      if [[ -t 0 && -t 1 ]]; then
+        stdio_flag="--pty"
+      else
+        stdio_flag="--pipe"
+      fi
+
+      exec systemd-run \
+        --uid="${agentCfg.user}" --gid=users \
+        "$stdio_flag" --same-dir --collect \
+        --unit="agent-''${AGENT_NAME}-$$" \
+        --slice=tsurf-agents.slice \
+        --property=MemoryMax=4G \
+        --property=CPUQuota=200% \
+        --property=TasksMax=256 \
+        --setenv=PATH="$PATH" \
+        --setenv=HOME="${agentCfg.home}" \
+        --setenv=AGENT_NAME="$AGENT_NAME" \
+        --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
+        --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
+        --setenv=AGENT_NONO_PROFILE="''${AGENT_NONO_PROFILE:-}" \
+        --setenv=AGENT_CREDENTIALS="''${AGENT_CREDENTIALS:-}" \
+        --setenv=AGENT_ALLOW_NIX_DAEMON="''${AGENT_ALLOW_NIX_DAEMON:-}" \
+        --setenv=AGENT_ALLOW_NOSANDBOX="''${AGENT_ALLOW_NOSANDBOX:-}" \
+        bash ${../scripts/agent-wrapper.sh} "$@"
+    '';
+  };
 
   # Build a sandboxed wrapper for an agent binary.
   # The Nix stub sets env vars consumed by scripts/agent-wrapper.sh.
@@ -27,7 +77,16 @@ let
         export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
         export AGENT_CREDENTIALS="${lib.concatStringsSep " " credentials}"
         ${lib.optionalString cfg.allowNixDaemon "export AGENT_ALLOW_NIX_DAEMON=1"}
-        exec bash ${../scripts/agent-wrapper.sh} "$@"
+
+        # If already running as agent user, exec wrapper directly (e.g. dev-agent.nix systemd unit).
+        if [[ "$(id -un)" == "${agentCfg.user}" ]]; then
+          exec bash ${../scripts/agent-wrapper.sh} "$@"
+        fi
+
+        # Brokered launch: privilege drop to agent user via systemd-run.
+        # sudo is at /run/wrappers/bin/sudo (NixOS setuid wrapper).
+        exec sudo --preserve-env=AGENT_NAME,AGENT_REAL_BINARY,AGENT_PROJECT_ROOT,AGENT_NONO_PROFILE,AGENT_CREDENTIALS,AGENT_ALLOW_NIX_DAEMON,AGENT_ALLOW_NOSANDBOX \
+          ${agentLauncher}/bin/tsurf-agent-launch "$@"
       '';
     }).overrideAttrs (old: { meta = (old.meta or {}) // { priority = 4; }; });
 
@@ -78,6 +137,20 @@ in
       (mkWrapper { name = "codex";  realPkg = pkgs.codex;            realBin = "codex";  credentials = [ "openai:OPENAI_API_KEY:openai-api-key" ]; })
       pi-sandboxed
     ];
+
+    # @decision SEC-119-02: Targeted NOPASSWD sudoers rule for the brokered agent launcher.
+    #   Scoped to %wheel group (compatible with execWheelOnly=true in users.nix).
+    #   Agent user is NOT in wheel (enforced by assertions), so cannot use this rule.
+    #   SETENV permits env var passthrough for AGENT_* vars.
+    #   The launcher validates AGENT_REAL_BINARY is in /nix/store to prevent arbitrary
+    #   command execution.
+    security.sudo.extraRules = [{
+      groups = [ "wheel" ];
+      commands = [{
+        command = "${agentLauncher}/bin/tsurf-agent-launch";
+        options = [ "NOPASSWD" "SETENV" ];
+      }];
+    }];
 
     # @decision SANDBOX-NET-01: UID-based nftables egress filtering restricts the agent
     #   user to a whitelist of TCP destination ports. DNS (UDP 53) is always allowed.

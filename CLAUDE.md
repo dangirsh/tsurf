@@ -187,16 +187,20 @@ Run before every module or service commit:
 - **SEC115-01:** Flat tailnet trust model — `tailscale0` in trustedInterfaces means all tailnet devices reach all internal services. Mitigated by binding services to 127.0.0.1 and relying on Tailscale device authentication. Production should use Tailscale ACL tags. See SECURITY.md "Tailnet Segmentation".
 - **SEC116-01:** Agent resource limits via `tsurf-agents.slice` set aggregate ceilings (8G/300%/1024 tasks). Per-unit limits on dev-agent (4G/200%/256 tasks, OOMPolicy=kill). Limits are conservative defaults; production may need tuning based on workload.
 - **SEC116-02:** Syncthing defaults to tailnet-only operation (global announce, local announce, relays, NAT all disabled). Public BEP port 22000 requires explicit `publicBep` opt-in. Private overlay should enable `publicBep` only if non-Tailscale peers are needed.
+- **SEC119-01:** Brokered launch model uses `sudo` + `systemd-run --uid=agent` for interactive sessions. A targeted NOPASSWD+SETENV sudoers rule allows `dev` to invoke only `tsurf-agent-launch`. The launcher validates `AGENT_REAL_BINARY` is in `/nix/store` to prevent arbitrary command execution. This rule is no broader than `dev`'s existing wheel access in template mode.
+- **SEC119-02:** Workspace directories under `/data/projects` must be accessible to the `agent` user for the brokered launcher's `--same-dir` to work. Production should set workspace ownership to `agent:users` and control-plane repos to `dev:dev`. See SECURITY.md "Control-Plane vs Workspace Separation".
 
 ## Sandbox Awareness
 
 When running inside the nono sandbox (as the `agent` user — no wheel, no docker):
 
+- **Brokered execution**: When operator (`dev`) invokes `claude`/`codex`/`pi`, the wrapper uses `sudo` + `systemd-run --uid=agent` to drop to the `agent` user before any sandbox or credential logic runs. The operator never directly execs agent binaries with credentials. When already running as `agent` (e.g. `dev-agent.nix`), the wrapper execs directly (no double privilege drop).
 - Launch from inside `/data/projects`; wrapper scripts reject sandboxed launches outside that root.
 - Read access is scoped to the current git repo root, not all of `/data/projects`.
-- API keys are loaded from `/run/secrets/` by the wrapper into the parent env. nono's reverse proxy reads them via `env://` URIs and passes only per-session phantom tokens to the sandboxed child (`--credential` flag).
+- API keys are loaded from `/run/secrets/` by the wrapper (running as `agent`) into the parent env. nono's reverse proxy reads them via `env://` URIs and passes only per-session phantom tokens to the sandboxed child (`--credential` flag).
 - Denied paths include `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`, `~/.aws`, and `~/.docker`.
-- `--no-sandbox` escape is blocked unless `AGENT_ALLOW_NOSANDBOX=1` is set.
+- `--no-sandbox` escape is blocked unless `AGENT_ALLOW_NOSANDBOX=1` is set. Under the brokered model, even unsandboxed agents run as `agent` (not operator).
+- Each interactive session gets per-session cgroup limits (MemoryMax=4G, CPUQuota=200%, TasksMax=256) in `tsurf-agents.slice`.
 - Launch events are logged to journald only (`journalctl -t agent-launch`). Structured metadata (mode, agent, user, uid, cwd, git_root) — no raw arguments or prompts.
 - For guided workflows, use `/nix-module` for module authoring and `/nix-test` for test execution + `.test-status`.
 
