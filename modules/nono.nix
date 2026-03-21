@@ -17,6 +17,9 @@ let
   # The wrapper reads /run/secrets/<secretName> into the parent env.
   # nono's proxy loads credentials via env://<envVar>, generates a phantom
   # token, and the child only receives the phantom token + a localhost base URL.
+  #
+  # Only providers with sops secrets declared in the public template are listed here.
+  # Private overlay can extend via services.nonoSandbox.extraCredentials.
   credentialDefs = {
     anthropic   = { secretName = "anthropic-api-key";   envVar = "ANTHROPIC_API_KEY";
                     upstream = "https://api.anthropic.com";
@@ -24,16 +27,7 @@ let
     openai      = { secretName = "openai-api-key";      envVar = "OPENAI_API_KEY";
                     upstream = "https://api.openai.com";
                     inject_header = "Authorization"; credential_format = "Bearer {}"; };
-    google      = { secretName = "google-api-key";      envVar = "GOOGLE_API_KEY";
-                    upstream = "https://generativelanguage.googleapis.com";
-                    inject_header = "x-goog-api-key"; credential_format = "{}"; };
-    xai         = { secretName = "xai-api-key";         envVar = "XAI_API_KEY";
-                    upstream = "https://api.x.ai";
-                    inject_header = "Authorization"; credential_format = "Bearer {}"; };
-    openrouter  = { secretName = "openrouter-api-key";  envVar = "OPENROUTER_API_KEY";
-                    upstream = "https://openrouter.ai/api";
-                    inject_header = "Authorization"; credential_format = "Bearer {}"; };
-  };
+  } // cfg.extraCredentials;
 
   # custom_credentials for nono proxy mode: each service gets a custom
   # credential definition with env:// URI so nono reads from the parent
@@ -147,6 +141,19 @@ in
       type = lib.types.str;
       default = config.tsurf.agent.home;
       description = "Home directory for the agent user. Used in profile filesystem allow-list.";
+    };
+
+    extraCredentials = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
+      default = {};
+      description = ''
+        Additional provider credential definitions merged into the nono profile.
+        Each key is a service name; value is an attrset with: secretName, envVar,
+        upstream, inject_header, credential_format.
+        Example: { google = { secretName = "google-api-key"; envVar = "GOOGLE_API_KEY";
+          upstream = "https://generativelanguage.googleapis.com";
+          inject_header = "x-goog-api-key"; credential_format = "{}"; }; }
+      '';
     };
 
   };
