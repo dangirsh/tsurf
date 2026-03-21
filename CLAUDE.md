@@ -175,7 +175,7 @@ Run before every module or service commit:
 - **nono proxy_credentials:** (RESOLVED in Phase 118) Proxy credential mode now active using `env://` URIs — no system keystore needed. Child processes receive only phantom tokens.
 - **dev-agent bypassPermissions:** `dev-agent.nix` runs claude with `--permission-mode=bypassPermissions` inside nono sandbox. Sandbox provides the actual permission boundary.
 - **Manual internalOnlyPorts:** Must be kept in sync with actual service ports. Mitigated by existing firewall assertion.
-- **SEC105-01:** Template ships insecure defaults (placeholder SSH keys, passwordless sudo, empty-password login). Required for public template to evaluate without real credentials. Private overlay replaces `users.nix` entirely.
+- **SEC105-01:** (UPDATED Phase 119) Host source files are secure by default. Insecure defaults (placeholder SSH keys, passwordless sudo, empty-password login) injected at flake level via `mkEvalFixture` for CI eval only. Private overlay uses `mkHost` directly.
 - **SEC105-02:** Unrestricted network egress for sandboxed agents (`--net-allow`). nono upstream does not yet support allowlist-based outbound filtering on headless servers. UID-based nftables egress filtering is now available as opt-in via `services.agentSandbox.egressControl.enable` (restricts agent user to whitelisted TCP destination ports).
 - **SEC105-03:** Public repo size (dashboard, cost-tracker, restic, syncthing, dev-agent, deploy.sh in core). Moving to `examples/` is large structural work; current modules serve both public template and private overlay.
 - **SEC105-04:** Service modules coupled to dashboard via `services.dashboard.entries.*`. Catalog abstraction is YAGNI at current scale.
