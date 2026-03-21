@@ -56,20 +56,30 @@ in
       "ovh allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
-  trusted-interfaces-tsurf = pkgs.runCommandNoCC "trusted-interfaces-tsurf" { } ''
-    actual='${builtins.toJSON tsurfCfg.networking.firewall.trustedInterfaces}'
-    require_iface() {
-      iface="$1"
-      if ! echo "$actual" | ${jq} -e "index(\"$iface\")" > /dev/null 2>&1; then
-        echo "FAIL: trustedInterfaces missing '$iface' (actual: $actual)"
-        exit 1
-      fi
-    }
+  # Phase 122: tailscale0 must NOT be in trustedInterfaces (localhost-first model).
+  no-trusted-tailscale0-tsurf = mkCheck
+    "no-trusted-tailscale0-tsurf"
+    "tsurf does not have tailscale0 in trustedInterfaces (localhost-first model)"
+    "SECURITY: tsurf has tailscale0 in trustedInterfaces — remove it, use per-service firewall.interfaces rules"
+    (!(builtins.elem "tailscale0" tsurfCfg.networking.firewall.trustedInterfaces));
 
-    require_iface tailscale0
-    echo "PASS: trusted interfaces include tailscale0"
-    touch "$out"
-  '';
+  no-trusted-tailscale0-ovh = mkCheck
+    "no-trusted-tailscale0-ovh"
+    "ovh does not have tailscale0 in trustedInterfaces (localhost-first model)"
+    "SECURITY: ovh has tailscale0 in trustedInterfaces — remove it, use per-service firewall.interfaces rules"
+    (!(builtins.elem "tailscale0" devCfg.networking.firewall.trustedInterfaces));
+
+  no-accept-routes-tsurf = mkCheck
+    "no-accept-routes-tsurf"
+    "tsurf Tailscale extraUpFlags does not include --accept-routes"
+    "tsurf Tailscale extraUpFlags contains --accept-routes — remove from default, add in overlay if needed"
+    (!(builtins.elem "--accept-routes" tsurfCfg.services.tailscale.extraUpFlags));
+
+  no-accept-routes-ovh = mkCheck
+    "no-accept-routes-ovh"
+    "ovh Tailscale extraUpFlags does not include --accept-routes"
+    "ovh Tailscale extraUpFlags contains --accept-routes — remove from default, add in overlay if needed"
+    (!(builtins.elem "--accept-routes" devCfg.services.tailscale.extraUpFlags));
 
   expected-services-tsurf =
     let
