@@ -173,6 +173,9 @@ in
             ct state established,related accept
             meta l4proto udp th dport 53 accept
             meta l4proto tcp th dport { ${portList} } accept
+            # Agent egress to tailnet peers (e.g., syncthing, other hosts). This is
+            # outbound egress control, separate from the host firewall's ingress rules.
+            # The host no longer trusts tailscale0 as an interface (NET-122-01).
             oifname "tailscale0" accept
             log prefix "agent-egress-deny: " drop
           }
