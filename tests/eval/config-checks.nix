@@ -406,18 +406,33 @@ in
      && builtins.hasAttr "syncthing" devCfg.tsurf
      && builtins.hasAttr "mesh" devCfg.tsurf.syncthing);
 
-  # --- Phase 106: Template safety + opt-in checks ---
+  # --- Phase 119: Secure-by-default host configs + eval fixture checks ---
 
-  template-mode-neurosys = mkCheck
-    "template-mode-neurosys"
-    "neurosys host has allowUnsafePlaceholders = true (template mode)"
-    "neurosys host missing allowUnsafePlaceholders — public template won't evaluate"
+  # Phase 119: Host source files must NOT set allowUnsafePlaceholders.
+  # The flag is injected at the flake level (mkEvalFixture) for CI eval only.
+  secure-host-services = mkCheck
+    "secure-host-services"
+    "hosts/services/default.nix does not set allowUnsafePlaceholders"
+    "SECURITY: hosts/services/default.nix sets allowUnsafePlaceholders — host source must be secure by default"
+    (!(lib.hasInfix "allowUnsafePlaceholders" (builtins.readFile ../../hosts/services/default.nix)));
+
+  secure-host-dev = mkCheck
+    "secure-host-dev"
+    "hosts/dev/default.nix does not set allowUnsafePlaceholders"
+    "SECURITY: hosts/dev/default.nix sets allowUnsafePlaceholders — host source must be secure by default"
+    (!(lib.hasInfix "allowUnsafePlaceholders" (builtins.readFile ../../hosts/dev/default.nix)));
+
+  # Regression guard: eval fixtures must have the flag enabled (proves mkEvalFixture works)
+  fixture-mode-neurosys = mkCheck
+    "fixture-mode-neurosys"
+    "neurosys eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
+    "eval fixture neurosys missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
     neurosysCfg.tsurf.template.allowUnsafePlaceholders;
 
-  template-mode-ovh = mkCheck
-    "template-mode-ovh"
-    "ovh host has allowUnsafePlaceholders = true (template mode)"
-    "ovh host missing allowUnsafePlaceholders — public template won't evaluate"
+  fixture-mode-ovh = mkCheck
+    "fixture-mode-ovh"
+    "ovh eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
+    "eval fixture ovh missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
     devCfg.tsurf.template.allowUnsafePlaceholders;
 
   dev-agent-not-in-template = mkCheck
