@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# tests/live/service-health.bats — Systemd unit health checks for neurosys hosts.
+# tests/live/service-health.bats — Systemd unit health checks for tsurf hosts.
 # @decision TEST-48-01: Host-aware service checks use skip guards for role-specific units.
 
 load "../lib/common"
@@ -32,16 +32,16 @@ bats_load_library bats-assert
   assert_success
 }
 
-@test "${HOST}: nix-dashboard.service is active (neurosys only)" {
-  if ! is_neurosys; then
-    skip "nix-dashboard only on neurosys"
+@test "${HOST}: nix-dashboard.service is active (tsurf only)" {
+  if ! is_tsurf; then
+    skip "nix-dashboard only on tsurf"
   fi
   assert_unit_active "nix-dashboard.service"
 }
 
-@test "${HOST}: restic-backups-b2.timer is enabled (neurosys only)" {
-  if ! is_neurosys; then
-    skip "restic backup timer only on neurosys"
+@test "${HOST}: restic-backups-b2.timer is enabled (tsurf only)" {
+  if ! is_tsurf; then
+    skip "restic backup timer only on tsurf"
   fi
   run remote systemctl is-enabled restic-backups-b2.timer
   assert_success
@@ -93,10 +93,10 @@ bats_load_library bats-assert
   }
 
   local expected_prefix
-  if is_neurosys; then
-    expected_prefix="neurosys"
+  if is_tsurf; then
+    expected_prefix="tsurf"
   else
-    expected_prefix="neurosys-dev"
+    expected_prefix="tsurf-dev"
   fi
 
   if [[ "$ts_hostname" != "${expected_prefix}"* ]]; then

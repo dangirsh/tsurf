@@ -13,8 +13,8 @@
 # 1. On each host, get the device ID: `syncthing -device-id` (or Syncthing GUI > Actions > Show ID)
 # 2. In your private overlay (or host config), set:
 #      tsurf.syncthing.mesh.devices = {
-#        "neurosys" = { id = "XXXXXXX-..."; addresses = [ "tcp://100.x.y.z:22000" ]; };
-#        "neurosys-dev" = { id = "YYYYYYY-..."; addresses = [ "tcp://100.a.b.c:22000" ]; };
+#        "tsurf" = { id = "XXXXXXX-..."; addresses = [ "tcp://100.x.y.z:22000" ]; };
+#        "tsurf-dev" = { id = "YYYYYYY-..."; addresses = [ "tcp://100.a.b.c:22000" ]; };
 #      };
 #      tsurf.syncthing.mesh.folders.sync = {
 #        path = "/home/dev/Sync";

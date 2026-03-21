@@ -25,7 +25,7 @@
 
   home-manager.users.dev = import ../../home;
 
-  networking.hostName = "neurosys";
+  networking.hostName = "tsurf";
   time.timeZone = "Europe/Berlin";
   i18n.defaultLocale = "C.UTF-8";
 
@@ -35,7 +35,7 @@
   # --- Host-specific shared module settings ---
   boot.loader.grub.device = "/dev/sda";
   networking.nat.externalInterface = "eth0";
-  sops.defaultSopsFile = ../../secrets/neurosys.yaml;
+  sops.defaultSopsFile = ../../secrets/tsurf.yaml;
 
   # Contabo VPS uses scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;

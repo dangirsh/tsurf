@@ -4,7 +4,7 @@ keys:
   - &admin       age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   - &host_main   age1yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 creation_rules:
-  - path_regex: secrets/neurosys\.yaml$
+  - path_regex: secrets/tsurf\.yaml$
     key_groups:
       - age:
         - *admin

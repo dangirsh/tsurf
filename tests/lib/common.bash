@@ -3,7 +3,7 @@
 # @decision TEST-48-01: Shared SSH + assertion helpers keep BATS cases single-assertion and readable.
 #
 # Usage: load '../lib/common' at the top of each .bats file
-# Requires: TSURF_TEST_HOST env var (default: neurosys)
+# Requires: TSURF_TEST_HOST env var (default: tsurf)
 
 # --- Configuration ---
 SSH_OPTS=(
@@ -13,7 +13,7 @@ SSH_OPTS=(
   -o LogLevel=ERROR
   -F /dev/null
 )
-HOST="${TSURF_TEST_HOST:-neurosys}"
+HOST="${TSURF_TEST_HOST:-tsurf}"
 SSH_USER="${TSURF_TEST_USER:-root}"
 
 # --- SSH helpers ---
@@ -137,11 +137,11 @@ assert_contains() {
   fi
 }
 
-# Check if current host is neurosys (Contabo) vs ovh.
-is_neurosys() {
-  [[ "$HOST" == "neurosys" ]]
+# Check if current host is tsurf (Contabo) vs ovh.
+is_tsurf() {
+  [[ "$HOST" == "tsurf" ]]
 }
 
 is_ovh() {
-  [[ "$HOST" == "neurosys-dev" ]] || [[ "$HOST" == "ovh" ]]
+  [[ "$HOST" == "tsurf-dev" ]] || [[ "$HOST" == "ovh" ]]
 }

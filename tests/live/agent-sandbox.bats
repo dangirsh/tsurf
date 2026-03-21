@@ -7,7 +7,7 @@ bats_load_library bats-support
 bats_load_library bats-assert
 
 @test "${HOST}: sandboxed claude wrapper exists in PATH" {
-  if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
+  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   local claude_path
   # readlink -f resolves /run/current-system/sw/bin/claude → /nix/store/…/bin/claude
   claude_path="$(remote "readlink -f \$(command -v claude)")"
@@ -18,7 +18,7 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: sandboxed codex wrapper exists in PATH" {
-  if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
+  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   local codex_path
   codex_path="$(remote "readlink -f \$(command -v codex)")"
   [[ "$codex_path" == /nix/store/* ]]
@@ -26,7 +26,7 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: sandboxed claude hides /run/secrets" {
-  if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
+  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   local claude_path script_content
   claude_path="$(remote "readlink -f \$(command -v claude)")"
   script_content="$(remote cat "${claude_path}")"
@@ -38,7 +38,7 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: sandboxed claude hides ~/.ssh" {
-  if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
+  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   local claude_path script_content
   claude_path="$(remote "readlink -f \$(command -v claude)")"
   script_content="$(remote cat "${claude_path}")"
@@ -50,14 +50,14 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: --no-sandbox blocked without AGENT_ALLOW_NOSANDBOX" {
-  if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
+  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   # Running with --no-sandbox but without AGENT_ALLOW_NOSANDBOX should exit non-zero
   run remote "unset AGENT_ALLOW_NOSANDBOX; claude --no-sandbox --version 2>&1 || true"
   assert_output --partial "AGENT_ALLOW_NOSANDBOX=1"
 }
 
 @test "${HOST}: wrapper includes logger (util-linux) for journald logging" {
-  if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
+  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   local claude_path
   claude_path="$(remote "readlink -f \$(command -v claude)")"
   # The wrapper's runtimeInputs should include util-linux (provides logger)
@@ -65,7 +65,7 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: wrapper does not contain file audit log path" {
-  if ! is_ovh; then skip "agent sandbox only on neurosys-dev"; fi
+  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   local claude_path script_content
   claude_path="$(remote "readlink -f \$(command -v claude)")"
   script_content="$(remote cat "${claude_path}")"
