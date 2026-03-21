@@ -50,7 +50,7 @@ Each module declares its own dashboard entry and network exposure directly. Inte
 | Category | Network | Examples |
 |----------|---------|----------|
 | Web | Public ([nginx](https://nginx.org/) + [ACME](https://letsencrypt.org/)) | personal sites |
-| Internal | Tailscale-only | dashboard, syncthing GUI, restic-status |
+| Internal | Localhost-only (`127.0.0.1`) | dashboard, syncthing GUI, restic-status |
 | System | Public firewall | SSH (22), Syncthing BEP (22000) |
 | Agent | outbound only | claude, codex, pi |
 | Worker | none/outbound | restic backup, sshd-liveness-check |
