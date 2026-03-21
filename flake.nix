@@ -91,30 +91,30 @@
 
       evalChecks = import ./tests/eval/config-checks.nix { inherit self pkgs lib; };
     in {
-      nixosConfigurations.neurosys = mkEvalFixture ./hosts/services;
-      nixosConfigurations.neurosys-dev = mkEvalFixture ./hosts/dev;
+      nixosConfigurations.tsurf = mkEvalFixture ./hosts/services;
+      nixosConfigurations.tsurf-dev = mkEvalFixture ./hosts/dev;
 
-      deploy.nodes.neurosys = {
-        hostname = "neurosys"; # Tailscale MagicDNS hostname; private overlay may override with IP
+      deploy.nodes.tsurf = {
+        hostname = "tsurf"; # Tailscale MagicDNS hostname; private overlay may override with IP
         sshUser = "root";
         magicRollback = true;
         autoRollback = true;
         confirmTimeout = 300; # Keep in sync with scripts/deploy.sh --confirm-timeout
         profiles.system = {
           user = "root";
-          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.neurosys;
+          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.tsurf;
         };
       };
 
-      deploy.nodes.neurosys-dev = {
-        hostname = "neurosys-dev";
+      deploy.nodes.tsurf-dev = {
+        hostname = "tsurf-dev";
         sshUser = "root";
         magicRollback = true;
         autoRollback = true;
         confirmTimeout = 300; # Keep in sync with scripts/deploy.sh --confirm-timeout
         profiles.system = {
           user = "root";
-          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.neurosys-dev;
+          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.tsurf-dev;
         };
       };
 
@@ -140,7 +140,7 @@
             #!/usr/bin/env bash
             set -euo pipefail
 
-            HOST="neurosys"
+            HOST="tsurf"
             BATS_FILES=()
 
             while [[ $# -gt 0 ]]; do
@@ -149,7 +149,7 @@
                   HOST="$2"
                   shift 2
                   ;;
-                neurosys|neurosys-dev)
+                tsurf|tsurf-dev)
                   HOST="$1"
                   shift
                   ;;
