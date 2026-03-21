@@ -67,7 +67,7 @@ tests/
 - Secrets managed via sops-nix (age key derived from SSH host key).
 - All service configs are declarative — no imperative setup steps.
 - Infrastructure repos cloned via activation scripts (clone-only, never pull).
-- Internal services use `openFirewall = false` + `trustedInterfaces` (Tailscale-only).
+- Internal services bind `127.0.0.1` (localhost-only). Overlay can expose on tailnet via `networking.firewall.interfaces.tailscale0.allowedTCPPorts`.
 - `@decision` annotations on security-relevant choices in module headers.
 
 ### NixOS module authoring
@@ -190,7 +190,7 @@ Run before every module or service commit:
 - **SEC105-07:** `deploy.sh` is 558 lines with custom logic. Serves its purpose for private overlay deployment; public users can use bare `deploy-rs`.
 - **SEC114-01:** (RESOLVED in Phase 117) File-based audit log removed. Launch logging is now journald-only (`journalctl -t agent-launch`), root-owned and append-only. Only structured metadata is logged — no raw arguments or prompts.
 - **SEC114-02:** (RESOLVED in Phase 118) Proxy credential mode active. Real API keys no longer reach the sandboxed child process — only per-session phantom tokens via nono's reverse proxy. Real keys stay in the parent (nono proxy) process, stored in `Zeroizing<String>` (wiped on drop).
-- **SEC115-01:** Flat tailnet trust model — `tailscale0` in trustedInterfaces means all tailnet devices reach all internal services. Mitigated by binding services to 127.0.0.1 and relying on Tailscale device authentication. Production should use Tailscale ACL tags. See SECURITY.md "Tailnet Segmentation".
+- **SEC115-01:** (RESOLVED in Phase 122) `tailscale0` removed from `trustedInterfaces`. Localhost-first model: internal services bind 127.0.0.1, no blanket tailnet trust. Private overlay can expose specific ports via `networking.firewall.interfaces.tailscale0.allowedTCPPorts`. `--accept-routes` removed from default Tailscale flags. See SECURITY.md "Tailnet Segmentation".
 - **SEC116-01:** Agent resource limits via `tsurf-agents.slice` set aggregate ceilings (8G/300%/1024 tasks). Per-unit limits on dev-agent (4G/200%/256 tasks, OOMPolicy=kill). Limits are conservative defaults; production may need tuning based on workload.
 - **SEC116-02:** Syncthing defaults to tailnet-only operation (global announce, local announce, relays, NAT all disabled). Public BEP port 22000 requires explicit `publicBep` opt-in. Private overlay should enable `publicBep` only if non-Tailscale peers are needed.
 - **SEC119-01:** Brokered launch model uses `sudo` + `systemd-run --uid=agent` for interactive sessions. A targeted NOPASSWD+SETENV sudoers rule allows `dev` to invoke only `tsurf-agent-launch`. The launcher validates `AGENT_REAL_BINARY` is in `/nix/store` to prevent arbitrary command execution. This rule is no broader than `dev`'s existing wheel access in template mode.
