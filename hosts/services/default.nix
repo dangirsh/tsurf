@@ -40,9 +40,6 @@
   # Contabo VPS uses scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;
 
-  # WARNING: Template mode — replace keys and disable this flag before deploying.
-  # See SECURITY.md.
-  tsurf.template.allowUnsafePlaceholders = true;
   services.dockerStarter.enable = true;
   services.syncthingStarter.enable = true;
 

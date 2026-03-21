@@ -81,10 +81,6 @@
     { type = "ed25519"; path = "/persist/etc/ssh/ssh_host_ed25519_key"; }
   ];
 
-  # WARNING: Template mode — replace keys and disable this flag before deploying.
-  # See SECURITY.md.
-  tsurf.template.allowUnsafePlaceholders = true;
-
   services.dockerStarter.enable = true;
   services.syncthingStarter.enable = true;
   services.agentCompute.enable = true;
