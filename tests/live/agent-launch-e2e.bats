@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # tests/live/agent-launch-e2e.bats — Brokered launch end-to-end tests.
 # These tests exercise the full operator -> sudo -> systemd-run -> agent-wrapper ->
-# nono path, including phantom-token injection and launcher tamper rejection.
+# nono path, including phantom-token injection and sudo-boundary hardening.
 # @decision TEST-131-01: A dedicated probe wrapper verifies the deployed brokered
 #   launch path end to end instead of bypassing it with direct `nono run`.
 
@@ -13,7 +13,7 @@ readonly PROBE_DIR="/data/projects/tsurf/tmp/agent-launch-e2e"
 readonly PROBE_REPORT="${PROBE_DIR}/report.txt"
 
 prepare_probe_dir() {
-  remote "install -d -m 0775 -o agent -g users ${PROBE_DIR}"
+  remote "install -d -m 0775 -o ${AGENT_USER} -g users ${PROBE_DIR}"
   remote "rm -f ${PROBE_REPORT}"
 }
 
@@ -27,11 +27,7 @@ read_report_value() {
   remote "grep '^${key}=' ${PROBE_REPORT} | cut -d= -f2-"
 }
 
-launcher_path() {
-  remote "sudo -u dev bash -lc 'sudo -l' | grep -o '/nix/store/[^ ,]*/bin/tsurf-agent-launch' | head -n1"
-}
-
-@test "${HOST}: brokered launch runs as agent with phantom Anthropic token" {
+@test "${HOST}: brokered launch runs as the configured agent with phantom Anthropic token" {
   if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
 
   run run_brokered_probe
@@ -39,7 +35,7 @@ launcher_path() {
 
   local report uid anthropic_key anthropic_base_url raw_secret
   report="$(remote "cat ${PROBE_REPORT}")"
-  assert_contains "$report" "user=agent" "probe report"
+  assert_contains "$report" "user=${AGENT_USER}" "probe report"
   assert_contains "$report" "secrets_read=denied" "probe report"
   assert_contains "$report" "repo_read=readable" "probe report"
   assert_contains "$report" "workdir_write=ok" "probe report"
@@ -57,14 +53,13 @@ launcher_path() {
   [[ "$anthropic_base_url" =~ ^http://127\.0\.0\.1:[0-9]+/anthropic$ ]]
 }
 
-@test "${HOST}: brokered launcher rejects tampered binary paths" {
+@test "${HOST}: sudoers exposes only dedicated per-agent launchers without SETENV" {
   if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
 
-  local launcher
-  launcher="$(launcher_path)"
-  [ -n "$launcher" ]
-
-  run remote "sudo -u dev bash -lc 'sudo AGENT_NAME=tamper AGENT_REAL_BINARY=/usr/bin/evil AGENT_PROJECT_ROOT=/data/projects ${launcher} --version 2>&1'"
-  assert_failure
-  assert_output --partial "/nix/store"
+  local sudo_list
+  sudo_list="$(remote "sudo -u dev bash -lc 'sudo -l'")"
+  assert_contains "$sudo_list" "tsurf-launch-claude" "sudo -l output"
+  assert_contains "$sudo_list" "tsurf-launch-agent-sandbox-e2e" "sudo -l output"
+  [[ "$sudo_list" != *"tsurf-agent-launch"* ]]
+  [[ "$sudo_list" != *"SETENV"* ]]
 }

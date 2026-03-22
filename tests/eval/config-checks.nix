@@ -727,9 +727,10 @@ in
     in
     mkCheck
       "brokered-launch-launcher"
-      "agent-sandbox.nix defines tsurf-agent-launch brokered launcher"
-      "agent-sandbox.nix missing tsurf-agent-launch — brokered launch model not implemented"
-      (lib.hasInfix "tsurf-agent-launch" source);
+      "agent-sandbox.nix defines immutable per-agent launchers"
+      "agent-sandbox.nix still relies on the generic tsurf-agent-launch boundary"
+      (lib.hasInfix "tsurf-launch-" source
+       && !(lib.hasInfix "tsurf-agent-launch" source));
 
   brokered-launch-systemd-run =
     let
@@ -747,9 +748,11 @@ in
     in
     mkCheck
       "brokered-launch-sudoers"
-      "agent-sandbox.nix configures sudo extraRules for brokered launcher"
-      "agent-sandbox.nix missing sudo.extraRules — operator cannot invoke brokered launcher"
-      (lib.hasInfix "security.sudo.extraRules" source);
+      "agent-sandbox.nix configures sudo extraRules without SETENV or caller env passthrough"
+      "agent-sandbox.nix sudoers path still uses SETENV or preserve-env"
+      (lib.hasInfix "security.sudo.extraRules" source
+       && !(lib.hasInfix "\"SETENV\"" source)
+       && !(lib.hasInfix "--preserve-env" source));
 
   brokered-launch-agent-fallback =
     let
@@ -826,6 +829,9 @@ in
         in if sca == null then false
            else if builtins.isList sca then builtins.elem "native" sca
            else sca == "native";
+      resticSource = builtins.readFile ../../extras/restic.nix;
+      costTrackerSource = builtins.readFile ../../extras/cost-tracker.nix;
+      devAgentSource = builtins.readFile ../../extras/dev-agent.nix;
     in
     mkCheck
       "systemd-hardening-baseline"
@@ -833,7 +839,12 @@ in
       "SECURITY: one or more services missing SystemCallArchitectures=native"
       (hasSCA tsurfCfg.systemd.services.nix-dashboard
        && hasSCA tsurfCfg.systemd.services.sshd-liveness-check
-       && hasSCA devCfg.systemd.services.syncthing);
+       && hasSCA devCfg.systemd.services.sshd-liveness-check
+       && hasSCA devCfg.systemd.services.syncthing
+       && lib.hasInfix "SystemCallArchitectures = \"native\"" (builtins.readFile ../../extras/dashboard.nix)
+       && lib.hasInfix "SystemCallArchitectures = \"native\"" resticSource
+       && lib.hasInfix "SystemCallArchitectures = \"native\"" costTrackerSource
+       && lib.hasInfix "SystemCallArchitectures = \"native\"" devAgentSource);
 
   # --- Phase 124: Control-plane separation ---
 
