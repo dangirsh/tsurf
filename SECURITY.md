@@ -19,17 +19,15 @@ and network model of tsurf. It is the authoritative source for security claims.
 - **Read access scoped to current git repo root**, not all of `/data/projects`.
 - **Denied paths**: `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`,
   `~/.aws`, `~/.docker`, `~/.config/syncthing`.
-- **`--no-sandbox` blocked** unless `AGENT_ALLOW_NOSANDBOX=1` is set in the environment.
 - **Launch logging** to journald (`journalctl -t agent-launch`) — structured metadata only, no raw arguments.
+- **Public repo has no unsandboxed execution path**: any trusted `--no-sandbox`
+  override must live in a private overlay, not this repo.
 
 ### What the sandbox does NOT guarantee
 
 - **No sandbox-level egress filtering**: nono does not yet support allowlist-based
   outbound filtering on headless servers. By default, agents have unrestricted outbound
   network access unless the optional nftables-based egress controls are enabled.
-- **Sandbox escape via `--no-sandbox`**: any user with `AGENT_ALLOW_NOSANDBOX=1` in
-  their environment can bypass the sandbox entirely. Under the brokered model, the
-  unsandboxed binary still runs as `agent` (not operator).
 - **`dev` user has effective root access**: `dev` is in `wheel` with passwordless sudo
   in the public template. The brokered launch model prevents casual privilege leaks,
   but `dev` can always escalate via `sudo`. The operator/agent split is enforced by
