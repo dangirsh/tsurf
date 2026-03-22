@@ -62,9 +62,6 @@ if [[ -z "$TAILSCALE_HOSTNAME" ]]; then
   exit 1
 fi
 
-# Ephemeral random password for Ubuntu PAM change (Ubuntu is wiped by nixos-anywhere).
-OVH_NEW_PASS="$(openssl rand -base64 16)"
-
 SSH_OPTS=(
   -i "$DEPLOY_KEY"
   -o StrictHostKeyChecking=no
@@ -118,6 +115,9 @@ if ! command -v openssl &>/dev/null; then
   echo "       Install with: nix-shell -p openssl"
   exit 1
 fi
+
+# Ephemeral random password for Ubuntu PAM change (Ubuntu is wiped by nixos-anywhere).
+OVH_NEW_PASS="$(openssl rand -base64 16)"
 
 # ────────────────────────────────────────────────────────────────────────────
 # Phase 1: Wait for SSH (root@ first — works in rescue mode or if key already there)

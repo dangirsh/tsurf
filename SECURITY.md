@@ -8,9 +8,10 @@ and network model of tsurf. It is the authoritative source for security claims.
 ### What the sandbox guarantees
 
 - **Brokered execution**: Interactive agent sessions run as the `agent` user, not the
-  calling operator. The wrapper uses `sudo` + `systemd-run --uid=agent` to drop
-  privileges before executing the agent binary. The operator never directly execs
-  agent binaries with agent credentials.
+  calling operator. The wrapper invokes a dedicated root-owned launcher for that
+  agent, which then uses `systemd-run --uid=agent` to drop privileges before
+  executing the agent binary. The operator never directly execs agent binaries
+  with agent credentials.
 - **Per-session cgroup limits**: Each interactive session runs in a transient systemd
   unit under `tsurf-agents.slice` with MemoryMax=4G, CPUQuota=200%, TasksMax=256.
 - **Filesystem isolation**: [nono](https://github.com/always-further/nono) uses
@@ -61,9 +62,9 @@ The public template ships an operator/agent user split with brokered execution:
 
 ```
 dev runs "claude ..."
-  → wrapper stub (as dev): sets AGENT_* env vars
-    → sudo tsurf-agent-launch (as root): validates inputs, Nix store path check
-      → systemd-run --uid=agent --pty --slice=tsurf-agents.slice
+  → wrapper stub (as dev)
+    → sudo tsurf-launch-claude (as root, immutable launcher)
+      → systemd-run --uid=agent --gid=<agent gid> --pty --slice=tsurf-agents.slice
         → agent-wrapper.sh (as agent): reads /run/secrets/*, applies nono sandbox
           → nono → real agent binary (as agent, sandboxed, phantom tokens only)
 ```
@@ -164,6 +165,8 @@ Parent process env var (e.g., ANTHROPIC_API_KEY=sk-...)
 - `/run/secrets/` files are NOT accessible from inside the sandbox (denied by Landlock)
 - Each wrapper loads only its own credential allowlist. Core `claude` loads only
   Anthropic; optional extras can scope to OpenAI, Anthropic, or both as needed.
+- The privileged sudo boundary does not accept caller-chosen binary/profile/credential
+  tuples; each allowed launcher is immutable and listed explicitly in sudoers.
 - See accepted risk SEC114-02
 
 ## Tailnet Segmentation

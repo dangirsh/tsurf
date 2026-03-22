@@ -9,85 +9,98 @@
 #   The child never sees real API keys.
 # @decision SEC-119-01: Brokered launch model — interactive agent sessions run as the
 #   agent user via systemd-run, not as the calling operator. Eliminates same-user
-#   sandbox bypass. Operator invokes wrapper → sudo tsurf-agent-launch → systemd-run
+#   sandbox bypass. Operator invokes wrapper → sudo tsurf-launch-<agent> → systemd-run
 #   --uid=agent → agent-wrapper.sh. When already running as agent (e.g. dev-agent.nix),
 #   the wrapper execs agent-wrapper.sh directly (no double privilege drop).
+# @decision SEC-135-01: The privileged sudo boundary exposes immutable per-agent launchers,
+#   not a generic env-configured root helper. Real binary, profile, credentials, and
+#   daemon access are baked into each launcher, so sudoers no longer needs SETENV.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentSandbox;
   agentCfg = config.tsurf.agent;
+  agentRuntimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.util-linux ];
 
-  # Brokered launcher: runs as root (via sudo), drops to agent user via systemd-run.
-  # Validates inputs, applies per-session cgroup limits, and passes through the terminal.
-  agentLauncher = pkgs.writeShellApplication {
-    name = "tsurf-agent-launch";
-    runtimeInputs = [ pkgs.systemd pkgs.coreutils pkgs.nono pkgs.git pkgs.util-linux ];
-    text = ''
-      # Validate required env vars (set by wrapper stub)
-      : "''${AGENT_NAME:?must be set by wrapper}"
-      : "''${AGENT_REAL_BINARY:?must be set by wrapper}"
-      : "''${AGENT_PROJECT_ROOT:?must be set by wrapper}"
+  mkAgent = { name, realPkg, realBin, credentials }:
+    let
+      launcherName = "tsurf-launch-${name}";
+      launcher = pkgs.writeShellApplication {
+        name = launcherName;
+        runtimeInputs = [ pkgs.systemd pkgs.coreutils ];
+        text = ''
+          export AGENT_NAME="${name}"
+          export AGENT_REAL_BINARY="${realPkg}/bin/${realBin}"
+          export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
+          export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
+          export AGENT_CREDENTIALS="${lib.concatStringsSep " " credentials}"
+          ${lib.optionalString cfg.allowNixDaemon "export AGENT_ALLOW_NIX_DAEMON=1"}
 
-      # AGENT_REAL_BINARY must be a Nix store path (prevent arbitrary command execution)
-      case "$AGENT_REAL_BINARY" in
-        /nix/store/*) ;;
-        *) echo "ERROR: AGENT_REAL_BINARY must be in /nix/store" >&2; exit 1 ;;
-      esac
+          case "$AGENT_REAL_BINARY" in
+            /nix/store/*) ;;
+            *) echo "ERROR: AGENT_REAL_BINARY must be in /nix/store" >&2; exit 1 ;;
+          esac
 
-      # Use --pty for interactive terminals, --pipe for non-interactive (scripts, pipes)
-      if [[ -t 0 && -t 1 ]]; then
-        stdio_flag="--pty"
-      else
-        stdio_flag="--pipe"
-      fi
+          if [[ -t 0 && -t 1 ]]; then
+            stdio_flag="--pty"
+          else
+            stdio_flag="--pipe"
+          fi
 
-      exec systemd-run \
-        --uid="${agentCfg.user}" --gid=users \
-        "$stdio_flag" --same-dir --collect \
-        --unit="agent-''${AGENT_NAME}-$$" \
-        --slice=tsurf-agents.slice \
-        --property=MemoryMax=4G \
-        --property=CPUQuota=200% \
-        --property=TasksMax=256 \
-        --setenv=PATH="$PATH" \
-        --setenv=HOME="${agentCfg.home}" \
-        --setenv=AGENT_NAME="$AGENT_NAME" \
-        --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
-        --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
-        --setenv=AGENT_NONO_PROFILE="''${AGENT_NONO_PROFILE:-}" \
-        --setenv=AGENT_CREDENTIALS="''${AGENT_CREDENTIALS:-}" \
-        --setenv=AGENT_ALLOW_NIX_DAEMON="''${AGENT_ALLOW_NIX_DAEMON:-}" \
-        bash ${../scripts/agent-wrapper.sh} "$@"
-    '';
-  };
+          exec systemd-run \
+            --uid="${agentCfg.user}" --gid="${toString agentCfg.gid}" \
+            "$stdio_flag" --same-dir --collect \
+            --unit="agent-${name}-$$" \
+            --slice=tsurf-agents.slice \
+            --property=MemoryMax=4G \
+            --property=CPUQuota=200% \
+            --property=TasksMax=256 \
+            --setenv=PATH="${agentRuntimePath}" \
+            --setenv=HOME="${agentCfg.home}" \
+            --setenv=AGENT_NAME="$AGENT_NAME" \
+            --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
+            --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
+            --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
+            --setenv=AGENT_CREDENTIALS="$AGENT_CREDENTIALS" \
+            ${lib.optionalString cfg.allowNixDaemon "--setenv=AGENT_ALLOW_NIX_DAEMON=1 \\"}
+            ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
+        '';
+      };
+      wrapper = (pkgs.writeShellApplication {
+        inherit name;
+        runtimeInputs = [ pkgs.nono pkgs.git pkgs.coreutils pkgs.util-linux ];
+        text = ''
+          export AGENT_NAME="${name}"
+          export AGENT_REAL_BINARY="${realPkg}/bin/${realBin}"
+          export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
+          export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
+          export AGENT_CREDENTIALS="${lib.concatStringsSep " " credentials}"
+          ${lib.optionalString cfg.allowNixDaemon "export AGENT_ALLOW_NIX_DAEMON=1"}
 
-  # Build a sandboxed wrapper for an agent binary.
-  # The Nix stub sets env vars consumed by scripts/agent-wrapper.sh.
-  # credentials: list of "SERVICE:ENV_VAR:secret-file-name" triples (per-wrapper allowlist).
-  #   SERVICE matches custom_credentials key in nono profile (proxy mode).
-  mkWrapper = { name, realPkg, realBin, credentials }:
-    (pkgs.writeShellApplication {
-      inherit name;
-      runtimeInputs = [ pkgs.nono pkgs.git pkgs.coreutils pkgs.util-linux ];
-      text = ''
-        export AGENT_NAME="${name}"
-        export AGENT_REAL_BINARY="${realPkg}/bin/${realBin}"
-        export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
-        export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
-        export AGENT_CREDENTIALS="${lib.concatStringsSep " " credentials}"
-        ${lib.optionalString cfg.allowNixDaemon "export AGENT_ALLOW_NIX_DAEMON=1"}
+          if [[ "$(id -un)" == "${agentCfg.user}" ]]; then
+            exec bash ${../scripts/agent-wrapper.sh} "$@"
+          fi
 
-        # If already running as agent user, exec wrapper directly (e.g. dev-agent.nix systemd unit).
-        if [[ "$(id -un)" == "${agentCfg.user}" ]]; then
-          exec bash ${../scripts/agent-wrapper.sh} "$@"
-        fi
+          exec /run/wrappers/bin/sudo ${launcher}/bin/${launcherName} "$@"
+        '';
+      }).overrideAttrs (old: { meta = (old.meta or {}) // { priority = 4; }; });
+    in {
+      inherit launcher launcherName wrapper;
+    };
 
-        # Brokered launch: privilege drop to agent user via systemd-run.
-        # sudo is at /run/wrappers/bin/sudo (NixOS setuid wrapper).
-        exec sudo --preserve-env=AGENT_NAME,AGENT_REAL_BINARY,AGENT_PROJECT_ROOT,AGENT_NONO_PROFILE,AGENT_CREDENTIALS,AGENT_ALLOW_NIX_DAEMON \
-          ${agentLauncher}/bin/tsurf-agent-launch "$@"
-      '';
-    }).overrideAttrs (old: { meta = (old.meta or {}) // { priority = 4; }; });
+  registeredAgents =
+    map
+      mkAgent
+      ([{
+        name = "claude";
+        realPkg = pkgs.claude-code;
+        realBin = "claude";
+        credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
+      }] ++ map (a: {
+        name = a.name;
+        realPkg = a.package;
+        realBin = a.binary;
+        credentials = a.credentials;
+      }) cfg.extraAgents);
 
 in
 {
@@ -147,26 +160,23 @@ in
 
   config = lib.mkIf cfg.enable {
     # Replace bare agent binaries with sandboxed wrappers (meta.priority = 4 wins over default 5).
-    environment.systemPackages = [
-      (mkWrapper { name = "claude"; realPkg = pkgs.claude-code;      realBin = "claude"; credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ]; })
-    ] ++ map (a: mkWrapper { name = a.name; realPkg = a.package; realBin = a.binary; credentials = a.credentials; }) cfg.extraAgents;
+    environment.systemPackages = map (agent: agent.wrapper) registeredAgents;
 
     # When Nix daemon socket access is enabled in the sandbox, also allow the agent
     # user to authenticate with the daemon (complements the Landlock socket grant).
     nix.settings.allowed-users = lib.mkIf cfg.allowNixDaemon [ agentCfg.user ];
 
-    # @decision SEC-119-02: Targeted NOPASSWD sudoers rule for the brokered agent launcher.
+    # @decision SEC-119-02: Targeted NOPASSWD sudoers rules for the immutable brokered launchers.
     #   Scoped to %wheel group (compatible with execWheelOnly=true in users.nix).
     #   Agent user is NOT in wheel (enforced by assertions), so cannot use this rule.
-    #   SETENV permits env var passthrough for AGENT_* vars.
-    #   The launcher validates AGENT_REAL_BINARY is in /nix/store to prevent arbitrary
-    #   command execution.
+    #   Launch configuration is baked into each root-owned launcher, so callers cannot
+    #   swap binaries, profiles, or credential tuples across the sudo boundary.
     security.sudo.extraRules = [{
       groups = [ "wheel" ];
-      commands = [{
-        command = "${agentLauncher}/bin/tsurf-agent-launch";
-        options = [ "NOPASSWD" "SETENV" ];
-      }];
+      commands = map (agent: {
+        command = "${agent.launcher}/bin/${agent.launcherName}";
+        options = [ "NOPASSWD" ];
+      }) registeredAgents;
     }];
 
     # @decision SANDBOX-NET-01: UID-based nftables egress filtering restricts the agent

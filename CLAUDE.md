@@ -196,7 +196,7 @@ Run before every module or service commit:
 - **SEC115-01:** (RESOLVED in Phase 122) `tailscale0` removed from `trustedInterfaces`. Localhost-first model: internal services bind 127.0.0.1, no blanket tailnet trust. Private overlay can expose specific ports via `networking.firewall.interfaces.tailscale0.allowedTCPPorts`. `--accept-routes` removed from default Tailscale flags. See SECURITY.md "Tailnet Segmentation".
 - **SEC116-01:** Agent resource limits via `tsurf-agents.slice` set aggregate ceilings (8G/300%/1024 tasks). Per-unit limits on dev-agent (4G/200%/256 tasks, OOMPolicy=kill). Limits are conservative defaults; production may need tuning based on workload.
 - **SEC116-02:** Syncthing defaults to tailnet-only operation (global announce, local announce, relays, NAT all disabled). Public BEP port 22000 requires explicit `publicBep` opt-in. Private overlay should enable `publicBep` only if non-Tailscale peers are needed.
-- **SEC119-01:** Brokered launch model uses `sudo` + `systemd-run --uid=agent` for interactive sessions. A targeted NOPASSWD+SETENV sudoers rule allows `dev` to invoke only `tsurf-agent-launch`. The launcher validates `AGENT_REAL_BINARY` is in `/nix/store` to prevent arbitrary command execution. This rule is no broader than `dev`'s existing wheel access in template mode.
+- **SEC119-01:** Brokered launch model uses dedicated per-agent launchers plus `systemd-run --uid=agent` for interactive sessions. Sudoers lists immutable launcher commands only; no SETENV or caller-chosen binary/profile/credential tuple crosses the privileged boundary.
 - **SEC119-02:** (UPDATED Phase 124) `dev-agent.nix` defaults WorkingDirectory to `agentCfg.projectRoot` (not the control-plane repo). Private overlay should set `services.devAgent.workingDirectory` to a specific workspace repo. Workspace directories under `/data/projects` must be accessible to the `agent` user for the brokered launcher's `--same-dir` to work. See SECURITY.md "Control-Plane vs Workspace Separation".
 
 ## Sandbox Awareness
@@ -204,6 +204,7 @@ Run before every module or service commit:
 When running inside the nono sandbox (as the `agent` user — no wheel, no docker):
 
 - **Brokered execution**: When operator (`dev`) invokes `claude` or any enabled extra wrapper such as `codex`, `pi`, or `opencode`, the wrapper uses `sudo` + `systemd-run --uid=agent` to drop to the `agent` user before any sandbox or credential logic runs. The operator never directly execs agent binaries with credentials. When already running as `agent` (e.g. `dev-agent.nix`), the wrapper execs directly (no double privilege drop).
+- **Immutable launchers**: The privileged path is one launcher per agent (`tsurf-launch-claude`, `tsurf-launch-codex`, etc.), not a generic env-configurable root helper.
 - Launch from inside `/data/projects`; wrapper scripts reject sandboxed launches outside that root.
 - Read access is scoped to the current git repo root, not all of `/data/projects`.
 - API keys are loaded from `/run/secrets/` by the wrapper (running as `agent`) into the parent env. nono's reverse proxy reads them via `env://` URIs and passes only per-session phantom tokens to the sandboxed child (`--credential` flag).

@@ -25,8 +25,9 @@ bats_load_library bats-assert
   assert_secret_exists "/run/secrets/tailscale-authkey" "root"
 }
 
-@test "${HOST}: anthropic-api-key secret exists and is agent-owned" {
-  assert_secret_exists "/run/secrets/anthropic-api-key" "agent"
+@test "${HOST}: wrapper API key secrets are owned by the configured agent user" {
+  assert_secret_exists "/run/secrets/anthropic-api-key" "${AGENT_USER}"
+  assert_secret_exists "/run/secrets/openai-api-key" "${AGENT_USER}"
 }
 
 @test "${HOST}: secret files are not world-readable" {

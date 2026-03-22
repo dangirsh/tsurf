@@ -100,6 +100,7 @@ in
         ProtectKernelModules = true;
         ProtectKernelLogs = true;
         ProtectControlGroups = true;
+        SystemCallArchitectures = "native";
         RestrictNamespaces = true;
         LockPersonality = true;
         # @decision SEC-116-05: Hardening baseline applied. MemoryDenyWriteExecute omitted
