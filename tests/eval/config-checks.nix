@@ -693,6 +693,19 @@ in
     "ovh nix.settings.allowed-users missing agent user despite allowNixDaemon=true"
     (builtins.elem devCfg.tsurf.agent.user devCfg.nix.settings.allowed-users);
 
+  # --- Phase 124: Clone-repos credential safety ---
+
+  clone-repos-no-cli-credentials =
+    let
+      source = builtins.readFile ../../extras/scripts/clone-repos.sh;
+    in
+    mkCheck
+      "clone-repos-no-cli-credentials"
+      "clone-repos.sh uses GIT_ASKPASS (no credentials on CLI)"
+      "clone-repos.sh passes credentials via git -c extraheader - use GIT_ASKPASS pattern instead"
+      (lib.hasInfix "GIT_ASKPASS" source
+       && !(lib.hasInfix "extraheader" source));
+
 }
 
 # --- Private overlay test extension pattern ---
