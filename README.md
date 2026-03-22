@@ -26,7 +26,7 @@ These lead to the following design goals:
 - **Fully declarative:** Agents get maximal system context from the source files. Imperative package management is disabled by convention (channels removed, NIX_PATH cleared). Undeclared state is wiped on boot via [BTRFS](https://btrfs.readthedocs.io/) subvolume rollback ([impermanence](https://github.com/nix-community/impermanence)).
 - **Robust multi-host deployment:** [deploy-rs](https://github.com/serokell/deploy-rs) with [automatic rollbacks](https://github.com/serokell/deploy-rs?tab=readme-ov-file#magic-rollback) and build-time lockout prevention.
 - **Hardened server configuration:** [srvos](https://github.com/nix-community/srvos) [server profile](https://github.com/nix-community/srvos/tree/main/nixos/server) (key-only SSH, immutable users, sudo wheel-only, systemd watchdogs, no emergency mode), [Tailscale](https://tailscale.com/) zero-trust networking (use [tailnet lock](https://tailscale.com/docs/features/tailnet-lock)), nftables default-deny firewall.
-- **Optional batteries** (in `extras/`): Service dashboard, coding agents ([Claude Code](https://claude.com/claude-code), [Codex](https://github.com/openai/codex), [Pi](https://github.com/badlogic/pi-mono)), agent session search ([CASS](https://github.com/Dicklesworthstone/coding_agent_session_search)), token cost tracking, encrypted backups ([Restic](https://restic.net/) + [B2](https://www.backblaze.com/cloud-storage)), cross-host file sync ([Syncthing](https://syncthing.net/)), Docker, and deploy orchestration. Import what you need.
+- **Optional batteries** (in [`extras/`](#extras)): Service dashboard, coding agents, cost tracking, encrypted backups, file sync, Docker, and more. Each is a standalone module you [import and enable](#extras) individually.
 
 ## Example Use Cases
 
@@ -52,8 +52,34 @@ Each module declares its own dashboard entry and network exposure directly. Inte
 | Web | Public ([nginx](https://nginx.org/) + [ACME](https://letsencrypt.org/)) | personal sites |
 | Internal | Localhost-only (`127.0.0.1`) | dashboard, syncthing GUI, restic-status |
 | System | Public firewall | SSH (22), Syncthing BEP (22000) |
-| Agent | outbound only | claude, codex, pi |
+| Agent | outbound only | claude, codex, pi, opencode |
 | Worker | none/outbound | restic backup, sshd-liveness-check |
+
+## Extras
+
+Optional modules in `extras/`. Import the file, then set the enable option:
+
+```nix
+# hosts/my-host/default.nix
+imports = [ ../../extras/docker.nix ];
+
+# then in config:
+services.dockerStarter.enable = true;
+```
+
+| Module | Enable option | Description |
+|--------|--------------|-------------|
+| [`dashboard.nix`](extras/dashboard.nix) | `services.dashboard.enable` | Service dashboard with live systemd status |
+| [`cost-tracker.nix`](extras/cost-tracker.nix) | `services.costTracker.enable` | API cost tracking (Anthropic, OpenAI) |
+| [`docker.nix`](extras/docker.nix) | `services.dockerStarter.enable` | Docker engine with NixOS-managed NAT |
+| [`syncthing.nix`](extras/syncthing.nix) | `services.syncthingStarter.enable` | Cross-host file sync (tailnet-only by default) |
+| [`restic.nix`](extras/restic.nix) | `services.resticStarter.enable` | Encrypted backups to Backblaze B2 |
+| [`dev-agent.nix`](extras/dev-agent.nix) | `services.devAgent.enable` | Persistent autonomous Claude Code agent |
+| [`opencode.nix`](extras/opencode.nix) | `services.opencodeAgent.enable` | [opencode](https://opencode.ai) AI coding assistant with nono sandbox |
+| [`home/`](extras/home/) | _(import as home-manager module)_ | git, SSH, direnv for the operator user |
+| [`home/cass.nix`](extras/home/cass.nix) | `programs.cass.enable` | [CASS](https://github.com/Dicklesworthstone/coding_agent_session_search) agent session indexer |
+
+All enable options default to `false`. In a [private overlay](#private-overlay), use `"${inputs.tsurf}/extras/docker.nix"` as the import path.
 
 ## Private overlay
 

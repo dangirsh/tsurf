@@ -28,6 +28,7 @@ extras/                  # Optional batteries — import what you need
   dashboard.nix        # Service dashboard from direct entry declarations
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
   dev-agent.nix        # Persistent autonomous Claude agent (zmx + systemd)
+  opencode.nix         # opencode AI coding assistant (sandboxed via agentSandbox.extraAgents)
   docker.nix           # Docker engine (--iptables=false), NAT
   restic.nix           # Restic backup to B2 + status server
   syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)

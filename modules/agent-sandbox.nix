@@ -101,6 +101,33 @@ in
   options.services.agentSandbox = {
     enable = lib.mkEnableOption "sandboxed agent wrappers for claude, codex, and pi";
 
+    extraAgents = lib.mkOption {
+      type = lib.types.listOf (lib.types.submodule ({ config, ... }: {
+        options = {
+          name = lib.mkOption {
+            type = lib.types.str;
+            description = "Wrapper binary name (exposed in PATH).";
+          };
+          package = lib.mkOption {
+            type = lib.types.package;
+            description = "Package containing the agent binary.";
+          };
+          binary = lib.mkOption {
+            type = lib.types.str;
+            default = config.name;
+            description = "Binary name within the package (defaults to name).";
+          };
+          credentials = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [];
+            description = "Credential triples for nono proxy (SERVICE:ENV_VAR:secret-file-name).";
+          };
+        };
+      }));
+      default = [];
+      description = "Additional agents to register with the brokered sandbox (used by extras modules).";
+    };
+
     projectRoot = lib.mkOption {
       type = lib.types.str;
       default = config.tsurf.agent.projectRoot;
@@ -131,7 +158,7 @@ in
       (mkWrapper { name = "claude"; realPkg = pkgs.claude-code;      realBin = "claude"; credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ]; })
       (mkWrapper { name = "codex";  realPkg = pkgs.codex;            realBin = "codex";  credentials = [ "openai:OPENAI_API_KEY:openai-api-key" ]; })
       pi-sandboxed
-    ];
+    ] ++ map (a: mkWrapper { name = a.name; realPkg = a.package; realBin = a.binary; credentials = a.credentials; }) cfg.extraAgents;
 
     # When Nix daemon socket access is enabled in the sandbox, also allow the agent
     # user to authenticate with the daemon (complements the Landlock socket grant).

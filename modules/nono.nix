@@ -76,6 +76,7 @@ let
         "${cfg.homeDir}/.claude"
         "${cfg.homeDir}/.config/claude"
         "${cfg.homeDir}/.codex"
+        "${cfg.homeDir}/.config/opencode"
         "${cfg.homeDir}/.pi"
         "${cfg.homeDir}/.pi/agent"
         "${cfg.homeDir}/.gitconfig"
