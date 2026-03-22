@@ -12,8 +12,8 @@
   # Set your git identity here, or override in your private overlay's home/default.nix.
   programs.git = {
     enable = true;
-    userName = "Your Name";
-    userEmail = "your@email.com";
+    settings.user.name = "Your Name";
+    settings.user.email = "your@email.com";
     # Recommended: add signing config if you use SSH commit signing:
     #   signing.key = "~/.ssh/id_ed25519.pub";
     #   signing.signByDefault = true;
@@ -29,10 +29,13 @@
   # Inlined from ssh.nix
   programs.ssh = {
     enable = true;
-    controlMaster = "auto";
-    controlPersist = "10m";
-    serverAliveInterval = 60;
-    hashKnownHosts = true;
+    enableDefaultConfig = false;
+    matchBlocks."*" = {
+      controlMaster = "auto";
+      controlPersist = "10m";
+      hashKnownHosts = true;
+      serverAliveInterval = 60;
+    };
   };
   services.ssh-agent.enable = true;
 

@@ -14,8 +14,8 @@ export XDG_RUNTIME_DIR
 # script directly. zmx run sends args through bash in the session, stripping
 # quotes — shell metacharacters in inline prompts cause syntax errors. A
 # pre-built script sidesteps this entirely.
-TASK_SCRIPT=$(mktemp /tmp/dev-agent-task.XXXXXX)
-chmod +x "$TASK_SCRIPT"
+TASK_SCRIPT="$XDG_RUNTIME_DIR/dev-agent-task.sh"
+umask 077
 cat > "$TASK_SCRIPT" << 'TASK'
 #!/usr/bin/env bash
 # WorkingDirectory is set by systemd via services.devAgent.workingDirectory.
@@ -23,5 +23,6 @@ cat > "$TASK_SCRIPT" << 'TASK'
 exec claude --model claude-opus-4-6 -p --permission-mode=bypassPermissions \
   'Conduct a literature search for projects similar to tsurf - NixOS configurations combined with AI agent infrastructure. Focus on projects with commits in the last few weeks. Check GitHub for recent activity. Document findings in /data/projects/tsurf/RESEARCH.md with: project name, repo URL, last commit date, key features, relevance score 1-10, and adoption recommendations. Use WebSearch and WebFetch tools.'
 TASK
+chmod 700 "$TASK_SCRIPT"
 
 exec zmx run dev-agent "$TASK_SCRIPT"

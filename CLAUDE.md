@@ -210,7 +210,7 @@ When running inside the nono sandbox (as the `agent` user — no wheel, no docke
 - Denied paths include `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`, `~/.aws`, and `~/.docker`.
 - Public wrappers do not expose `--no-sandbox`; any trusted unsandboxed workflow must be added in a private overlay.
 - Each interactive session gets per-session cgroup limits (MemoryMax=4G, CPUQuota=200%, TasksMax=256) in `tsurf-agents.slice`.
-- Launch events are logged to journald only (`journalctl -t agent-launch`). Structured metadata (mode, agent, user, uid, cwd, git_root) — no raw arguments or prompts.
+- Launch events are logged to journald only (`journalctl -t agent-launch`). Structured metadata (mode, agent, user, uid, repo_scope) — no raw arguments, prompts, or file paths.
 - For guided workflows, use `/nix-module` for module authoring and `/nix-test` for test execution + `.test-status`.
 
 ## Deployment Rules

@@ -192,12 +192,14 @@
         test-live = {
           type = "app";
           program = "${self.packages.${system}.test-live}/bin/test-live";
+          meta.description = "Run tsurf live BATS tests against a target host";
         };
 
         # @decision BOOT-06: Pinned nixos-anywhere via flake.lock (supply-chain safety).
         nixos-anywhere = {
           type = "app";
           program = "${nixos-anywhere.packages.${system}.default}/bin/nixos-anywhere";
+          meta.description = "Pinned nixos-anywhere bootstrap helper";
         };
       };
 
@@ -222,7 +224,7 @@
             else {};
         in
         deployChecks // evalChecks // {
-          shellcheck-tests = pkgs.runCommandNoCC "shellcheck-tests" {
+          shellcheck-tests = pkgs.runCommand "shellcheck-tests" {
             nativeBuildInputs = [ pkgs.shellcheck ];
             src = ./.;
           } ''

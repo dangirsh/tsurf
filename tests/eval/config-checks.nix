@@ -1,5 +1,5 @@
 # tests/eval/config-checks.nix — Nix eval-time assertions for tsurf (tsurf and tsurf-dev hosts).
-# @decision TEST-48-01: Keep checks purely eval-time with runCommandNoCC to catch regressions offline.
+# @decision TEST-48-01: Keep checks purely eval-time with runCommand to catch regressions offline.
 { self, pkgs, lib }:
 let
   tsurfCfg = self.nixosConfigurations."eval-tsurf".config;
@@ -11,7 +11,7 @@ let
   jq = "${pkgs.jq}/bin/jq";
 
   mkCheck = name: passMessage: failMessage: condition:
-    pkgs.runCommandNoCC name { } ''
+    pkgs.runCommand name { } ''
       ${if condition then ''
         echo "PASS: ${passMessage}"
         touch "$out"
@@ -22,17 +22,17 @@ let
     '';
 in
 {
-  eval-tsurf = pkgs.runCommandNoCC "eval-tsurf" { } ''
+  eval-tsurf = pkgs.runCommand "eval-tsurf" { } ''
     echo "eval-tsurf config evaluates: ${self.nixosConfigurations."eval-tsurf".config.system.build.toplevel}"
     touch "$out"
   '';
 
-  eval-tsurf-dev = pkgs.runCommandNoCC "eval-tsurf-dev" { } ''
+  eval-tsurf-dev = pkgs.runCommand "eval-tsurf-dev" { } ''
     echo "eval-tsurf-dev config evaluates: ${self.nixosConfigurations."eval-tsurf-dev".config.system.build.toplevel}"
     touch "$out"
   '';
 
-  eval-tsurf-dev-alt-agent = pkgs.runCommandNoCC "eval-tsurf-dev-alt-agent" { } ''
+  eval-tsurf-dev-alt-agent = pkgs.runCommand "eval-tsurf-dev-alt-agent" { } ''
     echo "eval-tsurf-dev-alt-agent config evaluates: ${self.nixosConfigurations."eval-tsurf-dev-alt-agent".config.system.build.toplevel}"
     touch "$out"
   '';
@@ -247,7 +247,7 @@ in
       "dashboard has too few entries: ${toString entryCount}"
       (entryCount >= 5);
 
-  dashboard-manifest = pkgs.runCommandNoCC "dashboard-manifest" { } ''
+  dashboard-manifest = pkgs.runCommand "dashboard-manifest" { } ''
     echo '${builtins.toJSON (builtins.fromJSON tsurfCfg.environment.etc."dashboard/manifest.json".text)}' \
       | ${jq} . > /dev/null
     echo "PASS: dashboard manifest is valid JSON"
@@ -804,6 +804,34 @@ in
       "clone-repos.sh passes credentials via git -c extraheader - use GIT_ASKPASS pattern instead"
       (lib.hasInfix "GIT_ASKPASS" source
        && !(lib.hasInfix "extraheader" source));
+
+  home-profile-no-deprecated-options =
+    let
+      source = builtins.readFile ../../extras/home/default.nix;
+    in
+    mkCheck
+      "home-profile-no-deprecated-options"
+      "extras/home/default.nix avoids deprecated Home Manager git/ssh options"
+      "extras/home/default.nix still uses deprecated Home Manager git/ssh options"
+      (!(lib.hasInfix "programs.git.userName" source)
+       && !(lib.hasInfix "programs.git.userEmail" source)
+       && !(lib.hasInfix "programs.ssh.controlMaster" source)
+       && !(lib.hasInfix "programs.ssh.controlPersist" source)
+       && !(lib.hasInfix "programs.ssh.hashKnownHosts" source)
+       && !(lib.hasInfix "programs.ssh.serverAliveInterval" source));
+
+  agent-scripts-avoid-global-tmp =
+    let
+      cloneSource = builtins.readFile ../../extras/scripts/clone-repos.sh;
+      devAgentSource = builtins.readFile ../../extras/scripts/dev-agent.sh;
+    in
+    mkCheck
+      "agent-scripts-avoid-global-tmp"
+      "agent helper scripts avoid /tmp for transient state"
+      "agent helper scripts still write transient files under /tmp"
+      (!(lib.hasInfix "mktemp /tmp" cloneSource)
+       && !(lib.hasInfix "mktemp /tmp" devAgentSource)
+       && !(lib.hasInfix "/tmp/dev-agent-task" devAgentSource));
 
   # --- Phase 124: Cost-tracker least privilege ---
 

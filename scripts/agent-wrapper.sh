@@ -22,10 +22,23 @@
 
 set -euo pipefail
 
+: "${AGENT_NAME:?must be set}"
+: "${AGENT_REAL_BINARY:?must be set}"
+: "${AGENT_PROJECT_ROOT:?must be set}"
+: "${AGENT_NONO_PROFILE:?must be set}"
+
+case "$AGENT_REAL_BINARY" in
+  /nix/store/*) ;;
+  *)
+    echo "ERROR: AGENT_REAL_BINARY must be in /nix/store" >&2
+    exit 1
+    ;;
+esac
+
 journal_log() {
   local mode="$1"
   logger -t "agent-launch" --id=$$ \
-    "mode=$mode agent=$AGENT_NAME user=$(whoami) uid=$(id -u) cwd=$PWD git_root=${git_root:-unknown}" \
+    "mode=$mode agent=$AGENT_NAME user=$(whoami) uid=$(id -u) repo_scope=${repo_scope:-unknown}" \
     2>/dev/null || true
 }
 
@@ -64,6 +77,7 @@ if [[ "$git_root" == "$AGENT_PROJECT_ROOT" ]]; then
   echo "ERROR: refusing to grant read access to the entire project root ($AGENT_PROJECT_ROOT)" >&2
   exit 1
 fi
+repo_scope="git-worktree"
 
 # Build nono arguments — proxy credential mode (phantom token pattern).
 # nono's reverse proxy reads real keys from parent env via env:// URIs,

@@ -20,7 +20,10 @@ fi
 # Create a temporary GIT_ASKPASS helper that returns the token.
 # git calls this helper with a prompt string as $1 - we ignore the prompt
 # and return the token for any password request.
-ASKPASS_HELPER=$(mktemp /tmp/git-askpass.XXXXXX)
+HELPER_DIR="$CLONE_DIR/tmp"
+mkdir -p "$HELPER_DIR"
+chmod 700 "$HELPER_DIR"
+ASKPASS_HELPER=$(mktemp "$HELPER_DIR/git-askpass.XXXXXX")
 chmod 700 "$ASKPASS_HELPER"
 cat > "$ASKPASS_HELPER" << 'HELPER'
 #!/usr/bin/env bash
