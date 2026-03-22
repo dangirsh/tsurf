@@ -19,7 +19,7 @@ Minimal forkable template for a private tsurf overlay.
 
 ## Adding a Custom Agent
 
-tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox with [Landlock](https://docs.kernel.org/userspace-api/landlock.html) kernel-level isolation. Each agent needs three things:
+tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox with [Landlock](https://docs.kernel.org/userspace-api/landlock.html) kernel-level isolation. API keys stay in the parent process; the child gets only a per-session phantom token. Each agent needs three things:
 
 1. **A nono profile** — what the agent can and cannot access
 2. **A launch script** — how the agent runs (credentials, CLI flags)
@@ -48,7 +48,7 @@ tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox
 
 ### Minimal example: `greeter.nix`
 
-[`modules/greeter.nix`](modules/greeter.nix) is the simplest possible agent — a daily timer that asks Claude to write a greeting. It demonstrates the full pattern in ~100 lines:
+[`modules/greeter.nix`](modules/greeter.nix) is the simplest possible agent: a daily timer that asks Claude to write a greeting. It demonstrates the full pattern in ~100 lines:
 
 ```nix
 # 1. Define a nono profile (what the agent can access)
@@ -57,7 +57,10 @@ greeterProfile = {
   filesystem.allow = [
     "/var/lib/greeter"           # output directory
   ];
-  network.block = false;         # needs API access
+  network = {
+    block = false;               # needs API access
+    custom_credentials.anthropic = { ... };  # env:// proxy credential
+  };
   workdir.access = "readwrite";  # CWD is writable
   interactive = false;           # no TTY (systemd timer)
 };
@@ -65,8 +68,10 @@ greeterProfile = {
 # 2. Install the profile
 environment.etc."nono/profiles/greeter.json".source = greeterProfileFile;
 
-# 3. Launch script (credential injection + nono sandbox)
+# 3. Launch script (proxy credential injection + nono sandbox)
+# pass the credential name declared above
 exec nono run --profile /etc/nono/profiles/greeter.json --net-allow \
+  --credential anthropic \
   -- claude -p --permission-mode=bypassPermissions \
   "Write a greeting to /var/lib/greeter/greeting.txt"
 
@@ -83,18 +88,6 @@ systemd.services.greeter = {
 
 To use it: import `modules/greeter.nix` in your host config and ensure `anthropic-api-key` exists in your sops secrets.
 
-### Complex example: `janitor.nix`
-
-[`modules/janitor.nix`](modules/janitor.nix) is a more realistic agent that demonstrates:
-
-- **Configurable options** (`services.janitor.schedule`, `.model`, `.systemPrompt`, `.reportPath`)
-- **Custom nono profile with `extends`** — inherits from `claude-code`, adds `/tmp`, `/nix/var`, `/var/lib/janitor`
-- **Natural-language system prompt** — cleanup behavior defined in English, not bash
-- **JSON report output** with validation
-- **Weekly systemd timer** with persistent scheduling
-
-Cost: ~$0.01-0.03/run (~$0.50-1.50/year at Sonnet pricing). Override model with `services.janitor.model`.
-
 ### Step-by-step: adding your own agent
 
 **1. Define the nono profile.**
@@ -109,7 +102,16 @@ myAgentProfile = {
     allow_file = [ "/var/lib/my-agent/output.json" ];  # specific files
     # deny list is inherited — blocks ~/.ssh, ~/.gnupg, etc.
   };
-  network.block = false;
+  network = {
+    block = false;
+    custom_credentials.anthropic = {
+      credential_key = "env://ANTHROPIC_API_KEY";
+      env_var = "ANTHROPIC_API_KEY";
+      upstream = "https://api.anthropic.com";
+      inject_header = "x-api-key";
+      credential_format = "{}";
+    };
+  };
   workdir.access = "readwrite";
   interactive = false;  # true if the agent needs a TTY (interactive use)
 };
@@ -121,6 +123,7 @@ Key profile fields:
 - `filesystem.allow_file`: specific files with read+write access
 - `filesystem.deny`: paths to block even within allowed parent directories
 - `network.block`: `false` to allow outbound network (API calls)
+- `network.custom_credentials`: proxy credential definitions backed by `env://...`
 - `workdir.access`: `"readwrite"` for the current working directory
 - `interactive`: `true` for interactive agents, `false` for timer/service agents
 
@@ -140,13 +143,14 @@ script = pkgs.writeShellScript "my-agent" ''
   exec nono run \
     --profile /etc/nono/profiles/my-agent.json \
     --net-allow \
+    --credential anthropic \
     -- claude -p \
     --permission-mode=bypassPermissions \
     "Your agent prompt here."
 '';
 ```
 
-For agents using other binaries (codex, pi, custom tools), replace `claude` with the appropriate command. The `--permission-mode=bypassPermissions` flag is safe here because nono is the actual permission boundary.
+For agents using other binaries (codex, pi, custom tools), replace `claude` with the appropriate command. If the agent needs API access, declare `network.custom_credentials.<name>` in the profile and pass `--credential <name>` here. `--permission-mode=bypassPermissions` is safe here because nono is the actual permission boundary.
 
 **4. Define the systemd service.**
 
