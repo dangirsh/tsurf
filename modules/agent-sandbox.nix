@@ -133,6 +133,10 @@ in
       pi-sandboxed
     ];
 
+    # When Nix daemon socket access is enabled in the sandbox, also allow the agent
+    # user to authenticate with the daemon (complements the Landlock socket grant).
+    nix.settings.allowed-users = lib.mkIf cfg.allowNixDaemon [ agentCfg.user ];
+
     # @decision SEC-119-02: Targeted NOPASSWD sudoers rule for the brokered agent launcher.
     #   Scoped to %wheel group (compatible with execWheelOnly=true in users.nix).
     #   Agent user is NOT in wheel (enforced by assertions), so cannot use this rule.
