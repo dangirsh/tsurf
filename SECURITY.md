@@ -1,274 +1,374 @@
 # Security Model
 
-This document describes the actual security boundaries, secret flow, privilege model,
-and network model of tsurf. It is the authoritative source for security claims.
+This document describes the security properties that this repository actually
+implements today. It is about the public repo as shipped. Private overlays can
+strengthen or weaken these properties, so host-specific statements are called out.
 
-## Trust Boundaries
+## Scope
 
-### What the sandbox guarantees
+- The public flake exports only eval fixtures:
+  `eval-tsurf`, `eval-tsurf-dev`, and `eval-tsurf-dev-alt-agent`.
+- The public flake exports no `deploy.nodes` and no deploy-looking
+  `nixosConfigurations.tsurf` / `tsurf-dev` outputs.
+- [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
+  refuses to deploy unless it is being run from a private overlay flake that
+  contains a `tsurf.url` input.
+- [`hosts/services/default.nix`](/data/projects/tsurf/hosts/services/default.nix)
+  is the service-host role. It does **not** import
+  [`modules/agent-sandbox.nix`](/data/projects/tsurf/modules/agent-sandbox.nix)
+  or [`modules/nono.nix`](/data/projects/tsurf/modules/nono.nix).
+- [`hosts/dev/default.nix`](/data/projects/tsurf/hosts/dev/default.nix) is the
+  agent-execution role. It imports both sandbox modules and enables:
+  - `services.agentSandbox.enable = true`
+  - `services.nonoSandbox.enable = true`
+  - `services.agentSandbox.allowNixDaemon = true`
+  - `services.agentSandbox.egressControl.enable = true`
 
-- **Brokered execution**: Interactive agent sessions run as the `agent` user, not the
-  calling operator. The wrapper invokes a dedicated root-owned launcher for that
-  agent, which then uses `systemd-run --uid=agent` to drop privileges before
-  executing the agent binary. The operator never directly execs agent binaries
-  with agent credentials.
-- **Per-session cgroup limits**: Each interactive session runs in a transient systemd
-  unit under `tsurf-agents.slice` with MemoryMax=4G, CPUQuota=200%, TasksMax=256.
-- **Filesystem isolation**: [nono](https://github.com/always-further/nono) uses
-  [Landlock](https://docs.kernel.org/userspace-api/landlock.html) (kernel-level,
-  irreversible per-process) to restrict agent filesystem access.
-- **Read access scoped to current git repo root**, not all of `/data/projects`.
-- **Denied paths**: `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`,
-  `~/.aws`, `~/.docker`, `~/.config/syncthing`.
-- **Launch logging** to journald (`journalctl -t agent-launch`) — structured metadata only, no raw arguments.
-- **Public repo has no unsandboxed execution path**: any trusted `--no-sandbox`
-  override must live in a private overlay, not this repo.
+## Core Security Invariants
 
-### What the sandbox does NOT guarantee
+- The public repo is intentionally non-deployable. Real deployments are expected
+  to come from a private overlay.
+- The operator and agent identities are separate:
+  - `dev` is the human/operator account.
+  - `tsurf.agent.user` defaults to `agent` and is the sandboxed agent account.
+- Build-time assertions enforce that the agent user:
+  - is not `dev`
+  - is not in `wheel`
+  - is not in `docker`
+- `users.mutableUsers = false`.
+- `security.sudo.execWheelOnly = true`.
+- Raw agent binaries are not installed in `PATH` by
+  [`modules/agent-compute.nix`](/data/projects/tsurf/modules/agent-compute.nix).
+  The intended interactive entrypoints are wrapper binaries such as `claude` and,
+  if enabled, `codex`, `pi`, or `opencode`.
+- The public wrapper/launcher path has no `--no-sandbox` or
+  `AGENT_ALLOW_NOSANDBOX` escape hatch.
 
-- **No sandbox-level egress filtering**: nono does not yet support allowlist-based
-  outbound filtering on headless servers. By default, agents have unrestricted outbound
-  network access unless the optional nftables-based egress controls are enabled.
-- **`dev` user has effective root access**: `dev` is in `wheel` with passwordless sudo
-  in the public template. The brokered launch model prevents casual privilege leaks,
-  but `dev` can always escalate via `sudo`. The operator/agent split is enforced by
-  build-time assertions and the brokered launcher.
+## User And Privilege Model
 
-## Secret Flow
+| Identity | Default groups | Purpose | Enforced by |
+| --- | --- | --- | --- |
+| `dev` | `wheel`, `docker` | human admin, deploy, maintenance | `modules/users.nix` |
+| `agent` | `users` | sandboxed agent execution | `modules/users.nix` assertions |
+| `root` | n/a | activation, secrets, deploy, recovery | NixOS/systemd |
 
-API keys are stored as sops-nix secrets, decrypted at activation to `/run/secrets/`.
-The brokered launcher runs `agent-wrapper.sh` as the `agent` user (via `systemd-run
---uid=agent`). The wrapper loads secrets from `/run/secrets/` (agent-owned) into the
-parent process environment. nono's reverse proxy reads them via `env://` URIs,
-generates per-session 256-bit phantom tokens, and passes only the phantom tokens to
-the sandboxed child. The child process never sees real API keys — it receives a
-worthless session token that only works with nono's localhost proxy.
+Important nuances:
 
-The operator (`dev`) never has agent credentials in their shell. Secrets are only
-readable by the `agent` user, and the brokered launcher ensures the wrapper runs as
-`agent` even when invoked by `dev`.
+- `dev` is always an administrative user in the template. The
+  `allowUnsafePlaceholders` flag does **not** remove `dev` from `wheel`; it only
+  controls placeholder-key assertions plus:
+  - `users.allowNoPasswordLogin`
+  - `security.sudo.wheelNeedsPassword`
+- Base Nix daemon policy is:
+  - `allowed-users = [ "root" "@wheel" ]`
+  - `trusted-users = [ "root" ]`
+- When `services.agentSandbox.allowNixDaemon = true`, the agent user is added to
+  `nix.settings.allowed-users` and the sandbox gets access to
+  `/nix/var/nix/daemon-socket`. This is enabled in
+  [`hosts/dev/default.nix`](/data/projects/tsurf/hosts/dev/default.nix).
+  The agent is still **not** a trusted Nix user.
 
-## Privilege Model
+## Template And Fixture Safety
 
-The public template ships an operator/agent user split with brokered execution:
+- `tsurf.template.allowUnsafePlaceholders` defaults to `false`.
+- Host source files do **not** set that flag. The public flake injects it only
+  into the clearly named eval fixtures so `nix flake check` can evaluate without
+  real credentials.
+- When the flag is enabled, it permits placeholder bootstrap/break-glass keys and
+  flips:
+  - `users.allowNoPasswordLogin = true`
+  - `security.sudo.wheelNeedsPassword = false`
+- The public repo still contains placeholder bootstrap and break-glass keys in
+  source. That is acceptable only because:
+  - real deploy targets are not exported here
+  - the public deploy script refuses to run
+  - real deployments are expected to replace these values in a private overlay
 
-| User | Groups | Purpose | Build-time assertions |
-|------|--------|---------|----------------------|
-| `dev` (operator) | wheel, docker | Human admin, deploy, maintenance | — |
-| `agent` | users | Runs sandboxed agent tools, owns workspaces | NOT in wheel, NOT in docker |
-| service-specific | (varies) | Long-lived services (optional) | — |
+## Agent Sandbox
 
-### Execution flow
+This section applies only to hosts that import and enable both
+[`modules/agent-sandbox.nix`](/data/projects/tsurf/modules/agent-sandbox.nix)
+and [`modules/nono.nix`](/data/projects/tsurf/modules/nono.nix). In the public
+repo, that is the dev-host role.
 
-```
-dev runs "claude ..."
-  → wrapper stub (as dev)
-    → sudo tsurf-launch-claude (as root, immutable launcher)
-      → systemd-run --uid=agent --gid=<agent gid> --pty --slice=tsurf-agents.slice
-        → agent-wrapper.sh (as agent): reads /run/secrets/*, applies nono sandbox
-          → nono → real agent binary (as agent, sandboxed, phantom tokens only)
-```
+### Launch Path
 
-When already running as `agent` (e.g. `dev-agent.nix` systemd unit), the wrapper
-skips the brokered path and execs `agent-wrapper.sh` directly.
+Interactive wrapper execution is brokered:
 
-Parameterized via `tsurf.agent.{user, home, projectRoot}` (default: `agent`,
-`/home/agent`, `/data/projects`). Build-time assertions reject agent user in
-wheel or docker groups.
-
-The `dev` user retains `wheel` + `docker` because the public template uses
-`allowUnsafePlaceholders = true` (injected at flake level for eval fixtures).
-Private overlay uses `mkHost` directly and never sets this flag.
-
-## Control-Plane vs Workspace Separation
-
-### Zones
-
-- **Control plane** (`/data/projects/tsurf` or private overlay): NixOS config,
-  deployment scripts, sops-encrypted secrets, `flake.lock`. Write access =
-  ability to modify the system config that gets deployed.
-- **Workspace** (`/data/projects/<other-repos>`): Application code repos where
-  agents do their work. Write access is expected and normal.
-
-### Current enforcement
-
-- Both zones live under `/data/projects` (persisted as a single impermanence directory)
-- The sandbox scopes read access to the current git repo root — agents cannot read sibling repos
-- `agent-wrapper.sh` refuses to grant read access to the entire `/data/projects` root
-- `extras/scripts/deploy.sh` runs as operator, not agent — agent user cannot deploy
-
-### Recommended production hardening
-
-- Set control-plane repo ownership to `dev:dev` (operator-only write)
-- Set workspace repos ownership to `agent:users`
-- Consider separate directories: `/data/infra` (operator) and `/data/workspace` (agent)
-- Add systemd tmpfiles rules for ownership enforcement
-- The `dev-agent.nix` service defaults `WorkingDirectory` to `${agentCfg.projectRoot}`
-  (the project root, not a specific repo). Private overlay should set
-  `services.devAgent.workingDirectory` to a workspace repo path
-
-## Credential Flow Architecture
-
-```
-sops-encrypted YAML (secrets/*.yaml)
-  │
-  ▼  sops-nix activation (age key from SSH host key)
-/run/secrets/<secret-name>  (mode 0400, owner: agent user for API keys)
-  │  Ownership declared in secrets.nix (owner = config.tsurf.agent.user).
-  │
-  ▼  Brokered privilege drop (interactive: sudo → systemd-run --uid=agent)
-  │  agent-wrapper.sh always runs as the agent user (see "Execution flow" above).
-  │
-  ▼  agent-wrapper.sh reads secrets from per-wrapper AGENT_CREDENTIALS allowlist
-Parent process env var (e.g., ANTHROPIC_API_KEY=sk-...)
-  │  PLACEHOLDER-prefixed values skip credential injection.
-  │
-  ▼  nono --credential <service> (proxy mode, Landlock sandbox applied)
-  │
-  ├─ nono proxy: reads env://ANTHROPIC_API_KEY, holds real key in Zeroizing<String>
-  │  Starts localhost reverse proxy, generates 256-bit phantom token
-  │
-  ▼  Sandboxed child receives:
-     ANTHROPIC_API_KEY=<64-char-hex-phantom-token>  (worthless outside session)
-     ANTHROPIC_BASE_URL=http://127.0.0.1:<port>/anthropic
+```text
+dev
+  -> wrapper stub (exports AGENT_* env)
+    -> sudo tsurf-launch-<agent>
+      -> systemd-run --uid=<agent> --gid=<agent gid> --same-dir --collect
+         --slice=tsurf-agents.slice
+        -> scripts/agent-wrapper.sh
+          -> nono run --profile /etc/nono/profiles/tsurf.json
+            -> real agent binary
 ```
 
-**Who runs the wrapper:**
-- **Interactive use** (operator typing `claude`): brokered launch drops to `agent` user
-  via `sudo` + `systemd-run --uid=agent` before the wrapper runs. Secret files are
-  agent-owned (declared in `secrets.nix`), which matches this path.
-- **dev-agent.nix** (systemd service): wrapper runs as `agentCfg.user` (default: `agent`)
-  directly — the wrapper detects it's already `agent` and skips the brokered path.
+Security properties of that path:
 
-**Stage details:**
-1. **sops-nix** decrypts at system activation using age key derived from SSH host key.
-   Secret files land at `/run/secrets/<name>` with mode 0400.
-2. **Ownership** is declared in `secrets.nix` — `anthropic-api-key` and
-   `openai-api-key` are owned by `config.tsurf.agent.user`. The brokered launch
-   model ensures the wrapper always runs as `agent`, so ownership matches both
-   interactive and daemon execution paths.
-3. **agent-wrapper.sh** reads only the secrets named in `AGENT_CREDENTIALS` (a per-wrapper
-   allowlist set by the Nix wrapper stub). Each triple is `SERVICE:ENV_VAR:secret-file-name`.
-   Missing files produce a warning; `PLACEHOLDER`-prefixed values skip credential injection.
-4. **nono's reverse proxy** loads real keys from parent env via `env://` URIs (no system
-   keystore needed), generates per-session 256-bit phantom tokens.
-5. The child receives only phantom tokens + localhost base URLs — real keys never enter
-   the child's environment or memory.
+- `security.sudo.extraRules` exposes only immutable per-agent launchers such as
+  `tsurf-launch-claude`. There is no generic root helper.
+- Those sudo rules use `NOPASSWD` only. They do **not** use `SETENV`, and the
+  wrapper no longer uses `sudo --preserve-env`.
+- Each root-owned launcher bakes in:
+  - the real binary path
+  - the nono profile path
+  - the credential allowlist
+  - whether Nix daemon access is enabled
+- The launcher still rejects any baked `AGENT_REAL_BINARY` outside `/nix/store`.
+- The caller cannot swap binaries, profiles, or credential tuples across the
+  privileged sudo boundary.
+- If the wrapper is already running as the agent user, it skips the sudo/systemd
+  hop and execs `agent-wrapper.sh` directly. This is how `dev-agent` runs.
+- Launch events go to journald only (`journalctl -t agent-launch`).
+  Logged fields are limited to `mode`, `agent`, `user`, `uid`, and `repo_scope`.
+  Raw arguments, prompts, and file paths are not logged.
 
-**Security properties:**
-- The operator (`dev`) never has agent API keys in their shell environment
-- Real API keys exist only in the nono proxy process (parent), stored in `Zeroizing<String>`
-  (memory wiped on drop)
-- Child process env (`/proc/PID/environ`) contains only worthless phantom tokens
-- Phantom tokens are validated via constant-time comparison
-- The proxy enforces TLS for upstream connections
-- `/run/secrets/` files are NOT accessible from inside the sandbox (denied by Landlock)
-- Each wrapper loads only its own credential allowlist. Core `claude` loads only
-  Anthropic; optional extras can scope to OpenAI, Anthropic, or both as needed.
-- The privileged sudo boundary does not accept caller-chosen binary/profile/credential
-  tuples; each allowed launcher is immutable and listed explicitly in sudoers.
-- See accepted risk SEC114-02
+### Resource Limits
 
-## Tailnet Segmentation
+- The shared `tsurf-agents.slice` aggregate ceiling is:
+  - `MemoryMax = 8G`
+  - `CPUQuota = 300%`
+  - `TasksMax = 1024`
+- Each brokered interactive session gets tighter transient-unit limits:
+  - `MemoryMax = 4G`
+  - `CPUQuota = 200%`
+  - `TasksMax = 256`
+- The optional `dev-agent` service also runs inside `tsurf-agents.slice` with
+  per-unit `4G / 200% / 256` and `OOMPolicy=kill`.
 
-### Localhost-first model
+### Filesystem Boundary
 
-`tailscale0` is **not** in `trustedInterfaces`. Internal services bind `127.0.0.1`
-and are not reachable from the tailnet by default. Access to internal services is via
-SSH tunnel (`ssh -L`) or Tailscale Serve. `--accept-routes` is not set by default.
+The sandbox is implemented by `nono` with a pinned profile and Landlock-backed
+filesystem rules.
 
-If a private overlay needs direct tailnet access to a service, it should:
-1. Change the service's bind address to `0.0.0.0`
-2. Add the port to `networking.firewall.interfaces.tailscale0.allowedTCPPorts`
+Enforced behavior:
 
-No blanket interface trust is required.
+- The wrapper requires `$PWD` to be inside `services.agentSandbox.projectRoot`
+  (default `/data/projects`).
+- The wrapper requires `$PWD` to be inside a Git worktree.
+- The wrapper resolves the Git toplevel with `git rev-parse --show-toplevel` and
+  passes that path to nono with `--read`.
+- The wrapper refuses to run if the resolved Git root is exactly the project root.
+  This prevents granting blanket read access to all repos under `/data/projects`.
+- The shipped nono profile denies:
+  - `/run/secrets`
+  - `~/.ssh`
+  - `~/.bash_history`
+  - `~/.config/syncthing`
+  - `~/.gnupg`
+  - `~/.aws`
+  - `~/.kube`
+  - `~/.docker`
 
-### Recommendations for production
+Critical nuance:
 
-- **Tailscale ACL tags**: Assign `tag:server` to hosts, `tag:admin` to operator
-  devices, `tag:agent` to agent identities. Restrict service access to `tag:admin` only.
-- **Tailscale Grants/ACLs**: Use ACL policies to restrict which tagged devices can
-  reach which ports. Example: only `tag:admin` can reach port 8082 (dashboard).
-- **Per-host segmentation**: Agent-running host should have tighter tailnet ACLs than
-  the services host.
-- **Tailnet Lock**: Enable for higher-assurance node enrollment.
-- **`--accept-routes`**: Only add to `extraUpFlags` if you need to accept subnet
-  routes from other tailnet nodes. Disabled by default to prevent route hijacking.
+- The boundary is "current worktree vs sibling repos", not "workspace vs control
+  plane". The nono profile sets `workdir.access = "readwrite"`.
+- If an operator launches an agent from the tsurf repo itself, the current
+  working directory is writable, so the agent can modify that repo.
+- What is blocked is broad cross-repo access:
+  - no blanket `/data/projects` read grant
+  - no sibling-repo read access from the wrapper path
+- Private overlays should keep infrastructure repos operator-owned and launch
+  agents from workspace repos, not from the control-plane repo.
 
-## Template Safety
+Because deny behavior depends on nono/Landlock behavior on the target host, the
+repo backs these claims with live sandbox tests on the dev host.
 
-The public repo ships with `tsurf.template.allowUnsafePlaceholders` (default: `false`).
+## Secrets And Credential Flow
 
-When enabled (`true`), the flag:
-- Allows placeholder bootstrap and break-glass SSH keys (build-time assertions
-  reject these placeholders when the flag is `false`)
-- Sets `users.allowNoPasswordLogin = true` and `security.sudo.wheelNeedsPassword = false`
-  (these are directly configured based on the flag value, not assertion-guarded)
+### Secret Storage
 
-When disabled (`false`, the default), the flag:
-- Rejects placeholder SSH keys via build-time assertions
-- Sets `users.allowNoPasswordLogin = false` and `security.sudo.wheelNeedsPassword = true`
+- sops-nix derives its age identity from the host SSH ed25519 key.
+- Secrets are decrypted to `/run/secrets`.
+- Repo-defined ownership is:
 
-Host source files (`hosts/*/default.nix`) are secure by default and do NOT set
-`allowUnsafePlaceholders`. The public flake injects it only into the clearly named
-eval fixtures `nixosConfigurations."eval-tsurf"` and `."eval-tsurf-dev"` so
-`nix flake check` can evaluate without real credentials. The public flake exports
-no deploy nodes. Private overlay uses `mkHost` directly for real host outputs.
+| Secret | Owner |
+| --- | --- |
+| `anthropic-api-key` | agent user |
+| `openai-api-key` | agent user |
+| `google-api-key` | `dev` |
+| `xai-api-key` | `dev` |
+| `openrouter-api-key` | `dev` |
+| `github-pat` | `dev` |
+| `tailscale-authkey` | root/default |
+| `b2-account-id`, `b2-account-key`, `restic-password` | root/default |
+
+### Injection Model
+
+- Each wrapper carries a per-wrapper `AGENT_CREDENTIALS` allowlist of
+  `SERVICE:ENV_VAR:secret-file-name` triples.
+- `scripts/agent-wrapper.sh` reads only those named secret files from
+  `/run/secrets`.
+- Missing secret files produce a warning and an empty env var.
+- Values prefixed with `PLACEHOLDER` are not passed to nono as live credentials.
+- [`modules/nono.nix`](/data/projects/tsurf/modules/nono.nix) defines proxy-style
+  `custom_credentials` for Anthropic and OpenAI using `env://` URIs.
+- `nono` then injects per-session phantom tokens into the sandboxed child via
+  `--credential <service>`.
+
+What the child process gets:
+
+- a per-session token such as `ANTHROPIC_API_KEY=<64-hex-token>`
+- a localhost base URL such as `ANTHROPIC_BASE_URL=http://127.0.0.1:<port>/anthropic`
+
+What the child process does **not** get:
+
+- the raw `/run/secrets/*` file
+- the raw provider API key in its environment
+
+Credential scoping is least-privilege by wrapper:
+
+- `claude` defaults to Anthropic only
+- `codex` defaults to OpenAI only
+- `pi` defaults to Anthropic only
+- `opencode` defaults to Anthropic + OpenAI
+- extra agents must opt into credentials explicitly
 
 ## Network Model
 
-- **Default**: SSH (22) on public interface (key-only auth, hardened).
-- **Conditional**: Syncthing BEP (22000) when `publicBep` opt-in is enabled.
-- **Conditional**: HTTP/HTTPS (80/443) when `services.nginx.enable` is true.
-- **Everything else**: Localhost-only. Internal services bind `127.0.0.1`.
-  Access via SSH tunnel or Tailscale Serve. No blanket `trustedInterfaces`.
-  Private overlay can expose specific ports on `tailscale0` via
-  `networking.firewall.interfaces.tailscale0.allowedTCPPorts`.
-- **Metadata endpoint**: `169.254.169.254` blocked at nftables level.
-- **fail2ban**: disabled. SSH brute-force mitigation relies on key-only auth,
-  MaxAuthTries 3, and srvos defaults.
+- nftables is enabled.
+- `trustedInterfaces = [ ]`.
+- `tailscale0` is **not** trusted.
+- Public TCP exposure is limited to:
+  - `22` always
+  - `22000` only when `services.syncthingStarter.publicBep = true`
+  - `80` and `443` only when `services.nginx.enable = true`
+- Cloud metadata access to `169.254.169.254` is dropped in nftables.
+- Docker is configured with `iptables = false`; NixOS owns firewall/NAT policy.
+- `docker0` is not trusted by default.
 
-## Agent Egress Controls
+SSH defaults:
 
-UID-based nftables egress filtering is available as opt-in via
-`services.agentSandbox.egressControl.enable`. When enabled:
+- enabled
+- key-only auth
+- `PermitRootLogin = prohibit-password`
+- ed25519 host key only
+- `PasswordAuthentication = false`
+- `KbdInteractiveAuthentication = false`
+- `MaxAuthTries = 3`
+- `fail2ban` is disabled
 
-- The configured user (default: `agent`, via `tsurf.agent.user`) is restricted to a whitelist of TCP
-  destination ports (default: 53, 80, 443, 22, 9418 -- DNS, HTTP/S, SSH, git).
-- UDP port 53 (DNS) is always allowed regardless of the TCP port list.
-- Loopback and established/related connections are always allowed.
-- Traffic on the `tailscale0` interface is unrestricted for agent egress (outbound
-  to tailnet peers, e.g., syncthing, other hosts). This is separate from the host's
-  ingress firewall rules (which no longer trust `tailscale0` as an interface).
-- All other outbound traffic from the agent user is logged with prefix
-  `agent-egress-deny:` and dropped.
-- Non-agent users are unaffected (policy accept for other UIDs).
+Syncthing defaults:
 
-Configure the allowed port list via `services.agentSandbox.egressControl.allowedPorts`.
+- GUI binds `127.0.0.1:8384`
+- global announce, local announce, relays, and NAT are disabled
+- public BEP exposure is opt-in
 
-## Accepted Risks
+### Agent Egress
 
-See the "Accepted Risks" section in [CLAUDE.md](CLAUDE.md) for the full list.
-Key items:
+- `nono` itself is configured with `network.block = false`; it is not the egress
+  allowlist boundary here.
+- The `services.agentSandbox.egressControl` nftables table is the optional egress
+  boundary.
+- In the public repo:
+  - the service host does not use agent sandboxing
+  - the dev host enables egress control for the agent user
+- When enabled, agent-user egress allows:
+  - loopback
+  - established/related connections
+  - UDP `53`
+  - TCP `22`, `53`, `80`, `443`, `9418`
+  - all traffic over `tailscale0`
+- Other agent-user egress is logged with prefix `agent-egress-deny:` and dropped.
 
-- Agent network egress is unrestricted by default unless
-  `services.agentSandbox.egressControl.enable` is turned on (SEC105-02)
-- `dev` user in `wheel` + `docker` with passwordless sudo (template only)
-- Pre-built binaries (zmx, cass, nono) use SHA256 hash pinning, not signatures
-- `bypassPermissions` inside nono sandbox for unattended agent runs (SEC98-01)
+## Deployment, Recovery, And Lockout Prevention
 
-## Supply Chain
+Public-repo safety properties:
 
-All prebuilt binaries are content-addressed (SHA256 hash pinning). No GPG signature
-verification is performed. Versions are pinned; hash mismatches cause build failures.
+- The public flake exports no deploy targets.
+- [`examples/bootstrap/bootstrap-ovh.sh`](/data/projects/tsurf/examples/bootstrap/bootstrap-ovh.sh)
+  requires an explicit flake target and rejects public eval fixtures.
+- [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
+  refuses to deploy from the public repo.
 
-| Binary | Source | Hash Pinned | Opt-in |
-|--------|--------|-------------|--------|
-| nono | github.com/always-further/nono | Yes (sha256) | services.nonoSandbox.enable |
-| pi | github.com/badlogic/pi-mono | Yes (sha256) | services.piAgent.enable |
-| zmx | zmx.sh | Yes (sha256) | via agent-compute.nix import |
-| cass | github.com/Dicklesworthstone/coding_agent_session_search | Yes (sha256) | programs.cass.enable |
-| claude-code | numtide/llm-agents.nix | Via flake.lock | via agent-compute.nix import |
-| codex | numtide/llm-agents.nix | Via flake.lock | services.codexAgent.enable |
+Build-time lockout-prevention assertions require:
 
-To remove all prebuilt agent binaries: do not enable `services.agentSandbox` and do not enable any agent extras.
+- `sshd` enabled
+- root login not set to `no`
+- at least one root SSH authorized key
+- SSH port `22` reachable
+- Tailscale enabled
+- SSH host keys configured and persisted
+- a break-glass emergency SSH key present
+
+Recovery mechanisms:
+
+- [`modules/break-glass-ssh.nix`](/data/projects/tsurf/modules/break-glass-ssh.nix)
+  adds a hardcoded break-glass root key. In the public repo this key is
+  placeholder material and must be replaced in a private overlay before any real
+  deployment.
+- [`modules/sshd-liveness-check.nix`](/data/projects/tsurf/modules/sshd-liveness-check.nix)
+  runs every 5 minutes and rolls back after 3 consecutive sshd failures, with
+  deploy-aware suppression and an anti-loop guard.
+- The private-overlay deploy path implemented in
+  [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
+  relies on deploy-rs magic rollback plus an additional watchdog timer, but the
+  public copy of that script refuses to run.
+
+## Persistence And Supply Chain
+
+- Root rollback uses a BTRFS post-resume rollback script.
+- Persisted security-critical state includes:
+  - `/var/lib/nixos`
+  - `/var/lib/tailscale`
+  - `/etc/ssh/ssh_host_ed25519_key`
+  - `/data/projects`
+  - selected operator and agent home state
+- [`modules/impermanence.nix`](/data/projects/tsurf/modules/impermanence.nix)
+  makes `setupSecrets` depend on `persist-files` so sops-nix can read the
+  persisted SSH host key before decrypting `/run/secrets` after a hard reboot.
+
+Supply-chain properties:
+
+- Nix inputs are pinned by `flake.lock`.
+- Prebuilt binaries are SHA256-pinned, including `nono`, `pi`, and `zmx`.
+- `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
+- No signature verification is implemented for these prebuilt binaries.
+
+## Verification
+
+Security claims in this file are backed by both eval checks and live tests.
+
+Eval-time checks:
+
+- [`tests/eval/config-checks.nix`](/data/projects/tsurf/tests/eval/config-checks.nix)
+  covers public-output safety, placeholder isolation, firewall exposure,
+  break-glass requirements, Nix daemon restrictions, sandbox structure, read-scope
+  fail-closed behavior, sudo-boundary hardening, and proxy credential configuration.
+
+Live checks:
+
+- [`tests/live/security.bats`](/data/projects/tsurf/tests/live/security.bats)
+  verifies SSH hardening, kernel sysctls, metadata blocking, and firewall exposure.
+- [`tests/live/secrets.bats`](/data/projects/tsurf/tests/live/secrets.bats)
+  verifies `/run/secrets` presence, ownership, and non-world-readable permissions.
+- [`tests/live/networking.bats`](/data/projects/tsurf/tests/live/networking.bats)
+  verifies Tailscale state and the metadata-block nftables rule.
+- [`tests/live/sandbox-behavioral.bats`](/data/projects/tsurf/tests/live/sandbox-behavioral.bats)
+  proves that sandboxed agent code cannot read denied paths and can read/write the
+  expected worktree paths.
+- [`tests/live/agent-launch-e2e.bats`](/data/projects/tsurf/tests/live/agent-launch-e2e.bats)
+  verifies the full `dev -> sudo -> systemd-run -> agent-wrapper -> nono` path,
+  phantom-token injection, and the immutable-launcher sudo boundary.
+
+## Non-Goals And Accepted Risks
+
+- The service-host role does not include the agent sandbox at all.
+- The sandbox does not make the current worktree immutable. Launching an agent
+  from the control-plane repo gives that agent write access to the repo.
+- `dev` remains a trusted administrative user with `wheel` and `docker`.
+- The dev-host role explicitly grants the agent user access to the Nix daemon
+  socket as an allowed, but not trusted, user.
+- [`extras/dev-agent.nix`](/data/projects/tsurf/extras/dev-agent.nix) runs Claude
+  Code with `--permission-mode=bypassPermissions` inside the sandbox and defaults
+  its working directory to the project root unless a private overlay overrides it.
+- Egress filtering is host-level and opt-in at the module level. The dev host
+  enables it; the service host does not need it because it does not import the
+  sandbox. nono itself is not enforcing an outbound allowlist here.
+- Optional extras can widen access. Notable example:
+  `services.costTracker.enable` grants a DynamicUser service read-only
+  `/run/secrets` access plus `CAP_DAC_READ_SEARCH` so it can read provider keys.
