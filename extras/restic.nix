@@ -97,12 +97,14 @@ in
       ProtectKernelModules = true;
       ProtectKernelLogs = true;
       ProtectControlGroups = true;
+      SystemCallArchitectures = "native";
       ProtectProc = "invisible";
       ProcSubset = "pid";
       RestrictSUIDSGID = true;
       LockPersonality = true;
       RestrictRealtime = true;
       RestrictNamespaces = true;
+      MemoryDenyWriteExecute = true;
       RestrictAddressFamilies = [ "AF_INET" "AF_INET6" ];
       CapabilityBoundingSet = "";
       UMask = "0077";

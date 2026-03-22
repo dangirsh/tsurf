@@ -128,6 +128,17 @@ in
       STNODEFAULTFOLDER = "true";
     };
 
+    systemd.services.syncthing.serviceConfig = {
+      SystemCallArchitectures = "native";
+      RestrictSUIDSGID = true;
+      RestrictRealtime = true;
+      LockPersonality = true;
+      ProtectClock = true;
+      ProtectKernelLogs = true;
+      # @decision SYNC-125-01: ProtectHome/ProtectSystem/PrivateDevices omitted.
+      #   Syncthing needs filesystem access for sync operations.
+    };
+
     systemd.tmpfiles.rules = [
       "d /home/dev/Sync 0755 dev users -"
     ];

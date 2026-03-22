@@ -44,12 +44,17 @@ in
         ProtectKernelModules = true;
         ProtectKernelLogs = true;
         ProtectControlGroups = true;
+        SystemCallArchitectures = "native";
         LockPersonality = true;
         RestrictRealtime = true;
         RestrictSUIDSGID = true;
+        RestrictNamespaces = true;
         NoNewPrivileges = true;
+        CapabilityBoundingSet = "";
         # NOTE: ProtectHome, ProtectSystem=strict, PrivateDevices omitted — agent needs home
         #   dir write, project dir write, and PTY access for zmx sessions.
+        # @decision SEC-125-02: MemoryDenyWriteExecute omitted intentionally.
+        #   Node.js V8 JIT requires W+X memory pages.
 
         # @decision SEC-116-03: Per-unit resource limits within the agent slice.
         #   Prevents a single agent from consuming the entire slice budget.
