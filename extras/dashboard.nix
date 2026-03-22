@@ -199,9 +199,13 @@ in
         ProtectKernelModules = true;
         ProtectKernelLogs = true;
         ProtectControlGroups = true;
+        SystemCallArchitectures = "native";
+        PrivateDevices = true;
+        RestrictSUIDSGID = true;
         RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
         RestrictNamespaces = true;
         LockPersonality = true;
+        RestrictRealtime = true;
         MemoryDenyWriteExecute = true;
         CapabilityBoundingSet = "";
         ReadOnlyPaths = [

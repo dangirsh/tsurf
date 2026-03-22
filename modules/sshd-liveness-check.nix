@@ -15,14 +15,20 @@
       # @decision LIV-84-01: Hardened within constraints of root + nixos-rebuild rollback.
       # ProtectSystem omitted: nixos-rebuild switch --rollback needs filesystem writes.
       # NoNewPrivileges omitted: rollback execution path requires elevated operations.
+      # @decision SEC-125-01: CapabilityBoundingSet intentionally omitted.
+      #   nixos-rebuild switch --rollback requires root capabilities on this code path.
       ProtectHome = true;
       PrivateTmp = true;
+      PrivateDevices = true;
       ProtectClock = true;
       ProtectKernelTunables = true;
       ProtectKernelModules = true;
       ProtectControlGroups = true;
+      SystemCallArchitectures = "native";
       LockPersonality = true;
       RestrictRealtime = true;
+      RestrictSUIDSGID = true;
+      RestrictNamespaces = true;
       MemoryDenyWriteExecute = true;
     };
     path = with pkgs; [ coreutils iproute2 systemd gnugrep nixos-rebuild ];

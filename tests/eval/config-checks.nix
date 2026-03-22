@@ -706,6 +706,38 @@ in
       (lib.hasInfix "GIT_ASKPASS" source
        && !(lib.hasInfix "extraheader" source));
 
+  # --- Phase 124: Cost-tracker least privilege ---
+
+  cost-tracker-dynamic-user =
+    let
+      source = builtins.readFile ../../extras/cost-tracker.nix;
+    in
+    mkCheck
+      "cost-tracker-dynamic-user"
+      "cost-tracker uses DynamicUser for least privilege"
+      "cost-tracker.nix missing DynamicUser = true — service runs as root"
+      (lib.hasInfix "DynamicUser = true" source);
+
+  # --- Phase 125: systemd hardening baseline ---
+
+  systemd-hardening-baseline =
+    let
+      hasSCA = svc:
+        let sca = svc.serviceConfig.SystemCallArchitectures or null;
+        in if sca == null then false
+           else if builtins.isList sca then builtins.elem "native" sca
+           else sca == "native";
+    in
+    mkCheck
+      "systemd-hardening-baseline"
+      "All project services have SystemCallArchitectures=native"
+      "SECURITY: one or more services missing SystemCallArchitectures=native"
+      (hasSCA tsurfCfg.systemd.services.nix-dashboard
+       && hasSCA tsurfCfg.systemd.services.restic-status-server
+       && hasSCA tsurfCfg.systemd.services.sshd-liveness-check
+       && hasSCA devCfg.systemd.services.dev-agent
+       && hasSCA devCfg.systemd.services.syncthing);
+
 }
 
 # --- Private overlay test extension pattern ---
