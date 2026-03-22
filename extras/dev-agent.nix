@@ -12,8 +12,20 @@ let
   agentCfg = config.tsurf.agent;
 in
 {
-  options.services.devAgent.enable = lib.mkEnableOption
-    "persistent autonomous Claude Code agent";
+  options.services.devAgent = {
+    enable = lib.mkEnableOption
+      "persistent autonomous Claude Code agent";
+
+    workingDirectory = lib.mkOption {
+      type = lib.types.str;
+      default = agentCfg.projectRoot;
+      description = ''
+        Working directory for the dev-agent service. Should be a workspace repo path,
+        NOT the control-plane repo (tsurf). Default is the agent project root.
+        Private overlay should set this to a specific workspace repo.
+      '';
+    };
+  };
 
   config = lib.mkIf cfg.enable {
     systemd.services.dev-agent = {
@@ -30,9 +42,14 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         User = agentCfg.user;
-        # Template default: tsurf repo. Production should use a workspace repo path
-        # (not the control-plane repo) — see SECURITY.md control-plane separation.
-        WorkingDirectory = "${agentCfg.projectRoot}/tsurf";
+        # @decision SEC-124-03: Default to project root, not control-plane repo.
+        #   Private overlay should set services.devAgent.workingDirectory to a
+        #   specific workspace repo path. See SECURITY.md "Control-Plane Separation".
+        # NOTE: Type=oneshot + RemainAfterExit does not supervise the zmx session.
+        #   The long-running process lives inside zmx, not as a direct systemd child.
+        #   systemctl status shows "active" (RemainAfterExit), but zmx session health
+        #   is not monitored. Accept this limitation for template simplicity.
+        WorkingDirectory = cfg.workingDirectory;
         Restart = "on-failure";
         RestartSec = "30s";
 

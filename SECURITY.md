@@ -103,8 +103,9 @@ Private overlay uses `mkHost` directly and never sets this flag.
 - Set workspace repos ownership to `agent:users`
 - Consider separate directories: `/data/infra` (operator) and `/data/workspace` (agent)
 - Add systemd tmpfiles rules for ownership enforcement
-- The `dev-agent.nix` service uses `WorkingDirectory = /data/projects/tsurf` as a
-  template example — production should point to a workspace repo, not the control-plane
+- The `dev-agent.nix` service defaults `WorkingDirectory` to `${agentCfg.projectRoot}`
+  (the project root, not a specific repo). Private overlay should set
+  `services.devAgent.workingDirectory` to a workspace repo path
 
 ## Credential Flow Architecture
 

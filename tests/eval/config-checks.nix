@@ -736,6 +736,18 @@ in
        && hasSCA tsurfCfg.systemd.services.sshd-liveness-check
        && hasSCA devCfg.systemd.services.syncthing);
 
+  # --- Phase 124: Control-plane separation ---
+
+  dev-agent-not-control-plane =
+    let
+      source = builtins.readFile ../../extras/dev-agent.nix;
+    in
+    mkCheck
+      "dev-agent-not-control-plane"
+      "dev-agent.nix default WorkingDirectory is not the control-plane repo"
+      "SECURITY: dev-agent.nix WorkingDirectory defaults to /tsurf (control-plane repo) — use agentCfg.projectRoot"
+      (!(lib.hasInfix "projectRoot}/tsurf" source));
+
 }
 
 # --- Private overlay test extension pattern ---
