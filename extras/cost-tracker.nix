@@ -1,4 +1,4 @@
-# modules/cost-tracker.nix
+# extras/cost-tracker.nix
 # @decision COST-01: Separate module from dashboard — cost fetching needs
 #   network + secrets access; dashboard is DynamicUser with no secrets.
 # @decision COST-02: Provider-agnostic config — each provider is an attrset
@@ -47,7 +47,7 @@ let
   costTrackerScript = pkgs.writers.writePython3Bin "tsurf-cost-tracker" {
     libraries = [ ];
     flakeIgnore = [ "E501" ];
-  } (builtins.readFile ../scripts/cost-tracker.py);
+  } (builtins.readFile ./scripts/cost-tracker.py);
 
   configFile = pkgs.writeText "cost-tracker-config.json" providerJson;
 in

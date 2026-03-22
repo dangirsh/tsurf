@@ -1,6 +1,6 @@
-# modules/dashboard.nix
-# Frontend: ../scripts/dashboard-frontend.html (HTML/CSS/JS)
-# Backend:  ../scripts/dashboard-server.py (Python HTTP server)
+# extras/dashboard.nix
+# Frontend: ./scripts/dashboard-frontend.html (HTML/CSS/JS)
+# Backend:  ./scripts/dashboard-server.py (Python HTTP server)
 #
 # @decision DASH-01: Custom NixOS option namespace for dashboard entries.
 # @rationale: Each module self-describes via services.dashboard.entries.
@@ -69,10 +69,10 @@ let
   };
 
   dashboardHtml = pkgs.writeText "dashboard.html"
-    (builtins.readFile ../scripts/dashboard-frontend.html);
+    (builtins.readFile ./scripts/dashboard-frontend.html);
 
   dashboardBin = pkgs.writers.writePython3Bin "nix-dashboard" { }
-    (builtins.readFile ../scripts/dashboard-server.py);
+    (builtins.readFile ./scripts/dashboard-server.py);
 in
 {
   options.services.dashboard = {

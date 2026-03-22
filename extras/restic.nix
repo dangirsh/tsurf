@@ -1,4 +1,4 @@
-# modules/restic.nix
+# extras/restic.nix
 # @decision RESTIC-01: S3-compatible B2 backend (not native B2 — restic's B2 connector is unreliable per STACK.md)
 # @decision RESTIC-02: Retention policy 7 daily, 5 weekly, 12 monthly
 # @decision RESTIC-03: sops.templates for B2 credentials env file, passwordFile for encryption key

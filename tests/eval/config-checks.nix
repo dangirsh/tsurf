@@ -405,7 +405,7 @@ in
   syncthing-mesh-option = mkCheck
     "syncthing-mesh-option"
     "tsurf.syncthing.mesh option exists on both hosts"
-    "tsurf.syncthing.mesh option missing — import modules/syncthing.nix"
+    "tsurf.syncthing.mesh option missing — import extras/syncthing.nix"
     (builtins.hasAttr "syncthing" tsurfCfg.tsurf
      && builtins.hasAttr "mesh" tsurfCfg.tsurf.syncthing
      && builtins.hasAttr "syncthing" devCfg.tsurf
@@ -495,7 +495,7 @@ in
 
   dashboard-security-headers =
     let
-      serverSrc = builtins.readFile ../../scripts/dashboard-server.py;
+      serverSrc = builtins.readFile ../../extras/scripts/dashboard-server.py;
       hasHeader = header: lib.hasInfix header serverSrc;
     in
     mkCheck
@@ -506,7 +506,7 @@ in
 
   dashboard-no-innerhtml-xss =
     let
-      htmlSrc = builtins.readFile ../../scripts/dashboard-frontend.html;
+      htmlSrc = builtins.readFile ../../extras/scripts/dashboard-frontend.html;
     in
     mkCheck
       "dashboard-no-innerhtml-xss"
@@ -516,7 +516,7 @@ in
 
   deploy-no-repo-source =
     let
-      deploySrc = builtins.readFile ../../scripts/deploy.sh;
+      deploySrc = builtins.readFile ../../extras/scripts/deploy.sh;
     in
     mkCheck
       "deploy-no-repo-source"
@@ -612,7 +612,7 @@ in
 
   restic-status-dynamic-user =
     let
-      source = builtins.readFile ../../modules/restic.nix;
+      source = builtins.readFile ../../extras/restic.nix;
     in
     mkCheck
       "restic-status-dynamic-user"

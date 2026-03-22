@@ -50,7 +50,7 @@
         "${inputs.tsurf}/modules/users.nix"
         "${inputs.tsurf}/modules/impermanence.nix"
         "${inputs.tsurf}/modules/break-glass-ssh.nix"
-        "${inputs.tsurf}/modules/dashboard.nix"
+        "${inputs.tsurf}/extras/dashboard.nix"
         # nono sandbox infrastructure - provides NONO_PROFILE_PATH and profile
         # installation to /etc/nono/profiles/. Required by agentic janitor.
         "${inputs.tsurf}/modules/nono.nix"

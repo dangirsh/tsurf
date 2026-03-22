@@ -12,18 +12,18 @@
     ../../modules/users.nix
     ../../modules/networking.nix
     ../../modules/secrets.nix
-    ../../modules/docker.nix
-    ../../modules/syncthing.nix
+    ../../extras/docker.nix
+    ../../extras/syncthing.nix
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
     ../../modules/sshd-liveness-check.nix
-    ../../modules/restic.nix
-    ../../modules/dashboard.nix
-    ../../modules/cost-tracker.nix
+    ../../extras/restic.nix
+    ../../extras/dashboard.nix
+    ../../extras/cost-tracker.nix
     # Private overlay: add personal service modules (nginx, etc.) here
   ];
 
-  home-manager.users.dev = import ../../home;
+  home-manager.users.dev = import ../../extras/home;
 
   networking.hostName = "tsurf";
   time.timeZone = "Europe/Berlin";

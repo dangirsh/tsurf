@@ -12,34 +12,35 @@ hosts/
   disko-config.nix     # Shared disko partition layout (both hosts)
   services/            # Example service host (Contabo VPS)
   dev/                 # Example agent/dev host (OVH VPS)
-modules/
+modules/                 # Core — security/infrastructure essentials only
   agent-compute.nix    # Agent CLI (claude, codex), Podman, zmx
   agent-sandbox.nix    # nono wrappers for claude/codex/pi agents
   base.nix             # Nix settings, system packages, kernel sysctl hardening
   boot.nix             # GRUB bootloader + BTRFS root rollback
   break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
-  dashboard.nix        # Service dashboard from direct entry declarations
-  dev-agent.nix        # Persistent autonomous Claude agent (zmx + systemd)
-  docker.nix           # Docker engine (--iptables=false), NAT
   impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
   networking.nix       # nftables, SSH (hardened), Tailscale, firewall assertions
   nono.nix             # nono profile + proxy credential injection (phantom tokens)
-  cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
-  restic.nix           # Restic backup to B2 + status server
   secrets.nix          # sops-nix secret declarations
   sshd-liveness-check.nix # sshd liveness check with auto-rollback
-  syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
   users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
-home/
-  default.nix          # home-manager: git/ssh/direnv inlined
-  cass.nix             # CASS indexer timer (opt-in)
-scripts/
-  deploy.sh            # deploy-rs wrapper (locking, watchdog, health check)
+extras/                  # Optional batteries — import what you need
+  dashboard.nix        # Service dashboard from direct entry declarations
+  cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
+  dev-agent.nix        # Persistent autonomous Claude agent (zmx + systemd)
+  docker.nix           # Docker engine (--iptables=false), NAT
+  restic.nix           # Restic backup to B2 + status server
+  syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
+  home/
+    default.nix        # home-manager: git/ssh/direnv inlined
+    cass.nix           # CASS indexer timer (opt-in)
+  scripts/             # Scripts for extras modules
+    deploy.sh          # deploy-rs wrapper (locking, watchdog, health check)
+    clone-repos.sh     # Idempotent repo cloning activation script
+    bootstrap-contabo.sh # Contabo VPS bootstrap via rescue mode
 examples/
   bootstrap/
     bootstrap-ovh.sh   # OVH VPS bootstrap via rescue mode + nixos-anywhere
-scripts/
-  bootstrap-contabo.sh # Contabo VPS bootstrap via rescue mode
 secrets/               # sops-encrypted secrets (age keys, gitignored)
 tests/
   eval/config-checks.nix  # 47 offline eval assertions
@@ -76,7 +77,7 @@ tests/
   `{ config, lib, pkgs, ... }:` as the function signature, define repeated values in `let`,
   and keep the declarative body in the final attrset.
 - Register services on the dashboard with `services.dashboard.entries.<name>` (from
-  `modules/dashboard.nix`). Required fields: `name`, `description`, `icon`, `order`.
+  `extras/dashboard.nix`). Required fields: `name`, `description`, `icon`, `order`.
   Add the service port to `internalOnlyPorts` in `modules/networking.nix` manually.
 - `@decision` annotation format: `@decision ID: Description.` in module header comments.
   Use these for security choices, port exposure decisions, and design trade-offs.
@@ -218,7 +219,7 @@ When running inside the nono sandbox (as the `agent` user — no wheel, no docke
   ```
   cd /path/to/private-tsurf && ./scripts/deploy.sh [--node tsurf|tsurf-dev]
   ```
-- **`scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `tsurf.url` guard detects public repo)
+- **`extras/scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `tsurf.url` guard detects public repo)
 - **NEVER run `nixos-rebuild switch --flake .#tsurf`** or `.#tsurf-dev` from this repo — the public flake has placeholder SSH keys and no private services; it will break the server
 - **NEVER run `nixos-rebuild switch` from ANY repo** (parts, home-assistant-config, or any other) — even with the correct flake, this bypasses deploy.sh's safety guard, watchdog, and shared deploy lock. The ONLY safe deploy path is `./scripts/deploy.sh` from the private overlay
 - For first-time OVH bootstrap: `examples/bootstrap/bootstrap-ovh.sh` installs base NixOS, then follow with private overlay deploy

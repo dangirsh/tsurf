@@ -1,4 +1,4 @@
-# modules/docker.nix
+# extras/docker.nix
 # @decision DOCK-01: Docker engine with --iptables=false, NixOS owns the firewall
 { config, lib, pkgs, ... }:
 let

@@ -95,7 +95,7 @@ Private overlay uses `mkHost` directly and never sets this flag.
 - Both zones live under `/data/projects` (persisted as a single impermanence directory)
 - The sandbox scopes read access to the current git repo root — agents cannot read sibling repos
 - `agent-wrapper.sh` refuses to grant read access to the entire `/data/projects` root
-- `scripts/deploy.sh` runs as operator, not agent — agent user cannot deploy
+- `extras/scripts/deploy.sh` runs as operator, not agent — agent user cannot deploy
 
 ### Recommended production hardening
 

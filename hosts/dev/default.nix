@@ -12,20 +12,20 @@
     ../../modules/users.nix
     ../../modules/networking.nix
     ../../modules/secrets.nix
-    ../../modules/docker.nix
-    ../../modules/syncthing.nix
+    ../../extras/docker.nix
+    ../../extras/syncthing.nix
     ../../modules/agent-compute.nix
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
     ../../modules/sshd-liveness-check.nix
-    ../../modules/dashboard.nix
-    ../../modules/cost-tracker.nix
+    ../../extras/dashboard.nix
+    ../../extras/cost-tracker.nix
     ../../modules/agent-sandbox.nix
     ../../modules/nono.nix
-    # dev-agent.nix: import in private overlay with services.devAgent.enable = true
+    # dev-agent.nix: import ../../extras/dev-agent.nix in private overlay with services.devAgent.enable = true
   ];
 
-  home-manager.users.dev = import ../../home;
+  home-manager.users.dev = import ../../extras/home;
 
   # Agent user home-manager config (minimal — git + direnv only, no SSH)
   home-manager.users.agent = { ... }: {
@@ -58,7 +58,7 @@
     text = ''
       GIT_BIN="${pkgs.git}/bin/git"
       GITHUB_PAT_FILE="${config.sops.secrets."github-pat".path}"
-    '' + builtins.readFile ../../scripts/clone-repos.sh;
+    '' + builtins.readFile ../../extras/scripts/clone-repos.sh;
   };
 
   # --- Host-specific shared module settings ---

@@ -1,4 +1,4 @@
-# modules/syncthing.nix
+# extras/syncthing.nix
 # @decision SVC-02: Syncthing runs as user dev with fully declarative devices/folders.
 # @decision SVC-03: GUI binds 127.0.0.1 — access via Tailscale Serve or SSH tunnel only.
 # @decision SYNC-84-01: openDefaultPorts disabled to avoid exposing LAN discovery ports on VPS hosts.

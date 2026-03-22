@@ -1,4 +1,4 @@
-# modules/dev-agent.nix
+# extras/dev-agent.nix
 # Persistent autonomous Claude Code agent running in zmx session
 # @decision SEC-115-04: dev-agent runs as agent user, not operator.
 # @decision DEV-AGENT-89: Systemd service running claude in zmx
@@ -65,7 +65,7 @@ in
 
       # zmx wraps claude (which is already sandboxed via agent-sandbox.nix)
       path = [ pkgs.coreutils pkgs.zmx ];
-      script = builtins.readFile ../scripts/dev-agent.sh;
+      script = builtins.readFile ./scripts/dev-agent.sh;
     };
   };
 }
