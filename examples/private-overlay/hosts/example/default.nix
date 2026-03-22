@@ -5,7 +5,6 @@
     # REPLACE with your own hardware config.
     "${inputs.tsurf}/hosts/hardware.nix"
     "${inputs.tsurf}/hosts/disko-config.nix"
-    ../../modules/janitor.nix
 
     # After configuring Tailscale and SSH host keys, import:
     # "${inputs.tsurf}/modules/networking.nix"
@@ -25,12 +24,6 @@
   # sops.defaultSopsFile = ../../secrets/example.yaml;
 
   services.dashboard.enable = true;
-  # Agentic janitor requires:
-  # 1. sops secret "anthropic-api-key" (import secrets.nix or declare manually)
-  # 2. nono.nix in commonModules (already added)
-  # Optional: services.janitor.model = "claude-sonnet-4-20250514";
-  # Optional: override services.janitor.systemPrompt for custom cleanup logic.
-  services.janitor.enable = true;
 
   system.stateVersion = "25.11";
 }

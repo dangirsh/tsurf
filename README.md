@@ -75,6 +75,8 @@ services.dockerStarter.enable = true;
 | [`syncthing.nix`](extras/syncthing.nix) | `services.syncthingStarter.enable` | Cross-host file sync (tailnet-only by default) |
 | [`restic.nix`](extras/restic.nix) | `services.resticStarter.enable` | Encrypted backups to Backblaze B2 |
 | [`dev-agent.nix`](extras/dev-agent.nix) | `services.devAgent.enable` | Persistent autonomous Claude Code agent |
+| [`codex.nix`](extras/codex.nix) | `services.codexAgent.enable` | Codex CLI with nono sandbox |
+| [`pi.nix`](extras/pi.nix) | `services.piAgent.enable` | pi coding agent with nono sandbox |
 | [`opencode.nix`](extras/opencode.nix) | `services.opencodeAgent.enable` | [opencode](https://opencode.ai) AI coding assistant with nono sandbox |
 | [`home/`](extras/home/) | _(import as home-manager module)_ | git, SSH, direnv for the operator user |
 | [`home/cass.nix`](extras/home/cass.nix) | `programs.cass.enable` | [CASS](https://github.com/Dicklesworthstone/coding_agent_session_search) agent session indexer |

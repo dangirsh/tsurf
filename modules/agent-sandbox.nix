@@ -90,16 +90,10 @@ let
       '';
     }).overrideAttrs (old: { meta = (old.meta or {}) // { priority = 4; }; });
 
-  pi-sandboxed = mkWrapper {
-    name = "pi";
-    realPkg = pkgs.pi-coding-agent;
-    realBin = "pi";
-    credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
-  };
 in
 {
   options.services.agentSandbox = {
-    enable = lib.mkEnableOption "sandboxed agent wrappers for claude, codex, and pi";
+    enable = lib.mkEnableOption "sandboxed claude wrapper plus opt-in extra agent wrappers";
 
     extraAgents = lib.mkOption {
       type = lib.types.listOf (lib.types.submodule ({ config, ... }: {
@@ -156,8 +150,6 @@ in
     # Replace bare agent binaries with sandboxed wrappers (meta.priority = 4 wins over default 5).
     environment.systemPackages = [
       (mkWrapper { name = "claude"; realPkg = pkgs.claude-code;      realBin = "claude"; credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ]; })
-      (mkWrapper { name = "codex";  realPkg = pkgs.codex;            realBin = "codex";  credentials = [ "openai:OPENAI_API_KEY:openai-api-key" ]; })
-      pi-sandboxed
     ] ++ map (a: mkWrapper { name = a.name; realPkg = a.package; realBin = a.binary; credentials = a.credentials; }) cfg.extraAgents;
 
     # When Nix daemon socket access is enabled in the sandbox, also allow the agent

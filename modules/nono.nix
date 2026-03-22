@@ -1,5 +1,5 @@
 # modules/nono.nix
-# @decision NONO-89-01: Full nono module — credential bridge + tsurf profile.
+# @decision NONO-89-01: Full nono module — credential bridge + extensible tsurf profile.
 #   Installs nono system-wide and writes the tsurf profile JSON to
 #   /etc/nono/profiles/tsurf.json so wrapper scripts reference the profile
 #   by full path (agent-sandbox.nix uses /etc/nono/profiles/tsurf.json).
@@ -75,10 +75,6 @@ let
         # protected state root (~/.nono). Grant specific subdirs instead.
         "${cfg.homeDir}/.claude"
         "${cfg.homeDir}/.config/claude"
-        "${cfg.homeDir}/.codex"
-        "${cfg.homeDir}/.config/opencode"
-        "${cfg.homeDir}/.pi"
-        "${cfg.homeDir}/.pi/agent"
         "${cfg.homeDir}/.gitconfig"
         "/nix/var/nix/profiles"
         "/run/current-system"
@@ -87,13 +83,11 @@ let
         "/etc/ssl"
         "/etc/nix"
         "/etc/static"
-      ];
+      ] ++ cfg.extraAllow;
       allow_file = [
         "${cfg.homeDir}/.claude.json"
         "${cfg.homeDir}/.claude.json.lock"
-        "${cfg.homeDir}/.pi/agent/auth.json"
-        "${cfg.homeDir}/.pi/agent/settings.json"
-      ];
+      ] ++ cfg.extraAllowFile;
       read_file = [
         "${cfg.homeDir}/.gitconfig"
         "${cfg.homeDir}/.gitignore_global"
@@ -101,7 +95,7 @@ let
         "/etc/resolv.conf"
         "/etc/passwd"
         "/etc/group"
-      ];
+      ] ++ cfg.extraReadFile;
       # @decision NONO-84-01: Deny sensitive home subdirectories from sandboxed agents.
       #   homeDir is allowed for agent config/cache access, but these subdirs contain
       #   credentials or sensitive data that agents must not read.
@@ -132,7 +126,7 @@ let
 in
 {
   options.services.nonoSandbox = {
-    enable = lib.mkEnableOption "nono sandbox wrappers for claude, codex, and pi";
+    enable = lib.mkEnableOption "nono sandbox support for the core claude wrapper and opt-in extra agents";
 
     homeDir = lib.mkOption {
       type = lib.types.str;
@@ -151,6 +145,24 @@ in
           upstream = "https://generativelanguage.googleapis.com";
           inject_header = "x-goog-api-key"; credential_format = "{}"; }; }
       '';
+    };
+
+    extraAllow = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = "Additional filesystem.allow directory paths merged into the tsurf nono profile.";
+    };
+
+    extraAllowFile = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = "Additional filesystem.allow_file paths merged into the tsurf nono profile.";
+    };
+
+    extraReadFile = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = "Additional filesystem.read_file paths merged into the tsurf nono profile.";
     };
 
   };

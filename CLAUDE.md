@@ -13,8 +13,8 @@ hosts/
   services/            # Example service host (Contabo VPS)
   dev/                 # Example agent/dev host (OVH VPS)
 modules/                 # Core — security/infrastructure essentials only
-  agent-compute.nix    # Agent CLI (claude, codex), Podman, zmx
-  agent-sandbox.nix    # nono wrappers for claude/codex/pi agents
+  agent-compute.nix    # Agent runtime support (Podman, zmx, shared overlays)
+  agent-sandbox.nix    # nono wrapper for claude + hook for extra agents
   base.nix             # Nix settings, system packages, kernel sysctl hardening
   boot.nix             # GRUB bootloader + BTRFS root rollback
   break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
@@ -25,10 +25,12 @@ modules/                 # Core — security/infrastructure essentials only
   sshd-liveness-check.nix # sshd liveness check with auto-rollback
   users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
 extras/                  # Optional batteries — import what you need
+  codex.nix            # Codex CLI (sandboxed via agentSandbox.extraAgents)
   dashboard.nix        # Service dashboard from direct entry declarations
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
   dev-agent.nix        # Persistent autonomous Claude agent (zmx + systemd)
   opencode.nix         # opencode AI coding assistant (sandboxed via agentSandbox.extraAgents)
+  pi.nix               # pi coding agent (sandboxed via agentSandbox.extraAgents)
   docker.nix           # Docker engine (--iptables=false), NAT
   restic.nix           # Restic backup to B2 + status server
   syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
@@ -55,7 +57,7 @@ tests/
 - **Docker**: Engine with `--iptables=false`; NAT via nftables; docker0 NOT trusted by default
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
-- **Agent tooling**: llm-agents overlay provides claude-code + codex; nono sandbox via `nono.nix` and `agent-sandbox.nix`
+- **Agent tooling**: Core ships Claude Code sandboxing; optional agent CLIs (Codex, pi, opencode) layer in through `extras/`. nono sandboxing is shared via `nono.nix` and `agent-sandbox.nix`
 - **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, nix daemon socket opt-in. Per-wrapper credential allowlists (least privilege). Proxy credential injection — nono generates per-session phantom tokens; real keys never reach the child process.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
 - **Network model**: Only ports 22 + 22000 on public firewall by default. Ports 80/443 conditional on nginx. All internal services bind 127.0.0.1 (dashboard, syncthing GUI). Tailscale for internal access.
@@ -196,13 +198,13 @@ Run before every module or service commit:
 - **SEC116-01:** Agent resource limits via `tsurf-agents.slice` set aggregate ceilings (8G/300%/1024 tasks). Per-unit limits on dev-agent (4G/200%/256 tasks, OOMPolicy=kill). Limits are conservative defaults; production may need tuning based on workload.
 - **SEC116-02:** Syncthing defaults to tailnet-only operation (global announce, local announce, relays, NAT all disabled). Public BEP port 22000 requires explicit `publicBep` opt-in. Private overlay should enable `publicBep` only if non-Tailscale peers are needed.
 - **SEC119-01:** Brokered launch model uses `sudo` + `systemd-run --uid=agent` for interactive sessions. A targeted NOPASSWD+SETENV sudoers rule allows `dev` to invoke only `tsurf-agent-launch`. The launcher validates `AGENT_REAL_BINARY` is in `/nix/store` to prevent arbitrary command execution. This rule is no broader than `dev`'s existing wheel access in template mode.
-- **SEC119-02:** Workspace directories under `/data/projects` must be accessible to the `agent` user for the brokered launcher's `--same-dir` to work. Production should set workspace ownership to `agent:users` and control-plane repos to `dev:dev`. See SECURITY.md "Control-Plane vs Workspace Separation".
+- **SEC119-02:** (UPDATED Phase 124) `dev-agent.nix` defaults WorkingDirectory to `agentCfg.projectRoot` (not the control-plane repo). Private overlay should set `services.devAgent.workingDirectory` to a specific workspace repo. Workspace directories under `/data/projects` must be accessible to the `agent` user for the brokered launcher's `--same-dir` to work. See SECURITY.md "Control-Plane vs Workspace Separation".
 
 ## Sandbox Awareness
 
 When running inside the nono sandbox (as the `agent` user — no wheel, no docker):
 
-- **Brokered execution**: When operator (`dev`) invokes `claude`/`codex`/`pi`, the wrapper uses `sudo` + `systemd-run --uid=agent` to drop to the `agent` user before any sandbox or credential logic runs. The operator never directly execs agent binaries with credentials. When already running as `agent` (e.g. `dev-agent.nix`), the wrapper execs directly (no double privilege drop).
+- **Brokered execution**: When operator (`dev`) invokes `claude` or any enabled extra wrapper such as `codex`, `pi`, or `opencode`, the wrapper uses `sudo` + `systemd-run --uid=agent` to drop to the `agent` user before any sandbox or credential logic runs. The operator never directly execs agent binaries with credentials. When already running as `agent` (e.g. `dev-agent.nix`), the wrapper execs directly (no double privilege drop).
 - Launch from inside `/data/projects`; wrapper scripts reject sandboxed launches outside that root.
 - Read access is scoped to the current git repo root, not all of `/data/projects`.
 - API keys are loaded from `/run/secrets/` by the wrapper (running as `agent`) into the parent env. nono's reverse proxy reads them via `env://` URIs and passes only per-session phantom tokens to the sandboxed child (`--credential` flag).

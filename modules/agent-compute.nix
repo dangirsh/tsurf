@@ -12,7 +12,7 @@ let
   agentCfg = config.tsurf.agent;
 in
 {
-  options.services.agentCompute.enable = lib.mkEnableOption "Agent CLI tools (claude, codex, pi, zmx)";
+  options.services.agentCompute.enable = lib.mkEnableOption "Agent runtime support (zmx, podman, shared overlays)";
 
   config = lib.mkIf cfg.enable {
   # @decision: zmx pre-built static binary from zmx.sh (a zig2nix flake build
@@ -42,11 +42,11 @@ in
     })
   ];
 
-  # @decision SEC-116-01: Raw agent binaries (claude-code, codex, pi-coding-agent) are NOT
-  #   installed in PATH. They are only accessible via sandboxed wrappers in agent-sandbox.nix
-  #   which reference full store paths (AGENT_REAL_BINARY). Combined with the brokered launch
-  #   model (SEC-119-01), interactive sessions run as the agent user — the operator cannot
-  #   exec the raw binary with agent credentials.
+  # @decision SEC-116-01: Raw agent binaries are NOT installed in PATH. Sandboxed
+  #   wrappers in agent-sandbox.nix and opt-in extras reference full store paths
+  #   directly (AGENT_REAL_BINARY). Combined with the brokered launch model
+  #   (SEC-119-01), interactive sessions run as the agent user — the operator
+  #   cannot exec the raw binary with agent credentials.
   environment.systemPackages = [
     pkgs.zmx
     pkgs.nodejs

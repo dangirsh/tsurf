@@ -65,8 +65,6 @@
       "/home/dev/Sync"                    # Syncthing shared folders
       "/home/dev/.claude"                 # Claude Code state
       "/home/dev/.config/claude"          # Claude Code config
-      "/home/dev/.codex"                  # Codex state
-      "/home/dev/.pi"                     # Pi agent state
       "/home/dev/.config/git"             # Git config (global ignore, etc.)
       "/home/dev/.local/share/direnv"     # Direnv allowed envs
 
@@ -74,8 +72,6 @@
       # @decision IMP-115-01: Agent home persisted separately from operator home.
       "/home/agent/.claude"
       "/home/agent/.config/claude"
-      "/home/agent/.codex"
-      "/home/agent/.pi"
       "/home/agent/.config/git"
       "/home/agent/.local/share/direnv"
 

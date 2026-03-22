@@ -1,7 +1,8 @@
 # extras/opencode.nix
 # Optional: opencode AI coding assistant with nono sandbox.
 # Registers opencode as a sandboxed agent via the brokered launch model (SEC-119-01).
-# Requires: services.agentSandbox.enable = true (modules/agent-sandbox.nix).
+# Requires: services.agentSandbox.enable = true (modules/agent-sandbox.nix)
+# and services.nonoSandbox.enable = true (modules/nono.nix).
 #
 # Usage: import this module, then set services.opencodeAgent.enable = true.
 # Override the package via services.opencodeAgent.package if opencode is available
@@ -61,10 +62,16 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [{
-      assertion = config.services.agentSandbox.enable;
-      message = "extras/opencode.nix: services.agentSandbox.enable must be true";
-    }];
+    assertions = [
+      {
+        assertion = config.services.agentSandbox.enable;
+        message = "extras/opencode.nix: services.agentSandbox.enable must be true";
+      }
+      {
+        assertion = config.services.nonoSandbox.enable;
+        message = "extras/opencode.nix: services.nonoSandbox.enable must be true";
+      }
+    ];
 
     services.agentSandbox.extraAgents = [{
       name = "opencode";
@@ -72,5 +79,9 @@ in
       binary = "opencode";
       credentials = cfg.credentials;
     }];
+
+    services.nonoSandbox.extraAllow = [
+      "${config.tsurf.agent.home}/.config/opencode"
+    ];
   };
 }

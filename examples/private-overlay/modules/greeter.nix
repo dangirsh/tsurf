@@ -1,12 +1,12 @@
 # modules/greeter.nix — Minimal example: a sandboxed agent that runs daily
 #
 # This is the simplest possible agent module. It demonstrates:
-#   1. Defining a custom nono profile (filesystem allow/deny, network, workdir)
+#   1. Defining a custom nono profile (filesystem allow/deny, network, credentials)
 #   2. Installing the profile to /etc/nono/profiles/
-#   3. Running the agent via a systemd timer with credential injection
+#   3. Running the agent via a systemd timer with proxy credential injection
+#      (phantom tokens — the child process never sees the real API key)
 #
-# For a more complex example with options, model selection, and natural-language
-# prompts, see janitor.nix in this same directory.
+# For the full credential architecture, see SECURITY.md in the tsurf repo.
 { config, lib, pkgs, ... }:
 let
   # --- 1. Define a nono profile ---
@@ -34,6 +34,18 @@ let
     };
     network = {
       block = false;           # agent needs API access
+      # Proxy credential injection: nono reads the real API key from parent env
+      # via env:// URI, starts a reverse proxy, and passes only a per-session
+      # phantom token to the child process. The real key never reaches the agent.
+      custom_credentials = {
+        anthropic = {
+          upstream = "https://api.anthropic.com";
+          credential_key = "env://ANTHROPIC_API_KEY";
+          inject_header = "x-api-key";
+          credential_format = "{}";
+          env_var = "ANTHROPIC_API_KEY";
+        };
+      };
     };
     workdir = {
       access = "readwrite";    # CWD is writable (the agent works here)
@@ -45,13 +57,18 @@ let
     (builtins.toJSON greeterProfile);
 
   # --- 2. The agent launch script ---
-  # Reads the API key, then runs claude inside the nono sandbox.
+  # Loads the API key into parent env for nono proxy (env:// URI).
+  # The child process receives only a per-session phantom token.
   greeterScript = pkgs.writeShellScript "greeter-agent" ''
     set -euo pipefail
+    # Load API key into parent env for nono's proxy credential injection.
+    # nono reads this via env://ANTHROPIC_API_KEY, generates a phantom token,
+    # and the child process only sees the phantom token + localhost proxy URL.
     export ANTHROPIC_API_KEY="$(cat "$ANTHROPIC_API_KEY_FILE")"
     exec nono run \
       --profile /etc/nono/profiles/greeter.json \
       --net-allow \
+      --credential anthropic \
       -- claude -p \
       --permission-mode=bypassPermissions \
       "Write a short, cheerful greeting with today's date to /var/lib/greeter/greeting.txt. One sentence only."
@@ -77,7 +94,7 @@ in {
       WorkingDirectory = "/var/lib/greeter";
       ExecStart = greeterScript;
 
-      # Credential injection — the service needs the API key file path
+      # API key file for proxy credential injection (parent env only — child gets phantom token)
       Environment = [
         "ANTHROPIC_API_KEY_FILE=${config.sops.secrets."anthropic-api-key".path}"
       ];

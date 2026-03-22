@@ -208,17 +208,15 @@ sops.secrets."anthropic-api-key".owner = config.tsurf.agent.user;
 
 ### Using the built-in interactive wrappers
 
-For interactive use (not timer-based), tsurf ships sandboxed wrappers for `claude`, `codex`, and `pi`. These use the default `tsurf` nono profile and are available on the agent user's PATH:
+For interactive use (not timer-based), tsurf ships a sandboxed `claude` wrapper in core. Optional wrappers for `codex`, `pi`, and `opencode` are available via `extras/codex.nix`, `extras/pi.nix`, and `extras/opencode.nix`. Core `claude` is available on the agent user's PATH:
 
 ```bash
 # SSH in as operator, then:
 sudo -u agent bash
 cd /data/projects/my-repo
 claude   # runs through nono sandbox automatically
-codex    # same — sandboxed wrapper
-pi       # same
 ```
 
-The wrappers handle credential injection from `/run/secrets/`, enforce the git-worktree requirement, and log launches to journald (`journalctl -t agent-launch`).
+All enabled wrappers handle credential injection from `/run/secrets/`, enforce the git-worktree requirement, and log launches to journald (`journalctl -t agent-launch`).
 
 See `SECURITY.md` in the tsurf repo for the full access control model, credential flow architecture, and tailnet segmentation guidance.

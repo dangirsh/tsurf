@@ -51,10 +51,12 @@
         "${inputs.tsurf}/modules/impermanence.nix"
         "${inputs.tsurf}/modules/break-glass-ssh.nix"
         "${inputs.tsurf}/extras/dashboard.nix"
-        # nono sandbox infrastructure - provides NONO_PROFILE_PATH and profile
-        # installation to /etc/nono/profiles/. Required by agentic janitor.
+        # nono.nix: nono binary, tsurf profile, NONO_PROFILE_PATH, proxy credentials
         "${inputs.tsurf}/modules/nono.nix"
         { services.nonoSandbox.enable = true; }
+        # agent-sandbox.nix: core claude wrapper plus hook for optional agent extras
+        "${inputs.tsurf}/modules/agent-sandbox.nix"
+        { services.agentSandbox.enable = true; }
 
         # Import networking.nix after configuring Tailscale, SSH host keys, and impermanence.
         # Import secrets.nix after creating your encrypted secrets file, or write your own secrets module.

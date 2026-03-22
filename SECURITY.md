@@ -164,8 +164,8 @@ Parent process env var (e.g., ANTHROPIC_API_KEY=sk-...)
 - Phantom tokens are validated via constant-time comparison
 - The proxy enforces TLS for upstream connections
 - `/run/secrets/` files are NOT accessible from inside the sandbox (denied by Landlock)
-- Each wrapper loads only its own credential allowlist — `claude` loads only Anthropic,
-  `codex` loads only OpenAI (least-privilege per wrapper)
+- Each wrapper loads only its own credential allowlist. Core `claude` loads only
+  Anthropic; optional extras can scope to OpenAI, Anthropic, or both as needed.
 - See accepted risk SEC114-02
 
 ## Tailnet Segmentation
@@ -264,10 +264,10 @@ verification is performed. Versions are pinned; hash mismatches cause build fail
 | Binary | Source | Hash Pinned | Opt-in |
 |--------|--------|-------------|--------|
 | nono | github.com/always-further/nono | Yes (sha256) | services.nonoSandbox.enable |
-| pi | github.com/badlogic/pi-mono | Yes (sha256) | via agent-compute.nix import |
+| pi | github.com/badlogic/pi-mono | Yes (sha256) | services.piAgent.enable |
 | zmx | zmx.sh | Yes (sha256) | via agent-compute.nix import |
 | cass | github.com/Dicklesworthstone/coding_agent_session_search | Yes (sha256) | programs.cass.enable |
 | claude-code | numtide/llm-agents.nix | Via flake.lock | via agent-compute.nix import |
-| codex | numtide/llm-agents.nix | Via flake.lock | via agent-compute.nix import |
+| codex | numtide/llm-agents.nix | Via flake.lock | services.codexAgent.enable |
 
-To remove all prebuilt agent binaries: do not import `agent-compute.nix` in your host config.
+To remove all prebuilt agent binaries: do not enable `services.agentSandbox` and do not enable any agent extras.

@@ -22,14 +22,6 @@ bats_load_library bats-assert
   remote "grep -q nono ${claude_path}"
 }
 
-@test "${HOST}: sandboxed codex wrapper exists in PATH" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
-  local codex_path
-  codex_path="$(remote "readlink -f \$(command -v codex)")"
-  [[ "$codex_path" == /nix/store/* ]]
-  remote "grep -q nono ${codex_path}"
-}
-
 @test "${HOST}: sandboxed claude hides /run/secrets" {
   if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   local claude_path script_content

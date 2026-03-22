@@ -365,27 +365,51 @@ in
       "agent-sandbox module does not reference nono — sandbox is broken"
       (lib.hasInfix "nono" source);
 
-  # Phase 116: raw agent binaries removed from PATH (SEC-116-01).
-  # Verify the pi *wrapper* exists (writeShellApplication named "pi"), not the raw package.
-  pi-sandbox-wrapper-in-packages =
+  core-agent-sandbox-only-claude =
     let
       source = builtins.readFile ../../modules/agent-sandbox.nix;
     in
     mkCheck
-      "pi-sandbox-wrapper-in-packages"
-      "pi sandboxed wrapper defined in agent-sandbox.nix"
-      "pi sandboxed wrapper missing from agent-sandbox.nix"
-      (lib.hasInfix "pi-sandboxed" source);
+      "core-agent-sandbox-only-claude"
+      "agent-sandbox core wrapper list only includes claude"
+      "agent-sandbox.nix still hardcodes non-claude wrappers; move them to extras/"
+      (lib.hasInfix "name = \"claude\"" source
+       && !(lib.hasInfix "pkgs.codex" source)
+       && !(lib.hasInfix "pkgs.pi-coding-agent" source));
 
-  nono-profile-has-pi =
+  nono-profile-extra-path-hooks =
     let
       source = builtins.readFile ../../modules/nono.nix;
     in
     mkCheck
-      "nono-profile-has-pi"
-      "nono tsurf profile includes ~/.pi in filesystem allow list"
-      "nono tsurf profile missing ~/.pi — pi config inaccessible in sandbox"
-      (lib.hasInfix ".pi" source);
+      "nono-profile-extra-path-hooks"
+      "nono tsurf profile exposes extension hooks for extra agents"
+      "nono.nix is missing extra path hooks for agent extras"
+      (lib.hasInfix "cfg.extraAllow" source
+       && lib.hasInfix "cfg.extraAllowFile" source
+       && lib.hasInfix "cfg.extraReadFile" source);
+
+  codex-extra-registers-wrapper =
+    let
+      source = builtins.readFile ../../extras/codex.nix;
+    in
+    mkCheck
+      "codex-extra-registers-wrapper"
+      "codex extra registers its sandboxed wrapper"
+      "extras/codex.nix is missing sandbox wrapper registration"
+      (lib.hasInfix "services.agentSandbox.extraAgents" source
+       && lib.hasInfix "name = \"codex\"" source);
+
+  pi-extra-registers-wrapper =
+    let
+      source = builtins.readFile ../../extras/pi.nix;
+    in
+    mkCheck
+      "pi-extra-registers-wrapper"
+      "pi extra registers its sandboxed wrapper"
+      "extras/pi.nix is missing sandbox wrapper registration"
+      (lib.hasInfix "services.agentSandbox.extraAgents" source
+       && lib.hasInfix "name = \"pi\"" source);
 
   nono-sandbox-ovh-enabled = mkCheck
     "nono-sandbox-ovh-enabled"

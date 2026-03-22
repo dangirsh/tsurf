@@ -22,7 +22,8 @@
     ../../extras/cost-tracker.nix
     ../../modules/agent-sandbox.nix
     ../../modules/nono.nix
-    # dev-agent.nix: import ../../extras/dev-agent.nix in private overlay with services.devAgent.enable = true
+    # Optional agent extras: import ../../extras/codex.nix, ../../extras/pi.nix,
+    # ../../extras/opencode.nix, or ../../extras/dev-agent.nix in your private overlay.
   ];
 
   home-manager.users.dev = import ../../extras/home;
