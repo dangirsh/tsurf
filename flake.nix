@@ -52,6 +52,11 @@
       system = "x86_64-linux";
       lib = nixpkgs.lib;
       pkgs = nixpkgs.legacyPackages.${system};
+      tsurfOverlay = final: prev: {
+        nono = final.callPackage ./packages/nono.nix {};
+        pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix {};
+        zmx = final.callPackage ./packages/zmx.nix {};
+      };
 
       commonModules = [
         srvos.nixosModules.server
@@ -62,10 +67,7 @@
         {
           nixpkgs.overlays = [
             llm-agents.overlays.default
-            (final: prev: {
-              nono = final.callPackage ./packages/nono.nix {};
-              pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix {};
-            })
+            self.overlays.default
           ];
         }
         {
@@ -97,6 +99,8 @@
 
       evalChecks = import ./tests/eval/config-checks.nix { inherit self pkgs lib; };
     in {
+      overlays.default = tsurfOverlay;
+
       nixosConfigurations."eval-tsurf" = mkEvalFixture ./hosts/services [ ];
       nixosConfigurations."eval-tsurf-dev" = mkEvalFixture ./hosts/dev [ ];
       nixosConfigurations."eval-tsurf-dev-alt-agent" = mkEvalFixture ./hosts/dev [

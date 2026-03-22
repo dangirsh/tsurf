@@ -103,6 +103,7 @@ let
       #   Effectiveness depends on nono version and Landlock kernel support — verify
       #   with live testing after deploy (see Plan 84-02 Task 2).
       deny = [
+        "/run/secrets"
         "${cfg.homeDir}/.ssh"
         "${cfg.homeDir}/.bash_history"
         "${cfg.homeDir}/.config/syncthing"

@@ -560,6 +560,15 @@ in
      in lib.hasInfix "custom_credentials" src
         && lib.hasInfix "env://" src);
 
+  nono-profile-denies-run-secrets = mkCheck
+    "nono-profile-denies-run-secrets"
+    "generated nono profile explicitly denies /run/secrets"
+    "nono profile deny list is missing /run/secrets"
+    (let
+      profile = builtins.fromJSON (builtins.readFile devCfg.environment.etc."nono/profiles/tsurf.json".source);
+    in
+      builtins.elem "/run/secrets" profile.filesystem.deny);
+
   dashboard-security-headers =
     let
       serverSrc = builtins.readFile ../../extras/scripts/dashboard-server.py;

@@ -41,7 +41,10 @@
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
         {
-          nixpkgs.overlays = [ llm-agents.overlays.default ];
+          nixpkgs.overlays = [
+            llm-agents.overlays.default
+            inputs.tsurf.overlays.default
+          ];
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
         }

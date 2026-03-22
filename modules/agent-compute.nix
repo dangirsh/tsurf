@@ -15,33 +15,6 @@ in
   options.services.agentCompute.enable = lib.mkEnableOption "Agent runtime support (zmx, podman, shared overlays)";
 
   config = lib.mkIf cfg.enable {
-  # @decision: zmx pre-built static binary from zmx.sh (a zig2nix flake build
-  #   fails under apparmor-restricted user namespaces). Exposed via pkgs overlay
-  #   so all modules use one canonical zmx derivation.
-  nixpkgs.overlays = [
-    (final: prev: {
-      zmx = final.stdenv.mkDerivation rec {
-        pname = "zmx";
-        version = "0.3.0";
-        src = final.fetchurl {
-          url = "https://zmx.sh/a/zmx-${version}-linux-x86_64.tar.gz";
-          hash = "sha256-/K/xWB61pqPll4Gq13qMoGm0Q1vC/sQT3TI7RaTf3zI=";
-        };
-        sourceRoot = ".";
-        installPhase = ''
-          runHook preInstall
-          install -m755 -D zmx $out/bin/zmx
-          runHook postInstall
-        '';
-        meta = with final.lib; {
-          description = "Session persistence for terminal processes";
-          homepage = "https://github.com/neurosnap/zmx";
-          platforms = [ "x86_64-linux" ];
-        };
-      };
-    })
-  ];
-
   # @decision SEC-116-01: Raw agent binaries are NOT installed in PATH. Sandboxed
   #   wrappers in agent-sandbox.nix and opt-in extras reference full store paths
   #   directly (AGENT_REAL_BINARY). Combined with the brokered launch model
