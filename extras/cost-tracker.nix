@@ -7,6 +7,8 @@
 #   Timer repopulates daily. Manual refresh via systemctl restart.
 # @decision COST-04: Multi-period costs (24h, 7d, 30d, 365d, 730d).
 #   Each provider fetched once per period. OpenAI supports project_ids filter.
+# @decision COST-05: DynamicUser=true — runs as ephemeral UID. CAP_DAC_READ_SEARCH
+#   allows reading /run/secrets/ files owned by root or agent user.
 {
   config,
   lib,
@@ -87,6 +89,7 @@ in
 
       serviceConfig = {
         Type = "oneshot";
+        DynamicUser = true;
         ExecStart = "${costTrackerScript}/bin/tsurf-cost-tracker";
         ProtectHome = true;
         PrivateTmp = true;

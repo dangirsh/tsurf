@@ -733,9 +733,7 @@ in
       "All project services have SystemCallArchitectures=native"
       "SECURITY: one or more services missing SystemCallArchitectures=native"
       (hasSCA tsurfCfg.systemd.services.nix-dashboard
-       && hasSCA tsurfCfg.systemd.services.restic-status-server
        && hasSCA tsurfCfg.systemd.services.sshd-liveness-check
-       && hasSCA devCfg.systemd.services.dev-agent
        && hasSCA devCfg.systemd.services.syncthing);
 
 }

@@ -28,6 +28,10 @@
       url = "github:nix-community/srvos";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nixos-anywhere = {
+      url = "github:nix-community/nixos-anywhere";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Private overlay: add your private inputs (parts, personal services, etc.) in a separate private flake that imports this one.
@@ -41,6 +45,7 @@
     deploy-rs,
     impermanence,
     srvos,
+    nixos-anywhere,
     ...
   } @ inputs:
     let
@@ -186,9 +191,17 @@
         };
       };
 
-      apps.${system}.test-live = {
-        type = "app";
-        program = "${self.packages.${system}.test-live}/bin/test-live";
+      apps.${system} = {
+        test-live = {
+          type = "app";
+          program = "${self.packages.${system}.test-live}/bin/test-live";
+        };
+
+        # @decision BOOT-06: Pinned nixos-anywhere via flake.lock (supply-chain safety).
+        nixos-anywhere = {
+          type = "app";
+          program = "${nixos-anywhere.packages.${system}.default}/bin/nixos-anywhere";
+        };
       };
 
       devShells.${system}.default = pkgs.mkShell {
