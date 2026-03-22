@@ -68,12 +68,12 @@ bats_load_library bats-assert
 @test "${HOST}: agent user cannot connect to non-whitelisted port" {
   if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
   # Port 8080 is not in the egress allowlist — connection should be dropped
-  run remote "su -s /bin/sh agent -c 'nc -z -w2 1.1.1.1 8080'" 2>&1
+  run remote "su -s /bin/sh ${AGENT_USER} -c 'nc -z -w2 1.1.1.1 8080'" 2>&1
   [ "$status" -ne 0 ]
 }
 
 @test "${HOST}: agent user can reach DNS (port 53)" {
   if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
-  run remote "su -s /bin/sh agent -c 'nc -z -w2 8.8.8.8 53'"
+  run remote "su -s /bin/sh ${AGENT_USER} -c 'nc -z -w2 8.8.8.8 53'"
   [ "$status" -eq 0 ]
 }

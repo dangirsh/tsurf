@@ -420,6 +420,20 @@ in
       (lib.hasInfix "services.agentSandbox.extraAgents" source
        && lib.hasInfix "name = \"pi\"" source);
 
+  extra-agent-persistence-parameterized =
+    let
+      codexSource = builtins.readFile ../../extras/codex.nix;
+      piSource = builtins.readFile ../../extras/pi.nix;
+    in
+    mkCheck
+      "extra-agent-persistence-parameterized"
+      "optional agent extras derive persistence paths from config, not /home/agent"
+      "extras/codex.nix or extras/pi.nix still hardcode /home/agent persistence paths"
+      (!(lib.hasInfix "\"/home/agent/.codex\"" codexSource)
+       && !(lib.hasInfix "\"/home/agent/.pi\"" piSource)
+       && lib.hasInfix "agentHome" codexSource
+       && lib.hasInfix "agentHome" piSource);
+
   nono-sandbox-ovh-enabled = mkCheck
     "nono-sandbox-ovh-enabled"
     "ovh nono sandbox module is enabled"
@@ -886,6 +900,17 @@ in
       "SECURITY: dev-agent.nix WorkingDirectory defaults to /tsurf (control-plane repo) — use agentCfg.projectRoot"
       (!(lib.hasInfix "projectRoot}/tsurf" source));
 
+  live-test-agent-user-parameterized =
+    let
+      source = builtins.readFile ../../tests/live/agent-sandbox.bats;
+    in
+    mkCheck
+      "live-test-agent-user-parameterized"
+      "live agent-sandbox tests use AGENT_USER instead of hardcoded 'agent'"
+      "tests/live/agent-sandbox.bats still hardcodes the 'agent' username"
+      (lib.hasInfix "\${AGENT_USER}" source
+       && !(lib.hasInfix "su -s /bin/sh agent" source));
+
   # --- Phase 124: Sandbox read-scope regression guards ---
   # Source-text checks for critical fail-closed patterns in agent-wrapper.sh.
   # Runtime behavioral coverage is in tests/live/sandbox-behavioral.bats.
@@ -923,6 +948,17 @@ in
       (!(lib.hasInfix "no-sandbox" wrapperSource)
        && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" wrapperSource)
        && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" launcherSource));
+
+  example-greeter-uses-raw-claude =
+    let
+      source = builtins.readFile ../../examples/private-overlay/modules/greeter.nix;
+    in
+    mkCheck
+      "example-greeter-uses-raw-claude"
+      "example greeter calls the raw Claude binary inside its own nono sandbox"
+      "examples/private-overlay/modules/greeter.nix still shells out to the interactive claude wrapper"
+      (lib.hasInfix "pkgs.claude-code" source
+       && !(lib.hasInfix "-- claude -p" source));
 
 }
 

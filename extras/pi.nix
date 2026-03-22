@@ -2,9 +2,13 @@
 # Optional: pi coding agent sandboxed through the shared brokered launch model.
 # Requires: services.agentSandbox.enable = true (modules/agent-sandbox.nix)
 # and services.nonoSandbox.enable = true (modules/nono.nix).
+# @decision SEC-127-EXTRAS-01: Optional extra-agent persistence derives from
+#   tsurf.agent.home, not a literal /home/agent path.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.piAgent;
+  agentHome = config.tsurf.agent.home;
+  devHome = config.users.users.dev.home;
 in
 {
   options.services.piAgent = {
@@ -46,18 +50,18 @@ in
     }];
 
     services.nonoSandbox.extraAllow = [
-      "${config.tsurf.agent.home}/.pi"
-      "${config.tsurf.agent.home}/.pi/agent"
+      "${agentHome}/.pi"
+      "${agentHome}/.pi/agent"
     ];
 
     services.nonoSandbox.extraAllowFile = [
-      "${config.tsurf.agent.home}/.pi/agent/auth.json"
-      "${config.tsurf.agent.home}/.pi/agent/settings.json"
+      "${agentHome}/.pi/agent/auth.json"
+      "${agentHome}/.pi/agent/settings.json"
     ];
 
     environment.persistence."/persist".directories = [
-      "/home/dev/.pi"
-      "/home/agent/.pi"
+      "${devHome}/.pi"
+      "${agentHome}/.pi"
     ];
   };
 }

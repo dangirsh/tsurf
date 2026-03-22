@@ -2,9 +2,13 @@
 # Optional: Codex CLI sandboxed through the shared brokered launch model.
 # Requires: services.agentSandbox.enable = true (modules/agent-sandbox.nix)
 # and services.nonoSandbox.enable = true (modules/nono.nix).
+# @decision SEC-127-EXTRAS-01: Optional extra-agent persistence derives from
+#   tsurf.agent.home, not a literal /home/agent path.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.codexAgent;
+  agentHome = config.tsurf.agent.home;
+  devHome = config.users.users.dev.home;
 in
 {
   options.services.codexAgent = {
@@ -46,12 +50,12 @@ in
     }];
 
     services.nonoSandbox.extraAllow = [
-      "${config.tsurf.agent.home}/.codex"
+      "${agentHome}/.codex"
     ];
 
     environment.persistence."/persist".directories = [
-      "/home/dev/.codex"
-      "/home/agent/.codex"
+      "${devHome}/.codex"
+      "${agentHome}/.codex"
     ];
   };
 }

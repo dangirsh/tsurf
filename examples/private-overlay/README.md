@@ -70,9 +70,10 @@ environment.etc."nono/profiles/greeter.json".source = greeterProfileFile;
 
 # 3. Launch script (proxy credential injection + nono sandbox)
 # pass the credential name declared above
+# use the raw store binary here, not the interactive PATH wrapper
 exec nono run --profile /etc/nono/profiles/greeter.json --net-allow \
   --credential anthropic \
-  -- claude -p --permission-mode=bypassPermissions \
+  -- ${pkgs.claude-code}/bin/claude -p --permission-mode=bypassPermissions \
   "Write a greeting to /var/lib/greeter/greeting.txt"
 
 # 4. Systemd service + timer
@@ -144,13 +145,13 @@ script = pkgs.writeShellScript "my-agent" ''
     --profile /etc/nono/profiles/my-agent.json \
     --net-allow \
     --credential anthropic \
-    -- claude -p \
+    -- ${pkgs.claude-code}/bin/claude -p \
     --permission-mode=bypassPermissions \
     "Your agent prompt here."
 '';
 ```
 
-For agents using other binaries (codex, pi, custom tools), replace `claude` with the appropriate command. If the agent needs API access, declare `network.custom_credentials.<name>` in the profile and pass `--credential <name>` here. `--permission-mode=bypassPermissions` is safe here because nono is the actual permission boundary.
+For timer/service agents that call `nono run` directly, use the raw package binary path (`${pkgs.claude-code}/bin/claude`, `${pkgs.codex}/bin/codex`, etc.), not the interactive PATH wrapper from `agent-sandbox.nix`. The wrapper enforces the repo-scoped brokered launch flow and will reject non-repo working directories. If the agent needs API access, declare `network.custom_credentials.<name>` in the profile and pass `--credential <name>` here. `--permission-mode=bypassPermissions` is safe here because nono is the actual permission boundary.
 
 **4. Define the systemd service.**
 

@@ -7,6 +7,10 @@
 #      (phantom tokens — the child process never sees the real API key)
 #
 # For the full credential architecture, see SECURITY.md in the tsurf repo.
+# @decision EXAMPLE-130-01: Timer/service agents that call nono directly must
+#   exec the raw store binary, not the interactive PATH wrapper from
+#   agent-sandbox.nix. The wrapper enforces the git-worktree launch model and
+#   intentionally fails outside repo-scoped interactive sessions.
 { config, lib, pkgs, ... }:
 let
   # --- 1. Define a nono profile ---
@@ -69,7 +73,7 @@ let
       --profile /etc/nono/profiles/greeter.json \
       --net-allow \
       --credential anthropic \
-      -- claude -p \
+      -- ${pkgs.claude-code}/bin/claude -p \
       --permission-mode=bypassPermissions \
       "Write a short, cheerful greeting with today's date to /var/lib/greeter/greeting.txt. One sentence only."
   '';
