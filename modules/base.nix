@@ -15,6 +15,12 @@
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
+    # @decision SEC-124-01: Restrict Nix daemon access to root and wheel group.
+    #   Agent user is excluded by default — added conditionally via agent-sandbox.nix
+    #   when allowNixDaemon is enabled. trusted-users is root-only (no @wheel) to prevent
+    #   wheel users from adding arbitrary substituters or signing keys at runtime.
+    allowed-users = [ "root" "@wheel" ];
+    trusted-users = [ "root" ];
     # Numtide: llm-agents overlay (claude-code, codex, etc.)
     # Private overlay: add your own Cachix binary cache.
     # After creating a cache at https://app.cachix.org, add:
