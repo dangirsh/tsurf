@@ -20,7 +20,7 @@
     #   when allowNixDaemon is enabled. trusted-users is root-only (no @wheel) to prevent
     #   wheel users from adding arbitrary substituters or signing keys at runtime.
     allowed-users = [ "root" "@wheel" ];
-    trusted-users = [ "root" ];
+    trusted-users = lib.mkForce [ "root" ];
     # Numtide: llm-agents overlay (claude-code, codex, etc.)
     # Private overlay: add your own Cachix binary cache.
     # After creating a cache at https://app.cachix.org, add:
