@@ -872,6 +872,19 @@ in
       "agent-wrapper.sh missing project-root refusal — agents could read all repos"
       (lib.hasInfix "refusing to grant read access to the entire project root" source);
 
+  public-no-sandbox-removed =
+    let
+      wrapperSource = builtins.readFile ../../scripts/agent-wrapper.sh;
+      launcherSource = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "public-no-sandbox-removed"
+      "public wrapper/launcher no longer expose a --no-sandbox escape hatch"
+      "SECURITY: public wrapper or launcher still reference --no-sandbox / AGENT_ALLOW_NOSANDBOX"
+      (!(lib.hasInfix "no-sandbox" wrapperSource)
+       && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" wrapperSource)
+       && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" launcherSource));
+
 }
 
 # --- Private overlay test extension pattern ---

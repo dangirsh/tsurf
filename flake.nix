@@ -55,6 +55,7 @@
       tsurfOverlay = final: prev: {
         nono = final.callPackage ./packages/nono.nix {};
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix {};
+        sandbox-probe-e2e = final.callPackage ./packages/sandbox-probe-e2e.nix {};
         zmx = final.callPackage ./packages/zmx.nix {};
       };
 
@@ -112,6 +113,7 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
+        sandbox-probe-e2e = pkgs.callPackage ./packages/sandbox-probe-e2e.nix {};
 
         # NixOS VM test for sandbox user privilege separation (requires KVM).
         # Run: nix build .#vm-test-sandbox

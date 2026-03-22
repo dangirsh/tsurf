@@ -29,18 +29,6 @@ journal_log() {
     2>/dev/null || true
 }
 
-# --no-sandbox escape hatch: requires AGENT_ALLOW_NOSANDBOX=1
-if [[ "${1:-}" == "--no-sandbox" ]]; then
-  if [[ "${AGENT_ALLOW_NOSANDBOX:-}" != "1" ]]; then
-    echo "ERROR: --no-sandbox requires AGENT_ALLOW_NOSANDBOX=1" >&2
-    exit 1
-  fi
-  echo "WARNING: Running $AGENT_NAME WITHOUT sandbox. All secrets accessible." >&2
-  journal_log "nosandbox"
-  shift
-  exec "$AGENT_REAL_BINARY" "$@"
-fi
-
 # Enforce PWD inside project root
 cwd="$(readlink -f "$PWD")"
 case "$cwd" in

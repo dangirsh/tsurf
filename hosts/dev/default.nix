@@ -92,6 +92,12 @@ in {
   services.nonoSandbox.enable = true;
   services.agentSandbox.allowNixDaemon = true;
   services.agentSandbox.egressControl.enable = true;
+  services.agentSandbox.extraAgents = [{
+    name = "agent-sandbox-e2e";
+    package = pkgs.sandbox-probe-e2e;
+    binary = "sandbox-probe-e2e";
+    credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
+  }];
 
   networking.useNetworkd = lib.mkForce false;
 

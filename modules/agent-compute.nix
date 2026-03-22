@@ -3,9 +3,6 @@
 #   (not `llm-agents-claude-code` — the overlay adds packages directly to pkgs namespace)
 # @decision SANDBOX-11-01: Podman is enabled rootless; dockerCompat=false (conflicts with Docker)
 #   — sandbox uses a PATH-local docker->podman symlink derivation.
-# @decision SEC47-13: --no-sandbox agent = effective root access (accepted risk)
-# @rationale: --no-sandbox -> dev -> wheel -> passwordless sudo -> root.
-#   Mitigated by default sandbox-on, journald launch logging, operator awareness.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentCompute;

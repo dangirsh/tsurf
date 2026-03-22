@@ -1,6 +1,6 @@
 # modules/agent-sandbox.nix
 # @decision SANDBOX-73-01: Wrapper scripts replace bare agent binaries on dev hosts.
-#   nono sandbox is the default; --no-sandbox requires AGENT_ALLOW_NOSANDBOX=1.
+#   Public wrappers always route through nono; unsandboxed execution is private-overlay-only.
 # @decision AUDIT-117-01: Launch logging via journald only (logger -t agent-launch).
 #   File-based audit log removed — was user-owned/tamperable and leaked raw arguments.
 # @decision NONO-118-02: API keys loaded from /run/secrets/ by scripts/agent-wrapper.sh
@@ -57,7 +57,6 @@ let
         --setenv=AGENT_NONO_PROFILE="''${AGENT_NONO_PROFILE:-}" \
         --setenv=AGENT_CREDENTIALS="''${AGENT_CREDENTIALS:-}" \
         --setenv=AGENT_ALLOW_NIX_DAEMON="''${AGENT_ALLOW_NIX_DAEMON:-}" \
-        --setenv=AGENT_ALLOW_NOSANDBOX="''${AGENT_ALLOW_NOSANDBOX:-}" \
         bash ${../scripts/agent-wrapper.sh} "$@"
     '';
   };
@@ -85,7 +84,7 @@ let
 
         # Brokered launch: privilege drop to agent user via systemd-run.
         # sudo is at /run/wrappers/bin/sudo (NixOS setuid wrapper).
-        exec sudo --preserve-env=AGENT_NAME,AGENT_REAL_BINARY,AGENT_PROJECT_ROOT,AGENT_NONO_PROFILE,AGENT_CREDENTIALS,AGENT_ALLOW_NIX_DAEMON,AGENT_ALLOW_NOSANDBOX \
+        exec sudo --preserve-env=AGENT_NAME,AGENT_REAL_BINARY,AGENT_PROJECT_ROOT,AGENT_NONO_PROFILE,AGENT_CREDENTIALS,AGENT_ALLOW_NIX_DAEMON \
           ${agentLauncher}/bin/tsurf-agent-launch "$@"
       '';
     }).overrideAttrs (old: { meta = (old.meta or {}) // { priority = 4; }; });

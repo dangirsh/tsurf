@@ -77,11 +77,3 @@ run_sandbox_probe() {
   assert_success
   assert_output --partial "PASS: allowed-workdir-write"
 }
-
-@test "${HOST}: --no-sandbox blocked without AGENT_ALLOW_NOSANDBOX" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
-  # Run as agent user (not root). Must exit non-zero with clear error message.
-  run remote "sudo -u agent bash -c 'cd /data/projects/tsurf && unset AGENT_ALLOW_NOSANDBOX && claude --no-sandbox --version 2>&1'"
-  assert_failure
-  assert_output --partial "AGENT_ALLOW_NOSANDBOX"
-}

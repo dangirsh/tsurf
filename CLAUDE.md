@@ -152,7 +152,7 @@ In `tests/eval/config-checks.nix`:
 - **Never** commit unencrypted secrets; use sops-nix with minimal ownership.
 - **Never** embed credentials in URLs or CLI args.
 - **Never** weaken nono sandbox defaults in `nono.nix`.
-- **Never** run agents with `--no-sandbox` unless explicitly instructed for a trusted operation.
+- **Never** add a public `--no-sandbox` path; unsandboxed execution belongs in a private overlay only.
 - **Never** mount Docker socket without a documented `@decision`.
 - **Never** add packages imperatively (`nix-env`, `nix profile install`) or re-enable `nix.channel.enable` / `nix.nixPath`.
 - **Never** remove `modules/break-glass-ssh.nix` from either host config.
@@ -166,7 +166,7 @@ Run before every module or service commit:
 2. **Secrets** — New secret? Add to `secrets.nix` with minimal `owner`/permissions. Use `sops.templates` for env files. NEVER embed credentials in URLs, CLI args, or committed files.
 3. **New service** — Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts` and dashboard entry to `services.dashboard.entries`.
 4. **Sandbox impact** — Modifying `agent-compute.nix` or `nono.nix`? Verify `/run/secrets` and `~/.ssh` remain in the deny list. NEVER weaken nono sandbox defaults.
-5. **Agent execution** — NEVER run agents with `--no-sandbox` unless explicitly instructed. Requires `AGENT_ALLOW_NOSANDBOX=1`.
+5. **Agent execution** — Public repo wrappers must stay brokered + sandboxed. If a trusted workflow needs unsandboxed execution, implement it in a private overlay.
 6. **Docker** — NEVER mount Docker socket without `@decision` annotation.
 7. **Package management** — NEVER use `nix-env`, `nix profile install`, or re-enable `nix.channel.enable` / `nix.nixPath`.
 8. **Break-glass key** — NEVER remove `modules/break-glass-ssh.nix` from either host config.
@@ -176,7 +176,6 @@ Run before every module or service commit:
 
 - **Docker containers:** External service containers lack hardening (read-only rootfs, cap-drop). NixOS-managed containers inherit module defaults.
 - **Pre-built binaries:** zmx and cass lack signature verification — mitigated by SHA256 hash pinning.
-- **No-sandbox agents:** `--no-sandbox` = effective root access (dev → wheel → sudo). Mitigated by default sandbox-on, journald launch logging, operator awareness.
 - **Sandbox read access:** Sandboxed agents have read-only access to the current git repo root (not all of `/data/projects`). No `.env` files on server (sops-nix handles secrets). Unrestricted network egress (agents need API/git access; nono allowlist filtering not yet available on headless servers). Metadata endpoint blocked at nftables level.
 - **Public template users:** `users.allowNoPasswordLogin = true` required for eval without real credential hashes. Private overlay replaces `users.nix` entirely.
 - **srvos defaults:** Relied upon implicitly (fail2ban, SSH hardening, systemd-networkd). Specific overrides documented per-host with `mkForce`.
@@ -209,7 +208,7 @@ When running inside the nono sandbox (as the `agent` user — no wheel, no docke
 - Read access is scoped to the current git repo root, not all of `/data/projects`.
 - API keys are loaded from `/run/secrets/` by the wrapper (running as `agent`) into the parent env. nono's reverse proxy reads them via `env://` URIs and passes only per-session phantom tokens to the sandboxed child (`--credential` flag).
 - Denied paths include `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`, `~/.aws`, and `~/.docker`.
-- `--no-sandbox` escape is blocked unless `AGENT_ALLOW_NOSANDBOX=1` is set. Under the brokered model, even unsandboxed agents run as `agent` (not operator).
+- Public wrappers do not expose `--no-sandbox`; any trusted unsandboxed workflow must be added in a private overlay.
 - Each interactive session gets per-session cgroup limits (MemoryMax=4G, CPUQuota=200%, TasksMax=256) in `tsurf-agents.slice`.
 - Launch events are logged to journald only (`journalctl -t agent-launch`). Structured metadata (mode, agent, user, uid, cwd, git_root) — no raw arguments or prompts.
 - For guided workflows, use `/nix-module` for module authoring and `/nix-test` for test execution + `.test-status`.
