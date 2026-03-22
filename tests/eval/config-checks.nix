@@ -748,6 +748,31 @@ in
       "SECURITY: dev-agent.nix WorkingDirectory defaults to /tsurf (control-plane repo) — use agentCfg.projectRoot"
       (!(lib.hasInfix "projectRoot}/tsurf" source));
 
+  # --- Phase 124: Sandbox read-scope regression guards ---
+  # Source-text checks for critical fail-closed patterns in agent-wrapper.sh.
+  # Runtime behavioral coverage is in tests/live/sandbox-behavioral.bats.
+
+  sandbox-git-root-fail-closed =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck
+      "sandbox-git-root-fail-closed"
+      "agent-wrapper.sh has fail-closed git-root validation (no silent fallback)"
+      "agent-wrapper.sh missing fail-closed git-root check — agents may run outside git worktrees"
+      (lib.hasInfix "rev-parse --show-toplevel" source
+       && lib.hasInfix "exit 1" source);
+
+  sandbox-refuses-project-root-read =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck
+      "sandbox-refuses-project-root-read"
+      "agent-wrapper.sh refuses to grant read access to entire project root"
+      "agent-wrapper.sh missing project-root refusal — agents could read all repos"
+      (lib.hasInfix "refusing to grant read access to the entire project root" source);
+
 }
 
 # --- Private overlay test extension pattern ---
