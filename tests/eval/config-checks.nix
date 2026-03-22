@@ -671,6 +671,28 @@ in
     (devCfg.sops.secrets."anthropic-api-key".owner == devCfg.tsurf.agent.user
      && devCfg.sops.secrets."openai-api-key".owner == devCfg.tsurf.agent.user);
 
+  # --- Phase 124: Nix daemon user restrictions ---
+
+  nix-allowed-users-tsurf = mkCheck
+    "nix-allowed-users-tsurf"
+    "tsurf nix.settings.allowed-users restricts daemon access"
+    "tsurf nix.settings.allowed-users is not set or too permissive"
+    (builtins.elem "root" tsurfCfg.nix.settings.allowed-users
+     && builtins.elem "@wheel" tsurfCfg.nix.settings.allowed-users
+     && !(builtins.elem "*" tsurfCfg.nix.settings.allowed-users));
+
+  nix-trusted-users-tsurf = mkCheck
+    "nix-trusted-users-tsurf"
+    "tsurf nix.settings.trusted-users is root-only"
+    "tsurf nix.settings.trusted-users includes non-root entries"
+    (tsurfCfg.nix.settings.trusted-users == [ "root" ]);
+
+  nix-allowed-users-ovh-includes-agent = mkCheck
+    "nix-allowed-users-ovh-includes-agent"
+    "ovh nix.settings.allowed-users includes agent user (allowNixDaemon is on)"
+    "ovh nix.settings.allowed-users missing agent user despite allowNixDaemon=true"
+    (builtins.elem devCfg.tsurf.agent.user devCfg.nix.settings.allowed-users);
+
 }
 
 # --- Private overlay test extension pattern ---
