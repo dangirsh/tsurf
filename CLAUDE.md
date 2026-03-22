@@ -5,7 +5,7 @@ NixOS configuration template for declarative server management with flakes + hom
 ## Project Structure
 
 ```
-flake.nix              # Entrypoint — inputs, outputs, nixosConfigurations.tsurf + tsurf-dev
+flake.nix              # Entrypoint — inputs, outputs, eval fixtures `.#eval-tsurf` + `.#eval-tsurf-dev`
 flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-nix, disko, etc.)
 hosts/
   hardware.nix         # Shared QEMU VPS hardware config (both hosts)
@@ -183,7 +183,7 @@ Run before every module or service commit:
 - **nono proxy_credentials:** (RESOLVED in Phase 118) Proxy credential mode now active using `env://` URIs — no system keystore needed. Child processes receive only phantom tokens.
 - **dev-agent bypassPermissions:** `dev-agent.nix` runs claude with `--permission-mode=bypassPermissions` inside nono sandbox. Sandbox provides the actual permission boundary.
 - **Manual internalOnlyPorts:** Must be kept in sync with actual service ports. Mitigated by existing firewall assertion.
-- **SEC105-01:** (UPDATED Phase 119) Host source files are secure by default. Insecure defaults (placeholder SSH keys, passwordless sudo, empty-password login) injected at flake level via `mkEvalFixture` for CI eval only. Private overlay uses `mkHost` directly.
+- **SEC105-01:** (UPDATED Phase 134) Host source files are secure by default. Insecure defaults (placeholder SSH keys, passwordless sudo, empty-password login) exist only in the clearly named eval fixtures `.#eval-tsurf` and `.#eval-tsurf-dev` so `nix flake check` can evaluate without real credentials. The public flake exports no deploy nodes. Private overlay uses `mkHost` directly.
 - **SEC105-02:** Unrestricted network egress for sandboxed agents (`--net-allow`). nono upstream does not yet support allowlist-based outbound filtering on headless servers. UID-based nftables egress filtering is now available as opt-in via `services.agentSandbox.egressControl.enable` (restricts agent user to whitelisted TCP destination ports).
 - **SEC105-03:** Public repo size (dashboard, cost-tracker, restic, syncthing, dev-agent, deploy.sh in core). Moving to `examples/` is large structural work; current modules serve both public template and private overlay.
 - **SEC105-04:** Service modules coupled to dashboard via `services.dashboard.entries.*`. Catalog abstraction is YAGNI at current scale.
@@ -221,9 +221,9 @@ When running inside the nono sandbox (as the `agent` user — no wheel, no docke
   cd /path/to/private-tsurf && ./scripts/deploy.sh [--node tsurf|tsurf-dev]
   ```
 - **`extras/scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `tsurf.url` guard detects public repo)
-- **NEVER run `nixos-rebuild switch --flake .#tsurf`** or `.#tsurf-dev` from this repo — the public flake has placeholder SSH keys and no private services; it will break the server
+- **NEVER run `nixos-rebuild switch --flake .#eval-tsurf`** or `.#eval-tsurf-dev` from this repo — those are placeholder-enabled eval fixtures, not real host configs
 - **NEVER run `nixos-rebuild switch` from ANY repo** (parts, home-assistant-config, or any other) — even with the correct flake, this bypasses deploy.sh's safety guard, watchdog, and shared deploy lock. The ONLY safe deploy path is `./scripts/deploy.sh` from the private overlay
-- For first-time OVH bootstrap: `examples/bootstrap/bootstrap-ovh.sh` installs base NixOS, then follow with private overlay deploy
+- For first-time OVH bootstrap: `examples/bootstrap/bootstrap-ovh.sh` requires an explicit secure `FLAKE_TARGET` (for example `/data/projects/private-tsurf#tsurf-dev`) and refuses the public eval fixtures
 
 ## Recovery (Out-of-Band)
 

@@ -209,8 +209,10 @@ When disabled (`false`, the default), the flag:
 - Sets `users.allowNoPasswordLogin = false` and `security.sudo.wheelNeedsPassword = true`
 
 Host source files (`hosts/*/default.nix`) are secure by default and do NOT set
-`allowUnsafePlaceholders`. The public flake injects it at the flake level via
-`mkEvalFixture` for CI eval only. Private overlay uses `mkHost` directly.
+`allowUnsafePlaceholders`. The public flake injects it only into the clearly named
+eval fixtures `nixosConfigurations."eval-tsurf"` and `."eval-tsurf-dev"` so
+`nix flake check` can evaluate without real credentials. The public flake exports
+no deploy nodes. Private overlay uses `mkHost` directly for real host outputs.
 
 ## Network Model
 

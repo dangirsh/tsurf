@@ -32,9 +32,35 @@ VPS_IP="<OVH_PUBLIC_IP>"
 # Example: OVH_DEPLOY_KEY=~/.ssh/id_ed25519 bash examples/bootstrap/bootstrap-ovh.sh
 DEPLOY_KEY="${OVH_DEPLOY_KEY:-$FLAKE_DIR/tmp/ovh_deploy_key}"
 EXTRA_FILES="$FLAKE_DIR/tmp/ovh-host-keys"
-# REPLACE: Use your host name from flake.nix nixosConfigurations (e.g. tsurf-dev).
-FLAKE_TARGET="$FLAKE_DIR#tsurf-dev"
-TAILSCALE_HOSTNAME="tsurf-dev"
+# FLAKE_TARGET must point at a secure host config from a private overlay or another
+# secure flake. The public tsurf repo exports only eval fixtures (`#eval-tsurf`,
+# `#eval-tsurf-dev`) and this script refuses to install them onto a real machine.
+# Examples:
+#   FLAKE_TARGET=/data/projects/private-tsurf#tsurf-dev bash examples/bootstrap/bootstrap-ovh.sh
+#   FLAKE_TARGET=github:your-org/private-tsurf#tsurf-dev bash examples/bootstrap/bootstrap-ovh.sh
+FLAKE_TARGET="${FLAKE_TARGET:-}"
+if [[ -z "$FLAKE_TARGET" ]]; then
+  echo "ERROR: Set FLAKE_TARGET to a secure/private flake target (e.g. /data/projects/private-tsurf#tsurf-dev)" >&2
+  exit 1
+fi
+case "$FLAKE_TARGET" in
+  "$FLAKE_DIR#tsurf"|"$FLAKE_DIR#tsurf-dev"|"$FLAKE_DIR#eval-tsurf"|"$FLAKE_DIR#eval-tsurf-dev")
+    echo "ERROR: Refusing public eval fixture target: $FLAKE_TARGET" >&2
+    echo "       Point FLAKE_TARGET at your private overlay or another secure host flake." >&2
+    exit 1
+    ;;
+esac
+
+if [[ "$FLAKE_TARGET" == *#* ]]; then
+  default_tailscale_hostname="${FLAKE_TARGET##*#}"
+else
+  default_tailscale_hostname=""
+fi
+TAILSCALE_HOSTNAME="${TAILSCALE_HOSTNAME:-$default_tailscale_hostname}"
+if [[ -z "$TAILSCALE_HOSTNAME" ]]; then
+  echo "ERROR: Set TAILSCALE_HOSTNAME when FLAKE_TARGET does not include a #hostname attr" >&2
+  exit 1
+fi
 
 # Ephemeral random password for Ubuntu PAM change (Ubuntu is wiped by nixos-anywhere).
 OVH_NEW_PASS="$(openssl rand -base64 16)"
@@ -288,26 +314,15 @@ TAILSCALE_IP=$(tailscale status 2>/dev/null | awk "/[[:space:]]${TAILSCALE_HOSTN
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════════╗"
-echo "║  Bootstrap COMPLETE — base NixOS installed                        ║"
+echo "║  Bootstrap COMPLETE — NixOS target installed                      ║"
 echo "╚══════════════════════════════════════════════════════════════════╝"
 echo ""
 echo "  Host:         ${TAILSCALE_HOSTNAME}"
 echo "  Tailscale IP: ${TAILSCALE_IP}"
 echo "  SSH:          ssh root@${TAILSCALE_HOSTNAME}"
+echo "  FLAKE_TARGET: ${FLAKE_TARGET}"
 echo ""
-echo "╔══════════════════════════════════════════════════════════════════╗"
-echo "║  REQUIRED NEXT STEP: Deploy private overlay                       ║"
-echo "╚══════════════════════════════════════════════════════════════════╝"
-echo ""
-echo "  The server has the PUBLIC base config (no private services)."
-echo "  You MUST now deploy the private overlay to get:"
-echo "    - Real SSH keys + your-user user"
-echo "    - nginx, Matrix/Conduit, private agents, etc."
-echo ""
-echo "    cd /data/projects/private-tsurf"
-echo "    ./scripts/deploy.sh --node tsurf-dev --first-deploy"
-echo ""
-echo "  WARNING: Do NOT run ./scripts/deploy.sh --node tsurf-dev from the"
-echo "  PUBLIC repo (tsurf) — it will strip private services and"
-echo "  lock you out. The public deploy.sh hard-refuses --node tsurf-dev."
+echo "  Installed from the explicit target above."
+echo "  If you bootstrapped a minimal/base host, continue with whatever"
+echo "  follow-up deploy that target expects."
 echo ""

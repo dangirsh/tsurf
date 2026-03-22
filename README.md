@@ -90,8 +90,8 @@ Personal services, real credentials, and host-specific config go in a separate p
 > Point your agent at [CLAUDE.md](CLAUDE.md) and ask nicely for what you want to do.
 
 - **Requirements:** A Linux VPS (QEMU-compatible), NixOS installed, an age key for sops secrets. No KVM needed; sandboxing uses Landlock, not VMs.
-- **Deploys from this repo are intentionally blocked.** Real deployments require a [private overlay](#private-overlay) with your credentials and host config.
-- **Bootstrap a new host:** start with [`examples/bootstrap/`](examples/bootstrap/).
+- **Deploys from this repo are intentionally blocked.** The public flake exports only eval fixtures (`.#eval-tsurf`, `.#eval-tsurf-dev`) for `nix flake check`, not deployable host outputs. Real deployments require a [private overlay](#private-overlay) with your credentials and host config.
+- **Bootstrap a new host:** start with [`examples/bootstrap/`](examples/bootstrap/) and set `FLAKE_TARGET` to a secure/private flake target such as `/data/projects/private-tsurf#tsurf-dev`.
 - **Add your services:** fork [`examples/private-overlay/`](examples/private-overlay/) and import from `modules/` (core) and `extras/` (optional batteries).
 - **Add a custom agent:** see the [agent walkthrough](examples/private-overlay/README.md#adding-a-custom-agent) for how to define a nono profile, launch script, and systemd unit. Includes a minimal example (`greeter.nix`) and a more involved one (`janitor.nix`).
 

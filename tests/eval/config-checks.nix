@@ -2,8 +2,8 @@
 # @decision TEST-48-01: Keep checks purely eval-time with runCommandNoCC to catch regressions offline.
 { self, pkgs, lib }:
 let
-  tsurfCfg = self.nixosConfigurations.tsurf.config;
-  devCfg = self.nixosConfigurations.tsurf-dev.config;
+  tsurfCfg = self.nixosConfigurations."eval-tsurf".config;
+  devCfg = self.nixosConfigurations."eval-tsurf-dev".config;
   jq = "${pkgs.jq}/bin/jq";
 
   mkCheck = name: passMessage: failMessage: condition:
@@ -19,12 +19,12 @@ let
 in
 {
   eval-tsurf = pkgs.runCommandNoCC "eval-tsurf" { } ''
-    echo "tsurf config evaluates: ${self.nixosConfigurations.tsurf.config.system.build.toplevel}"
+    echo "eval-tsurf config evaluates: ${self.nixosConfigurations."eval-tsurf".config.system.build.toplevel}"
     touch "$out"
   '';
 
   eval-tsurf-dev = pkgs.runCommandNoCC "eval-tsurf-dev" { } ''
-    echo "tsurf-dev config evaluates: ${self.nixosConfigurations.tsurf-dev.config.system.build.toplevel}"
+    echo "eval-tsurf-dev config evaluates: ${self.nixosConfigurations."eval-tsurf-dev".config.system.build.toplevel}"
     touch "$out"
   '';
 
@@ -413,8 +413,8 @@ in
 
   # --- Phase 119: Secure-by-default host configs + eval fixture checks ---
 
-  # Phase 119: Host source files must NOT set allowUnsafePlaceholders.
-  # The flag is injected at the flake level (mkEvalFixture) for CI eval only.
+  # Phase 119/134: Host source files must NOT set allowUnsafePlaceholders.
+  # The flag is injected only in clearly named eval fixture outputs.
   secure-host-services = mkCheck
     "secure-host-services"
     "hosts/services/default.nix does not set allowUnsafePlaceholders"
@@ -439,6 +439,40 @@ in
     "ovh eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
     "eval fixture ovh missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
     devCfg.tsurf.template.allowUnsafePlaceholders;
+
+  fixture-output-names = mkCheck
+    "fixture-output-names"
+    "public flake exports only clearly named eval fixture outputs"
+    "public flake still exports deploy-looking nixosConfigurations.tsurf or tsurf-dev"
+    (
+      builtins.hasAttr "eval-tsurf" self.nixosConfigurations
+      && builtins.hasAttr "eval-tsurf-dev" self.nixosConfigurations
+      && !(builtins.hasAttr "tsurf" self.nixosConfigurations)
+      && !(builtins.hasAttr "tsurf-dev" self.nixosConfigurations)
+    );
+
+  public-deploy-empty = mkCheck
+    "public-deploy-empty"
+    "public flake exports no public deploy.nodes targets"
+    "public flake still exports deploy.nodes.* — deploy targets must live in a private overlay"
+    (
+      !(self ? deploy)
+      || (self.deploy.nodes or {}) == {}
+    );
+
+  bootstrap-ovh-explicit-target =
+    let
+      source = builtins.readFile ../../examples/bootstrap/bootstrap-ovh.sh;
+    in
+    mkCheck
+      "bootstrap-ovh-explicit-target"
+      "bootstrap-ovh requires an explicit secure flake target and rejects public eval fixtures"
+      "bootstrap-ovh still defaults to a public fixture target or lacks fixture rejection"
+      (
+        !lib.hasInfix "FLAKE_TARGET=\"$FLAKE_DIR#tsurf-dev\"" source
+        && lib.hasInfix "ERROR: Set FLAKE_TARGET" source
+        && lib.hasInfix "ERROR: Refusing public eval fixture target" source
+      );
 
   dev-agent-not-in-template = mkCheck
     "dev-agent-not-in-template"
@@ -784,7 +818,7 @@ in
 #   # { self, pkgs, lib, inputs }:
 #   # let
 #   #   publicChecks = import "${inputs.tsurf}/tests/eval/config-checks.nix" { inherit self pkgs lib; };
-#   #   privateCfg = self.nixosConfigurations.tsurf.config;
+#   #   privateCfg = self.nixosConfigurations.my-real-host.config;
 #   # in publicChecks // {
 #   #   agent-fleet-ports = ...; # private agent fleet/proxy assertions
 #   #   nginx-vhosts = ...;      # private reverse-proxy checks

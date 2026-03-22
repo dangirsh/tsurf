@@ -82,9 +82,10 @@
         modules = commonModules ++ [ hostDir ];
       };
 
-      # Eval fixtures: inject allowUnsafePlaceholders so public template evaluates
+      # Eval fixtures: inject allowUnsafePlaceholders so the public template evaluates
       # without real credentials. Host source files are secure by default (flag not set).
-      # Private overlay uses mkHost directly and never sets this flag.
+      # These are exported only as clearly named eval-only outputs, never as deploy
+      # targets. Private overlay uses mkHost directly and never sets this flag.
       mkEvalFixture = hostDir: nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = { inherit inputs; };
@@ -96,32 +97,8 @@
 
       evalChecks = import ./tests/eval/config-checks.nix { inherit self pkgs lib; };
     in {
-      nixosConfigurations.tsurf = mkEvalFixture ./hosts/services;
-      nixosConfigurations.tsurf-dev = mkEvalFixture ./hosts/dev;
-
-      deploy.nodes.tsurf = {
-        hostname = "tsurf"; # Tailscale MagicDNS hostname; private overlay may override with IP
-        sshUser = "root";
-        magicRollback = true;
-        autoRollback = true;
-        confirmTimeout = 300; # Keep in sync with scripts/deploy.sh --confirm-timeout
-        profiles.system = {
-          user = "root";
-          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.tsurf;
-        };
-      };
-
-      deploy.nodes.tsurf-dev = {
-        hostname = "tsurf-dev";
-        sshUser = "root";
-        magicRollback = true;
-        autoRollback = true;
-        confirmTimeout = 300; # Keep in sync with scripts/deploy.sh --confirm-timeout
-        profiles.system = {
-          user = "root";
-          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.tsurf-dev;
-        };
-      };
+      nixosConfigurations."eval-tsurf" = mkEvalFixture ./hosts/services;
+      nixosConfigurations."eval-tsurf-dev" = mkEvalFixture ./hosts/dev;
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
@@ -219,7 +196,10 @@
 
       checks.${system} =
         let
-          deployChecks = deploy-rs.lib.${system}.deployChecks self.deploy;
+          deployChecks =
+            if self ? deploy && self.deploy ? nodes
+            then deploy-rs.lib.${system}.deployChecks self.deploy
+            else {};
         in
         deployChecks // evalChecks // {
           shellcheck-tests = pkgs.runCommandNoCC "shellcheck-tests" {
