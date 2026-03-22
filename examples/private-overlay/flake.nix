@@ -57,6 +57,11 @@
         # agent-sandbox.nix: core claude wrapper plus hook for optional agent extras
         "${inputs.tsurf}/modules/agent-sandbox.nix"
         { services.agentSandbox.enable = true; }
+        # Example opt-in extras: Codex and pi register through agentSandbox.extraAgents.
+        "${inputs.tsurf}/extras/codex.nix"
+        "${inputs.tsurf}/extras/pi.nix"
+        { services.codexAgent.enable = true; }
+        { services.piAgent.enable = true; }
 
         # Import networking.nix after configuring Tailscale, SSH host keys, and impermanence.
         # Import secrets.nix after creating your encrypted secrets file, or write your own secrets module.
