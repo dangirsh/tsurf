@@ -102,8 +102,9 @@ assert_http_ok() {
 }
 
 # Assert a secret file exists with correct ownership.
-# Default owner varies by secret type — agent API keys are agent-owned (agent-sandbox.nix
-# mkDefault), other secrets may be root-owned. Callers should pass the expected owner explicitly.
+# Wrapper API keys are agent-owned by declaration in modules/secrets.nix. Other
+# secrets may be root-, dev-, or service-owned. Callers should pass the
+# expected owner explicitly.
 assert_secret_exists() {
   local path="$1"
   local expected_owner="${2:?expected_owner required}"

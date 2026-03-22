@@ -1,10 +1,11 @@
 # tests/vm/sandbox-behavioral.nix — NixOS VM test for sandbox boundary behavior.
 #
 # Tests the user privilege separation model: agent user exists, is not in
-# wheel/docker, and cannot read root-owned secrets. This is an OS-level smoke
-# test for the user privilege model, NOT a full nono Landlock test. The live
-# BATS tests in tests/live/sandbox-behavioral.bats exercise the full nono
-# sandbox on a deployed host.
+# wheel/docker, can read wrapper-consumed agent-owned secrets, and cannot read
+# root-owned operator secrets. This is an OS-level smoke test for the user and
+# secret-ownership model, NOT a full nono Landlock test. The live BATS tests in
+# tests/live/sandbox-behavioral.bats exercise the full nono sandbox on a
+# deployed host.
 #
 # Run: nix build .#vm-test-sandbox
 # Requires: KVM (not available on GitHub Actions ubuntu-latest)
@@ -20,15 +21,20 @@ pkgs.testers.nixosTest {
     # Gate insecure template defaults (passwordless login for eval)
     tsurf.template.allowUnsafePlaceholders = true;
 
-    # Create a fake secret file via activation script.
-    # sops-nix cannot be used in VM tests (no age key, no encrypted secrets file).
-    # This creates a root-owned 0600 file to test that the agent user is denied
-    # by standard Unix file permissions.
+    # Create fake secret files via activation script.
+    # sops-nix cannot be used in VM tests (no age key, no encrypted secrets
+    # file). Model both ownership classes explicitly:
+    # - anthropic-api-key: wrapper-consumed API secret, owned by the agent user
+    # - root-only-example: operator-only secret, unreadable to the agent user
     system.activationScripts.test-secrets = ''
       mkdir -p /run/secrets
       echo "test-key-value" > /run/secrets/anthropic-api-key
-      chmod 600 /run/secrets/anthropic-api-key
-      chown root:root /run/secrets/anthropic-api-key
+      chmod 400 /run/secrets/anthropic-api-key
+      chown ${config.tsurf.agent.user}:${config.tsurf.agent.user} /run/secrets/anthropic-api-key
+
+      echo "root-only-value" > /run/secrets/root-only-example
+      chmod 600 /run/secrets/root-only-example
+      chown root:root /run/secrets/root-only-example
     '';
 
     # Create a test git repo for the read-access check
@@ -65,12 +71,13 @@ pkgs.testers.nixosTest {
     uid = machine.succeed(f"sudo -u {agent_user} id -u").strip()
     assert uid != "0", f"Agent has root UID: {uid}"
 
-    # 2. Denied: /run/secrets (OS file permission check)
-    #    NOTE: This tests OS-level user privilege separation, NOT nono Landlock.
-    #    The file is owned root:root mode 0600 — the agent user (non-root, non-wheel)
-    #    must be denied by standard Unix permissions. The live BATS tests exercise
-    #    the full nono Landlock sandbox on a deployed host.
-    machine.fail(f"sudo -u {agent_user} cat /run/secrets/anthropic-api-key")
+    # 2. Wrapper-consumed API secrets are agent-owned in this fixture, so the
+    #    agent user can read them by normal Unix permissions. The live BATS
+    #    tests exercise the full nono path separately.
+    result = machine.succeed(
+        f"sudo -u {agent_user} cat /run/secrets/anthropic-api-key"
+    ).strip()
+    assert result == "test-key-value", f"Unexpected anthropic secret value: {result}"
 
     # 3. Agent can read files in a project directory it owns
     result = machine.succeed(
@@ -78,7 +85,8 @@ pkgs.testers.nixosTest {
     ).strip()
     assert result == "test content", f"Expected 'test content', got '{result}'"
 
-    # 4. Agent cannot read root-owned secrets via alternate paths
-    machine.fail(f"sudo -u {agent_user} bash -c 'cat /run/secrets/anthropic-api-key'")
+    # 4. Agent cannot read root-owned operator secrets by standard Unix permissions.
+    machine.fail(f"sudo -u {agent_user} cat /run/secrets/root-only-example")
+    machine.fail(f"sudo -u {agent_user} bash -c 'cat /run/secrets/root-only-example'")
   '';
 }

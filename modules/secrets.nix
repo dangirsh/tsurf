@@ -1,6 +1,7 @@
-# @decision SEC-04: Agent API keys (anthropic, openai) are owned by the agent user
-#   so the sandboxed wrapper process can read them at runtime. Other secrets
-#   (backup keys, tailscale, github-pat) remain owner 'dev' (default).
+# @decision SEC-04: Wrapper API keys (anthropic, openai) are owned by the agent
+#   user so the sandboxed wrapper process can read them at runtime. Operator-side
+#   provider keys (google, xai, openrouter, github-pat) stay owned by 'dev'.
+#   Other secrets inherit the sops-nix default owner unless explicitly set.
 #   Private overlay may override via lib.mkForce in its own secrets.nix.
 { config, lib, ... }: {
   sops = {
