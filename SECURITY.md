@@ -24,8 +24,9 @@ and network model of tsurf. It is the authoritative source for security claims.
 
 ### What the sandbox does NOT guarantee
 
-- **No egress filtering**: agents have unrestricted outbound network access. nono does
-  not yet support allowlist-based outbound filtering on headless servers.
+- **No sandbox-level egress filtering**: nono does not yet support allowlist-based
+  outbound filtering on headless servers. By default, agents have unrestricted outbound
+  network access unless the optional nftables-based egress controls are enabled.
 - **Sandbox escape via `--no-sandbox`**: any user with `AGENT_ALLOW_NOSANDBOX=1` in
   their environment can bypass the sandbox entirely. Under the brokered model, the
   unsandboxed binary still runs as `agent` (not operator).
@@ -247,7 +248,8 @@ Configure the allowed port list via `services.agentSandbox.egressControl.allowed
 See the "Accepted Risks" section in [CLAUDE.md](CLAUDE.md) for the full list.
 Key items:
 
-- Unrestricted agent network egress (SEC105-02)
+- Agent network egress is unrestricted by default unless
+  `services.agentSandbox.egressControl.enable` is turned on (SEC105-02)
 - `dev` user in `wheel` + `docker` with passwordless sudo (template only)
 - Pre-built binaries (zmx, cass, nono) use SHA256 hash pinning, not signatures
 - `bypassPermissions` inside nono sandbox for unattended agent runs (SEC98-01)

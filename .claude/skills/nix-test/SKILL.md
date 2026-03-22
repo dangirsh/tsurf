@@ -26,8 +26,8 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
    - Catches missing imports, broken option references, assertion violations, and type errors.
    - **Always run before committing.** No exceptions.
 
-2. **VM integration test (requires KVM)** -- `nix build .#vm-test-ssh`
-   - Boots a NixOS VM and verifies SSH, port 22, and break-glass key behavior.
+2. **VM integration test (requires KVM)** -- `nix build .#vm-test-sandbox`
+   - Boots a NixOS VM and verifies the brokered user-privilege model for sandboxed agents.
    - Cannot run on Contabo/OVH VPS (no nested KVM). Run on local dev machine only.
    - Exposed as a package (not a check) so `nix flake check` works everywhere.
 

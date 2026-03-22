@@ -123,10 +123,6 @@ let
       custom_credentials = customCredentials;
     };
     workdir = { access = "readwrite"; };
-    undo = {
-      exclude_patterns = [ "node_modules" ".next" "__pycache__" "target" ".git" ];
-      exclude_globs = [ "*.tmp.[0-9]*.[0-9]*" ];
-    };
     interactive = true;
   };
 

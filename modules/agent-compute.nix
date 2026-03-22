@@ -49,6 +49,7 @@ in
   #   exec the raw binary with agent credentials.
   environment.systemPackages = [
     pkgs.zmx
+    pkgs.nodejs
   ];
 
   # Rootless Podman for sandboxed agent container workflows.

@@ -65,10 +65,7 @@
     yq-go
     ripgrep
     fd
-    nodejs    # @decision SEC47-19: agent tooling (Claude Code, npm-based tools)
   ];
-
-  programs.ssh.startAgent = true;
 
   # --- srvos overrides (shared across all hosts) ---
   # Agents don't need man pages or command-not-found suggestions

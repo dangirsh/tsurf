@@ -34,6 +34,7 @@
     serverAliveInterval = 60;
     hashKnownHosts = true;
   };
+  services.ssh-agent.enable = true;
 
   # Inlined from direnv.nix
   programs.direnv = {
