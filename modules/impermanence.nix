@@ -5,7 +5,20 @@
 #   what state survives reboots. New tools may require adding paths; run
 #   `find /home/dev -maxdepth 2 -newer /home/dev/.bash_history -type d` to discover.
 # @decision IMP-04: /var/lib/private covers DynamicUser services
-{ config, lib, ... }: {
+{ config, lib, ... }:
+let
+  agentCfg = config.tsurf.agent;
+  agentPersistDirs = map (path: "${agentCfg.home}/${path}") [
+    ".claude"
+    ".config/claude"
+    ".config/git"
+    ".local/share/direnv"
+  ];
+  agentPersistFiles = map (path: "${agentCfg.home}/${path}") [
+    ".gitconfig"
+    ".bash_history"
+  ];
+in {
   # @decision IMP-05: Fix /etc permissions for sshd strict mode checks.
   # Impermanence file bind-mounts create parent dirs as 775 (group-writable).
   # sshd rejects authorized_keys if any parent dir in the path is group-writable.
@@ -70,10 +83,7 @@
 
       # --- Agent user home (no .ssh — agent has no SSH access) ---
       # @decision IMP-115-01: Agent home persisted separately from operator home.
-      "/home/agent/.claude"
-      "/home/agent/.config/claude"
-      "/home/agent/.config/git"
-      "/home/agent/.local/share/direnv"
+    ] ++ agentPersistDirs ++ [
 
       # --- Root home (explicit paths instead of whole /root) ---
       "/root/.ssh"                        # SSH keys, known_hosts, authorized_keys
@@ -92,8 +102,7 @@
       "/etc/ssh/ssh_host_ed25519_key.pub"  # SSH host key (public)
       "/home/dev/.gitconfig"               # Git identity
       "/home/dev/.bash_history"            # Shell history
-      "/home/agent/.gitconfig"             # Agent git identity
-      "/home/agent/.bash_history"          # Agent shell history
+    ] ++ agentPersistFiles ++ [
       "/root/.gitconfig"                   # Root git identity
     ];
   };

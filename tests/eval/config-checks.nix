@@ -4,6 +4,10 @@
 let
   tsurfCfg = self.nixosConfigurations."eval-tsurf".config;
   devCfg = self.nixosConfigurations."eval-tsurf-dev".config;
+  altAgentCfg = self.nixosConfigurations."eval-tsurf-dev-alt-agent".config;
+  devAgentUser = devCfg.tsurf.agent.user;
+  altAgentUser = altAgentCfg.tsurf.agent.user;
+  altAgentHome = altAgentCfg.tsurf.agent.home;
   jq = "${pkgs.jq}/bin/jq";
 
   mkCheck = name: passMessage: failMessage: condition:
@@ -25,6 +29,11 @@ in
 
   eval-tsurf-dev = pkgs.runCommandNoCC "eval-tsurf-dev" { } ''
     echo "eval-tsurf-dev config evaluates: ${self.nixosConfigurations."eval-tsurf-dev".config.system.build.toplevel}"
+    touch "$out"
+  '';
+
+  eval-tsurf-dev-alt-agent = pkgs.runCommandNoCC "eval-tsurf-dev-alt-agent" { } ''
+    echo "eval-tsurf-dev-alt-agent config evaluates: ${self.nixosConfigurations."eval-tsurf-dev-alt-agent".config.system.build.toplevel}"
     touch "$out"
   '';
 
@@ -588,26 +597,26 @@ in
     "agent-user-exists-ovh"
     "ovh agent user exists and is a normal user"
     "ovh agent user missing or not a normal user"
-    (builtins.hasAttr "agent" devCfg.users.users
-     && devCfg.users.users.agent.isNormalUser);
+    (builtins.hasAttr devAgentUser devCfg.users.users
+     && (builtins.getAttr devAgentUser devCfg.users.users).isNormalUser);
 
   agent-user-no-wheel = mkCheck
     "agent-user-no-wheel"
     "agent user is not in wheel group"
     "SECURITY: agent user is in wheel group — must not have sudo"
-    (!(builtins.elem "wheel" devCfg.users.users.agent.extraGroups));
+    (!(builtins.elem "wheel" (builtins.getAttr devAgentUser devCfg.users.users).extraGroups));
 
   agent-user-no-docker = mkCheck
     "agent-user-no-docker"
     "agent user is not in docker group"
     "SECURITY: agent user is in docker group — must not have docker access"
-    (!(builtins.elem "docker" devCfg.users.users.agent.extraGroups));
+    (!(builtins.elem "docker" (builtins.getAttr devAgentUser devCfg.users.users).extraGroups));
 
   agent-egress-targets-agent-user = mkCheck
     "agent-egress-targets-agent-user"
     "ovh agent egress control targets agent user"
     "ovh agent egress control targets wrong user"
-    (devCfg.services.agentSandbox.egressControl.user == "agent");
+    (devCfg.services.agentSandbox.egressControl.user == devAgentUser);
 
   agent-uid-explicit = mkCheck
     "agent-uid-explicit"
@@ -624,12 +633,35 @@ in
   impermanence-agent-home =
     let
       source = builtins.readFile ../../modules/impermanence.nix;
+      expectedSuffixes = [
+        ".claude"
+        ".config/claude"
+        ".config/git"
+        ".local/share/direnv"
+        ".gitconfig"
+        ".bash_history"
+      ];
+      missingSuffixes = builtins.filter (path: !(lib.hasInfix "\"${path}\"" source)) expectedSuffixes;
     in
     mkCheck
       "impermanence-agent-home"
-      "agent home paths declared in impermanence"
-      "agent home paths missing from impermanence.nix"
-      (lib.hasInfix "/home/agent/.claude" source);
+      "impermanence derives agent paths from agentCfg.home"
+      "impermanence.nix still hardcodes agent home paths or is missing agent state suffixes"
+      (lib.hasInfix "agentCfg.home" source
+       && !(lib.hasInfix "\"/home/agent/" source)
+       && missingSuffixes == [ ]);
+
+  alt-agent-parameterization = mkCheck
+    "alt-agent-parameterization"
+    "non-default agent fixture propagates through users, home-manager, and sandbox"
+    "non-default agent fixture still relies on hardcoded agent identity or home"
+    (
+      builtins.hasAttr altAgentUser altAgentCfg.users.users
+      && builtins.hasAttr altAgentUser altAgentCfg.home-manager.users
+      && (builtins.getAttr altAgentUser altAgentCfg.users.users).home == altAgentHome
+      && (builtins.getAttr altAgentUser altAgentCfg.home-manager.users).home.homeDirectory == altAgentHome
+      && altAgentCfg.services.agentSandbox.egressControl.user == altAgentUser
+    );
 
   # --- Phase 116: structural hardening regression guards ---
 

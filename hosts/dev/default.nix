@@ -2,7 +2,10 @@
 # Role: agent development and sandboxed execution via agent-sandbox.nix + nono.nix.
 # Clone-repos activation script initializes project directories on first boot.
 # Private overlay adds repo lists, agent fleet config, and host-specific service wiring.
-{ config, inputs, lib, pkgs, ... }: {
+{ config, inputs, lib, pkgs, ... }:
+let
+  agentCfg = config.tsurf.agent;
+in {
   imports = [
     ../hardware.nix
     ../disko-config.nix
@@ -29,9 +32,9 @@
   home-manager.users.dev = import ../../extras/home;
 
   # Agent user home-manager config (minimal — git + direnv only, no SSH)
-  home-manager.users.agent = { ... }: {
-    home.username = "agent";
-    home.homeDirectory = "/home/agent";
+  home-manager.users.${agentCfg.user} = { ... }: {
+    home.username = agentCfg.user;
+    home.homeDirectory = agentCfg.home;
     home.stateVersion = "25.11";
     programs.home-manager.enable = true;
     programs.git = {

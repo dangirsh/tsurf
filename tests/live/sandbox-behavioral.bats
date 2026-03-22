@@ -18,14 +18,14 @@ setup_file() {
   probe_src="$(cd "$(dirname "${BATS_TEST_FILENAME}")"/../../scripts && pwd)/sandbox-probe.sh"
   scp "${SSH_OPTS[@]}" "$probe_src" "root@${HOST}:/data/projects/tsurf/scripts/sandbox-probe.sh"
   remote "chmod +x /data/projects/tsurf/scripts/sandbox-probe.sh"
-  remote "chown agent:users /data/projects/tsurf/scripts/sandbox-probe.sh"
+  remote "chown ${AGENT_USER}:users /data/projects/tsurf/scripts/sandbox-probe.sh"
 }
 
 # Helper: run a probe check inside the nono sandbox as the agent user.
 # The probe script is at /data/projects/tsurf/scripts/sandbox-probe.sh.
 run_sandbox_probe() {
   local check="$1"
-  remote "sudo -u agent bash -c 'cd /data/projects/tsurf && nono run --profile tsurf --read /data/projects/tsurf -- bash scripts/sandbox-probe.sh ${check}'"
+  remote "sudo -u ${AGENT_USER} bash -c 'cd /data/projects/tsurf && nono run --profile tsurf --read /data/projects/tsurf -- bash scripts/sandbox-probe.sh ${check}'"
 }
 
 @test "${HOST}: agent user identity is correct inside sandbox" {

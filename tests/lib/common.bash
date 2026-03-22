@@ -15,6 +15,7 @@ SSH_OPTS=(
 )
 HOST="${TSURF_TEST_HOST:-tsurf}"
 SSH_USER="${TSURF_TEST_USER:-root}"
+AGENT_USER="${TSURF_TEST_AGENT_USER:-agent}"
 
 # --- SSH helpers ---
 ssh_cmd() {
@@ -63,7 +64,7 @@ retry() {
 remote_as_agent() {
   local escaped_cmd
   escaped_cmd="$(printf '%q ' "$@")"
-  ssh_cmd "sudo -u agent bash -c ${escaped_cmd}"
+  ssh_cmd "sudo -u ${AGENT_USER} bash -c ${escaped_cmd}"
 }
 
 # --- Assertion helpers ---

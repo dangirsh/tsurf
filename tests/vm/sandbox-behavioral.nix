@@ -41,23 +41,28 @@ pkgs.testers.nixosTest {
         ${pkgs.git}/bin/git add .
         ${pkgs.git}/bin/git -c user.email=test@test -c user.name=test commit -m "init"
       fi
-      chown -R agent:agent /data/projects/test-repo
+      chown -R ${config.tsurf.agent.user}:${config.tsurf.agent.user} /data/projects/test-repo
     '';
   };
 
   testScript = ''
     machine.wait_for_unit("multi-user.target")
 
-    # 1. Agent user identity — verify user exists and is not privileged
-    result = machine.succeed("sudo -u agent whoami").strip()
-    assert result == "agent", f"Expected 'agent', got '{result}'"
+    agent_user = machine.succeed(
+        "getent passwd | awk -F: '$3 >= 1000 && $1 != \"dev\" { print $1; exit }'"
+    ).strip()
+    assert agent_user != "", "Could not determine configured agent user"
 
-    result = machine.succeed("sudo -u agent id")
+    # 1. Agent user identity — verify user exists and is not privileged
+    result = machine.succeed(f"sudo -u {agent_user} whoami").strip()
+    assert result == agent_user, f"Expected '{agent_user}', got '{result}'"
+
+    result = machine.succeed(f"sudo -u {agent_user} id")
     assert "wheel" not in result, f"Agent in wheel group: {result}"
     assert "docker" not in result, f"Agent in docker group: {result}"
 
     # Verify agent is not root
-    uid = machine.succeed("sudo -u agent id -u").strip()
+    uid = machine.succeed(f"sudo -u {agent_user} id -u").strip()
     assert uid != "0", f"Agent has root UID: {uid}"
 
     # 2. Denied: /run/secrets (OS file permission check)
@@ -65,15 +70,15 @@ pkgs.testers.nixosTest {
     #    The file is owned root:root mode 0600 — the agent user (non-root, non-wheel)
     #    must be denied by standard Unix permissions. The live BATS tests exercise
     #    the full nono Landlock sandbox on a deployed host.
-    machine.fail("sudo -u agent cat /run/secrets/anthropic-api-key")
+    machine.fail(f"sudo -u {agent_user} cat /run/secrets/anthropic-api-key")
 
     # 3. Agent can read files in a project directory it owns
     result = machine.succeed(
-        "sudo -u agent cat /data/projects/test-repo/test-file.txt"
+        f"sudo -u {agent_user} cat /data/projects/test-repo/test-file.txt"
     ).strip()
     assert result == "test content", f"Expected 'test content', got '{result}'"
 
     # 4. Agent cannot read root-owned secrets via alternate paths
-    machine.fail("sudo -u agent bash -c 'cat /run/secrets/anthropic-api-key'")
+    machine.fail(f"sudo -u {agent_user} bash -c 'cat /run/secrets/anthropic-api-key'")
   '';
 }

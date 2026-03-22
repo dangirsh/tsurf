@@ -86,19 +86,25 @@
       # without real credentials. Host source files are secure by default (flag not set).
       # These are exported only as clearly named eval-only outputs, never as deploy
       # targets. Private overlay uses mkHost directly and never sets this flag.
-      mkEvalFixture = hostDir: nixpkgs.lib.nixosSystem {
+      mkEvalFixture = hostDir: extraModules: nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = { inherit inputs; };
         modules = commonModules ++ [
           hostDir
           { tsurf.template.allowUnsafePlaceholders = true; }
-        ];
+        ] ++ extraModules;
       };
 
       evalChecks = import ./tests/eval/config-checks.nix { inherit self pkgs lib; };
     in {
-      nixosConfigurations."eval-tsurf" = mkEvalFixture ./hosts/services;
-      nixosConfigurations."eval-tsurf-dev" = mkEvalFixture ./hosts/dev;
+      nixosConfigurations."eval-tsurf" = mkEvalFixture ./hosts/services [ ];
+      nixosConfigurations."eval-tsurf-dev" = mkEvalFixture ./hosts/dev [ ];
+      nixosConfigurations."eval-tsurf-dev-alt-agent" = mkEvalFixture ./hosts/dev [
+        {
+          tsurf.agent.user = "sandbox";
+          tsurf.agent.home = "/srv/sandbox";
+        }
+      ];
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
@@ -149,6 +155,14 @@
             done
 
             export TSURF_TEST_HOST="$HOST"
+            case "$HOST" in
+              tsurf)
+                export TSURF_TEST_AGENT_USER="${self.nixosConfigurations."eval-tsurf".config.tsurf.agent.user}"
+                ;;
+              tsurf-dev|ovh)
+                export TSURF_TEST_AGENT_USER="${self.nixosConfigurations."eval-tsurf-dev".config.tsurf.agent.user}"
+                ;;
+            esac
             export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
 
             tests_dir="${builtins.toString ./tests/live}"
