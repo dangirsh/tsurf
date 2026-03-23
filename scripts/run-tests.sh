@@ -4,9 +4,8 @@
 #
 # Usage:
 #   ./scripts/run-tests.sh                            # Eval checks only
-#   ./scripts/run-tests.sh --live                     # Eval + live tests against tsurf
-#   ./scripts/run-tests.sh --live --host ovh          # Eval + live tests against ovh
-#   ./scripts/run-tests.sh --live-only                # Live tests only
+#   ./scripts/run-tests.sh --live --host <hostname>   # Eval + live tests against a host
+#   ./scripts/run-tests.sh --live-only --host <hostname>  # Live tests only
 
 set -euo pipefail
 
@@ -15,7 +14,7 @@ cd "$FLAKE_DIR"
 
 RUN_EVAL=true
 RUN_LIVE=false
-HOST="tsurf"
+HOST=""
 FAILURES=0
 
 while [[ $# -gt 0 ]]; do
@@ -35,11 +34,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     --help|-h)
       cat <<'USAGE'
-Usage: ./scripts/run-tests.sh [--live] [--live-only] [--host HOST]
+Usage: ./scripts/run-tests.sh [--live --host HOST] [--live-only --host HOST]
 
   --live        Run eval checks + live tests
   --live-only   Run live tests only (skip nix flake check)
-  --host HOST   Target host for live tests (default: tsurf)
+  --host HOST   Target host for live tests (required for --live)
 USAGE
       exit 0
       ;;
@@ -49,6 +48,11 @@ USAGE
       ;;
   esac
 done
+
+if $RUN_LIVE && [[ -z "$HOST" ]]; then
+  echo "Error: --host is required for live tests"
+  exit 1
+fi
 
 if $RUN_EVAL; then
   echo "=== Running eval checks (nix flake check) ==="

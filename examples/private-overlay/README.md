@@ -19,11 +19,7 @@ Minimal forkable template for a private tsurf overlay.
 
 ## Adding a Custom Agent
 
-tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox with [Landlock](https://docs.kernel.org/userspace-api/landlock.html) kernel-level isolation. API keys stay in the parent process; the child gets only a per-session phantom token. Each agent needs three things:
-
-1. **A nono profile** — what the agent can and cannot access
-2. **A launch script** — how the agent runs (credentials, CLI flags)
-3. **A systemd unit** — when and how the system starts it
+tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox with [Landlock](https://docs.kernel.org/userspace-api/landlock.html) kernel-level isolation. API keys stay in the parent process; the child gets only a per-session phantom token. For recurring agents, `services.agentSandbox.agentTimers` now generates the nono profile, launch script, env template, and systemd units from one declarative entry.
 
 ### What agents can access
 
@@ -48,163 +44,54 @@ tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox
 
 ### Minimal example: `greeter.nix`
 
-[`modules/greeter.nix`](modules/greeter.nix) is the simplest possible agent: a daily timer that asks Claude to write a greeting. It demonstrates the full pattern in ~100 lines:
+[`modules/greeter.nix`](modules/greeter.nix) is the simplest possible agent: a daily timer that asks Claude to write a greeting. Using `agentTimers`, the whole module is about ten lines:
 
 ```nix
-# 1. Define a nono profile (what the agent can access)
-greeterProfile = {
-  extends = "claude-code";       # inherit safe defaults
-  filesystem.allow = [
-    "/var/lib/greeter"           # output directory
-  ];
-  network = {
-    block = false;               # needs API access
-    custom_credentials.anthropic = { ... };  # env:// proxy credential
+{ ... }:
+{
+  services.agentSandbox.agentTimers.greeter = {
+    description = "Example daily greeting agent";
+    prompt = "Write a short, cheerful greeting with today's date to /var/lib/greeter/greeting.txt. One sentence only.";
+    workingDirectory = "/var/lib/greeter";
+    filesystem.allow = [ "/var/lib/greeter" ];
+    filesystem.allowFile = [ "/var/lib/greeter/greeting.txt" ];
+    credentials = [ "anthropic" ];
+    timer.onCalendar = "daily";
   };
-  workdir.access = "readwrite";  # CWD is writable
-  interactive = false;           # no TTY (systemd timer)
-};
-
-# 2. Install the profile
-environment.etc."nono/profiles/greeter.json".source = greeterProfileFile;
-
-# 3. Launch script (proxy credential injection + nono sandbox)
-# pass the credential name declared above
-# use the raw store binary here, not the interactive PATH wrapper
-exec nono run --profile /etc/nono/profiles/greeter.json --net-allow \
-  --credential anthropic \
-  -- ${pkgs.claude-code}/bin/claude -p --permission-mode=bypassPermissions \
-  "Write a greeting to /var/lib/greeter/greeting.txt"
-
-# 4. Systemd service + timer
-systemd.services.greeter = {
-  serviceConfig = {
-    User = config.tsurf.agent.user;  # runs as agent, not operator
-    Slice = "tsurf-agents.slice";    # resource limits
-    MemoryMax = "2G";
-    # ... hardening flags ...
-  };
-};
+}
 ```
 
-To use it: import `modules/greeter.nix` in your host config and ensure `anthropic-api-key` exists in your sops secrets.
+The abstraction auto-generates the nono profile, launch script, sops env template, systemd service with hardening defaults, tmpfiles rule for the working directory, and the timer. To use it: import `modules/greeter.nix` in your host config and ensure `anthropic-api-key` exists in your sops secrets.
 
 ### Step-by-step: adding your own agent
 
-**1. Define the nono profile.**
-
-Start with `extends = "claude-code"` and add only the paths your agent needs:
+**1. Define the agent timer.**
 
 ```nix
-myAgentProfile = {
-  extends = "claude-code";
-  filesystem = {
-    allow = [ "/var/lib/my-agent" ];  # directories the agent needs to write
-    allow_file = [ "/var/lib/my-agent/output.json" ];  # specific files
-    # deny list is inherited — blocks ~/.ssh, ~/.gnupg, etc.
+# modules/my-agent.nix
+{ ... }:
+{
+  services.agentSandbox.agentTimers.my-agent = {
+    description = "My custom agent";
+    prompt = "Your agent prompt here.";
+    workingDirectory = "/var/lib/my-agent";
+    filesystem.allow = [ "/var/lib/my-agent" ];
+    credentials = [ "anthropic" ];
+    timer.onCalendar = "daily";
+    # Optional overrides:
+    # filesystem.allowFile = [ "/var/lib/my-agent/output.json" ];
+    # memoryMax = "4G";
+    # tasksMax = 128;
+    # package = pkgs.claude-code;
+    # binary = "claude";
+    # cliArgs = [ "-p" "--permission-mode=bypassPermissions" ];
   };
-  network = {
-    block = false;
-    custom_credentials.anthropic = {
-      credential_key = "env://ANTHROPIC_API_KEY";
-      env_var = "ANTHROPIC_API_KEY";
-      upstream = "https://api.anthropic.com";
-      inject_header = "x-api-key";
-      credential_format = "{}";
-    };
-  };
-  workdir.access = "readwrite";
-  interactive = false;  # true if the agent needs a TTY (interactive use)
-};
+}
 ```
 
-Key profile fields:
-- `extends`: inherit from a built-in profile (`claude-code`, `codex`, etc.)
-- `filesystem.allow`: directories with read+write access
-- `filesystem.allow_file`: specific files with read+write access
-- `filesystem.deny`: paths to block even within allowed parent directories
-- `network.block`: `false` to allow outbound network (API calls)
-- `network.custom_credentials`: proxy credential definitions backed by `env://...`
-- `workdir.access`: `"readwrite"` for the current working directory
-- `interactive`: `true` for interactive agents, `false` for timer/service agents
+This generates the nono profile, launch script, env template, systemd service, and optional timer automatically. Credentials refer to `services.nonoSandbox` definitions, so the API endpoint details stay centralized.
 
-**2. Install the profile to `/etc/nono/profiles/`.**
-
-```nix
-profileFile = pkgs.writeText "my-agent-profile.json" (builtins.toJSON myAgentProfile);
-environment.etc."nono/profiles/my-agent.json".source = profileFile;
-```
-
-**3. Write the launch script.**
-
-```nix
-script = pkgs.writeShellScript "my-agent" ''
-  set -euo pipefail
-  : "${ANTHROPIC_API_KEY:?set by systemd EnvironmentFile}"
-  exec nono run \
-    --profile /etc/nono/profiles/my-agent.json \
-    --net-allow \
-    --credential anthropic \
-    -- ${pkgs.claude-code}/bin/claude -p \
-    --permission-mode=bypassPermissions \
-    "Your agent prompt here."
-'';
-```
-
-For timer/service agents that call `nono run` directly, use the raw package binary path (`${pkgs.claude-code}/bin/claude`, `${pkgs.codex}/bin/codex`, etc.), not the interactive PATH wrapper from `agent-sandbox.nix`. The wrapper enforces the repo-scoped brokered launch flow and will reject non-repo working directories. If the agent needs API access, declare `network.custom_credentials.<name>` in the profile and pass `--credential <name>` here. Feed credentials through `EnvironmentFile`/templates, not manual `export ...="$(cat ...)"` shell patterns. `--permission-mode=bypassPermissions` is safe here because nono is the actual permission boundary.
-
-**4. Define the systemd service.**
-
-```nix
-systemd.services.my-agent = {
-  serviceConfig = {
-    Type = "oneshot";
-    User = config.tsurf.agent.user;          # runs as agent, not operator
-    WorkingDirectory = "/var/lib/my-agent";
-    ExecStart = script;
-    EnvironmentFile = config.sops.templates."my-agent-env".path;
-
-    # Resource limits
-    Slice = "tsurf-agents.slice";
-    MemoryMax = "2G";
-    TasksMax = 64;
-
-    # Hardening baseline
-    NoNewPrivileges = true;
-    PrivateTmp = true;
-    ProtectClock = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectKernelLogs = true;
-    ProtectControlGroups = true;
-    LockPersonality = true;
-    RestrictRealtime = true;
-    RestrictSUIDSGID = true;
-  };
-};
-```
-
-Provide the API key via a sops template that systemd loads as an environment file:
-
-```nix
-sops.templates."my-agent-env".content = ''
-  ANTHROPIC_API_KEY=${config.sops.placeholder."anthropic-api-key"}
-'';
-```
-
-**5. (Optional) Add a timer.**
-
-```nix
-systemd.timers.my-agent = {
-  wantedBy = [ "timers.target" ];
-  timerConfig = {
-    OnCalendar = "daily";   # or "weekly", "Mon *-*-* 03:00", etc.
-    Persistent = true;       # run missed timers on boot
-  };
-};
-```
-
-**6. Wire it up.**
+**2. Wire it up.**
 
 Import the module in your host config:
 

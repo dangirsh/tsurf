@@ -1,11 +1,11 @@
 # CLAUDE.md — tsurf
 
-NixOS configuration template for declarative server management with flakes + home-manager. Hosts: `tsurf` (services) and `tsurf-dev` (agent/dev).
+NixOS configuration template for declarative server management with flakes + home-manager. Example hosts: `services` and `dev` (replaced by real hosts in a private overlay).
 
 ## Project Structure
 
 ```
-flake.nix              # Entrypoint — inputs, outputs, eval fixtures `.#eval-tsurf` + `.#eval-tsurf-dev`
+flake.nix              # Entrypoint — inputs, outputs, eval fixtures `.#eval-services` + `.#eval-dev`
 flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-nix, disko, etc.)
 hosts/
   hardware.nix         # Shared QEMU VPS hardware config (both hosts)
@@ -110,12 +110,12 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
 |-------|---------|------|
 | Eval checks (50+ assertions, fast) | `nix flake check` | Before every commit |
 | VM sandbox (requires KVM) | `nix build .#vm-test-sandbox` | Requires KVM |
-| Live tests over SSH | `nix run .#test-live -- --host tsurf` | After deploy only |
-| Live sandbox behavioral | `nix run .#test-live -- --host tsurf-dev tests/live/sandbox-behavioral.bats` | After deploy (tsurf-dev host) |
+| Live tests over SSH | `nix run .#test-live -- --host <hostname>` | After deploy only |
+| Live sandbox behavioral | `nix run .#test-live -- --host <sandbox-host> tests/live/sandbox-behavioral.bats` | After deploy (sandbox host only) |
 
 Sandbox testing has three tiers:
 - **Eval checks**: Source-text regression guards (fast, every commit) — catch structural regressions
-- **Live behavioral**: Runtime probes as agent user inside nono sandbox (after deploy, tsurf-dev host)
+- **Live behavioral**: Runtime probes as agent user inside nono sandbox (after deploy, sandbox host only)
 - **VM test**: Reproducible user privilege separation smoke test (requires KVM, not in CI)
 
 ### Test conventions
@@ -163,8 +163,8 @@ See `SECURITY.md` "Accepted Risks" section for the complete list with rationale 
 
 ## Deployment Rules
 
-- **ALL deploys from the PRIVATE overlay**: `cd /path/to/private-tsurf && ./scripts/deploy.sh [--node tsurf|tsurf-dev]`.
-- **This public repo refuses deploys** (`tsurf.url` guard in `extras/scripts/deploy.sh`) and exports eval fixtures only (`.#eval-tsurf`, `.#eval-tsurf-dev`).
+- **ALL deploys from the PRIVATE overlay**: `cd /path/to/private-overlay && ./scripts/deploy.sh --node <your-host>`.
+- **This public repo refuses deploys** (`tsurf.url` guard in `extras/scripts/deploy.sh`) and exports eval fixtures only (`.#eval-services`, `.#eval-dev`).
 - **NEVER** use `nixos-rebuild switch` for normal deploys; it bypasses the deploy safety guard and lock/watcher flow.
 
 ## Recovery

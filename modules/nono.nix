@@ -166,17 +166,28 @@ in
       description = "Additional filesystem.read_file paths merged into the tsurf nono profile.";
     };
 
+    _credentialDefs = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
+      internal = true;
+      description = "Merged credential definitions for internal module consumers.";
+    };
+
   };
 
-  config = lib.mkIf cfg.enable {
-    # Make nono available system-wide
-    environment.systemPackages = [ pkgs.nono ];
+  config = lib.mkMerge [
+    {
+      services.nonoSandbox._credentialDefs = credentialDefs;
+    }
+    (lib.mkIf cfg.enable {
+      # Make nono available system-wide
+      environment.systemPackages = [ pkgs.nono ];
 
-    # Install tsurf profile to /etc/nono/profiles/ and point nono at it
-    # via NONO_PROFILE_PATH so `--profile tsurf` resolves without user config.
-    environment.etc."nono/profiles/tsurf.json".source = profileFile;
+      # Install tsurf profile to /etc/nono/profiles/ and point nono at it
+      # via NONO_PROFILE_PATH so `--profile tsurf` resolves without user config.
+      environment.etc."nono/profiles/tsurf.json".source = profileFile;
 
-    # Set NONO_PROFILE_PATH system-wide so nono can find /etc/nono/profiles/
-    environment.variables.NONO_PROFILE_PATH = "/etc/nono/profiles";
-  };
+      # Set NONO_PROFILE_PATH system-wide so nono can find /etc/nono/profiles/
+      environment.variables.NONO_PROFILE_PATH = "/etc/nono/profiles";
+    })
+  ];
 }

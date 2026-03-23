@@ -12,7 +12,7 @@ bats_load_library bats-assert
 
 # Copy sandbox-probe.sh to the remote host once per test file.
 setup_file() {
-  if ! is_ovh; then return; fi
+  if ! has_agent_sandbox; then return; fi
   # Upload probe script to a location the agent user can access inside the sandbox
   local probe_src
   probe_src="$(cd "$(dirname "${BATS_TEST_FILENAME}")"/../../scripts && pwd)/sandbox-probe.sh"
@@ -29,14 +29,14 @@ run_sandbox_probe() {
 }
 
 @test "${HOST}: agent user identity is correct inside sandbox" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe check-identity
   assert_success
   assert_output --partial "PASS: check-identity"
 }
 
 @test "${HOST}: sandbox denies read access to /run/secrets" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   # Critical regression test: finding 4 — secret-access denial.
   run run_sandbox_probe denied-secrets
   assert_success
@@ -44,35 +44,35 @@ run_sandbox_probe() {
 }
 
 @test "${HOST}: sandbox denies read access to ~/.ssh" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe denied-ssh
   assert_success
   assert_output --partial "PASS: denied-ssh"
 }
 
 @test "${HOST}: sandbox denies read access to ~/.gnupg" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe denied-gnupg
   assert_success
   assert_output --partial "PASS: denied-gnupg"
 }
 
 @test "${HOST}: sandbox denies read access to ~/.bash_history" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe denied-bash-history
   assert_success
   assert_output --partial "PASS: denied-bash-history"
 }
 
 @test "${HOST}: sandbox allows reading files in current git repo" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe allowed-repo-read
   assert_success
   assert_output --partial "PASS: allowed-repo-read"
 }
 
 @test "${HOST}: sandbox allows writing files in workdir" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe allowed-workdir-write
   assert_success
   assert_output --partial "PASS: allowed-workdir-write"

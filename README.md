@@ -99,7 +99,7 @@ Personal services, real credentials, and host-specific config go in a separate p
 > Point your agent at [CLAUDE.md](CLAUDE.md) and ask nicely for what you want to do.
 
 - **Requirements:** A VPS or bare-metal host running NixOS, an age key for sops secrets, and a private overlay for anything real. No KVM is needed for sandboxing; tsurf uses Landlock, not VMs.
-- **Deploys from this repo are intentionally blocked.** The public flake exposes `.#eval-tsurf`, `.#eval-tsurf-dev`, and `.#eval-tsurf-dev-alt-agent` for eval/testing only, and exports no `deploy.nodes`. Real deployments require a [private overlay](#private-overlay) with your credentials and host config.
+- **Deploys from this repo are intentionally blocked.** The public flake exposes `.#eval-services`, `.#eval-dev`, and `.#eval-dev-alt-agent` for eval/testing only, and exports no `deploy.nodes`. Real deployments require a [private overlay](#private-overlay) with your credentials and host config.
 - **Add your services:** fork [`examples/private-overlay/`](examples/private-overlay/) and import from `modules/` (core) and `extras/` (optional batteries).
 - **Agent CLIs:** `claude` is the core interactive wrapper. `codex`, `pi`, and `opencode` are opt-in extras.
 - **Add a custom agent:** see the [agent walkthrough](examples/private-overlay/README.md#adding-a-custom-agent) for how to define a nono profile, proxy credentials, launch script, and systemd unit. It includes a minimal `greeter.nix` example.

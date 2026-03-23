@@ -54,8 +54,6 @@
       pkgs = nixpkgs.legacyPackages.${system};
       tsurfOverlay = final: prev: {
         nono = final.callPackage ./packages/nono.nix {};
-        pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix {};
-        sandbox-probe-e2e = final.callPackage ./packages/sandbox-probe-e2e.nix {};
         zmx = final.callPackage ./packages/zmx.nix {};
       };
 
@@ -102,9 +100,9 @@
     in {
       overlays.default = tsurfOverlay;
 
-      nixosConfigurations."eval-tsurf" = mkEvalFixture ./hosts/services [ ];
-      nixosConfigurations."eval-tsurf-dev" = mkEvalFixture ./hosts/dev [ ];
-      nixosConfigurations."eval-tsurf-dev-alt-agent" = mkEvalFixture ./hosts/dev [
+      nixosConfigurations."eval-services" = mkEvalFixture ./hosts/services [ ];
+      nixosConfigurations."eval-dev" = mkEvalFixture ./hosts/dev [ ];
+      nixosConfigurations."eval-dev-alt-agent" = mkEvalFixture ./hosts/dev [
         {
           tsurf.agent.user = "sandbox";
           tsurf.agent.home = "/srv/sandbox";
@@ -113,7 +111,6 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
-        sandbox-probe-e2e = pkgs.callPackage ./packages/sandbox-probe-e2e.nix {};
 
         # NixOS VM test for sandbox user privilege separation (requires KVM).
         # Run: nix build .#vm-test-sandbox
@@ -137,11 +134,22 @@
             gnugrep
             gawk
           ];
-          text = ''
+          text =
+            let
+              evalFixtures = lib.filterAttrs
+                (name: _: lib.hasPrefix "eval-" name && !(lib.hasSuffix "-alt-agent" name))
+                self.nixosConfigurations;
+              hostCases = lib.concatStringsSep "\n" (lib.mapAttrsToList (_: sys:
+                let
+                  hostName = sys.config.networking.hostName;
+                  hasSandbox = lib.attrByPath [ "config" "services" "agentSandbox" "enable" ] false sys;
+                in "              ${hostName}) export TSURF_TEST_AGENT_USER=\"${sys.config.tsurf.agent.user}\"; export TSURF_TEST_HAS_SANDBOX=\"${if hasSandbox then "1" else "0"}\" ;;"
+              ) evalFixtures);
+            in ''
             #!/usr/bin/env bash
             set -euo pipefail
 
-            HOST="tsurf"
+            HOST=""
             BATS_FILES=()
 
             while [[ $# -gt 0 ]]; do
@@ -150,10 +158,6 @@
                   HOST="$2"
                   shift 2
                   ;;
-                tsurf|tsurf-dev)
-                  HOST="$1"
-                  shift
-                  ;;
                 *)
                   BATS_FILES+=("$1")
                   shift
@@ -161,14 +165,15 @@
               esac
             done
 
+            if [[ -z "$HOST" ]]; then
+              echo "Usage: test-live -- --host <hostname> [test-files...]"
+              exit 1
+            fi
+
             export TSURF_TEST_HOST="$HOST"
             case "$HOST" in
-              tsurf)
-                export TSURF_TEST_AGENT_USER="${self.nixosConfigurations."eval-tsurf".config.tsurf.agent.user}"
-                ;;
-              tsurf-dev|ovh)
-                export TSURF_TEST_AGENT_USER="${self.nixosConfigurations."eval-tsurf-dev".config.tsurf.agent.user}"
-                ;;
+${hostCases}
+              *) echo "WARNING: unknown host '$HOST' — TSURF_TEST_AGENT_USER not set" ;;
             esac
             export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
 
@@ -193,7 +198,7 @@
         test-live = {
           type = "app";
           program = "${self.packages.${system}.test-live}/bin/test-live";
-          meta.description = "Run tsurf live BATS tests against a target host";
+          meta.description = "Run live BATS tests against a target host";
         };
 
 
@@ -202,32 +207,27 @@
           getFiles = cfg: map (f: f.file) cfg.environment.persistence."/persist".files;
           sorted = builtins.sort (a: b: a < b);
           formatList = lst: lib.concatMapStringsSep "\n" (p: "  " + p) (sorted lst);
-          tsurfCfg = self.nixosConfigurations."eval-tsurf".config;
-          devCfg = self.nixosConfigurations."eval-tsurf-dev".config;
+          sections = lib.concatStringsSep "\n\n" (lib.mapAttrsToList (name: sys:
+            let cfg = sys.config; in ''
+=== ${name} (${cfg.networking.hostName}) ===
+Directories:
+${formatList (getDirs cfg)}
+
+Files:
+${formatList (getFiles cfg)}''
+          ) (lib.filterAttrs (name: _: lib.hasPrefix "eval-" name) self.nixosConfigurations));
           script = pkgs.writeShellApplication {
             name = "persistence-audit";
             text = ''
               cat <<'EOF'
-=== eval-tsurf (services host) ===
-Directories:
-${formatList (getDirs tsurfCfg)}
-
-Files:
-${formatList (getFiles tsurfCfg)}
-
-=== eval-tsurf-dev (dev host) ===
-Directories:
-${formatList (getDirs devCfg)}
-
-Files:
-${formatList (getFiles devCfg)}
+${sections}
 EOF
             '';
           };
         in {
           type = "app";
           program = "${script}/bin/persistence-audit";
-          meta.description = "Print merged persistence paths for all hosts";
+          meta.description = "Print merged persistence paths for all eval fixtures";
         };
         # @decision BOOT-06: Pinned nixos-anywhere via flake.lock (supply-chain safety).
         nixos-anywhere = {

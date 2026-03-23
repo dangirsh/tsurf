@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# scripts/deploy.sh — Deploy a selected tsurf NixOS flake node
+# scripts/deploy.sh — Deploy a tsurf NixOS flake node
 #
 # Modes:
 #   --mode remote  (default) Build on target host via deploy-rs --remote-build
 #   --mode local   Build locally, deploy remotely via deploy-rs
 #
 # Flags:
-#   --node NAME         Flake node to deploy (default: tsurf; choices: tsurf, tsurf-dev)
-#   --target USER@HOST  Override SSH target (default depends on --node)
+#   --node NAME         Flake node to deploy (required)
+#   --target USER@HOST  Override SSH target (default: root@<node>)
 #   --first-deploy  Disable magic rollback once for migration from nixos-rebuild
 #   --magic-rollback  Enable deploy-rs magic rollback with 300s confirm timeout
 #   --help         Print usage
@@ -18,12 +18,12 @@
 # @decision Single-pass service health check after deploy.
 # @decision No auto-commit of flake.lock — print reminder instead.
 # @decision DEPLOY-114-01: No repo-controlled post-deploy hooks — require explicit --post-hook.
-# @decision Remote build default (DEPLOY-01): tsurf has 18 vCPU / 96 GB RAM — faster than
-#   local build + closure upload. Use --mode local for first deploys or when server is unreachable.
+# @decision Remote build default (DEPLOY-01): --mode remote is faster on beefy servers.
+#   Use --mode local for first deploys or when server is unreachable.
 set -euo pipefail
 
 FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-NODE="tsurf"
+NODE=""
 TARGET=""
 TARGET_SET=false
 MODE="remote"
@@ -31,6 +31,7 @@ FAST_MODE=false
 FIRST_DEPLOY=false
 MAGIC_ROLLBACK=false
 POST_HOOK=""
+PUBLIC_IP=""
 SKIP_UPDATE=true
 SECONDS=0
 
@@ -97,31 +98,31 @@ trap cleanup EXIT
 
 usage() {
   cat <<USAGE
-Usage: $(basename "$0") [OPTIONS]
+Usage: $(basename "$0") --node <NAME> [OPTIONS]
 
 Deploy tsurf NixOS config to the selected deploy node.
 
 Options:
-  --node NAME           Deploy flake node (tsurf|tsurf-dev, default: tsurf)
+  --node NAME           Flake node to deploy (required)
   --mode remote         Build on target host via deploy-rs --remote-build (default)
   --mode local          Build locally, deploy remotely
-  --target U@H          Override SSH target (default by node)
+  --target U@H          Override SSH target (default: root@<node>)
   --first-deploy        Disable magic rollback for one-time migration
   --fast                Local build, single evaluation (no --remote-build)
   --magic-rollback      Enable deploy-rs magic rollback (300s confirm timeout)
+  --public-ip IP        Public IP for post-deploy connectivity check (optional)
   --post-hook PATH      Run script at absolute PATH after successful deploy (subprocess, not sourced)
   --update-inputs       Pull latest flake inputs before building
   --help                Show this help
 
 Examples:
-  ./scripts/deploy.sh                              # Deploy tsurf (remote build)
-  ./scripts/deploy.sh --fast                       # Fast mode: local build, single eval (<90s for trivial changes)
-  ./scripts/deploy.sh --update-inputs              # Deploy and update flake inputs first
-  ./scripts/deploy.sh --node tsurf-dev          # Deploy OVH dev node only
-  ./scripts/deploy.sh --mode local                # Local build (fallback if server unreachable)
-  ./scripts/deploy.sh --first-deploy               # First migration deploy from nixos-rebuild
-  ./scripts/deploy.sh --magic-rollback             # Enable magic rollback with 300s confirm
-  ./scripts/deploy.sh --target root@1.2.3.4        # Explicit SSH target override
+  ./scripts/deploy.sh --node myhost                # Deploy myhost (remote build)
+  ./scripts/deploy.sh --node myhost --fast         # Fast mode: local build, single eval
+  ./scripts/deploy.sh --node myhost --update-inputs  # Deploy and update flake inputs first
+  ./scripts/deploy.sh --node myhost --mode local   # Local build (fallback if server unreachable)
+  ./scripts/deploy.sh --node myhost --first-deploy # First migration deploy from nixos-rebuild
+  ./scripts/deploy.sh --node myhost --magic-rollback  # Enable magic rollback with 300s confirm
+  ./scripts/deploy.sh --target root@1.2.3.4 --node myhost  # Explicit SSH target override
 USAGE
 }
 
@@ -165,6 +166,10 @@ while [[ $# -gt 0 ]]; do
       POST_HOOK="$2"
       shift 2
       ;;
+    --public-ip)
+      PUBLIC_IP="$2"
+      shift 2
+      ;;
     --skip-update)
       # no-op: input update is skipped by default; use --update-inputs to enable
       shift
@@ -186,8 +191,9 @@ if [[ "$MODE" != "local" && "$MODE" != "remote" ]]; then
   exit 1
 fi
 
-if [[ "$NODE" != "tsurf" && "$NODE" != "tsurf-dev" ]]; then
-  echo "Error: --node must be 'tsurf' or 'tsurf-dev', got '$NODE'"
+if [[ -z "$NODE" ]]; then
+  echo "Error: --node is required"
+  usage
   exit 1
 fi
 
@@ -202,14 +208,8 @@ if [[ -n "$POST_HOOK" ]]; then
   fi
 fi
 
-# Public IPs for post-deploy connectivity verification (independent of Tailscale).
-case "$NODE" in
-  tsurf) PUBLIC_IP="<CONTABO_PUBLIC_IP>" ;;
-  tsurf-dev) PUBLIC_IP="<OVH_PUBLIC_IP>" ;;
-esac
-
 # SAFETY GUARD: All deploys MUST come from the private overlay.
-# @decision DEPLOY-02: Both tsurf and ovh run the private overlay config.
+# @decision DEPLOY-02: Real hosts run the private overlay config.
 #   The public flake's nixosConfigurations have placeholder SSH keys, no real
 #   users (dev instead of your-user), and no private services. Deploying from
 #   the public repo to EITHER host strips
@@ -223,35 +223,27 @@ if ! grep -q 'tsurf\.url' "$FLAKE_DIR/flake.nix" 2>/dev/null; then
   echo "║  BLOCKED: Deploy refused from public repo                      ║"
   echo "╚══════════════════════════════════════════════════════════════════╝"
   echo ""
-  echo "  Both hosts (tsurf + tsurf-dev) run the PRIVATE overlay config."
+  echo "  All real hosts run the PRIVATE overlay config."
   echo "  Deploying from the public repo strips private services, users,"
   echo "  and SSH keys — potentially locking you out."
   echo ""
-  echo "  Always deploy from the PRIVATE overlay:"
+  echo "  Always deploy from your PRIVATE overlay:"
   echo ""
-  echo "    cd /data/projects/private-tsurf"
-  echo "    ./scripts/deploy.sh [--node tsurf|tsurf-dev]"
+  echo "    cd /path/to/private-overlay"
+  echo "    ./scripts/deploy.sh --node <your-host>"
   echo ""
   exit 1
 fi
 
 if [[ "$TARGET_SET" == false ]]; then
-  if [[ "$NODE" == "tsurf-dev" ]]; then
-    TARGET="root@tsurf-dev"
-  else
-    TARGET="root@tsurf"
-  fi
+  TARGET="root@${NODE}"
 fi
 
-# --- Node-specific service health checks ---
-# Generic services only. Private overlay should extend this in its own deploy.sh.
-if [[ "$NODE" == "tsurf" ]]; then
-  SYSTEMD_SERVICES=("tailscaled" "sshd")
-elif [[ "$NODE" == "tsurf-dev" ]]; then
-  SYSTEMD_SERVICES=("tailscaled" "sshd" "syncthing")
-fi
+# --- Service health checks ---
+# Base services checked on all nodes. Private overlay can extend this list.
+SYSTEMD_SERVICES=("tailscaled" "sshd")
 
-REMOTE_LOCK_DIR="/var/lock/tsurf-${NODE}-deploy.lock"
+REMOTE_LOCK_DIR="/var/lock/deploy-${NODE}.lock"
 
 # --- Remote lock (prevent concurrent deploys from any machine) ---
 GIT_SHA=$(git -C "$FLAKE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -383,21 +375,28 @@ else
 fi
 
 # Independent SSH to public IP (separate from Tailscale path)
-if ssh -o ConnectTimeout=15 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ControlPath=none \
-    "root@$PUBLIC_IP" "systemctl is-active --quiet sshd.service" 2>/dev/null; then
-  echo "  Public IP ($PUBLIC_IP): SSH + sshd OK"
+if [[ -n "$PUBLIC_IP" ]]; then
+  if ssh -o ConnectTimeout=15 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ControlPath=none \
+      "root@$PUBLIC_IP" "systemctl is-active --quiet sshd.service" 2>/dev/null; then
+    echo "  Public IP ($PUBLIC_IP): SSH + sshd OK"
+  else
+    echo "  Public IP ($PUBLIC_IP): UNREACHABLE or sshd down"
+    REMOTE_ACCESS_OK=false
+  fi
 else
-  echo "  Public IP ($PUBLIC_IP): UNREACHABLE or sshd down"
-  REMOTE_ACCESS_OK=false
+  echo "  Public IP check skipped (no --public-ip provided)"
 fi
 
 # Handle watchdog based on remote access results
 if [[ "$WATCHDOG_ACTIVE" == true ]]; then
   if [[ "$REMOTE_ACCESS_OK" == true ]]; then
     echo "==> Remote access verified — cancelling rollback watchdog..."
-    ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl stop deploy-watchdog.timer deploy-watchdog.service 2>/dev/null" || \
-      ssh -o ConnectTimeout=10 -o BatchMode=yes -o ControlPath=none "root@$PUBLIC_IP" \
-        "systemctl stop deploy-watchdog.timer deploy-watchdog.service 2>/dev/null" || true
+    if ! ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl stop deploy-watchdog.timer deploy-watchdog.service 2>/dev/null"; then
+      if [[ -n "$PUBLIC_IP" ]]; then
+        ssh -o ConnectTimeout=10 -o BatchMode=yes -o ControlPath=none "root@$PUBLIC_IP" \
+          "systemctl stop deploy-watchdog.timer deploy-watchdog.service 2>/dev/null" || true
+      fi
+    fi
     WATCHDOG_ACTIVE=false
   else
     echo ""
@@ -408,10 +407,18 @@ if [[ "$WATCHDOG_ACTIVE" == true ]]; then
     echo "║  ~5 minutes unless cancelled.                                  ║"
     echo "║                                                                ║"
     echo "║  To KEEP the new config (cancel watchdog):                     ║"
-    echo "║    ssh root@$PUBLIC_IP systemctl stop deploy-watchdog.timer    ║"
+    if [[ -n "$PUBLIC_IP" ]]; then
+      echo "║    ssh root@$PUBLIC_IP systemctl stop deploy-watchdog.timer    ║"
+    else
+      echo "║    ssh $TARGET systemctl stop deploy-watchdog.timer            ║"
+    fi
     echo "║                                                                ║"
     echo "║  To rollback NOW:                                              ║"
-    echo "║    ssh root@$PUBLIC_IP $PREV_SYSTEM/bin/switch-to-configuration switch"
+    if [[ -n "$PUBLIC_IP" ]]; then
+      echo "║    ssh root@$PUBLIC_IP $PREV_SYSTEM/bin/switch-to-configuration switch"
+    else
+      echo "║    ssh $TARGET $PREV_SYSTEM/bin/switch-to-configuration switch"
+    fi
     echo "╚══════════════════════════════════════════════════════════════════╝"
   fi
 elif [[ "$REMOTE_ACCESS_OK" != true ]]; then
@@ -420,9 +427,13 @@ elif [[ "$REMOTE_ACCESS_OK" != true ]]; then
   echo "║  WARNING: Remote access issues detected!                       ║"
   echo "╠══════════════════════════════════════════════════════════════════╣"
   echo "║  deploy-rs magic rollback should catch SSH failures, but       ║"
-  echo "║  Tailscale may be down while public SSH still works.           ║"
+  echo "║  Tailscale may be down while another SSH path still works.     ║"
   echo "║  Manual rollback if needed:                                    ║"
-  echo "║    ssh root@$PUBLIC_IP nixos-rebuild switch --rollback"
+  if [[ -n "$PUBLIC_IP" ]]; then
+    echo "║    ssh root@$PUBLIC_IP nixos-rebuild switch --rollback"
+  else
+    echo "║    ssh $TARGET nixos-rebuild switch --rollback"
+  fi
   echo "╚══════════════════════════════════════════════════════════════════╝"
 fi
 

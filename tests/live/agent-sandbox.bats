@@ -12,7 +12,7 @@ bats_load_library bats-support
 bats_load_library bats-assert
 
 @test "${HOST}: sandboxed claude wrapper exists in PATH" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path
   # readlink -f resolves /run/current-system/sw/bin/claude → /nix/store/…/bin/claude
   claude_path="$(remote "readlink -f \$(command -v claude)")"
@@ -23,7 +23,7 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: sandboxed claude hides /run/secrets" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path script_content
   claude_path="$(remote "readlink -f \$(command -v claude)")"
   script_content="$(remote cat "${claude_path}")"
@@ -35,7 +35,7 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: sandboxed claude hides ~/.ssh" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path script_content
   claude_path="$(remote "readlink -f \$(command -v claude)")"
   script_content="$(remote cat "${claude_path}")"
@@ -47,7 +47,7 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: wrapper includes logger (util-linux) for journald logging" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path
   claude_path="$(remote "readlink -f \$(command -v claude)")"
   # The wrapper's runtimeInputs should include util-linux (provides logger)
@@ -55,7 +55,7 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: wrapper does not contain file audit log path" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path script_content
   claude_path="$(remote "readlink -f \$(command -v claude)")"
   script_content="$(remote cat "${claude_path}")"
@@ -66,14 +66,14 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: agent user cannot connect to non-whitelisted port" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   # Port 8080 is not in the egress allowlist — connection should be dropped
   run remote "su -s /bin/sh ${AGENT_USER} -c 'nc -z -w2 1.1.1.1 8080'" 2>&1
   [ "$status" -ne 0 ]
 }
 
 @test "${HOST}: agent user can reach DNS (port 53)" {
-  if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run remote "su -s /bin/sh ${AGENT_USER} -c 'nc -z -w2 8.8.8.8 53'"
   [ "$status" -eq 0 ]
 }

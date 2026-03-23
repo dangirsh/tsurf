@@ -29,16 +29,16 @@ bats_load_library bats-assert
   assert_success
 }
 
-@test "${HOST}: nix-dashboard.service is active (tsurf only)" {
-  if ! is_tsurf; then
-    skip "nix-dashboard only on tsurf"
+@test "${HOST}: nix-dashboard.service is active (if present)" {
+  if ! remote systemctl list-unit-files nix-dashboard.service --no-legend | grep -q nix-dashboard; then
+    skip "nix-dashboard not installed on this host"
   fi
   assert_unit_active "nix-dashboard.service"
 }
 
-@test "${HOST}: restic-backups-b2.timer is enabled (tsurf only)" {
-  if ! is_tsurf; then
-    skip "restic backup timer only on tsurf"
+@test "${HOST}: restic-backups-b2.timer is enabled (if present)" {
+  if ! remote systemctl list-unit-files restic-backups-b2.timer --no-legend | grep -q restic-backups-b2; then
+    skip "restic backup timer not installed on this host"
   fi
   run remote systemctl is-enabled restic-backups-b2.timer
   assert_success
@@ -89,15 +89,8 @@ bats_load_library bats-assert
     return 1
   }
 
-  local expected_prefix
-  if is_tsurf; then
-    expected_prefix="tsurf"
-  else
-    expected_prefix="tsurf-dev"
-  fi
-
-  if [[ "$ts_hostname" != "${expected_prefix}"* ]]; then
-    echo "FAIL: tailscale hostname='$ts_hostname', expected prefix='${expected_prefix}'"
+  if [[ "$ts_hostname" != "${HOST}"* ]]; then
+    echo "FAIL: tailscale hostname='$ts_hostname', expected prefix='${HOST}'"
     return 1
   fi
 }

@@ -3,7 +3,7 @@
 # @decision TEST-48-01: Shared SSH + assertion helpers keep BATS cases single-assertion and readable.
 #
 # Usage: load '../lib/common' at the top of each .bats file
-# Requires: TSURF_TEST_HOST env var (default: tsurf)
+# Requires: TSURF_TEST_HOST env var (target hostname)
 
 # --- Configuration ---
 SSH_OPTS=(
@@ -13,7 +13,7 @@ SSH_OPTS=(
   -o LogLevel=ERROR
   -F /dev/null
 )
-HOST="${TSURF_TEST_HOST:-tsurf}"
+HOST="${TSURF_TEST_HOST:?TSURF_TEST_HOST must be set (use test-live --host <hostname>)}"
 SSH_USER="${TSURF_TEST_USER:-root}"
 AGENT_USER="${TSURF_TEST_AGENT_USER:-agent}"
 
@@ -148,11 +148,7 @@ assert_contains() {
   fi
 }
 
-# Check if current host is tsurf (Contabo) vs ovh.
-is_tsurf() {
-  [[ "$HOST" == "tsurf" ]]
-}
-
-is_ovh() {
-  [[ "$HOST" == "tsurf-dev" ]] || [[ "$HOST" == "ovh" ]]
+# Check host role. Set TSURF_TEST_HAS_SANDBOX=1 for hosts with agent sandbox.
+has_agent_sandbox() {
+  [[ "${TSURF_TEST_HAS_SANDBOX:-}" == "1" ]]
 }

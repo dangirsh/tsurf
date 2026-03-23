@@ -7,9 +7,9 @@ strengthen or weaken these properties, so host-specific statements are called ou
 ## Scope
 
 - The public flake exports only eval fixtures:
-  `eval-tsurf`, `eval-tsurf-dev`, and `eval-tsurf-dev-alt-agent`.
-- The public flake exports no `deploy.nodes` and no deploy-looking
-  `nixosConfigurations.tsurf` / `tsurf-dev` outputs.
+  `eval-services`, `eval-dev`, and `eval-dev-alt-agent`.
+- The public flake exports no `deploy.nodes`; all exported
+  `nixosConfigurations` are prefixed with `eval-`.
 - [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
   refuses to deploy unless it is being run from a private overlay flake that
   contains a `tsurf.url` input.
@@ -345,9 +345,6 @@ Live checks:
 - [`tests/live/sandbox-behavioral.bats`](/data/projects/tsurf/tests/live/sandbox-behavioral.bats)
   proves that sandboxed agent code cannot read denied paths and can read/write the
   expected worktree paths.
-- [`tests/live/agent-launch-e2e.bats`](/data/projects/tsurf/tests/live/agent-launch-e2e.bats)
-  verifies the full `dev -> sudo -> systemd-run -> agent-wrapper -> nono` path,
-  phantom-token injection, and the immutable-launcher sudo boundary.
 
 ## Non-Goals And Accepted Risks
 

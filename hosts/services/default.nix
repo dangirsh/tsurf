@@ -1,7 +1,7 @@
-# hosts/services/default.nix — services host (e.g. Contabo VPS)
+# hosts/services/default.nix — example services host
 # Role: runs long-lived services (containers, backups, file sync, dashboard).
 # Imports restic.nix for backups and omits agent-sandbox.nix by default.
-# Private overlay adds personal service modules, real user config, and host networking.
+# Private overlay replaces this with real host config, user settings, and networking.
 { config, pkgs, inputs, lib, ... }: {
   imports = [
     ../hardware.nix
@@ -23,16 +23,16 @@
 
   home-manager.users.dev = import ../../extras/home;
 
-  networking.hostName = "tsurf";
-  time.timeZone = "Europe/Berlin";
+  networking.hostName = "services"; # REPLACE in private overlay
+  time.timeZone = "UTC"; # REPLACE
   i18n.defaultLocale = "C.UTF-8";
 
   # Static IP config is host-specific — set in your private overlay or directly here.
   networking.useDHCP = false;
 
   # --- Host-specific shared module settings ---
-  boot.loader.grub.device = "/dev/sda";
-  sops.defaultSopsFile = ../../secrets/tsurf.yaml;
+  boot.loader.grub.device = "/dev/sda"; # REPLACE
+  sops.defaultSopsFile = ../../secrets/example.yaml; # REPLACE with per-host secrets
 
   # Contabo VPS uses scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;

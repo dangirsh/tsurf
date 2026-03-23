@@ -1,10 +1,10 @@
-# tests/eval/config-checks.nix — Nix eval-time assertions for tsurf (tsurf and tsurf-dev hosts).
+# tests/eval/config-checks.nix — Nix eval-time assertions for tsurf eval fixtures.
 # @decision TEST-48-01: Keep checks purely eval-time with runCommand to catch regressions offline.
 { self, pkgs, lib }:
 let
-  tsurfCfg = self.nixosConfigurations."eval-tsurf".config;
-  devCfg = self.nixosConfigurations."eval-tsurf-dev".config;
-  altAgentCfg = self.nixosConfigurations."eval-tsurf-dev-alt-agent".config;
+  servicesCfg = self.nixosConfigurations."eval-services".config;
+  devCfg = self.nixosConfigurations."eval-dev".config;
+  altAgentCfg = self.nixosConfigurations."eval-dev-alt-agent".config;
   devAgentUser = devCfg.tsurf.agent.user;
   altAgentUser = altAgentCfg.tsurf.agent.user;
   altAgentHome = altAgentCfg.tsurf.agent.home;
@@ -22,37 +22,37 @@ let
     '';
 in
 {
-  eval-tsurf = pkgs.runCommand "eval-tsurf" { } ''
-    echo "eval-tsurf config evaluates: ${self.nixosConfigurations."eval-tsurf".config.system.build.toplevel}"
+  eval-services = pkgs.runCommand "eval-services" { } ''
+    echo "eval-services config evaluates: ${self.nixosConfigurations."eval-services".config.system.build.toplevel}"
     touch "$out"
   '';
 
-  eval-tsurf-dev = pkgs.runCommand "eval-tsurf-dev" { } ''
-    echo "eval-tsurf-dev config evaluates: ${self.nixosConfigurations."eval-tsurf-dev".config.system.build.toplevel}"
+  eval-dev = pkgs.runCommand "eval-dev" { } ''
+    echo "eval-dev config evaluates: ${self.nixosConfigurations."eval-dev".config.system.build.toplevel}"
     touch "$out"
   '';
 
-  eval-tsurf-dev-alt-agent = pkgs.runCommand "eval-tsurf-dev-alt-agent" { } ''
-    echo "eval-tsurf-dev-alt-agent config evaluates: ${self.nixosConfigurations."eval-tsurf-dev-alt-agent".config.system.build.toplevel}"
+  eval-dev-alt-agent = pkgs.runCommand "eval-dev-alt-agent" { } ''
+    echo "eval-dev-alt-agent config evaluates: ${self.nixosConfigurations."eval-dev-alt-agent".config.system.build.toplevel}"
     touch "$out"
   '';
 
   # Ports are conditional: 22000 on publicBep opt-in, 80/443 on nginx.enable.
   # Public template has no nginx and publicBep defaults to false.
-  firewall-ports-tsurf =
+  firewall-ports-services =
     let
-      actual = builtins.sort builtins.lessThan tsurfCfg.networking.firewall.allowedTCPPorts;
+      actual = builtins.sort builtins.lessThan servicesCfg.networking.firewall.allowedTCPPorts;
       expected = [ 22 ]
-        ++ lib.optionals tsurfCfg.services.syncthingStarter.publicBep [ 22000 ]
-        ++ lib.optionals tsurfCfg.services.nginx.enable [ 80 443 ];
+        ++ lib.optionals servicesCfg.services.syncthingStarter.publicBep [ 22000 ]
+        ++ lib.optionals servicesCfg.services.nginx.enable [ 80 443 ];
     in
     mkCheck
-      "firewall-ports-tsurf"
-      "tsurf firewall ports match publicBep/nginx state"
-      "tsurf allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
+      "firewall-ports-services"
+      "services host firewall ports match publicBep/nginx state"
+      "services host allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
-  firewall-ports-ovh =
+  firewall-ports-dev =
     let
       actual = builtins.sort builtins.lessThan devCfg.networking.firewall.allowedTCPPorts;
       expected = [ 22 ]
@@ -60,52 +60,52 @@ in
         ++ lib.optionals devCfg.services.nginx.enable [ 80 443 ];
     in
     mkCheck
-      "firewall-ports-ovh"
-      "ovh firewall ports match publicBep/nginx state"
-      "ovh allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
+      "firewall-ports-dev"
+      "dev host firewall ports match publicBep/nginx state"
+      "dev host allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
   # Phase 122: tailscale0 must NOT be in trustedInterfaces (localhost-first model).
-  no-trusted-tailscale0-tsurf = mkCheck
-    "no-trusted-tailscale0-tsurf"
-    "tsurf does not have tailscale0 in trustedInterfaces (localhost-first model)"
-    "SECURITY: tsurf has tailscale0 in trustedInterfaces — remove it, use per-service firewall.interfaces rules"
-    (!(builtins.elem "tailscale0" tsurfCfg.networking.firewall.trustedInterfaces));
+  no-trusted-tailscale0-services = mkCheck
+    "no-trusted-tailscale0-services"
+    "services host does not have tailscale0 in trustedInterfaces (localhost-first model)"
+    "SECURITY: services host has tailscale0 in trustedInterfaces — remove it, use per-service firewall.interfaces rules"
+    (!(builtins.elem "tailscale0" servicesCfg.networking.firewall.trustedInterfaces));
 
-  no-trusted-tailscale0-ovh = mkCheck
-    "no-trusted-tailscale0-ovh"
-    "ovh does not have tailscale0 in trustedInterfaces (localhost-first model)"
-    "SECURITY: ovh has tailscale0 in trustedInterfaces — remove it, use per-service firewall.interfaces rules"
+  no-trusted-tailscale0-dev = mkCheck
+    "no-trusted-tailscale0-dev"
+    "dev host does not have tailscale0 in trustedInterfaces (localhost-first model)"
+    "SECURITY: dev host has tailscale0 in trustedInterfaces — remove it, use per-service firewall.interfaces rules"
     (!(builtins.elem "tailscale0" devCfg.networking.firewall.trustedInterfaces));
 
-  no-accept-routes-tsurf = mkCheck
-    "no-accept-routes-tsurf"
-    "tsurf Tailscale extraUpFlags does not include --accept-routes"
-    "tsurf Tailscale extraUpFlags contains --accept-routes — remove from default, add in overlay if needed"
-    (!(builtins.elem "--accept-routes" tsurfCfg.services.tailscale.extraUpFlags));
+  no-accept-routes-services = mkCheck
+    "no-accept-routes-services"
+    "services host Tailscale extraUpFlags does not include --accept-routes"
+    "services host Tailscale extraUpFlags contains --accept-routes — remove from default, add in overlay if needed"
+    (!(builtins.elem "--accept-routes" servicesCfg.services.tailscale.extraUpFlags));
 
-  no-accept-routes-ovh = mkCheck
-    "no-accept-routes-ovh"
-    "ovh Tailscale extraUpFlags does not include --accept-routes"
-    "ovh Tailscale extraUpFlags contains --accept-routes — remove from default, add in overlay if needed"
+  no-accept-routes-dev = mkCheck
+    "no-accept-routes-dev"
+    "dev host Tailscale extraUpFlags does not include --accept-routes"
+    "dev host Tailscale extraUpFlags contains --accept-routes — remove from default, add in overlay if needed"
     (!(builtins.elem "--accept-routes" devCfg.services.tailscale.extraUpFlags));
 
-  expected-services-tsurf =
+  expected-services-services =
     let
       expectedServices = [
         "tailscaled"
         "syncthing"
         "nix-dashboard"
       ];
-      missing = builtins.filter (name: !(builtins.hasAttr name tsurfCfg.systemd.services)) expectedServices;
+      missing = builtins.filter (name: !(builtins.hasAttr name servicesCfg.systemd.services)) expectedServices;
     in
     mkCheck
-      "expected-services-tsurf"
-      "all expected tsurf services are defined"
-      "missing tsurf services: ${builtins.concatStringsSep ", " missing}"
+      "expected-services-services"
+      "all expected services host services are defined"
+      "missing services host services: ${builtins.concatStringsSep ", " missing}"
       (missing == [ ]);
 
-  expected-services-ovh =
+  expected-services-dev =
     let
       expectedServices = [
         "tailscaled"
@@ -114,14 +114,14 @@ in
       missing = builtins.filter (name: !(builtins.hasAttr name devCfg.systemd.services)) expectedServices;
     in
     mkCheck
-      "expected-services-ovh"
-      "all expected ovh services are defined"
-      "missing ovh services: ${builtins.concatStringsSep ", " missing}"
+      "expected-services-dev"
+      "all expected dev host services are defined"
+      "missing dev host services: ${builtins.concatStringsSep ", " missing}"
       (missing == [ ]);
 
   ssh-ed25519-only =
     let
-      hostKeyTypes = map (k: k.type) tsurfCfg.services.openssh.hostKeys;
+      hostKeyTypes = map (k: k.type) servicesCfg.services.openssh.hostKeys;
     in
     mkCheck
       "ssh-ed25519-only"
@@ -133,7 +133,7 @@ in
     "metadata-block"
     "agent-metadata-block nftables table is defined"
     "agent-metadata-block nftables table not found"
-    (builtins.hasAttr "agent-metadata-block" tsurfCfg.networking.nftables.tables);
+    (builtins.hasAttr "agent-metadata-block" servicesCfg.networking.nftables.tables);
 
 
   dashboard-enabled = mkCheck
@@ -141,14 +141,14 @@ in
     "nix-dashboard is enabled on port 8082"
     "nix-dashboard disabled or wrong port"
     (
-      tsurfCfg.services.dashboard.enable
-      && tsurfCfg.services.dashboard.listenPort == 8082
+      servicesCfg.services.dashboard.enable
+      && servicesCfg.services.dashboard.listenPort == 8082
     );
 
   dashboard-entries =
     let
       entryCount =
-        builtins.length (builtins.attrNames tsurfCfg.services.dashboard.entries);
+        builtins.length (builtins.attrNames servicesCfg.services.dashboard.entries);
     in
     mkCheck
       "dashboard-entries"
@@ -157,22 +157,22 @@ in
       (entryCount >= 4);
 
   dashboard-manifest = pkgs.runCommand "dashboard-manifest" { } ''
-    echo '${builtins.toJSON (builtins.fromJSON tsurfCfg.environment.etc."dashboard/manifest.json".text)}' \
+    echo '${builtins.toJSON (builtins.fromJSON servicesCfg.environment.etc."dashboard/manifest.json".text)}' \
       | ${jq} . > /dev/null
     echo "PASS: dashboard manifest is valid JSON"
     touch "$out"
   '';
 
-  agent-sandbox-ovh-enabled = mkCheck
-    "agent-sandbox-ovh-enabled"
-    "ovh agent sandbox wrappers are enabled"
-    "ovh services.agentSandbox.enable is false — dev agents run unsandboxed"
+  agent-sandbox-dev-enabled = mkCheck
+    "agent-sandbox-dev-enabled"
+    "dev host agent sandbox wrappers are enabled"
+    "dev host services.agentSandbox.enable is false — dev agents run unsandboxed"
     devCfg.services.agentSandbox.enable;
 
-  agent-egress-ovh = mkCheck
-    "agent-egress-ovh"
-    "ovh agent egress nftables table is defined"
-    "ovh agent-egress nftables table missing"
+  agent-egress-dev = mkCheck
+    "agent-egress-dev"
+    "dev host agent egress nftables table is defined"
+    "dev host agent-egress nftables table missing"
     (builtins.hasAttr "agent-egress" devCfg.networking.nftables.tables);
 
   # --- Source-text regression guards ---
@@ -240,10 +240,10 @@ in
        && lib.hasInfix "agentHome" codexSource
        && lib.hasInfix "agentHome" piSource);
 
-  nono-sandbox-ovh-enabled = mkCheck
-    "nono-sandbox-ovh-enabled"
-    "ovh nono sandbox module is enabled"
-    "ovh services.nonoSandbox.enable is false — nono not active"
+  nono-sandbox-dev-enabled = mkCheck
+    "nono-sandbox-dev-enabled"
+    "dev host nono sandbox module is enabled"
+    "dev host services.nonoSandbox.enable is false — nono not active"
     devCfg.services.nonoSandbox.enable;
 
   agent-journald-logging = mkCheck
@@ -259,8 +259,8 @@ in
     "syncthing-mesh-option"
     "tsurf.syncthing.mesh option exists on both hosts"
     "tsurf.syncthing.mesh option missing — import extras/syncthing.nix"
-    (builtins.hasAttr "syncthing" tsurfCfg.tsurf
-     && builtins.hasAttr "mesh" tsurfCfg.tsurf.syncthing
+    (builtins.hasAttr "syncthing" servicesCfg.tsurf
+     && builtins.hasAttr "mesh" servicesCfg.tsurf.syncthing
      && builtins.hasAttr "syncthing" devCfg.tsurf
      && builtins.hasAttr "mesh" devCfg.tsurf.syncthing);
 
@@ -281,28 +281,25 @@ in
     (!(lib.hasInfix "allowUnsafePlaceholders" (builtins.readFile ../../hosts/dev/default.nix)));
 
   # Regression guard: eval fixtures must have the flag enabled (proves mkEvalFixture works)
-  fixture-mode-tsurf = mkCheck
-    "fixture-mode-tsurf"
-    "tsurf eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
-    "eval fixture tsurf missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
-    tsurfCfg.tsurf.template.allowUnsafePlaceholders;
+  fixture-mode-services = mkCheck
+    "fixture-mode-services"
+    "services eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
+    "eval fixture services missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
+    servicesCfg.tsurf.template.allowUnsafePlaceholders;
 
-  fixture-mode-ovh = mkCheck
-    "fixture-mode-ovh"
-    "ovh eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
-    "eval fixture ovh missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
+  fixture-mode-dev = mkCheck
+    "fixture-mode-dev"
+    "dev eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
+    "eval fixture dev missing allowUnsafePlaceholders — check flake.nix mkEvalFixture"
     devCfg.tsurf.template.allowUnsafePlaceholders;
 
   fixture-output-names = mkCheck
     "fixture-output-names"
     "public flake exports only clearly named eval fixture outputs"
-    "public flake still exports deploy-looking nixosConfigurations.tsurf or tsurf-dev"
-    (
-      builtins.hasAttr "eval-tsurf" self.nixosConfigurations
-      && builtins.hasAttr "eval-tsurf-dev" self.nixosConfigurations
-      && !(builtins.hasAttr "tsurf" self.nixosConfigurations)
-      && !(builtins.hasAttr "tsurf-dev" self.nixosConfigurations)
-    );
+    "public flake still exports deploy-looking nixosConfigurations (non-eval-prefixed)"
+    (let
+      names = builtins.attrNames self.nixosConfigurations;
+    in builtins.length names > 0 && builtins.all (name: lib.hasPrefix "eval-" name) names);
 
   public-deploy-empty = mkCheck
     "public-deploy-empty"
@@ -315,15 +312,15 @@ in
 
   dev-agent-not-in-template = mkCheck
     "dev-agent-not-in-template"
-    "dev-agent service not defined in public ovh config (opt-in works)"
-    "dev-agent service defined in public ovh config — should be opt-in only"
+    "dev-agent service not defined in public dev config (opt-in works)"
+    "dev-agent service defined in public dev config — should be opt-in only"
     (!(builtins.hasAttr "dev-agent" devCfg.systemd.services));
 
   restic-opt-in = mkCheck
     "restic-opt-in"
-    "restic backup not active in public tsurf config (opt-in works)"
+    "restic backup not active in public services config (opt-in works)"
     "restic backup active in public template — services.resticStarter.enable should be false"
-    (!tsurfCfg.services.resticStarter.enable);
+    (!servicesCfg.services.resticStarter.enable);
 
   # Stale-phrase check: banned phrases must not appear in key docs.
   # Prevents reintroduction of outdated security claims.
@@ -408,10 +405,10 @@ in
 
   # --- Phase 115: operator/agent user split ---
 
-  agent-user-exists-ovh = mkCheck
-    "agent-user-exists-ovh"
-    "ovh agent user exists and is a normal user"
-    "ovh agent user missing or not a normal user"
+  agent-user-exists-dev = mkCheck
+    "agent-user-exists-dev"
+    "dev host agent user exists and is a normal user"
+    "dev host agent user missing or not a normal user"
     (builtins.hasAttr devAgentUser devCfg.users.users
      && (builtins.getAttr devAgentUser devCfg.users.users).isNormalUser);
 
@@ -429,8 +426,8 @@ in
 
   agent-egress-targets-agent-user = mkCheck
     "agent-egress-targets-agent-user"
-    "ovh agent egress control targets agent user"
-    "ovh agent egress control targets wrong user"
+    "dev host agent egress control targets agent user"
+    "dev host agent egress control targets wrong user"
     (devCfg.services.agentSandbox.egressControl.user == devAgentUser);
 
   agent-uid-explicit = mkCheck
@@ -484,12 +481,12 @@ in
     "syncthing-discovery-disabled"
     "Syncthing global announce and relays disabled by default"
     "Syncthing global announce or relays still enabled"
-    (tsurfCfg.services.syncthing.settings.options.globalAnnounceEnabled == false
-     && tsurfCfg.services.syncthing.settings.options.relaysEnabled == false);
+    (servicesCfg.services.syncthing.settings.options.globalAnnounceEnabled == false
+     && servicesCfg.services.syncthing.settings.options.relaysEnabled == false);
 
   syncthing-no-public-bep =
     let
-      ports = tsurfCfg.networking.firewall.allowedTCPPorts;
+      ports = servicesCfg.networking.firewall.allowedTCPPorts;
     in
     mkCheck
       "syncthing-no-public-bep"
@@ -509,8 +506,8 @@ in
        && !(lib.hasInfix "pkgs.codex" source)
        && !(lib.hasInfix "pkgs.pi-coding-agent" source));
 
-  agent-slice-exists-ovh = mkCheck
-    "agent-slice-exists-ovh"
+  agent-slice-exists-dev = mkCheck
+    "agent-slice-exists-dev"
     "tsurf-agents systemd slice defined on dev host"
     "tsurf-agents slice missing from dev host"
     (builtins.hasAttr "tsurf-agents" devCfg.systemd.slices);
@@ -572,8 +569,8 @@ in
 
   # --- Phase 120: agent API key ownership (SEC-04) ---
 
-  agent-api-key-ownership-ovh = mkCheck
-    "agent-api-key-ownership-ovh"
+  agent-api-key-ownership-dev = mkCheck
+    "agent-api-key-ownership-dev"
     "anthropic-api-key and openai-api-key owned by agent user on dev host"
     "SECURITY: anthropic-api-key or openai-api-key not owned by agent user — wrapper cannot read secrets"
     (devCfg.sops.secrets."anthropic-api-key".owner == devCfg.tsurf.agent.user
@@ -581,24 +578,24 @@ in
 
   # --- Phase 124: Nix daemon user restrictions ---
 
-  nix-allowed-users-tsurf = mkCheck
-    "nix-allowed-users-tsurf"
-    "tsurf nix.settings.allowed-users restricts daemon access"
-    "tsurf nix.settings.allowed-users is not set or too permissive"
-    (builtins.elem "root" tsurfCfg.nix.settings.allowed-users
-     && builtins.elem "@wheel" tsurfCfg.nix.settings.allowed-users
-     && !(builtins.elem "*" tsurfCfg.nix.settings.allowed-users));
+  nix-allowed-users-services = mkCheck
+    "nix-allowed-users-services"
+    "services host nix.settings.allowed-users restricts daemon access"
+    "services host nix.settings.allowed-users is not set or too permissive"
+    (builtins.elem "root" servicesCfg.nix.settings.allowed-users
+     && builtins.elem "@wheel" servicesCfg.nix.settings.allowed-users
+     && !(builtins.elem "*" servicesCfg.nix.settings.allowed-users));
 
-  nix-trusted-users-tsurf = mkCheck
-    "nix-trusted-users-tsurf"
-    "tsurf nix.settings.trusted-users is root-only"
-    "tsurf nix.settings.trusted-users includes non-root entries"
-    (tsurfCfg.nix.settings.trusted-users == [ "root" ]);
+  nix-trusted-users-services = mkCheck
+    "nix-trusted-users-services"
+    "services host nix.settings.trusted-users is root-only"
+    "services host nix.settings.trusted-users includes non-root entries"
+    (servicesCfg.nix.settings.trusted-users == [ "root" ]);
 
-  nix-allowed-users-ovh-includes-agent = mkCheck
-    "nix-allowed-users-ovh-includes-agent"
-    "ovh nix.settings.allowed-users includes agent user (allowNixDaemon is on)"
-    "ovh nix.settings.allowed-users missing agent user despite allowNixDaemon=true"
+  nix-allowed-users-dev-includes-agent = mkCheck
+    "nix-allowed-users-dev-includes-agent"
+    "dev host nix.settings.allowed-users includes agent user (allowNixDaemon is on)"
+    "dev host nix.settings.allowed-users missing agent user despite allowNixDaemon=true"
     (builtins.elem devCfg.tsurf.agent.user devCfg.nix.settings.allowed-users);
 
   # --- Phase 124: Clone-repos credential safety ---
@@ -671,7 +668,7 @@ in
       "systemd-hardening-baseline"
       "All project services have SystemCallArchitectures=native"
       "SECURITY: one or more services missing SystemCallArchitectures=native"
-      (hasSCA tsurfCfg.systemd.services.nix-dashboard
+      (hasSCA servicesCfg.systemd.services.nix-dashboard
        && hasSCA devCfg.systemd.services.syncthing
        && lib.hasInfix "SystemCallArchitectures = \"native\"" (builtins.readFile ../../extras/dashboard.nix)
        && lib.hasInfix "SystemCallArchitectures = \"native\"" resticSource
@@ -739,15 +736,15 @@ in
        && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" wrapperSource)
        && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" launcherSource));
 
-  example-greeter-uses-raw-claude =
+  example-greeter-uses-agent-timers =
     let
       source = builtins.readFile ../../examples/private-overlay/modules/greeter.nix;
     in
     mkCheck
-      "example-greeter-uses-raw-claude"
-      "example greeter calls the raw Claude binary inside its own nono sandbox"
-      "examples/private-overlay/modules/greeter.nix still shells out to the interactive claude wrapper"
-      (lib.hasInfix "pkgs.claude-code" source
+      "example-greeter-uses-agent-timers"
+      "example greeter uses the agentTimers abstraction"
+      "examples/private-overlay/modules/greeter.nix should use agentTimers, not manual nono/claude invocation"
+      (lib.hasInfix "agentTimers" source
        && !(lib.hasInfix "-- claude -p" source));
 
 }

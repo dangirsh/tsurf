@@ -1,7 +1,7 @@
-# hosts/dev/default.nix — dev host (e.g. OVH VPS)
+# hosts/dev/default.nix — example agent/dev host
 # Role: agent development and sandboxed execution via agent-sandbox.nix + nono.nix.
 # Clone-repos activation script initializes project directories on first boot.
-# Private overlay adds repo lists, agent fleet config, and host-specific service wiring.
+# Private overlay replaces this with real host config, repo lists, and agent fleet wiring.
 { config, inputs, lib, pkgs, ... }:
 let
   agentCfg = config.tsurf.agent;
@@ -47,11 +47,10 @@ in {
     };
   };
 
-  networking.hostName = "tsurf-dev";
-  time.timeZone = "Europe/Berlin";
+  networking.hostName = "dev"; # REPLACE in private overlay
+  time.timeZone = "UTC"; # REPLACE
   i18n.defaultLocale = "C.UTF-8";
 
-  # OVH uses DHCP for static assignment.
   networking.useDHCP = true;
 
   # @decision AGENT-01, AGENT-02: Idempotent repo cloning on activation (clone-only, never pull)
@@ -64,16 +63,16 @@ in {
   };
 
   # --- Host-specific shared module settings ---
-  boot.loader.grub.device = "/dev/sda";
-  sops.defaultSopsFile = ../../secrets/ovh.yaml;
+  boot.loader.grub.device = "/dev/sda"; # REPLACE
+  sops.defaultSopsFile = ../../secrets/example.yaml; # REPLACE with per-host secrets
   sops.age.sshKeyPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
 
-  # @decision OVH-01: Port 22 open on public interface for bootstrap and deploy access.
-  # OVH VPS has no Tailscale pre-installed; SSH must be public until Tailscale is up.
+  # @decision DEV-01: Port 22 open on public interface for bootstrap and deploy access.
+  # Template hosts may not have Tailscale up on first boot, so SSH stays public initially.
   # Key-only auth enforced by networking.nix. fail2ban is disabled (SEC83-01).
   services.openssh.openFirewall = lib.mkForce true;
 
-  # @decision OVH-02: Explicit hostKeys path points directly to /persist/ to avoid
+  # @decision DEV-02: Explicit hostKeys path points directly to /persist/ to avoid
   # impermanence mount timing races on first boot. The etc-ssh.mount unit mounts
   # /persist/etc/ssh/ over /etc/ssh/, but if sshd starts before the mount completes,
   # it fails with "no such file". By pointing sshd directly at /persist/etc/ssh/,
@@ -88,12 +87,6 @@ in {
   services.nonoSandbox.enable = true;
   services.agentSandbox.allowNixDaemon = true;
   services.agentSandbox.egressControl.enable = true;
-  services.agentSandbox.extraAgents = [{
-    name = "agent-sandbox-e2e";
-    package = pkgs.sandbox-probe-e2e;
-    binary = "sandbox-probe-e2e";
-    credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
-  }];
 
   networking.useNetworkd = lib.mkForce false;
 

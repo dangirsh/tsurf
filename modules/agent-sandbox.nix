@@ -19,6 +19,7 @@
 let
   cfg = config.services.agentSandbox;
   agentCfg = config.tsurf.agent;
+  nonoCfg = config.services.nonoSandbox;
   agentRuntimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.util-linux ];
 
   mkAgent = { name, realPkg, realBin, credentials }:
@@ -102,6 +103,129 @@ let
         credentials = a.credentials;
       }) cfg.extraAgents);
 
+  mkTimerCredential = credName:
+    let
+      cred = nonoCfg._credentialDefs.${credName};
+    in {
+      inherit (cred) upstream inject_header credential_format;
+      credential_key = "env://${cred.envVar}";
+      env_var = cred.envVar;
+    };
+
+  mkTimerProfile = name: timerCfg: {
+    extends = "claude-code";
+    meta = {
+      inherit name;
+      version = "1.0.0";
+      description = timerCfg.description;
+      author = "tsurf";
+    };
+    filesystem = {
+      allow = timerCfg.filesystem.allow;
+      allow_file = timerCfg.filesystem.allowFile;
+    };
+    network = {
+      block = false;
+      custom_credentials = lib.genAttrs timerCfg.credentials mkTimerCredential;
+    };
+    workdir.access = "readwrite";
+    interactive = false;
+  };
+
+  mkTimerScript = name: timerCfg:
+    let
+      credentialFlags = lib.concatMapStringsSep " " (credName: "--credential ${credName}") timerCfg.credentials;
+      cliArgs =
+        if timerCfg.cliArgs == [ ]
+        then ""
+        else lib.concatMapStringsSep " " lib.escapeShellArg timerCfg.cliArgs;
+      promptArg = lib.escapeShellArg timerCfg.prompt;
+      envChecks = lib.concatMapStrings (credName:
+        let cred = nonoCfg._credentialDefs.${credName}; in
+        ": \"\${${cred.envVar}:?set by systemd EnvironmentFile}\"\n"
+      ) timerCfg.credentials;
+      commandParts = builtins.filter (part: part != "") [
+        "exec nono run"
+        "--profile /etc/nono/profiles/${name}.json"
+        "--net-allow"
+        credentialFlags
+        "-- ${timerCfg.package}/bin/${timerCfg.binary}"
+        cliArgs
+        promptArg
+      ];
+      commandText = lib.concatStringsSep " \\\n  " commandParts;
+    in
+    pkgs.writeShellScript "${name}-agent" ''
+      set -euo pipefail
+      ${envChecks}${commandText}
+    '';
+
+  timerProfileEtc =
+    lib.mapAttrs'
+      (name: timerCfg:
+        lib.nameValuePair "nono/profiles/${name}.json" {
+          source = pkgs.writeText "${name}-nono-profile.json" (builtins.toJSON (mkTimerProfile name timerCfg));
+        })
+      cfg.agentTimers;
+
+  timerEnvTemplates =
+    lib.mapAttrs'
+      (name: timerCfg:
+        lib.nameValuePair "${name}-env" {
+          content = lib.concatMapStrings (credName:
+            let cred = nonoCfg._credentialDefs.${credName}; in
+            "${cred.envVar}=${config.sops.placeholder.${cred.secretName}}\n"
+          ) timerCfg.credentials;
+        })
+      cfg.agentTimers;
+
+  timerServices =
+    lib.mapAttrs
+      (name: timerCfg: {
+        description = timerCfg.description;
+        wants = [ "network-online.target" ];
+        after = [ "network-online.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = agentCfg.user;
+          WorkingDirectory = timerCfg.workingDirectory;
+          ExecStart = mkTimerScript name timerCfg;
+          EnvironmentFile = config.sops.templates."${name}-env".path;
+          Slice = "tsurf-agents.slice";
+          MemoryMax = timerCfg.memoryMax;
+          TasksMax = timerCfg.tasksMax;
+          NoNewPrivileges = true;
+          PrivateTmp = true;
+          ProtectClock = true;
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectKernelLogs = true;
+          ProtectControlGroups = true;
+          LockPersonality = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+        };
+      })
+      cfg.agentTimers;
+
+  timerTimers =
+    lib.mapAttrs'
+      (name: timerCfg:
+        lib.nameValuePair name {
+          description = "Run ${name} agent on schedule";
+          wantedBy = [ "timers.target" ];
+          timerConfig = {
+            OnCalendar = timerCfg.timer.onCalendar;
+            Persistent = timerCfg.timer.persistent;
+          };
+        })
+      (lib.filterAttrs (_: timerCfg: timerCfg.timer.onCalendar != null) cfg.agentTimers);
+
+  timerTmpfiles =
+    lib.mapAttrsToList
+      (_: timerCfg: "d ${timerCfg.workingDirectory} 0755 ${agentCfg.user} users -")
+      cfg.agentTimers;
+
 in
 {
   options.services.agentSandbox = {
@@ -156,6 +280,84 @@ in
         description = "Username whose egress is restricted.";
       };
     };
+
+    agentTimers = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule {
+        options = {
+          description = lib.mkOption {
+            type = lib.types.str;
+            description = "Systemd service description.";
+          };
+          prompt = lib.mkOption {
+            type = lib.types.str;
+            description = "Prompt passed to the agent CLI as the final argument.";
+          };
+          package = lib.mkOption {
+            type = lib.types.package;
+            default = pkgs.claude-code;
+            description = "Package containing the timer agent binary.";
+          };
+          binary = lib.mkOption {
+            type = lib.types.str;
+            default = "claude";
+            description = "Binary name within the timer agent package.";
+          };
+          cliArgs = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ "-p" "--permission-mode=bypassPermissions" ];
+            description = "CLI arguments inserted between the binary and prompt.";
+          };
+          workingDirectory = lib.mkOption {
+            type = lib.types.str;
+            description = "Working directory for the systemd service.";
+          };
+          filesystem = {
+            allow = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Extra directories granted to the generated nono profile.";
+            };
+            allowFile = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Extra files granted to the generated nono profile.";
+            };
+          };
+          credentials = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ "anthropic" ];
+            description = "Credential names from services.nonoSandbox credential definitions.";
+          };
+          timer = {
+            onCalendar = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "systemd OnCalendar expression. Null disables the timer.";
+            };
+            persistent = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Whether missed timer runs should execute on boot.";
+            };
+          };
+          memoryMax = lib.mkOption {
+            type = lib.types.str;
+            default = "2G";
+            description = "MemoryMax applied to the generated systemd service.";
+          };
+          tasksMax = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 64;
+            description = "TasksMax applied to the generated systemd service.";
+          };
+        };
+      });
+      default = { };
+      description = ''
+        Declarative oneshot and timer-driven agent services that auto-generate
+        their nono profile, environment template, launch script, and systemd units.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -192,6 +394,12 @@ in
         ".gitconfig"
         ".bash_history"
       ];
+
+    environment.etc = timerProfileEtc;
+    sops.templates = timerEnvTemplates;
+    systemd.services = timerServices;
+    systemd.timers = timerTimers;
+    systemd.tmpfiles.rules = timerTmpfiles;
 
     # @decision SANDBOX-NET-01: UID-based nftables egress filtering restricts the agent
     #   user to a whitelist of TCP destination ports. DNS (UDP 53) is always allowed.

@@ -21,7 +21,7 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
 ## Three-layer test architecture
 
 1. **Eval checks (offline, fast, ~30s)** -- `nix flake check`
-   - Validates NixOS config evaluation for both `tsurf` and `ovh` hosts.
+   - Validates NixOS config evaluation for both example `services` and `dev` hosts.
    - Runs 50+ assertions in `tests/eval/config-checks.nix`.
    - Catches missing imports, broken option references, assertion violations, and type errors.
    - **Always run before committing.** No exceptions.
@@ -31,7 +31,7 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
    - Cannot run on Contabo/OVH VPS (no nested KVM). Run on local dev machine only.
    - Exposed as a package (not a check) so `nix flake check` works everywhere.
 
-3. **Live tests (SSH to running hosts)** -- `nix run .#test-live -- --host tsurf`
+3. **Live tests (SSH to running hosts)** -- `nix run .#test-live -- --host <hostname>`
    - BATS tests over SSH to verify services on deployed hosts.
    - Only after deploy. Never during development.
    - JSON output: `scripts/run-tests.sh --live --json` (one JSON object per test).
@@ -59,8 +59,8 @@ my-check-name = mkCheck
 
 Access host configs:
 
-- `tsurfCfg` -- services host (Contabo)
-- `ovhCfg` -- dev host (OVH)
+- `servicesCfg` -- services host
+- `devCfg` -- dev host
 
 For source-based checks (verify module content without importing):
 
@@ -75,7 +75,7 @@ my-source-check =
 
 ## Debugging eval failures
 
-1. Read `nix flake check` output. The check name (for example `firewall-ports-tsurf`) maps directly to a derivation in `config-checks.nix`.
+1. Read `nix flake check` output. The check name (for example `firewall-ports-services`) maps directly to a derivation in `config-checks.nix`.
 2. Find that derivation to inspect the condition and failure message.
 3. Common causes:
    - **New file not tracked**: `git add modules/new-file.nix`

@@ -10,10 +10,9 @@ bats_load_library bats-assert
   assert_http_ok "http://localhost:8384" "Syncthing GUI"
 }
 
-@test "${HOST}: nix-dashboard responds on localhost:8082 (tsurf only)" {
-  if ! is_tsurf; then
-    skip "nix-dashboard only on tsurf"
+@test "${HOST}: nix-dashboard responds on localhost:8082 (if present)" {
+  if ! remote systemctl is-active --quiet nix-dashboard.service 2>/dev/null; then
+    skip "nix-dashboard not active on this host"
   fi
   assert_http_ok "http://localhost:8082" "nix-dashboard"
 }
-
