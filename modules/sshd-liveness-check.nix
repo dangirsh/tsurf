@@ -47,4 +47,9 @@
       RandomizedDelaySec = "30s";
     };
   };
+
+  # --- Persistence: failure counter + last-rollback timestamp ---
+  environment.persistence."/persist".directories = [
+    "/var/lib/sshd-liveness-check"
+  ];
 }

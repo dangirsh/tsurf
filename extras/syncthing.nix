@@ -179,6 +179,12 @@ in
       };
     };
 
+    # --- Persistence: syncthing device keys + sync folders ---
+    environment.persistence."/persist".directories = [
+      "/home/dev/.config/syncthing"
+      "/home/dev/Sync"
+    ];
+
     services.dashboard.entries.syncthing = {
       name = "Syncthing";
       description = "File sync across devices";

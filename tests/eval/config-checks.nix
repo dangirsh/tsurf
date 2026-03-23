@@ -215,7 +215,7 @@ in
     "tsurf SSH host key is declared in impermanence persistence"
     "tsurf SSH host key not found in impermanence files — sshd may fail on reboot"
     (let
-      source = builtins.readFile ../../modules/impermanence.nix;
+      source = builtins.readFile ../../modules/networking.nix;
     in
       lib.hasInfix "\"/etc/ssh/ssh_host_ed25519_key\"" source);
 
@@ -515,7 +515,7 @@ in
 
   impermanence-agent-home =
     let
-      source = builtins.readFile ../../modules/impermanence.nix;
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
       expectedSuffixes = [
         ".claude"
         ".config/claude"
@@ -528,8 +528,8 @@ in
     in
     mkCheck
       "impermanence-agent-home"
-      "impermanence derives agent paths from agentCfg.home"
-      "impermanence.nix still hardcodes agent home paths or is missing agent state suffixes"
+      "agent-sandbox derives agent persist paths from agentCfg.home"
+      "agent-sandbox.nix still hardcodes agent home paths or is missing agent state suffixes"
       (lib.hasInfix "agentCfg.home" source
        && !(lib.hasInfix "\"/home/agent/" source)
        && missingSuffixes == [ ]);

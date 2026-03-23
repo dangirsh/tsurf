@@ -41,5 +41,10 @@ in
       TasksMax = 1024;
     };
   };
+  # --- Persistence: project workspace ---
+  environment.persistence."/persist".directories = [
+    "/data/projects"
+  ];
+
   }; # end lib.mkIf
 }

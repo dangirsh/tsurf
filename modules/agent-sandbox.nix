@@ -179,6 +179,20 @@ in
       }) registeredAgents;
     }];
 
+    # --- Persistence: agent user home state ---
+    environment.persistence."/persist".directories =
+      map (path: "${agentCfg.home}/${path}") [
+        ".claude"
+        ".config/claude"
+        ".config/git"
+        ".local/share/direnv"
+      ];
+    environment.persistence."/persist".files =
+      map (path: "${agentCfg.home}/${path}") [
+        ".gitconfig"
+        ".bash_history"
+      ];
+
     # @decision SANDBOX-NET-01: UID-based nftables egress filtering restricts the agent
     #   user to a whitelist of TCP destination ports. DNS (UDP 53) is always allowed.
     #   Tailscale traffic is unrestricted. All other outbound traffic is dropped.

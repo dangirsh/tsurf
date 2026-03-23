@@ -172,4 +172,13 @@ in {
     order = 6;
     module = "networking.nix";
   };
+
+  # --- Persistence: network identity + SSH host keys ---
+  environment.persistence."/persist".directories = [
+    "/var/lib/tailscale"                 # Device keys, auth state, node identity
+  ];
+  environment.persistence."/persist".files = [
+    "/etc/ssh/ssh_host_ed25519_key"      # SSH host key — sops-nix age key derivation chain
+    "/etc/ssh/ssh_host_ed25519_key.pub"  # SSH host key (public)
+  ];
 }

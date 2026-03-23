@@ -196,6 +196,39 @@
           meta.description = "Run tsurf live BATS tests against a target host";
         };
 
+
+        persistence-audit = let
+          getDirs = cfg: map (d: d.directory) cfg.environment.persistence."/persist".directories;
+          getFiles = cfg: map (f: f.file) cfg.environment.persistence."/persist".files;
+          sorted = builtins.sort (a: b: a < b);
+          formatList = lst: lib.concatMapStringsSep "\n" (p: "  " + p) (sorted lst);
+          tsurfCfg = self.nixosConfigurations."eval-tsurf".config;
+          devCfg = self.nixosConfigurations."eval-tsurf-dev".config;
+          script = pkgs.writeShellApplication {
+            name = "persistence-audit";
+            text = ''
+              cat <<'EOF'
+=== eval-tsurf (services host) ===
+Directories:
+${formatList (getDirs tsurfCfg)}
+
+Files:
+${formatList (getFiles tsurfCfg)}
+
+=== eval-tsurf-dev (dev host) ===
+Directories:
+${formatList (getDirs devCfg)}
+
+Files:
+${formatList (getFiles devCfg)}
+EOF
+            '';
+          };
+        in {
+          type = "app";
+          program = "${script}/bin/persistence-audit";
+          meta.description = "Print merged persistence paths for all hosts";
+        };
         # @decision BOOT-06: Pinned nixos-anywhere via flake.lock (supply-chain safety).
         nixos-anywhere = {
           type = "app";

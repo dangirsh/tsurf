@@ -136,5 +136,22 @@ in
         '';
       }
     ];
+
+    # --- Persistence: operator + root home state ---
+    environment.persistence."/persist".directories = [
+      "/home/dev/.ssh"
+      "/home/dev/.claude"
+      "/home/dev/.config/claude"
+      "/home/dev/.config/git"
+      "/home/dev/.local/share/direnv"
+      "/root/.ssh"
+      "/root/.config/nix"
+      "/root/.docker"
+    ];
+    environment.persistence."/persist".files = [
+      "/home/dev/.gitconfig"
+      "/home/dev/.bash_history"
+      "/root/.gitconfig"
+    ];
   };
 }

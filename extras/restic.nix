@@ -73,6 +73,11 @@ in
     '';
   };
 
+  # --- Persistence: restic chunk cache ---
+  environment.persistence."/persist".directories = [
+    "/root/.cache/restic"
+  ];
+
   systemd.tmpfiles.rules = [ "d /var/lib/restic-status 0755 root root -" ];
 
   # Minimal HTTP server so homepage can display last backup time without Prometheus.
