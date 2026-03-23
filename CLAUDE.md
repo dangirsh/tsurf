@@ -31,7 +31,6 @@ extras/                  # Optional batteries — import what you need
   dev-agent.nix        # Persistent autonomous Claude agent (zmx + systemd)
   opencode.nix         # opencode AI coding assistant (sandboxed via agentSandbox.extraAgents)
   pi.nix               # pi coding agent (sandboxed via agentSandbox.extraAgents)
-  docker.nix           # Docker engine (--iptables=false), NAT
   restic.nix           # Restic backup to B2 + status server
   syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
   home/
@@ -52,14 +51,13 @@ tests/
 ## Key Decisions
 
 - **Flakes + home-manager**: Reproducible, lockfile-pinned (nixos-25.11)
-- **Docker**: Engine with `--iptables=false`; NAT via nftables; docker0 NOT trusted by default
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
 - **Agent tooling**: Core ships Claude Code sandboxing; optional agent CLIs (Codex, pi, opencode) layer in through `extras/`. nono sandboxing is shared via `nono.nix` and `agent-sandbox.nix`
 - **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, nix daemon socket opt-in. Per-wrapper credential allowlists (least privilege). Proxy credential injection — nono generates per-session phantom tokens; real keys never reach the child process.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
 - **Network model**: Only ports 22 + 22000 on public firewall by default. Ports 80/443 conditional on nginx. All internal services bind 127.0.0.1 (dashboard, syncthing GUI). Tailscale for internal access.
-- **Privilege model**: `dev` is the operator (wheel, docker, human admin). `agent` runs sandboxed tools (no wheel, no docker). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
+- **Privilege model**: `dev` is the operator (wheel, human admin). `agent` runs sandboxed tools (no wheel). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
 
 ## Module Conventions & Patterns
@@ -151,7 +149,6 @@ In `tests/eval/config-checks.nix`:
 - **Never** embed credentials in URLs or CLI args.
 - **Never** weaken nono sandbox defaults in `nono.nix`.
 - **Never** add a public `--no-sandbox` path; unsandboxed execution belongs in a private overlay only.
-- **Never** mount Docker socket without a documented `@decision`.
 - **Never** add packages imperatively (`nix-env`, `nix profile install`) or re-enable `nix.channel.enable` / `nix.nixPath`.
 - **Never** remove `modules/break-glass-ssh.nix` from either host config.
 - **Never** omit `@decision` annotations for security-relevant module choices.
@@ -165,14 +162,12 @@ Run before every module or service commit:
 3. **New service** — Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts` and dashboard entry to `services.dashboard.entries`.
 4. **Sandbox impact** — Modifying `agent-compute.nix` or `nono.nix`? Verify `/run/secrets` and `~/.ssh` remain in the deny list. NEVER weaken nono sandbox defaults.
 5. **Agent execution** — Public repo wrappers must stay brokered + sandboxed. If a trusted workflow needs unsandboxed execution, implement it in a private overlay.
-6. **Docker** — NEVER mount Docker socket without `@decision` annotation.
 7. **Package management** — NEVER use `nix-env`, `nix profile install`, or re-enable `nix.channel.enable` / `nix.nixPath`.
 8. **Break-glass key** — NEVER remove `modules/break-glass-ssh.nix` from either host config.
 9. **Validation** — `nix flake check` passes.
 
 ### Accepted Risks (documented, not actionable)
 
-- **Docker containers:** External service containers lack hardening (read-only rootfs, cap-drop). NixOS-managed containers inherit module defaults.
 - **Pre-built binaries:** zmx and cass lack signature verification — mitigated by SHA256 hash pinning.
 - **Sandbox read access:** Sandboxed agents have read-only access to the current git repo root (not all of `/data/projects`). No `.env` files on server (sops-nix handles secrets). Unrestricted network egress (agents need API/git access; nono allowlist filtering not yet available on headless servers). Metadata endpoint blocked at nftables level.
 - **Public template users:** `users.allowNoPasswordLogin = true` required for eval without real credential hashes. Private overlay replaces `users.nix` entirely.
@@ -199,7 +194,7 @@ Run before every module or service commit:
 
 ## Sandbox Awareness
 
-When running inside the nono sandbox (as the `agent` user — no wheel, no docker):
+When running inside the nono sandbox (as the `agent` user — no wheel):
 
 - **Brokered execution**: When operator (`dev`) invokes `claude` or any enabled extra wrapper such as `codex`, `pi`, or `opencode`, the wrapper uses `sudo` + `systemd-run --uid=agent` to drop to the `agent` user before any sandbox or credential logic runs. The operator never directly execs agent binaries with credentials. When already running as `agent` (e.g. `dev-agent.nix`), the wrapper execs directly (no double privilege drop).
 - **Immutable launchers**: The privileged path is one launcher per agent (`tsurf-launch-claude`, `tsurf-launch-codex`, etc.), not a generic env-configurable root helper.

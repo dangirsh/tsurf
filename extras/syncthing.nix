@@ -165,7 +165,7 @@ in
 
         gui = {
           # @decision SEC47-21: Host check re-enabled (default)
-          # @rationale: Only localhost access (homepage siteMonitor). Docker bridge not used.
+          # @rationale: Only localhost access (homepage siteMonitor). 
           insecureSkipHostcheck = false;
         };
 

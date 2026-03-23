@@ -38,7 +38,6 @@ let
 
   moduleLabels = {
     "networking.nix" = "Networking";
-    "docker.nix" = "Containers";
     "restic.nix" = "Backup";
     "syncthing.nix" = "File Sync";
     "agent-compute.nix" = "Agent Compute";

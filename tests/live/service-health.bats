@@ -10,8 +10,6 @@ bats_load_library bats-assert
   assert_unit_active "tailscaled.service"
 }
 
-@test "${HOST}: docker.service is active" {
-  assert_unit_active "docker.service"
 }
 
 @test "${HOST}: syncthing.service is active" {

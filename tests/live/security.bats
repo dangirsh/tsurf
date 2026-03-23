@@ -73,19 +73,6 @@ bats_load_library bats-assert
   return 1
 }
 
-@test "${HOST}: Docker daemon has iptables=false" {
-  local config
-  config="$(remote cat /etc/docker/daemon.json 2>&1)" || {
-    echo "FAIL: cannot read /etc/docker/daemon.json"
-    return 1
-  }
-
-  if ! echo "$config" | jq -e ".iptables == false" > /dev/null 2>&1; then
-    echo "FAIL: daemon.json missing iptables=false"
-    echo "DEBUG: config=$config"
-    return 1
-  fi
-}
 
 @test "${HOST}: internal ports are absent from public nftables accept rules" {
   local nft_output

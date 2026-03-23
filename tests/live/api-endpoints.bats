@@ -17,15 +17,3 @@ bats_load_library bats-assert
   assert_http_ok "http://localhost:8082" "nix-dashboard"
 }
 
-@test "${HOST}: docker daemon responds to docker ps (tsurf only)" {
-  if ! is_tsurf; then
-    skip "container presence check only on tsurf"
-  fi
-
-  run remote docker ps --format "{{.Names}}"
-  if [[ "$status" -ne 0 ]]; then
-    echo "FAIL: docker ps failed with status='$status'"
-    echo "DEBUG: output: $output"
-    return 1
-  fi
-}

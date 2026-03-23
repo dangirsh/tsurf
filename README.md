@@ -26,7 +26,7 @@ These lead to the following design goals:
 - **Fully declarative:** Agents get maximal system context from the source files. Imperative package management is disabled by convention (channels removed, NIX_PATH cleared). Undeclared state is wiped on boot via [BTRFS](https://btrfs.readthedocs.io/) subvolume rollback ([impermanence](https://github.com/nix-community/impermanence)).
 - **Robust multi-host deployment:** [deploy-rs](https://github.com/serokell/deploy-rs) with [automatic rollbacks](https://github.com/serokell/deploy-rs?tab=readme-ov-file#magic-rollback) and build-time lockout prevention.
 - **Hardened server configuration:** [srvos](https://github.com/nix-community/srvos) [server profile](https://github.com/nix-community/srvos/tree/main/nixos/server) (key-only SSH, immutable users, sudo wheel-only, systemd watchdogs, no emergency mode), [Tailscale](https://tailscale.com/) zero-trust networking (use [tailnet lock](https://tailscale.com/docs/features/tailnet-lock)), nftables default-deny firewall, and localhost-first internal services.
-- **Optional batteries** (in [`extras/`](#extras)): Dashboard, Codex/pi/opencode wrappers, persistent agents, cost tracking, backups, file sync, Docker, and more. Each is a standalone module you [import and enable](#extras) individually.
+- **Optional batteries** (in [`extras/`](#extras)): Dashboard, Codex/pi/opencode wrappers, persistent agents, cost tracking, backups, file sync, and more. Each is a standalone module you [import and enable](#extras) individually.
 
 ## Example Use Cases
 
@@ -61,17 +61,16 @@ Optional modules in `extras/`. Import the file, then set the enable option:
 
 ```nix
 # hosts/my-host/default.nix
-imports = [ ../../extras/docker.nix ];
+imports = [ ../../extras/syncthing.nix ];
 
 # then in config:
-services.dockerStarter.enable = true;
+services.syncthingStarter.enable = true;
 ```
 
 | Module | Enable option | Description |
 |--------|--------------|-------------|
 | [`dashboard.nix`](extras/dashboard.nix) | `services.dashboard.enable` | Service dashboard with live systemd status |
 | [`cost-tracker.nix`](extras/cost-tracker.nix) | `services.costTracker.enable` | API cost tracking (Anthropic, OpenAI) |
-| [`docker.nix`](extras/docker.nix) | `services.dockerStarter.enable` | Docker engine with NixOS-managed NAT |
 | [`syncthing.nix`](extras/syncthing.nix) | `services.syncthingStarter.enable` | Cross-host file sync (tailnet-only by default) |
 | [`restic.nix`](extras/restic.nix) | `services.resticStarter.enable` | Encrypted backups to Backblaze B2 |
 | [`dev-agent.nix`](extras/dev-agent.nix) | `services.devAgent.enable` | Persistent autonomous Claude Code agent |
@@ -81,7 +80,7 @@ services.dockerStarter.enable = true;
 | [`home/`](extras/home/) | _(import as home-manager module)_ | git, SSH, direnv for the operator user |
 | [`home/cass.nix`](extras/home/cass.nix) | `programs.cass.enable` | [CASS](https://github.com/Dicklesworthstone/coding_agent_session_search) agent session indexer |
 
-All enable options default to `false`. In a [private overlay](#private-overlay), use `"${inputs.tsurf}/extras/docker.nix"` as the import path.
+All enable options default to `false`. In a [private overlay](#private-overlay), use `"${inputs.tsurf}/extras/syncthing.nix"` as the import path.
 
 ## Private overlay
 

@@ -34,7 +34,6 @@ strengthen or weaken these properties, so host-specific statements are called ou
 - Build-time assertions enforce that the agent user:
   - is not `dev`
   - is not in `wheel`
-  - is not in `docker`
 - `users.mutableUsers = false`.
 - `security.sudo.execWheelOnly = true`.
 - Raw agent binaries are not installed in `PATH` by
@@ -48,7 +47,7 @@ strengthen or weaken these properties, so host-specific statements are called ou
 
 | Identity | Default groups | Purpose | Enforced by |
 | --- | --- | --- | --- |
-| `dev` | `wheel`, `docker` | human admin, deploy, maintenance | `modules/users.nix` |
+| `dev` | `wheel` | human admin, deploy, maintenance | `modules/users.nix` |
 | `agent` | `users` | sandboxed agent execution | `modules/users.nix` assertions |
 | `root` | n/a | activation, secrets, deploy, recovery | NixOS/systemd |
 
@@ -238,8 +237,6 @@ Credential scoping is least-privilege by wrapper:
   - `22000` only when `services.syncthingStarter.publicBep = true`
   - `80` and `443` only when `services.nginx.enable = true`
 - Cloud metadata access to `169.254.169.254` is dropped in nftables.
-- Docker is configured with `iptables = false`; NixOS owns firewall/NAT policy.
-- `docker0` is not trusted by default.
 
 SSH defaults:
 
@@ -360,7 +357,7 @@ Live checks:
 - The service-host role does not include the agent sandbox at all.
 - The sandbox does not make the current worktree immutable. Launching an agent
   from the control-plane repo gives that agent write access to the repo.
-- `dev` remains a trusted administrative user with `wheel` and `docker`.
+- `dev` remains a trusted administrative user with `wheel`.
 - The dev-host role explicitly grants the agent user access to the Nix daemon
   socket as an allowed, but not trusted, user.
 - [`extras/dev-agent.nix`](/data/projects/tsurf/extras/dev-agent.nix) runs Claude

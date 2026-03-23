@@ -1,11 +1,11 @@
 # modules/users.nix
-# @decision SYS-01: dev with sudo (wheel) + docker group; mutableUsers=false, execWheelOnly=true
+# @decision SYS-01: dev with sudo (wheel); mutableUsers=false, execWheelOnly=true
 # @decision SEC-106-01: allowUnsafePlaceholders gates insecure template defaults.
 #   When false (default), assertions reject placeholder SSH keys and passwordless login.
 #   Public template hosts set this to true for eval; real deploys must not.
-# @decision SEC-115-01: Operator/agent user split. 'dev' is the operator (wheel, docker,
+# @decision SEC-115-01: Operator/agent user split. 'dev' is the operator (wheel,
 #   human admin). tsurf.agent.user (default 'agent') runs sandboxed agent tools with
-#   no wheel, no docker. Assertions enforce these invariants at build time.
+#   no wheel. Assertions enforce these invariants at build time.
 { config, lib, pkgs, ... }:
 let
   cfg = config.tsurf.template;
@@ -56,12 +56,12 @@ in
   config = {
     users.mutableUsers = false;
 
-    # Operator user — human admin with wheel + docker
+    # Operator user — human admin with wheel
     users.users.dev = {
       isNormalUser = true;
       uid = cfg.devUid;
       group = "dev";
-      extraGroups = [ "wheel" "docker" ];
+      extraGroups = [ "wheel" ];
       subUidRanges = [{ startUid = 100000; count = 65536; }];
       subGidRanges = [{ startGid = 100000; count = 65536; }];
       openssh.authorizedKeys.keys = [

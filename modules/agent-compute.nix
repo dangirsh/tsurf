@@ -1,8 +1,8 @@
 # modules/agent-compute.nix
 # @decision: Package names are `claude-code` and `codex` from llm-agents overlay
 #   (not `llm-agents-claude-code` — the overlay adds packages directly to pkgs namespace)
-# @decision SANDBOX-11-01: Podman is enabled rootless; dockerCompat=false (conflicts with Docker)
-#   — sandbox uses a PATH-local docker->podman symlink derivation.
+# @decision SANDBOX-11-01: Podman is enabled rootless; dockerCompat=false to avoid
+#   — installing a system-wide docker->podman symlink (private overlay may enable Docker).
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentCompute;
@@ -23,8 +23,7 @@ in
   ];
 
   # Rootless Podman for sandboxed agent container workflows.
-  # dockerCompat = false because virtualisation.docker.enable = true in docker.nix —
-  # NixOS asserts they cannot coexist.
+  # dockerCompat = false because virtualisation.false — avoids system-wide symlink; private overlay may enable Docker.
   virtualisation.podman = {
     enable = true;
     dockerCompat = false;

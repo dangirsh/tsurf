@@ -12,7 +12,6 @@
     ../../modules/users.nix
     ../../modules/networking.nix
     ../../modules/secrets.nix
-    ../../extras/docker.nix
     ../../extras/syncthing.nix
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
@@ -34,13 +33,11 @@
 
   # --- Host-specific shared module settings ---
   boot.loader.grub.device = "/dev/sda";
-  networking.nat.externalInterface = "eth0";
   sops.defaultSopsFile = ../../secrets/tsurf.yaml;
 
   # Contabo VPS uses scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;
 
-  services.dockerStarter.enable = true;
   services.syncthingStarter.enable = true;
 
   services.dashboard.enable = true;

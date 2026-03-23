@@ -1,7 +1,7 @@
 # tests/vm/sandbox-behavioral.nix — NixOS VM test for sandbox boundary behavior.
 #
 # Tests the user privilege separation model: agent user exists, is not in
-# wheel/docker, can read wrapper-consumed agent-owned secrets, and cannot read
+# wheel, can read wrapper-consumed agent-owned secrets, and cannot read
 # root-owned operator secrets. This is an OS-level smoke test for the user and
 # secret-ownership model, NOT a full nono Landlock test. The live BATS tests in
 # tests/live/sandbox-behavioral.bats exercise the full nono sandbox on a

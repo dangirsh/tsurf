@@ -1,6 +1,5 @@
 # modules/impermanence.nix
 # @decision IMP-01: BTRFS subvolume rollback (not tmpfs) — server workloads need disk-backed root
-# @decision IMP-02: Docker on own @docker subvolume (not impermanence bind-mount) — avoids overlay2 nested mount conflicts
 # @decision IMP-03: Explicit per-path home persistence — maximally transparent about
 #   what state survives reboots. New tools may require adding paths; run
 #   `find /home/dev -maxdepth 2 -newer /home/dev/.bash_history -type d` to discover.
@@ -89,7 +88,6 @@ in {
       "/root/.ssh"                        # SSH keys, known_hosts, authorized_keys
       "/root/.cache/restic"               # Restic chunk cache (performance)
       "/root/.config/nix"                 # Nix config/registries
-      "/root/.docker"                     # Docker credentials/config
 
       # --- Project data ---
       "/data/projects"                    # Code repos and agent state
@@ -107,3 +105,4 @@ in {
     ];
   };
 }
+# MARKER_TEST_12345

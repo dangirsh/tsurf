@@ -110,7 +110,6 @@ in
       expectedServices = [
         "tailscaled"
         "syncthing"
-        "docker"
       ];
       missing = builtins.filter (name: !(builtins.hasAttr name devCfg.systemd.services)) expectedServices;
     in
@@ -215,11 +214,6 @@ in
     "agent-metadata-block nftables table not found"
     (builtins.hasAttr "agent-metadata-block" tsurfCfg.networking.nftables.tables);
 
-  oci-backend-docker = mkCheck
-    "oci-backend-docker"
-    "OCI containers backend is docker"
-    "OCI containers backend is ${tsurfCfg.virtualisation.oci-containers.backend}, expected docker"
-    (tsurfCfg.virtualisation.oci-containers.backend == "docker");
 
   dashboard-enabled = mkCheck
     "dashboard-enabled"
@@ -243,9 +237,9 @@ in
     in
     mkCheck
       "dashboard-entries"
-      "dashboard has ${toString entryCount} entries (>= 5)"
+      "dashboard has ${toString entryCount} entries (>= 4)"
       "dashboard has too few entries: ${toString entryCount}"
-      (entryCount >= 5);
+      (entryCount >= 4);
 
   dashboard-manifest = pkgs.runCommand "dashboard-manifest" { } ''
     echo '${builtins.toJSON (builtins.fromJSON tsurfCfg.environment.etc."dashboard/manifest.json".text)}' \

@@ -3,7 +3,7 @@
 # @decision RESTIC-02: Retention policy 7 daily, 5 weekly, 12 monthly
 # @decision RESTIC-03: sops.templates for B2 credentials env file, passwordFile for encryption key
 # @decision RESTIC-04: Public template keeps backupPrepareCommand as a no-op; private overlay can add service-specific dump hooks.
-# @decision RESTIC-05: Back up /persist subvolume (all stateful data). Ephemeral root, /nix, Docker subvolume excluded by design.
+# @decision RESTIC-05: Back up /persist subvolume (all stateful data). Ephemeral root and /nix excluded by design.
 # @decision RESTIC-06: Backup timestamp served on localhost:9200 (python3 http.server) for homepage widget — no Prometheus dependency.
 { config, lib, pkgs, ... }:
 let
