@@ -1,10 +1,6 @@
 # extras/pi.nix
 # Optional: pi coding agent sandboxed through a self-contained wrapper + launcher.
 # Requires: services.agentSandbox.enable = true and services.nonoSandbox.enable = true.
-# @decision SEC-127-EXTRAS-01: Optional extra-agent persistence derives from
-#   tsurf.agent.home, not a literal /home/agent path.
-# @decision EXTRAS-PRUNE-01: Core no longer provides extraAgents registration.
-#   This module now ships its own launcher + wrapper and a profile extension file.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.piAgent;
