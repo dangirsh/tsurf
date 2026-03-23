@@ -61,14 +61,11 @@ let
     (builtins.toJSON greeterProfile);
 
   # --- 2. The agent launch script ---
-  # Loads the API key into parent env for nono proxy (env:// URI).
-  # The child process receives only a per-session phantom token.
+  # systemd loads ANTHROPIC_API_KEY from a sops-rendered env file. nono reads
+  # it via env:// URI, then passes only a per-session phantom token onward.
   greeterScript = pkgs.writeShellScript "greeter-agent" ''
     set -euo pipefail
-    # Load API key into parent env for nono's proxy credential injection.
-    # nono reads this via env://ANTHROPIC_API_KEY, generates a phantom token,
-    # and the child process only sees the phantom token + localhost proxy URL.
-    export ANTHROPIC_API_KEY="$(cat "$ANTHROPIC_API_KEY_FILE")"
+    : "${ANTHROPIC_API_KEY:?set by systemd EnvironmentFile}"
     exec nono run \
       --profile /etc/nono/profiles/greeter.json \
       --net-allow \
@@ -80,6 +77,9 @@ let
 in {
   # --- 3. Install the nono profile ---
   environment.etc."nono/profiles/greeter.json".source = greeterProfileFile;
+  sops.templates."greeter-env".content = ''
+    ANTHROPIC_API_KEY=${config.sops.placeholder."anthropic-api-key"}
+  '';
 
   # --- 4. Create the output directory ---
   systemd.tmpfiles.rules = [
@@ -98,10 +98,7 @@ in {
       WorkingDirectory = "/var/lib/greeter";
       ExecStart = greeterScript;
 
-      # API key file for proxy credential injection (parent env only — child gets phantom token)
-      Environment = [
-        "ANTHROPIC_API_KEY_FILE=${config.sops.secrets."anthropic-api-key".path}"
-      ];
+      EnvironmentFile = config.sops.templates."greeter-env".path;
 
       # Resource limits (within the agent slice)
       Slice = "tsurf-agents.slice";

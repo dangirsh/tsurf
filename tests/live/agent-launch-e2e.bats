@@ -22,6 +22,21 @@ run_brokered_probe() {
   remote "sudo -u dev bash -lc 'cd /data/projects/tsurf && agent-sandbox-e2e ${PROBE_REPORT}'"
 }
 
+read_recent_launch_log() {
+  local since_epoch="$1"
+  remote "
+    for _ in 1 2 3 4 5; do
+      out=\$(journalctl -t agent-launch --since '@${since_epoch}' --no-pager -o cat 2>/dev/null || true)
+      if [ -n \"\$out\" ]; then
+        printf '%s\n' \"\$out\"
+        exit 0
+      fi
+      sleep 1
+    done
+    exit 1
+  "
+}
+
 read_report_value() {
   local key="$1"
   remote "grep '^${key}=' ${PROBE_REPORT} | cut -d= -f2-"
@@ -30,10 +45,13 @@ read_report_value() {
 @test "${HOST}: brokered launch runs as the configured agent with phantom Anthropic token" {
   if ! is_ovh; then skip "agent sandbox only on tsurf-dev"; fi
 
+  local since_epoch
+  since_epoch="$(remote "date +%s")"
+
   run run_brokered_probe
   assert_success
 
-  local report uid anthropic_key anthropic_base_url raw_secret
+  local report uid anthropic_key anthropic_base_url raw_secret launch_log
   report="$(remote "cat ${PROBE_REPORT}")"
   assert_contains "$report" "user=${AGENT_USER}" "probe report"
   assert_contains "$report" "secrets_read=denied" "probe report"
@@ -51,6 +69,13 @@ read_report_value() {
 
   anthropic_base_url="$(read_report_value anthropic_base_url)"
   [[ "$anthropic_base_url" =~ ^http://127\.0\.0\.1:[0-9]+/anthropic$ ]]
+
+  launch_log="$(read_recent_launch_log "$since_epoch")"
+  assert_contains "$launch_log" "mode=sandboxed" "agent launch log"
+  assert_contains "$launch_log" "agent=agent-sandbox-e2e" "agent launch log"
+  assert_contains "$launch_log" "user=${AGENT_USER}" "agent launch log"
+  assert_contains "$launch_log" "uid=${uid}" "agent launch log"
+  assert_contains "$launch_log" "repo_scope=git-worktree" "agent launch log"
 }
 
 @test "${HOST}: sudoers exposes only dedicated per-agent launchers without SETENV" {

@@ -140,7 +140,7 @@ environment.etc."nono/profiles/my-agent.json".source = profileFile;
 ```nix
 script = pkgs.writeShellScript "my-agent" ''
   set -euo pipefail
-  export ANTHROPIC_API_KEY="$(cat "$ANTHROPIC_API_KEY_FILE")"
+  : "${ANTHROPIC_API_KEY:?set by systemd EnvironmentFile}"
   exec nono run \
     --profile /etc/nono/profiles/my-agent.json \
     --net-allow \
@@ -151,7 +151,7 @@ script = pkgs.writeShellScript "my-agent" ''
 '';
 ```
 
-For timer/service agents that call `nono run` directly, use the raw package binary path (`${pkgs.claude-code}/bin/claude`, `${pkgs.codex}/bin/codex`, etc.), not the interactive PATH wrapper from `agent-sandbox.nix`. The wrapper enforces the repo-scoped brokered launch flow and will reject non-repo working directories. If the agent needs API access, declare `network.custom_credentials.<name>` in the profile and pass `--credential <name>` here. `--permission-mode=bypassPermissions` is safe here because nono is the actual permission boundary.
+For timer/service agents that call `nono run` directly, use the raw package binary path (`${pkgs.claude-code}/bin/claude`, `${pkgs.codex}/bin/codex`, etc.), not the interactive PATH wrapper from `agent-sandbox.nix`. The wrapper enforces the repo-scoped brokered launch flow and will reject non-repo working directories. If the agent needs API access, declare `network.custom_credentials.<name>` in the profile and pass `--credential <name>` here. Feed credentials through `EnvironmentFile`/templates, not manual `export ...="$(cat ...)"` shell patterns. `--permission-mode=bypassPermissions` is safe here because nono is the actual permission boundary.
 
 **4. Define the systemd service.**
 
@@ -162,7 +162,7 @@ systemd.services.my-agent = {
     User = config.tsurf.agent.user;          # runs as agent, not operator
     WorkingDirectory = "/var/lib/my-agent";
     ExecStart = script;
-    Environment = [ "ANTHROPIC_API_KEY_FILE=${config.sops.secrets."anthropic-api-key".path}" ];
+    EnvironmentFile = config.sops.templates."my-agent-env".path;
 
     # Resource limits
     Slice = "tsurf-agents.slice";
@@ -182,6 +182,14 @@ systemd.services.my-agent = {
     RestrictSUIDSGID = true;
   };
 };
+```
+
+Provide the API key via a sops template that systemd loads as an environment file:
+
+```nix
+sops.templates."my-agent-env".content = ''
+  ANTHROPIC_API_KEY=${config.sops.placeholder."anthropic-api-key"}
+'';
 ```
 
 **5. (Optional) Add a timer.**
@@ -217,9 +225,8 @@ For interactive use (not timer-based), tsurf ships a sandboxed `claude` wrapper 
 
 ```bash
 # SSH in as operator, then:
-sudo -u agent bash
 cd /data/projects/my-repo
-claude   # runs through nono sandbox automatically
+claude   # wrapper broker-launches as agent user and runs in nono sandbox
 ```
 
 All enabled wrappers handle credential injection from `/run/secrets/`, enforce the git-worktree requirement, and log launches to journald (`journalctl -t agent-launch`).

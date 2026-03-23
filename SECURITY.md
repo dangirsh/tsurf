@@ -277,10 +277,9 @@ Syncthing defaults:
 Public-repo safety properties:
 
 - The public flake exports no deploy targets.
-- [`examples/bootstrap/bootstrap-ovh.sh`](/data/projects/tsurf/examples/bootstrap/bootstrap-ovh.sh)
-  requires an explicit flake target and rejects public eval fixtures.
 - [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
-  refuses to deploy from the public repo.
+  refuses to deploy from the public repo, so public eval fixtures cannot be
+  installed through the shipped deploy path.
 
 Build-time lockout-prevention assertions require:
 

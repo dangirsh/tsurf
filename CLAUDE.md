@@ -125,20 +125,6 @@ Sandbox testing has three tiers:
 - Tests are idempotent and read-only.
 - Helpers in `tests/lib/common.bash`.
 
-### Adding eval checks
-
-In `tests/eval/config-checks.nix`:
-- Copy the `mkCheck` pattern already used in the file.
-- Use `tsurfCfg` for the services host and `devCfg` for the dev host.
-- For source checks on modules not imported directly, use `builtins.readFile` + `lib.hasInfix`.
-
-### Debugging eval failures
-
-- The failing check name maps directly to a derivation in `config-checks.nix`.
-- Read that check's failure message to identify which invariant failed.
-- Common causes: missing `git add`, missing host import, assertion violation in
-  `modules/networking.nix`, wrong option type.
-
 ## Security
 
 ### Hard-stop rules
@@ -171,22 +157,21 @@ See `SECURITY.md` "Accepted Risks" section for the complete list with rationale 
 
 ## Sandbox Awareness
 
-- **Brokered execution**: Operator (`dev`) wrappers use `sudo` + `systemd-run --uid=agent` to drop privileges. Immutable per-agent launchers — no env-configurable root helper.
-- **Scoped access**: Read access scoped to current git repo root. API keys become per-session phantom tokens via nono proxy. Denied: `/run/secrets/`, `~/.ssh`, `~/.bash_history`.
-- No `--no-sandbox` escape hatch in public wrappers.
-- Per-session cgroup limits in `tsurf-agents.slice`. Launch events logged to journald (`journalctl -t agent-launch`).
-- See `SECURITY.md` for the full credential flow and access control model.
+- Operator wrappers broker through `sudo` + `systemd-run --uid=agent` using immutable per-agent launchers.
+- Access stays repo-scoped; no public `--no-sandbox` path; denied paths include `/run/secrets/`, `~/.ssh`, and `~/.bash_history`.
+- Sessions run under `tsurf-agents.slice` limits and emit launch logs to journald (`journalctl -t agent-launch`).
+- See `SECURITY.md` for the full credential-flow and access-control model.
 
 ## Deployment Rules
 
-- **ALL deploys from the PRIVATE overlay**: `cd /path/to/private-tsurf && ./scripts/deploy.sh [--node tsurf|tsurf-dev]`
-- **This public repo refuses all deploys** (`tsurf.url` guard in `extras/scripts/deploy.sh`)
-- **NEVER** run `nixos-rebuild switch` directly — it bypasses deploy.sh's safety guard, watchdog, and shared lock
-- Public flake outputs (`.#eval-tsurf`, `.#eval-tsurf-dev`) are eval fixtures, not deployable configs
+- **ALL deploys from the PRIVATE overlay**: `cd /path/to/private-tsurf && ./scripts/deploy.sh [--node tsurf|tsurf-dev]`.
+- **This public repo refuses deploys** (`tsurf.url` guard in `extras/scripts/deploy.sh`) and exports eval fixtures only (`.#eval-tsurf`, `.#eval-tsurf-dev`).
+- **NEVER** use `nixos-rebuild switch` for normal deploys; it bypasses the deploy safety guard and lock/watcher flow.
 
 ## Recovery
 
-If SSH is lost: provider console/rescue mode → `nixos-rebuild switch --rollback` or mount persist subvolume and fix authorized_keys. After recovery: check `journalctl -b -1 -p err`, deploy via private overlay, verify break-glass key.
+If SSH is lost, use provider console/rescue mode to rollback (`nixos-rebuild switch --rollback`) or repair persisted `authorized_keys`, then redeploy from the private overlay.
+Keep `modules/break-glass-ssh.nix` in both host configs and follow `SECURITY.md` recovery invariants.
 
 ## Private Overlay
 
@@ -208,13 +193,3 @@ that imports this repo's modules. The private flake:
 - Let bindings for values used more than once (e.g., Tailscale IP in homepage.nix)
 - `tmp/` in project root for temporary files (never `/tmp/`) — convention from global CLAUDE.md
 - `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (users.nix, agent-compute.nix), or when the entire content differs (homepage.nix, syncthing.nix). For service modules (automaton, openclaw, matrix), import from public and override only what differs.
-
-## Module Change Checklist
-
-Before committing any module change:
-
-1. Run the full [Security pre-flight checklist](#pre-flight-checklist).
-2. Verify module placement follows [NixOS module authoring](#nixos-module-authoring) (<20 lines extends existing module, new service gets its own file).
-3. Ensure explicit host imports are updated in `hosts/services/default.nix` and/or `hosts/dev/default.nix`.
-4. Follow [Testing workflow](#testing-workflow), including `.test-status` output for the commit guard.
-5. If creating or restructuring a module, invoke `/nix-module`. If validating tests or check failures, invoke `/nix-test`.
