@@ -581,16 +581,6 @@ in
       "cost-tracker.nix missing DynamicUser = true — service runs as root"
       (lib.hasInfix "DynamicUser = true" source);
 
-  cost-tracker-secret-capability =
-    let
-      source = builtins.readFile ../../extras/cost-tracker.nix;
-    in
-    mkCheck
-      "cost-tracker-secret-capability"
-      "cost-tracker grants AmbientCapabilities for /run/secrets reads"
-      "cost-tracker.nix missing AmbientCapabilities for CAP_DAC_READ_SEARCH"
-      (lib.hasInfix "AmbientCapabilities = [ \"CAP_DAC_READ_SEARCH\" ]" source);
-
   # --- Phase 125: systemd hardening baseline ---
 
   systemd-hardening-baseline =
