@@ -1,11 +1,5 @@
 # modules/impermanence.nix
 # @decision IMP-01: BTRFS subvolume rollback (not tmpfs) — server workloads need disk-backed root
-# @decision IMP-04: /var/lib/private covers DynamicUser services
-# @decision IMP-138-01: Persistence declarations are colocated with their owning module.
-#   Each module declares its own environment.persistence."/persist" paths; the NixOS
-#   module system merges them. This file keeps only activation scripts and system-level
-#   paths that have no clear owning module. Run `nix run .#persistence-audit` for the
-#   merged flat list.
 { ... }: {
   # @decision IMP-05: Fix /etc permissions for sshd strict mode checks.
   system.activationScripts.fixEtcPermissions = {
