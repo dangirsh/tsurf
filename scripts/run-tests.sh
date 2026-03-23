@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # scripts/run-tests.sh — Run tsurf test suite
-# @decision TEST-48-01: Eval and live tests share a single wrapper for agent automation output.
 #
 # Usage:
 #   ./scripts/run-tests.sh                            # Eval checks only
