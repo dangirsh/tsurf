@@ -8,7 +8,8 @@
 # @decision COST-04: Multi-period costs (24h, 7d, 30d, 365d, 730d).
 #   Each provider fetched once per period. OpenAI supports project_ids filter.
 # @decision COST-05: DynamicUser=true — runs as ephemeral UID. CAP_DAC_READ_SEARCH
-#   allows reading /run/secrets/ files owned by root or agent user.
+#   is granted via AmbientCapabilities + CapabilityBoundingSet so the service can
+#   read configured secret files without running as root.
 {
   config,
   lib,
@@ -112,6 +113,7 @@ in
         RestrictRealtime = true;
         RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
         UMask = "0077";
+        AmbientCapabilities = [ "CAP_DAC_READ_SEARCH" ];
         CapabilityBoundingSet = [ "CAP_DAC_READ_SEARCH" ];
         RuntimeDirectory = "tsurf-cost-tracker";
         ReadWritePaths = [ (builtins.dirOf cfg.outputPath) ];

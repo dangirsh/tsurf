@@ -614,6 +614,28 @@ in
       "SECURITY: dev-agent.nix WorkingDirectory defaults to /tsurf (control-plane repo) — use agentCfg.projectRoot"
       (!(lib.hasInfix "projectRoot}/tsurf" source));
 
+  dev-agent-script-no-control-plane-output =
+    let
+      source = builtins.readFile ../../extras/scripts/dev-agent.sh;
+    in
+    mkCheck
+      "dev-agent-script-no-control-plane-output"
+      "dev-agent task writes research output to the configured working directory"
+      "SECURITY: dev-agent.sh hardcodes /data/projects/tsurf/RESEARCH.md instead of the current working directory"
+      (!(lib.hasInfix "/data/projects/tsurf/RESEARCH.md" source)
+       && lib.hasInfix "./RESEARCH.md" source);
+
+  cost-tracker-secret-capability =
+    let
+      source = builtins.readFile ../../extras/cost-tracker.nix;
+    in
+    mkCheck
+      "cost-tracker-secret-capability"
+      "cost-tracker explicitly grants CAP_DAC_READ_SEARCH ambiently for secret reads"
+      "cost-tracker.nix bounds CAP_DAC_READ_SEARCH without AmbientCapabilities — DynamicUser service cannot read configured secret files"
+      (lib.hasInfix "AmbientCapabilities = [ \"CAP_DAC_READ_SEARCH\" ]" source
+       && lib.hasInfix "CapabilityBoundingSet = [ \"CAP_DAC_READ_SEARCH\" ]" source);
+
   # --- Phase 124: Sandbox read-scope regression guards ---
   # Source-text checks for critical fail-closed patterns in agent-wrapper.sh.
   # Runtime behavioral coverage is in tests/live/sandbox-behavioral.bats.
