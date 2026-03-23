@@ -556,6 +556,7 @@ in
   agent-scripts-avoid-global-tmp =
     let
       cloneSource = builtins.readFile ../../extras/scripts/clone-repos.sh;
+      deploySource = builtins.readFile ../../extras/scripts/deploy.sh;
       devAgentSource = builtins.readFile ../../extras/scripts/dev-agent.sh;
     in
     mkCheck
@@ -563,6 +564,8 @@ in
       "agent helper scripts avoid /tmp for transient state"
       "agent helper scripts still write transient files under /tmp"
       (!(lib.hasInfix "mktemp /tmp" cloneSource)
+       && !(lib.hasInfix " /tmp/" deploySource)
+       && !(lib.hasInfix "=/tmp/" deploySource)
        && !(lib.hasInfix "mktemp /tmp" devAgentSource)
        && !(lib.hasInfix "/tmp/dev-agent-task" devAgentSource));
 
@@ -577,6 +580,16 @@ in
       "cost-tracker uses DynamicUser for least privilege"
       "cost-tracker.nix missing DynamicUser = true — service runs as root"
       (lib.hasInfix "DynamicUser = true" source);
+
+  cost-tracker-secret-capability =
+    let
+      source = builtins.readFile ../../extras/cost-tracker.nix;
+    in
+    mkCheck
+      "cost-tracker-secret-capability"
+      "cost-tracker grants AmbientCapabilities for /run/secrets reads"
+      "cost-tracker.nix missing AmbientCapabilities for CAP_DAC_READ_SEARCH"
+      (lib.hasInfix "AmbientCapabilities = [ \"CAP_DAC_READ_SEARCH\" ]" source);
 
   # --- Phase 125: systemd hardening baseline ---
 

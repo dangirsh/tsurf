@@ -61,7 +61,7 @@ let
       export AGENT_CREDENTIALS="anthropic:ANTHROPIC_API_KEY:anthropic-api-key"
 
       if [[ "$(id -un)" == "${agentCfg.user}" ]]; then
-        exec bash ${../scripts/agent-wrapper.sh} "$@"
+        exec ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
       fi
 
       exec /run/wrappers/bin/sudo ${launcher}/bin/${launcherName} "$@"

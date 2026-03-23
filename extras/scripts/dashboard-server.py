@@ -169,6 +169,13 @@ def make_handler(manifest_path, html_path):
                 status=status,
             )
 
+        def _redirect(self, location, status=302):
+            self.send_response(status)
+            self.send_header("Location", location)
+            self.send_header("Content-Length", "0")
+            self._security_headers()
+            self.end_headers()
+
         def do_GET(self):
             route = urlparse(self.path).path
             if route == "/":
@@ -186,9 +193,7 @@ def make_handler(manifest_path, html_path):
                 )
                 return
             if route == "/cost":
-                self.send_response(302)
-                self.send_header("Location", "/?tab=cost")
-                self.end_headers()
+                self._redirect("/?tab=cost")
                 return
             if route == "/api/cost-data":
                 self._send_json(build_cost_payload())

@@ -61,11 +61,9 @@ Important nuances:
 - Base Nix daemon policy is:
   - `allowed-users = [ "root" "@wheel" ]`
   - `trusted-users = [ "root" ]`
-- When `services.agentSandbox.allowNixDaemon = true`, the agent user is added to
-  `nix.settings.allowed-users` and the sandbox gets access to
-  `/nix/var/nix/daemon-socket`. This is enabled in
-  [`hosts/dev/default.nix`](/data/projects/tsurf/hosts/dev/default.nix).
-  The agent is still **not** a trusted Nix user.
+- The public core does **not** grant the agent user direct Nix daemon access.
+  Private overlays can loosen that boundary, but this repo does not ship such an
+  option today.
 
 ## Template And Fixture Safety
 
@@ -259,18 +257,10 @@ Syncthing defaults:
 
 - `nono` itself is configured with `network.block = false`; it is not the egress
   allowlist boundary here.
-- The `services.agentSandbox.egressControl` nftables table is the optional egress
-  boundary.
-- In the public repo:
-  - the service host does not use agent sandboxing
-  - the dev host enables egress control for the agent user
-- When enabled, agent-user egress allows:
-  - loopback
-  - established/related connections
-  - UDP `53`
-  - TCP `22`, `53`, `80`, `443`, `9418`
-  - all traffic over `tailscale0`
-- Other agent-user egress is logged with prefix `agent-egress-deny:` and dropped.
+- The public repo does not currently ship a separate per-agent egress allowlist
+  module. Outbound policy is therefore the normal host network policy plus any
+  nono proxy credential routing. Private overlays can add tighter egress
+  controls if needed.
 
 ## Deployment, Recovery, And Lockout Prevention
 

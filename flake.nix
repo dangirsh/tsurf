@@ -262,10 +262,20 @@ EOF
             nativeBuildInputs = [ pkgs.shellcheck ];
             src = ./.;
           } ''
-            shellcheck "$src"/tests/lib/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/extras/scripts/clone-repos.sh "$src"/extras/scripts/dev-agent.sh "$src"/scripts/sandbox-probe.sh
+            shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/extras/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/extras/scripts/dev-agent.sh "$src"/scripts/sandbox-probe.sh
             # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
             # SC2317: BATS @test blocks appear unreachable to shellcheck
             shellcheck --exclude=SC2317 "$src"/tests/live/*.bats
+            touch "$out"
+          '';
+          unit-tests = pkgs.runCommand "unit-tests" {
+            nativeBuildInputs = [ pkgs.bash pkgs.python3 ];
+            src = ./.;
+          } ''
+            export TSURF_TEST_TMPDIR="$TMPDIR/tsurf-unit-tests"
+            mkdir -p "$TSURF_TEST_TMPDIR"
+            bash "$src"/tests/unit/deploy-script.bash
+            python3 -m unittest discover -s "$src"/tests/unit -p 'test_*.py'
             touch "$out"
           '';
         };

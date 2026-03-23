@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2029
 # scripts/deploy.sh — Deploy a tsurf NixOS flake node
 #
 # Modes:
@@ -22,7 +23,24 @@
 #   Use --mode local for first deploys or when server is unreachable.
 set -euo pipefail
 
-FLAKE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+resolve_flake_dir() {
+  local script_path="$1"
+  local candidate
+  candidate="$(cd "$(dirname "$script_path")" && pwd -P)"
+
+  while [[ "$candidate" != "/" ]]; do
+    if [[ -f "$candidate/flake.nix" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+    candidate="$(dirname "$candidate")"
+  done
+
+  echo "ERROR: could not find flake.nix above $script_path" >&2
+  return 1
+}
+
+FLAKE_DIR="$(resolve_flake_dir "${BASH_SOURCE[0]}")"
 NODE=""
 TARGET=""
 TARGET_SET=false
@@ -32,7 +50,6 @@ FIRST_DEPLOY=false
 MAGIC_ROLLBACK=false
 POST_HOOK=""
 PUBLIC_IP=""
-SKIP_UPDATE=true
 SECONDS=0
 
 SYSTEMD_SERVICES=()
@@ -40,7 +57,6 @@ DEPLOY_COMPLETED=false
 PREV_SYSTEM=""
 WATCHDOG_ACTIVE=false
 DEPLOY_SUMMARY=""
-mkdir -p "$FLAKE_DIR/tmp"
 
 # Write deploy status JSON to remote host for dashboard consumption.
 # Called from success, failure, and rollback paths.
@@ -126,6 +142,12 @@ Examples:
 USAGE
 }
 
+if [[ "${TSURF_DEPLOY_LIB_ONLY:-0}" == "1" && "${BASH_SOURCE[0]}" != "$0" ]]; then
+  return 0
+fi
+
+mkdir -p "$FLAKE_DIR/tmp"
+
 # --- Argument parsing ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -159,7 +181,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --update-inputs)
-      SKIP_UPDATE=false
       shift
       ;;
     --post-hook)
