@@ -159,6 +159,23 @@ in
       # Always generate manifest so other hosts can reference it
       # via services.dashboard.extraManifests
       environment.etc."dashboard/manifest.json".text = manifestJson;
+
+      services.dashboard.entries.tailscale = {
+        name = "Tailscale";
+        description = "VPN mesh network";
+        systemdUnit = "tailscaled.service";
+        icon = "tailscale";
+        order = 5;
+        module = "networking.nix";
+      };
+
+      services.dashboard.entries.sshd = {
+        name = "SSH";
+        description = "Key-only, hardened (port 22)";
+        systemdUnit = "sshd.service";
+        order = 6;
+        module = "networking.nix";
+      };
     }
     (lib.mkIf cfg.enable {
     services.dashboard.entries.dashboard = {
