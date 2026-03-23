@@ -59,7 +59,7 @@ print(json.dumps({
     'node': sys.argv[4],
     'duration_seconds': int(sys.argv[5]),
     'summary': sys.argv[6]
-}))" "$status" "$ts" "$GIT_SHA" "$NODE" "$SECONDS" "$DEPLOY_SUMMARY")
+}, separators=(',', ':')))" "$status" "$ts" "$GIT_SHA" "$NODE" "$SECONDS" "$DEPLOY_SUMMARY")
   else
     # Fallback: basic escaping for git log output
     local esc
@@ -266,10 +266,24 @@ REMOTE_LOCK_HELD=true
 printf '%s\n' "$LOCK_INFO" | ssh "${SSH_OPTS[@]}" "$TARGET" "cat > '$REMOTE_LOCK_DIR/info.txt'" 2>/dev/null || true
 
 # --- Compute deploy summary from git log ---
-PREV_DEPLOY_SHA=$(ssh "${SSH_OPTS[@]}" "$TARGET" \
-  "cat /var/lib/deploy-status/status.json 2>/dev/null" 2>/dev/null \
-  | grep -o '"sha":"[^"]*"' | cut -d'"' -f4 \
-  || echo "")
+DEPLOY_STATUS_JSON="$(ssh "${SSH_OPTS[@]}" "$TARGET" \
+  "cat /var/lib/deploy-status/status.json 2>/dev/null" 2>/dev/null || true)"
+PREV_DEPLOY_SHA=""
+if [[ -n "$DEPLOY_STATUS_JSON" ]]; then
+  if command -v python3 &>/dev/null; then
+    PREV_DEPLOY_SHA="$(python3 -c "
+import json, sys
+try:
+    print(json.load(sys.stdin).get('sha', ''))
+except Exception:
+    print('')
+" <<< "$DEPLOY_STATUS_JSON")"
+  else
+    PREV_DEPLOY_SHA="$(printf '%s\n' "$DEPLOY_STATUS_JSON" \
+      | sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+      | head -n1)"
+  fi
+fi
 
 if [[ -n "$PREV_DEPLOY_SHA" ]] && git -C "$FLAKE_DIR" cat-file -t "$PREV_DEPLOY_SHA" &>/dev/null; then
   DEPLOY_SUMMARY=$(git -C "$FLAKE_DIR" log --oneline "${PREV_DEPLOY_SHA}..HEAD" -- 2>/dev/null | head -5)
@@ -296,7 +310,8 @@ if [[ "$FIRST_DEPLOY" != true ]]; then
         --unit=deploy-watchdog --description='Deploy rollback watchdog (300s)' -- \
         /bin/bash -c '$PREV_SYSTEM/bin/switch-to-configuration switch && \
           nix-env -p /nix/var/nix/profiles/system --set $PREV_SYSTEM && \
-          echo \"\$(date -u): WATCHDOG FIRED -- rolled back to $PREV_SYSTEM\" >> /tmp/deploy-watchdog.log'" \
+          mkdir -p /var/lib/deploy-status && \
+          echo \"\$(date -u): WATCHDOG FIRED -- rolled back to $PREV_SYSTEM\" >> /var/lib/deploy-status/watchdog.log'" \
       2>/dev/null; then
       WATCHDOG_ACTIVE=true
       echo "==> Watchdog scheduled — auto-rollback in 5 min if not cancelled."

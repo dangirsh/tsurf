@@ -67,9 +67,10 @@ case "$check" in
 
   check-identity)
     # Verify we are running as the agent user.
+    expected_user="${EXPECTED_AGENT_USER:-agent}"
     current_user="$(whoami)"
-    if [[ "$current_user" != "agent" ]]; then
-      echo "FAIL: running as '$current_user', expected 'agent'" >&2
+    if [[ "$current_user" != "$expected_user" ]]; then
+      echo "FAIL: running as '$current_user', expected '$expected_user'" >&2
       exit 1
     fi
     if [[ "$(id -u)" == "0" ]]; then
