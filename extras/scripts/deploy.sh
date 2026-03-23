@@ -13,14 +13,7 @@
 #   --magic-rollback  Enable deploy-rs magic rollback with 300s confirm timeout
 #   --help         Print usage
 #
-# @decision Manual deploy only — no CI/CD. NixOS handles incrementality.
-# @decision Full deploy-rs system activation every deploy — no partial/container-only.
-# @decision Magic rollback opt-in via --magic-rollback (300s confirm timeout).
-# @decision Single-pass service health check after deploy.
-# @decision No auto-commit of flake.lock — print reminder instead.
 # @decision DEPLOY-114-01: No repo-controlled post-deploy hooks — require explicit --post-hook.
-# @decision Remote build default (DEPLOY-01): --mode remote is faster on beefy servers.
-#   Use --mode local for first deploys or when server is unreachable.
 set -euo pipefail
 
 resolve_flake_dir() {
