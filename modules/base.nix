@@ -27,8 +27,6 @@
     #   "https://your-cache.cachix.org"
     # And add the corresponding public key to extra-trusted-public-keys:
     #   "your-cache.cachix.org-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    # Then in scripts/deploy-post.sh, push closures after deploy:
-    #   nix path-info --recursive /nix/var/nix/profiles/system | cachix push your-cache
     extra-substituters = [
       "https://cache.numtide.com"
     ];
