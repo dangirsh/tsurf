@@ -225,3 +225,44 @@ claude   # runs through nono sandbox automatically
 All enabled wrappers handle credential injection from `/run/secrets/`, enforce the git-worktree requirement, and log launches to journald (`journalctl -t agent-launch`).
 
 See `SECURITY.md` in the tsurf repo for the full access control model, credential flow architecture, and tailnet segmentation guidance.
+
+### Adding Docker
+
+Docker is not included in the public template. To add it in your private overlay:
+
+1. Create a Docker module (or copy from the public repo's git history):
+
+```nix
+# modules/docker.nix
+{ config, lib, ... }: {
+  virtualisation.docker = {
+    enable = true;
+    daemon.settings = {
+      iptables = false;        # NixOS owns the firewall
+      log-driver = "journald";
+    };
+  };
+  virtualisation.oci-containers.backend = "docker";
+  networking.nat = {
+    enable = true;
+    internalIPs = [ "172.16.0.0/12" ];
+  };
+}
+```
+
+2. Import it in your host config and add `dev` to the `docker` group:
+
+```nix
+# hosts/my-host/default.nix
+imports = [ ../../modules/docker.nix ];
+users.users.dev.extraGroups = [ "wheel" "docker" ];
+```
+
+3. Add a `/docker` BTRFS subvolume in your disko config for overlay2 storage:
+
+```nix
+"/docker" = {
+  mountpoint = "/var/lib/docker";
+  mountOptions = [ "compress=zstd" "noatime" ];
+};
+```
