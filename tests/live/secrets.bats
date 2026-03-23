@@ -41,9 +41,14 @@ bats_load_library bats-assert
 }
 
 @test "${HOST}: SSH host key exists for sops age key derivation" {
-  local key_path="/etc/ssh/ssh_host_ed25519_key"
-  if is_ovh; then
-    key_path="/persist/etc/ssh/ssh_host_ed25519_key"
+  local key_path
+  key_path="$(remote "sshd -T 2>/dev/null | awk '\$1 == \"hostkey\" && \$2 ~ /ssh_host_ed25519_key$/ { print \$2; exit }'")" || {
+    echo "FAIL: could not determine sshd host key path"
+    return 1
+  }
+
+  if [[ -z "$key_path" ]]; then
+    key_path="/etc/ssh/ssh_host_ed25519_key"
   fi
 
   run remote test -f "$key_path"

@@ -25,7 +25,7 @@ setup_file() {
 # The probe script is at /data/projects/tsurf/scripts/sandbox-probe.sh.
 run_sandbox_probe() {
   local check="$1"
-  remote "sudo -u ${AGENT_USER} bash -c 'cd /data/projects/tsurf && nono run --profile tsurf --read /data/projects/tsurf -- bash scripts/sandbox-probe.sh ${check}'"
+  remote "sudo -u ${AGENT_USER} bash -c 'cd /data/projects/tsurf && EXPECTED_AGENT_USER=${AGENT_USER} nono run --profile tsurf --read /data/projects/tsurf -- bash scripts/sandbox-probe.sh ${check}'"
 }
 
 @test "${HOST}: agent user identity is correct inside sandbox" {
