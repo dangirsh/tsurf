@@ -23,7 +23,7 @@ let
       url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-x64";
       # Replace with the actual hash:
       #   nix store prefetch-file "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-x64"
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = lib.fakeHash;
     };
     nativeBuildInputs = [ pkgs.autoPatchelfHook ];
     buildInputs = [ pkgs.stdenv.cc.cc.lib ];
