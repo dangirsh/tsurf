@@ -33,9 +33,10 @@ extras/                  # Optional batteries — import what you need
     default.nix        # home-manager: git/ssh/direnv inlined
     cass.nix           # CASS indexer timer (opt-in)
   scripts/             # Scripts for extras modules
-    deploy.sh          # deploy-rs wrapper (locking, watchdog, health check)
     clone-repos.sh     # Idempotent repo cloning activation script
 examples/
+  scripts/
+    deploy.sh          # Private-overlay deploy wrapper reference (tsurf.url guard)
   private-overlay/     # Forkable starting point for a private overlay
 secrets/               # sops-encrypted secrets (age keys, gitignored)
 tests/
@@ -161,7 +162,7 @@ See `SECURITY.md` "Accepted Risks" section for the complete list with rationale 
 ## Deployment Rules
 
 - **ALL deploys from the PRIVATE overlay**: `cd /path/to/private-overlay && ./scripts/deploy.sh --node <your-host>`.
-- **This public repo refuses deploys** (`tsurf.url` guard in `extras/scripts/deploy.sh`) and exports eval fixtures only (`.#eval-services`, `.#eval-dev`).
+- **This public repo refuses deploys** (`tsurf.url` guard in `examples/scripts/deploy.sh`) and exports eval fixtures only (`.#eval-services`, `.#eval-dev`).
 - **NEVER** use `nixos-rebuild switch` for normal deploys; it bypasses the deploy safety guard and lock/watcher flow.
 
 ## Recovery
