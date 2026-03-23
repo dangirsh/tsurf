@@ -10,8 +10,8 @@ flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-
 hosts/
   hardware.nix         # Shared QEMU VPS hardware config (both hosts)
   disko-config.nix     # Shared disko partition layout (both hosts)
-  services/            # Example service host (Contabo VPS)
-  dev/                 # Example agent/dev host (OVH VPS)
+  services/            # Example service host
+  dev/                 # Example agent/dev host
 modules/                 # Core — security/infrastructure essentials only
   agent-compute.nix    # Agent runtime support (Podman, zmx, shared overlays)
   agent-sandbox.nix    # nono wrapper for claude + hook for extra agents
@@ -40,10 +40,8 @@ extras/                  # Optional batteries — import what you need
   scripts/             # Scripts for extras modules
     deploy.sh          # deploy-rs wrapper (locking, watchdog, health check)
     clone-repos.sh     # Idempotent repo cloning activation script
-    bootstrap-contabo.sh # Contabo VPS bootstrap via rescue mode
 examples/
-  bootstrap/
-    bootstrap-ovh.sh   # OVH VPS bootstrap via rescue mode + nixos-anywhere
+  private-overlay/     # Forkable starting point for a private overlay
 secrets/               # sops-encrypted secrets (age keys, gitignored)
 tests/
   eval/config-checks.nix  # 47 offline eval assertions
@@ -116,12 +114,12 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
 | Eval checks (50+ assertions, fast) | `nix flake check` | Before every commit |
 | VM sandbox (requires KVM) | `nix build .#vm-test-sandbox` | Requires KVM |
 | Live tests over SSH | `nix run .#test-live -- --host tsurf` | After deploy only |
-| Live sandbox behavioral | `nix run .#test-live -- --host tsurf-dev tests/live/sandbox-behavioral.bats` | After deploy, OVH only |
+| Live sandbox behavioral | `nix run .#test-live -- --host tsurf-dev tests/live/sandbox-behavioral.bats` | After deploy (tsurf-dev host) |
 | JSON output | `scripts/run-tests.sh --live --json` | After deploy only |
 
 Sandbox testing has three tiers:
 - **Eval checks**: Source-text regression guards (fast, every commit) — catch structural regressions
-- **Live behavioral**: Runtime probes as agent user inside nono sandbox (after deploy, OVH only)
+- **Live behavioral**: Runtime probes as agent user inside nono sandbox (after deploy, tsurf-dev host)
 - **VM test**: Reproducible user privilege separation smoke test (requires KVM, not in CI)
 
 ### Test conventions
@@ -225,14 +223,10 @@ When running inside the nono sandbox (as the `agent` user — no wheel, no docke
 - **`extras/scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `tsurf.url` guard detects public repo)
 - **NEVER run `nixos-rebuild switch --flake .#eval-tsurf`** or `.#eval-tsurf-dev` from this repo — those are placeholder-enabled eval fixtures, not real host configs
 - **NEVER run `nixos-rebuild switch` from ANY repo** (parts, home-assistant-config, or any other) — even with the correct flake, this bypasses deploy.sh's safety guard, watchdog, and shared deploy lock. The ONLY safe deploy path is `./scripts/deploy.sh` from the private overlay
-- For first-time OVH bootstrap: `examples/bootstrap/bootstrap-ovh.sh` requires an explicit secure `FLAKE_TARGET` (for example `/data/projects/private-tsurf#tsurf-dev`) and refuses the public eval fixtures
 
 ## Recovery (Out-of-Band)
 
-If SSH access is lost, regain access via provider console:
-
-- **Contabo:** KVM VNC console (my.contabo.com -> VPS -> VNC tab). Log in as root, then `nixos-rebuild switch --rollback` or manually fix `/persist/root/.ssh/authorized_keys`.
-- **OVH:** Rescue mode (ovh.com/manager -> VPS -> Boot -> Rescue). SSH into rescue, mount persist subvolume (`mount /dev/sda3 /mnt -o subvol=persist`), fix authorized_keys or chroot + rollback. Switch boot back to hard disk after.
+If SSH access is lost, use your provider's console or rescue mode to log in as root. From there: `nixos-rebuild switch --rollback` or mount the persist subvolume (`mount /dev/sda3 /mnt -o subvol=persist`) and fix `/persist/root/.ssh/authorized_keys` directly.
 
 After recovery: identify root cause (`journalctl -b -1 -p err`), deploy via private overlay only, verify break-glass key is present.
 

@@ -507,20 +507,6 @@ in
       || (self.deploy.nodes or {}) == {}
     );
 
-  bootstrap-ovh-explicit-target =
-    let
-      source = builtins.readFile ../../examples/bootstrap/bootstrap-ovh.sh;
-    in
-    mkCheck
-      "bootstrap-ovh-explicit-target"
-      "bootstrap-ovh requires an explicit secure flake target and rejects public eval fixtures"
-      "bootstrap-ovh still defaults to a public fixture target or lacks fixture rejection"
-      (
-        !lib.hasInfix "FLAKE_TARGET=\"$FLAKE_DIR#tsurf-dev\"" source
-        && lib.hasInfix "ERROR: Set FLAKE_TARGET" source
-        && lib.hasInfix "ERROR: Refusing public eval fixture target" source
-      );
-
   dev-agent-not-in-template = mkCheck
     "dev-agent-not-in-template"
     "dev-agent service not defined in public ovh config (opt-in works)"
