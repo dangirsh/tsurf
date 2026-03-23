@@ -9,8 +9,6 @@
 #                             SERVICE = nono credential service name (matches custom_credentials key)
 #                             ENV_VAR = env var name (loaded into parent env for env:// URI)
 #                             secret-file-name = filename under /run/secrets/
-#   AGENT_ALLOW_NIX_DAEMON  — non-empty to grant /nix/var/nix/daemon-socket access
-#
 # Launch logging:
 #   Single sink: journald via logger -t agent-launch (root-owned, append-only).
 #   Only structured metadata is logged — no raw arguments, prompts, or file paths.
@@ -83,7 +81,6 @@ repo_scope="git-worktree"
 # nono's reverse proxy reads real keys from parent env via env:// URIs,
 # generates per-session phantom tokens, and only exposes those to the child.
 nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --read "$git_root")
-[[ -n "${AGENT_ALLOW_NIX_DAEMON:-}" ]] && nono_args+=(--read /nix/var/nix/daemon-socket)
 
 # Enable proxy credential injection for each loaded service
 for triple in "${cred_triples[@]}"; do

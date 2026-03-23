@@ -2,10 +2,7 @@
 # Role: agent development and sandboxed execution via agent-sandbox.nix + nono.nix.
 # Clone-repos activation script initializes project directories on first boot.
 # Private overlay replaces this with real host config, repo lists, and agent fleet wiring.
-{ config, inputs, lib, pkgs, ... }:
-let
-  agentCfg = config.tsurf.agent;
-in {
+{ config, inputs, lib, pkgs, ... }: {
   imports = [
     ../hardware.nix
     ../disko-config.nix
@@ -20,32 +17,12 @@ in {
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
     ../../extras/dashboard.nix
-    ../../extras/cost-tracker.nix
     ../../modules/agent-sandbox.nix
     ../../modules/nono.nix
-    # Optional agent extras: import ../../extras/codex.nix, ../../extras/pi.nix,
-    # ../../extras/opencode.nix, or ../../extras/dev-agent.nix in your private overlay.
+    # Optional extras belong in a private overlay.
   ];
 
   home-manager.users.dev = import ../../extras/home;
-
-  # Agent user home-manager config (minimal — git + direnv only, no SSH)
-  home-manager.users.${agentCfg.user} = { ... }: {
-    home.username = agentCfg.user;
-    home.homeDirectory = agentCfg.home;
-    home.stateVersion = "25.11";
-    programs.home-manager.enable = true;
-    programs.git = {
-      enable = true;
-      settings.user.name = "Agent";
-      settings.user.email = "agent@localhost";
-    };
-    programs.direnv = {
-      enable = true;
-      enableBashIntegration = true;
-      nix-direnv.enable = true;
-    };
-  };
 
   networking.hostName = "dev"; # REPLACE in private overlay
   time.timeZone = "UTC"; # REPLACE
@@ -85,8 +62,6 @@ in {
   services.agentCompute.enable = true;
   services.agentSandbox.enable = true;
   services.nonoSandbox.enable = true;
-  services.agentSandbox.allowNixDaemon = true;
-  services.agentSandbox.egressControl.enable = true;
 
   networking.useNetworkd = lib.mkForce false;
 

@@ -13,8 +13,8 @@ hosts/
   services/            # Example service host
   dev/                 # Example agent/dev host
 modules/                 # Core — security/infrastructure essentials only
-  agent-compute.nix    # Agent runtime support (Podman, zmx, shared overlays)
-  agent-sandbox.nix    # nono wrapper for claude + hook for extra agents
+  agent-compute.nix    # Agent runtime support (resource controls + shared tooling)
+  agent-sandbox.nix    # Single first-class sandboxed `claude` wrapper path
   base.nix             # Nix settings, system packages, kernel sysctl hardening
   boot.nix             # GRUB bootloader + BTRFS root rollback
   break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
@@ -24,12 +24,9 @@ modules/                 # Core — security/infrastructure essentials only
   secrets.nix          # sops-nix secret declarations
   users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
 extras/                  # Optional batteries — import what you need
-  codex.nix            # Codex CLI (sandboxed via agentSandbox.extraAgents)
   dashboard.nix        # Service dashboard from direct entry declarations
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
   dev-agent.nix        # Persistent autonomous Claude agent (zmx + systemd)
-  opencode.nix         # opencode AI coding assistant (sandboxed via agentSandbox.extraAgents)
-  pi.nix               # pi coding agent (sandboxed via agentSandbox.extraAgents)
   restic.nix           # Restic backup to B2 + status server
   syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
   home/
@@ -52,8 +49,8 @@ tests/
 - **Flakes + home-manager**: Reproducible, lockfile-pinned (nixos-25.11)
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
-- **Agent tooling**: Core ships Claude Code sandboxing; optional agent CLIs (Codex, pi, opencode) layer in through `extras/`. nono sandboxing is shared via `nono.nix` and `agent-sandbox.nix`
-- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, nix daemon socket opt-in. Per-wrapper credential allowlists (least privilege). Proxy credential injection — nono generates per-session phantom tokens; real keys never reach the child process.
+- **Agent tooling**: Public core ships one first-class agent path: sandboxed `claude` only. Additional agent CLIs belong in private overlays.
+- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo. Proxy credential injection — nono generates per-session phantom tokens; real keys never reach the child process.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
 - **Network model**: Only ports 22 + 22000 on public firewall by default. Ports 80/443 conditional on nginx. All internal services bind 127.0.0.1 (dashboard, syncthing GUI). Tailscale for internal access.
 - **Privilege model**: `dev` is the operator (wheel, human admin). `agent` runs sandboxed tools (no wheel). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
@@ -145,7 +142,7 @@ Run before every module or service commit:
 2. **Secrets** — New secret? Add to `secrets.nix` with minimal `owner`/permissions. Use `sops.templates` for env files. NEVER embed credentials in URLs, CLI args, or committed files.
 3. **New service** — Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts` and dashboard entry to `services.dashboard.entries`.
 4. **Sandbox impact** — Modifying `agent-compute.nix` or `nono.nix`? Verify `/run/secrets` and `~/.ssh` remain in the deny list. NEVER weaken nono sandbox defaults.
-5. **Agent execution** — Public repo wrappers must stay brokered + sandboxed. If a trusted workflow needs unsandboxed execution, implement it in a private overlay.
+5. **Agent execution** — Public core `claude` wrapper must stay brokered + sandboxed. If a trusted workflow needs unsandboxed execution or extra agent binaries, implement it in a private overlay.
 7. **Package management** — NEVER use `nix-env`, `nix profile install`, or re-enable `nix.channel.enable` / `nix.nixPath`.
 8. **Break-glass key** — NEVER remove `modules/break-glass-ssh.nix` from either host config.
 9. **Validation** — `nix flake check` passes.
@@ -156,7 +153,7 @@ See `SECURITY.md` "Accepted Risks" section for the complete list with rationale 
 
 ## Sandbox Awareness
 
-- Operator wrappers broker through `sudo` + `systemd-run --uid=agent` using immutable per-agent launchers.
+- The public core wrapper brokers through `sudo` + `systemd-run --uid=agent`.
 - Access stays repo-scoped; no public `--no-sandbox` path; denied paths include `/run/secrets/`, `~/.ssh`, and `~/.bash_history`.
 - Sessions run under `tsurf-agents.slice` limits and emit launch logs to journald (`journalctl -t agent-launch`).
 - See `SECURITY.md` for the full credential-flow and access-control model.

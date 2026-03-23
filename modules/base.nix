@@ -16,9 +16,9 @@
     experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
     # @decision SEC-124-01: Restrict Nix daemon access to root and wheel group.
-    #   Agent user is excluded by default — added conditionally via agent-sandbox.nix
-    #   when allowNixDaemon is enabled. trusted-users is root-only (no @wheel) to prevent
-    #   wheel users from adding arbitrary substituters or signing keys at runtime.
+    #   Agent user stays excluded in the public core. trusted-users is root-only
+    #   (no @wheel) to prevent wheel users from adding arbitrary substituters or
+    #   signing keys at runtime.
     allowed-users = [ "root" "@wheel" ];
     trusted-users = lib.mkForce [ "root" ];
     # Numtide: llm-agents overlay (claude-code, codex, etc.)

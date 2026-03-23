@@ -1,8 +1,7 @@
 # extras/opencode.nix
 # Optional: opencode AI coding assistant with nono sandbox.
-# Registers opencode as a sandboxed agent via the brokered launch model (SEC-119-01).
-# Requires: services.agentSandbox.enable = true (modules/agent-sandbox.nix)
-# and services.nonoSandbox.enable = true (modules/nono.nix).
+# Uses a self-contained wrapper + launcher (no core extraAgents API dependency).
+# Requires: services.agentSandbox.enable = true and services.nonoSandbox.enable = true.
 #
 # Usage: import this module, then set services.opencodeAgent.enable = true.
 # Override the package via services.opencodeAgent.package if opencode is available
@@ -13,6 +12,9 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.opencodeAgent;
+  agentCfg = config.tsurf.agent;
+  launcherName = "tsurf-launch-opencode";
+  runtimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.util-linux ];
 
   defaultPackage = pkgs.stdenv.mkDerivation rec {
     pname = "opencode";
@@ -37,6 +39,63 @@ let
       platforms = [ "x86_64-linux" ];
     };
   };
+
+  nonoProfile = pkgs.writeText "tsurf-opencode-profile.json" (builtins.toJSON {
+    extends = "tsurf";
+    meta = {
+      name = "tsurf-opencode";
+      version = "1.0.0";
+      description = "tsurf opencode profile extension";
+      author = "tsurf";
+    };
+    filesystem = { allow = [ "${agentCfg.home}/.config/opencode" ]; };
+  });
+
+  launcher = pkgs.writeShellApplication {
+    name = launcherName;
+    runtimeInputs = [ pkgs.systemd pkgs.coreutils ];
+    text = ''
+      export AGENT_NAME="opencode"
+      export AGENT_REAL_BINARY="${cfg.package}/bin/opencode"
+      export AGENT_PROJECT_ROOT="${agentCfg.projectRoot}"
+      export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf-opencode.json"
+      export AGENT_CREDENTIALS="${lib.concatStringsSep " " cfg.credentials}"
+
+      exec systemd-run \
+        --uid="${agentCfg.user}" --gid="${toString agentCfg.gid}" \
+        --same-dir --collect --pipe \
+        --unit="agent-opencode-$$" \
+        --slice=tsurf-agents.slice \
+        --setenv=PATH="${runtimePath}" \
+        --setenv=HOME="${agentCfg.home}" \
+        --setenv=AGENT_NAME="$AGENT_NAME" \
+        --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
+        --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
+        --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
+        --setenv=AGENT_CREDENTIALS="$AGENT_CREDENTIALS" \
+        ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
+    '';
+  };
+
+  wrapper = (pkgs.writeShellApplication {
+    name = "opencode";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      export AGENT_NAME="opencode"
+      export AGENT_REAL_BINARY="${cfg.package}/bin/opencode"
+      export AGENT_PROJECT_ROOT="${agentCfg.projectRoot}"
+      export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf-opencode.json"
+      export AGENT_CREDENTIALS="${lib.concatStringsSep " " cfg.credentials}"
+
+      if [[ "$(id -un)" == "${agentCfg.user}" ]]; then
+        exec ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
+      fi
+
+      exec /run/wrappers/bin/sudo ${launcher}/bin/${launcherName} "$@"
+    '';
+  }).overrideAttrs (old: {
+    meta = (old.meta or { }) // { priority = 4; };
+  });
 in
 {
   options.services.opencodeAgent = {
@@ -73,15 +132,15 @@ in
       }
     ];
 
-    services.agentSandbox.extraAgents = [{
-      name = "opencode";
-      package = cfg.package;
-      binary = "opencode";
-      credentials = cfg.credentials;
-    }];
+    environment.systemPackages = [ wrapper ];
+    environment.etc."nono/profiles/tsurf-opencode.json".source = nonoProfile;
 
-    services.nonoSandbox.extraAllow = [
-      "${config.tsurf.agent.home}/.config/opencode"
-    ];
+    security.sudo.extraRules = [{
+      groups = [ "wheel" ];
+      commands = [{
+        command = "${launcher}/bin/${launcherName}";
+        options = [ "NOPASSWD" ];
+      }];
+    }];
   };
 }

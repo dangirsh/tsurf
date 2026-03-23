@@ -64,16 +64,3 @@ bats_load_library bats-assert
     return 1
   fi
 }
-
-@test "${HOST}: agent user cannot connect to non-whitelisted port" {
-  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
-  # Port 8080 is not in the egress allowlist — connection should be dropped
-  run remote "su -s /bin/sh ${AGENT_USER} -c 'nc -z -w2 1.1.1.1 8080'" 2>&1
-  [ "$status" -ne 0 ]
-}
-
-@test "${HOST}: agent user can reach DNS (port 53)" {
-  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
-  run remote "su -s /bin/sh ${AGENT_USER} -c 'nc -z -w2 8.8.8.8 53'"
-  [ "$status" -eq 0 ]
-}

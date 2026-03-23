@@ -169,12 +169,6 @@ in
     "dev host services.agentSandbox.enable is false — dev agents run unsandboxed"
     devCfg.services.agentSandbox.enable;
 
-  agent-egress-dev = mkCheck
-    "agent-egress-dev"
-    "dev host agent egress nftables table is defined"
-    "dev host agent-egress nftables table missing"
-    (builtins.hasAttr "agent-egress" devCfg.networking.nftables.tables);
-
   # --- Source-text regression guards ---
   # These checks verify module source contains expected strings. They catch
   # accidental removal of security-critical code but do NOT prove runtime
@@ -191,54 +185,6 @@ in
       (lib.hasInfix "name = \"claude\"" source
        && !(lib.hasInfix "pkgs.codex" source)
        && !(lib.hasInfix "pkgs.pi-coding-agent" source));
-
-  nono-profile-extra-path-hooks =
-    let
-      source = builtins.readFile ../../modules/nono.nix;
-    in
-    mkCheck
-      "nono-profile-extra-path-hooks"
-      "nono tsurf profile exposes extension hooks for extra agents"
-      "nono.nix is missing extra path hooks for agent extras"
-      (lib.hasInfix "cfg.extraAllow" source
-       && lib.hasInfix "cfg.extraAllowFile" source
-       && lib.hasInfix "cfg.extraReadFile" source);
-
-  codex-extra-registers-wrapper =
-    let
-      source = builtins.readFile ../../extras/codex.nix;
-    in
-    mkCheck
-      "codex-extra-registers-wrapper"
-      "codex extra registers its sandboxed wrapper"
-      "extras/codex.nix is missing sandbox wrapper registration"
-      (lib.hasInfix "services.agentSandbox.extraAgents" source
-       && lib.hasInfix "name = \"codex\"" source);
-
-  pi-extra-registers-wrapper =
-    let
-      source = builtins.readFile ../../extras/pi.nix;
-    in
-    mkCheck
-      "pi-extra-registers-wrapper"
-      "pi extra registers its sandboxed wrapper"
-      "extras/pi.nix is missing sandbox wrapper registration"
-      (lib.hasInfix "services.agentSandbox.extraAgents" source
-       && lib.hasInfix "name = \"pi\"" source);
-
-  extra-agent-persistence-parameterized =
-    let
-      codexSource = builtins.readFile ../../extras/codex.nix;
-      piSource = builtins.readFile ../../extras/pi.nix;
-    in
-    mkCheck
-      "extra-agent-persistence-parameterized"
-      "optional agent extras derive persistence paths from config, not /home/agent"
-      "extras/codex.nix or extras/pi.nix still hardcode /home/agent persistence paths"
-      (!(lib.hasInfix "\"/home/agent/.codex\"" codexSource)
-       && !(lib.hasInfix "\"/home/agent/.pi\"" piSource)
-       && lib.hasInfix "agentHome" codexSource
-       && lib.hasInfix "agentHome" piSource);
 
   nono-sandbox-dev-enabled = mkCheck
     "nono-sandbox-dev-enabled"
@@ -424,23 +370,11 @@ in
     "SECURITY: agent user is in docker group — must not have docker access"
     (!(builtins.elem "docker" (builtins.getAttr devAgentUser devCfg.users.users).extraGroups));
 
-  agent-egress-targets-agent-user = mkCheck
-    "agent-egress-targets-agent-user"
-    "dev host agent egress control targets agent user"
-    "dev host agent egress control targets wrong user"
-    (devCfg.services.agentSandbox.egressControl.user == devAgentUser);
-
   agent-uid-explicit = mkCheck
     "agent-uid-explicit"
     "agent user has explicit UID defined"
-    "agent user uid is not set (required for nftables egress rules)"
+    "agent user uid is not set (required for stable sandbox policy references)"
     (devCfg.users.users.${devCfg.tsurf.agent.user}.uid != null);
-
-  egress-ruleset-check-enabled = mkCheck
-    "egress-ruleset-check-enabled"
-    "nftables ruleset validation is not disabled"
-    "nftables.checkRuleset is false — egress UID model not fixed"
-    (devCfg.networking.nftables.checkRuleset != false);
 
   impermanence-agent-home =
     let
@@ -465,14 +399,13 @@ in
 
   alt-agent-parameterization = mkCheck
     "alt-agent-parameterization"
-    "non-default agent fixture propagates through users, home-manager, and sandbox"
+    "non-default agent fixture propagates through users and sandbox modules"
     "non-default agent fixture still relies on hardcoded agent identity or home"
     (
       builtins.hasAttr altAgentUser altAgentCfg.users.users
-      && builtins.hasAttr altAgentUser altAgentCfg.home-manager.users
       && (builtins.getAttr altAgentUser altAgentCfg.users.users).home == altAgentHome
-      && (builtins.getAttr altAgentUser altAgentCfg.home-manager.users).home.homeDirectory == altAgentHome
-      && altAgentCfg.services.agentSandbox.egressControl.user == altAgentUser
+      && altAgentCfg.services.agentSandbox.enable
+      && altAgentCfg.services.nonoSandbox.enable
     );
 
   # --- Phase 116: structural hardening regression guards ---
@@ -592,12 +525,6 @@ in
     "services host nix.settings.trusted-users includes non-root entries"
     (servicesCfg.nix.settings.trusted-users == [ "root" ]);
 
-  nix-allowed-users-dev-includes-agent = mkCheck
-    "nix-allowed-users-dev-includes-agent"
-    "dev host nix.settings.allowed-users includes agent user (allowNixDaemon is on)"
-    "dev host nix.settings.allowed-users missing agent user despite allowNixDaemon=true"
-    (builtins.elem devCfg.tsurf.agent.user devCfg.nix.settings.allowed-users);
-
   # --- Phase 124: Clone-repos credential safety ---
 
   clone-repos-no-cli-credentials =
@@ -687,17 +614,6 @@ in
       "SECURITY: dev-agent.nix WorkingDirectory defaults to /tsurf (control-plane repo) — use agentCfg.projectRoot"
       (!(lib.hasInfix "projectRoot}/tsurf" source));
 
-  live-test-agent-user-parameterized =
-    let
-      source = builtins.readFile ../../tests/live/agent-sandbox.bats;
-    in
-    mkCheck
-      "live-test-agent-user-parameterized"
-      "live agent-sandbox tests use AGENT_USER instead of hardcoded 'agent'"
-      "tests/live/agent-sandbox.bats still hardcodes the 'agent' username"
-      (lib.hasInfix "\${AGENT_USER}" source
-       && !(lib.hasInfix "su -s /bin/sh agent" source));
-
   # --- Phase 124: Sandbox read-scope regression guards ---
   # Source-text checks for critical fail-closed patterns in agent-wrapper.sh.
   # Runtime behavioral coverage is in tests/live/sandbox-behavioral.bats.
@@ -735,17 +651,6 @@ in
       (!(lib.hasInfix "no-sandbox" wrapperSource)
        && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" wrapperSource)
        && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" launcherSource));
-
-  example-greeter-uses-agent-timers =
-    let
-      source = builtins.readFile ../../examples/private-overlay/modules/greeter.nix;
-    in
-    mkCheck
-      "example-greeter-uses-agent-timers"
-      "example greeter uses the agentTimers abstraction"
-      "examples/private-overlay/modules/greeter.nix should use agentTimers, not manual nono/claude invocation"
-      (lib.hasInfix "agentTimers" source
-       && !(lib.hasInfix "-- claude -p" source));
 
 }
 

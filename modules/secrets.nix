@@ -1,8 +1,7 @@
-# @decision SEC-04: Wrapper API keys (anthropic, openai) are owned by the agent
-#   user so the sandboxed wrapper process can read them at runtime. Operator-side
-#   provider keys (google, xai, openrouter, github-pat) stay owned by 'dev'.
-#   Other secrets inherit the sops-nix default owner unless explicitly set.
-#   Private overlay may override via lib.mkForce in its own secrets.nix.
+# @decision SEC-04: Core sandbox credentials stay readable by the agent user so the
+#   parent wrapper can load them from /run/secrets/ before entering nono. Optional
+#   extras may reuse the same ownership model. Operator-side credentials stay owned
+#   by 'dev'. Private overlay may override via lib.mkForce in its own secrets.nix.
 { config, lib, ... }: {
   sops = {
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];

@@ -19,7 +19,9 @@ Minimal forkable template for a private tsurf overlay.
 
 ## Adding a Custom Agent
 
-tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox with [Landlock](https://docs.kernel.org/userspace-api/landlock.html) kernel-level isolation. API keys stay in the parent process; the child gets only a per-session phantom token. For recurring agents, `services.agentSandbox.agentTimers` now generates the nono profile, launch script, env template, and systemd units from one declarative entry.
+Public tsurf core provides one first-class agent path: the sandboxed `claude` wrapper running as the unprivileged `agent` user under [nono](https://github.com/always-further/nono).
+
+If you need additional agents, implement them directly in your private overlay. Do not rely on public-core multi-agent framework APIs.
 
 ### What agents can access
 
@@ -30,7 +32,7 @@ tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox
 | Agent config dirs (`~/.claude`, etc.) | Read + write | `filesystem.allow` in nono profile |
 | Nix store, SSL certs, `/etc` basics | Read only | Inherited from `extends = "claude-code"` |
 | Paths in `filesystem.allow` | Read + write | Your nono profile |
-| Outbound network (API calls, git) | Allowed | `network.block = false` + egress nftables rules |
+| Outbound network (API calls, git) | Allowed | `network.block = false` in nono profile |
 
 | Resource | Denied | Controlled by |
 |----------|--------|---------------|
@@ -39,68 +41,64 @@ tsurf agents run inside a [nono](https://github.com/always-further/nono) sandbox
 | Other git repos (sibling projects) | Blocked | `agent-wrapper.sh` scopes read to current repo only |
 | `wheel` / `sudo` | No access | Agent user has no `wheel` group (build-time assertion) |
 | Docker daemon | No access | Agent user has no `docker` group (build-time assertion) |
-| Nix daemon | Off by default | `services.agentSandbox.allowNixDaemon` (opt-in) |
 | CPU / memory beyond limits | Killed | `tsurf-agents.slice` cgroup limits |
 
-### Minimal example: `greeter.nix`
+### Minimal recurring workflow (Claude only)
 
-[`modules/greeter.nix`](modules/greeter.nix) is the simplest possible agent: a daily timer that asks Claude to write a greeting. Using `agentTimers`, the whole module is about ten lines:
+Use a systemd timer in your private overlay and call the core `claude` wrapper directly:
 
 ```nix
-{ ... }:
+{ config, pkgs, ... }:
 {
-  services.agentSandbox.agentTimers.greeter = {
-    description = "Example daily greeting agent";
-    prompt = "Write a short, cheerful greeting with today's date to /var/lib/greeter/greeting.txt. One sentence only.";
-    workingDirectory = "/var/lib/greeter";
-    filesystem.allow = [ "/var/lib/greeter" ];
-    filesystem.allowFile = [ "/var/lib/greeter/greeting.txt" ];
-    credentials = [ "anthropic" ];
-    timer.onCalendar = "daily";
+  systemd.services.greeter-agent = {
+    description = "Daily greeting agent (Claude)";
+    serviceConfig = {
+      Type = "oneshot";
+      User = config.tsurf.agent.user;
+      WorkingDirectory = "/var/lib/greeter";
+      ExecStart = "${pkgs.bash}/bin/bash -lc 'claude -p \"Write one short greeting with today\\'s date to /var/lib/greeter/greeting.txt\"'";
+    };
+  };
+
+  systemd.timers.greeter-agent = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
   };
 }
 ```
 
-The abstraction auto-generates the nono profile, launch script, sops env template, systemd service with hardening defaults, tmpfiles rule for the working directory, and the timer. To use it: import `modules/greeter.nix` in your host config and ensure `anthropic-api-key` exists in your sops secrets.
+This keeps the workflow explicit and local to your overlay.
 
-### Step-by-step: adding your own agent
+### Step-by-step: adding another wrapper command
 
-**1. Define the agent timer.**
+For additional workflows, add your own wrapper module in the private overlay:
 
 ```nix
-# modules/my-agent.nix
-{ ... }:
+# modules/my-agent-wrapper.nix
+{ pkgs, ... }:
 {
-  services.agentSandbox.agentTimers.my-agent = {
-    description = "My custom agent";
-    prompt = "Your agent prompt here.";
-    workingDirectory = "/var/lib/my-agent";
-    filesystem.allow = [ "/var/lib/my-agent" ];
-    credentials = [ "anthropic" ];
-    timer.onCalendar = "daily";
-    # Optional overrides:
-    # filesystem.allowFile = [ "/var/lib/my-agent/output.json" ];
-    # memoryMax = "4G";
-    # tasksMax = 128;
-    # package = pkgs.claude-code;
-    # binary = "claude";
-    # cliArgs = [ "-p" "--permission-mode=bypassPermissions" ];
-  };
+  environment.systemPackages = [
+    (pkgs.writeShellApplication {
+      name = "my-agent";
+      runtimeInputs = [ pkgs.claude-code ];
+      text = ''
+        # Start with the core Claude wrapper path; replace with your own
+        # private-overlay command model as needed.
+        exec claude "$@"
+      '';
+    })
+  ];
 }
 ```
 
-This generates the nono profile, launch script, env template, systemd service, and optional timer automatically. Credentials refer to `services.nonoSandbox` definitions, so the API endpoint details stay centralized.
+Then add workflow-specific credentials and execution policy in that same overlay module.
 
-**2. Wire it up.**
+### Secret ownership for agent execution
 
-Import the module in your host config:
-
-```nix
-# hosts/my-host/default.nix
-imports = [ ../../modules/my-agent.nix ];
-```
-
-Ensure the sops secret exists:
+Ensure provider keys needed by agent-run workloads are readable by `config.tsurf.agent.user`:
 
 ```nix
 sops.secrets."anthropic-api-key".owner = config.tsurf.agent.user;
@@ -108,7 +106,7 @@ sops.secrets."anthropic-api-key".owner = config.tsurf.agent.user;
 
 ### Using the built-in interactive wrappers
 
-For interactive use (not timer-based), tsurf ships a sandboxed `claude` wrapper in core. Optional wrappers for `codex`, `pi`, and `opencode` are available via `extras/codex.nix`, `extras/pi.nix`, and `extras/opencode.nix`. Core `claude` is available on the agent user's PATH:
+For interactive use, tsurf ships only the sandboxed `claude` wrapper in public core:
 
 ```bash
 # SSH in as operator, then:
@@ -116,7 +114,7 @@ cd /data/projects/my-repo
 claude   # wrapper broker-launches as agent user and runs in nono sandbox
 ```
 
-All enabled wrappers handle credential injection from `/run/secrets/`, enforce the git-worktree requirement, and log launches to journald (`journalctl -t agent-launch`).
+The wrapper handles credential injection from `/run/secrets/`, enforces the git-worktree requirement, and logs launches to journald (`journalctl -t agent-launch`).
 
 See `SECURITY.md` in the tsurf repo for the full access control model, credential flow architecture, and tailnet segmentation guidance.
 
