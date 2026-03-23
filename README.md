@@ -53,7 +53,7 @@ Service modules declare their own dashboard entries, and localhost-only service 
 | Internal | Localhost-only (`127.0.0.1`) | dashboard, syncthing GUI, restic-status |
 | System | Public firewall | SSH (22), Syncthing BEP (22000) |
 | Agent | outbound only | claude, codex, pi, opencode |
-| Worker | none/outbound | restic backup, sshd-liveness-check |
+| Worker | none/outbound | restic backup |
 
 ## Extras
 

@@ -22,7 +22,6 @@ modules/                 # Core — security/infrastructure essentials only
   networking.nix       # nftables, SSH (hardened), Tailscale, firewall assertions
   nono.nix             # nono profile + proxy credential injection (phantom tokens)
   secrets.nix          # sops-nix secret declarations
-  sshd-liveness-check.nix # sshd liveness check with auto-rollback
   users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
 extras/                  # Optional batteries — import what you need
   codex.nix            # Codex CLI (sandboxed via agentSandbox.extraAgents)

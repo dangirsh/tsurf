@@ -297,13 +297,11 @@ Recovery mechanisms:
   adds a hardcoded break-glass root key. In the public repo this key is
   placeholder material and must be replaced in a private overlay before any real
   deployment.
-- [`modules/sshd-liveness-check.nix`](/data/projects/tsurf/modules/sshd-liveness-check.nix)
-  runs every 5 minutes and rolls back after 3 consecutive sshd failures, with
-  deploy-aware suppression and an anti-loop guard.
 - The private-overlay deploy path implemented in
   [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
-  relies on deploy-rs magic rollback plus an additional watchdog timer, but the
-  public copy of that script refuses to run.
+  schedules a 5-minute rollback watchdog via `systemd-run` before every deploy.
+  The watchdog auto-reverts to the previous NixOS generation if SSH connectivity
+  is not verified post-deploy. The public copy of that script refuses to run.
 
 ## Persistence And Supply Chain
 

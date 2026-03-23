@@ -287,77 +287,29 @@ fi
 
 # Private overlay: add flake input update logic here if needed.
 
-# --- Pre-deploy: safety checks when magic rollback is disabled ---
-# @decision DEPLOY-03: When magic rollback is off, schedule a self-managed watchdog process on the
-# server that auto-reverts to the previous NixOS generation after 5 minutes. The watchdog runs as a
-# nohup process (survives systemd reload during activation). deploy.sh cancels it after verifying
-# remote access post-deploy. If SSH breaks, the watchdog fires and restores access automatically.
-if [[ "$FIRST_DEPLOY" == true || "$MAGIC_ROLLBACK" != true ]]; then
-  echo "==> Magic rollback disabled — running pre-deploy safety checks..."
-
-  # Evaluate the target config to trigger NixOS remote-access assertions
-  echo "==> Evaluating $NODE config (remote access assertions)..."
-  if ! nix eval "$FLAKE_DIR#nixosConfigurations.$NODE.config.system.build.toplevel" --raw >/dev/null 2>&1; then
-    echo ""
-    echo "╔══════════════════════════════════════════════════════════════════╗"
-    echo "║  BLOCKED: Config evaluation failed                             ║"
-    echo "╚══════════════════════════════════════════════════════════════════╝"
-    echo ""
-    echo "  NixOS assertions failed for node '$NODE'."
-    echo "  Cannot deploy without magic rollback when assertions fail."
-    echo "  Run for details:"
-    echo "    nix eval .#nixosConfigurations.$NODE.config.system.build.toplevel"
-    exit 1
-  fi
-  echo "==> Config assertions passed."
-
-  # Save current system path for watchdog rollback
+# --- Pre-deploy: schedule rollback watchdog ---
+# @decision DEPLOY-03: Always schedule a 5-min watchdog via systemd-run that auto-reverts
+# to the previous NixOS generation. deploy.sh cancels it after verifying SSH post-deploy.
+# @decision DEPLOY-05: Uses systemd-run transient timer (survives sshd restarts and cgroup
+# cleanup during activation — deploy-rs issue #153).
+if [[ "$FIRST_DEPLOY" != true ]]; then
   PREV_SYSTEM=$(ssh "${SSH_OPTS[@]}" "$TARGET" "readlink -f /nix/var/nix/profiles/system" 2>/dev/null)
   if [[ -z "$PREV_SYSTEM" ]]; then
-    echo "ERROR: Cannot read current system generation — cannot proceed without magic rollback."
-    exit 1
-  fi
-  echo "==> Previous system: $PREV_SYSTEM"
-
-  # Schedule watchdog: auto-rollback in 5 minutes if not cancelled.
-  # @decision DEPLOY-05: Uses systemd-run transient timer instead of nohup bash.
-  # nohup processes are killed by systemd cgroup cleanup when sshd restarts during
-  # activation (deploy-rs issue #153). systemd-run creates an independent unit that
-  # survives sshd restarts, cgroup kills, and session cleanup.
-  echo "==> Scheduling rollback watchdog (5 min timeout via systemd-run)..."
-  if ssh "${SSH_OPTS[@]}" "$TARGET" \
-    "systemd-run --on-active=300 --timer-property=AccuracySec=5s \
-      --unit=deploy-watchdog --description='Deploy rollback watchdog (300s)' -- \
-      /bin/bash -c '$PREV_SYSTEM/bin/switch-to-configuration switch && \
-        nix-env -p /nix/var/nix/profiles/system --set $PREV_SYSTEM && \
-        echo \"\$(date -u): WATCHDOG FIRED -- rolled back to $PREV_SYSTEM\" >> /tmp/deploy-watchdog.log'" \
-    2>/dev/null; then
-    WATCHDOG_ACTIVE=true
-    echo "==> Watchdog scheduled — auto-rollback in 5 min if not cancelled."
+    echo "WARNING: Cannot read current system generation — no watchdog safety net."
   else
-    echo "WARNING: Failed to schedule watchdog — proceeding without rollback safety net."
-  fi
-fi
-
-# --- Belt-and-suspenders watchdog for magic-rollback deploys ---
-# @decision DEPLOY-06: When magic rollback is enabled, schedule a longer watchdog (10 min)
-# as a safety net. Magic rollback can fail if activate-rs is killed by cgroup cleanup
-# (deploy-rs issue #153). The 600s timeout is well beyond the 300s confirm timeout,
-# so it only fires if magic rollback itself failed.
-# @decision DEPLOY-07: confirmTimeout bumped 120→300 — activation takes >120s on OVH due to
-# repo cloning + dbus session startup during NixOS switch-to-configuration.
-if [[ "$WATCHDOG_ACTIVE" != true && "$MAGIC_ROLLBACK" == true ]]; then
-  PREV_SYSTEM=$(ssh "${SSH_OPTS[@]}" "$TARGET" "readlink -f /nix/var/nix/profiles/system" 2>/dev/null || true)
-  if [[ -n "$PREV_SYSTEM" ]]; then
+    echo "==> Previous system: $PREV_SYSTEM"
+    echo "==> Scheduling rollback watchdog (5 min timeout via systemd-run)..."
     if ssh "${SSH_OPTS[@]}" "$TARGET" \
-      "systemd-run --on-active=600 --timer-property=AccuracySec=5s \
-        --unit=deploy-watchdog --description='Deploy rollback watchdog (600s, belt-and-suspenders)' -- \
+      "systemd-run --on-active=300 --timer-property=AccuracySec=5s \
+        --unit=deploy-watchdog --description='Deploy rollback watchdog (300s)' -- \
         /bin/bash -c '$PREV_SYSTEM/bin/switch-to-configuration switch && \
           nix-env -p /nix/var/nix/profiles/system --set $PREV_SYSTEM && \
-          echo \"\$(date -u): BELT-AND-SUSPENDERS WATCHDOG FIRED -- rolled back to $PREV_SYSTEM\" >> /tmp/deploy-watchdog.log'" \
+          echo \"\$(date -u): WATCHDOG FIRED -- rolled back to $PREV_SYSTEM\" >> /tmp/deploy-watchdog.log'" \
       2>/dev/null; then
       WATCHDOG_ACTIVE=true
-      echo "==> Belt-and-suspenders watchdog scheduled (10 min)."
+      echo "==> Watchdog scheduled — auto-rollback in 5 min if not cancelled."
+    else
+      echo "WARNING: Failed to schedule watchdog — proceeding without rollback safety net."
     fi
   fi
 fi

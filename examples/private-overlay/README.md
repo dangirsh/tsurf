@@ -10,7 +10,7 @@ Minimal forkable template for a private tsurf overlay.
 2. Edit `flake.nix`: replace `github:your-org/tsurf` and `REPLACE` placeholders.
 3. Replace placeholder recipients in `.sops.yaml` with real age public keys.
 4. Replace hardware references in `hosts/example/default.nix` with your host's config.
-5. After host-specific setup, import `networking.nix`, `secrets.nix`, and `sshd-liveness-check.nix` (requires Tailscale, persisted SSH host keys, and an encrypted sops file).
+5. After host-specific setup, import `networking.nix` and `secrets.nix` (requires Tailscale, persisted SSH host keys, and an encrypted sops file).
 6. Run `nix flake lock` in this private repo to generate `flake.lock`.
 7. Create `secrets/example.yaml`, encrypt it with sops, and set `sops.defaultSopsFile` when enabling `secrets.nix`.
 8. Deploy with deploy-rs using your real hostnames and SSH access.

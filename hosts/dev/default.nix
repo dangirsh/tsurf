@@ -19,7 +19,6 @@ in {
     ../../modules/agent-compute.nix
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
-    ../../modules/sshd-liveness-check.nix
     ../../extras/dashboard.nix
     ../../extras/cost-tracker.nix
     ../../modules/agent-sandbox.nix

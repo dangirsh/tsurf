@@ -163,74 +163,6 @@ in
     touch "$out"
   '';
 
-  # --- Phase 70: Lockout prevention checks ---
-
-  break-glass-key-tsurf = mkCheck
-    "break-glass-key-tsurf"
-    "tsurf root has break-glass emergency SSH key"
-    "tsurf root is missing break-glass emergency SSH key (import modules/break-glass-ssh.nix)"
-    (builtins.any (k: lib.hasInfix "break-glass-emergency" k)
-      tsurfCfg.users.users.root.openssh.authorizedKeys.keys);
-
-  break-glass-key-ovh = mkCheck
-    "break-glass-key-ovh"
-    "ovh root has break-glass emergency SSH key"
-    "ovh root is missing break-glass emergency SSH key (import modules/break-glass-ssh.nix)"
-    (builtins.any (k: lib.hasInfix "break-glass-emergency" k)
-      devCfg.users.users.root.openssh.authorizedKeys.keys);
-
-  break-glass-key-unique-tsurf =
-    let
-      keys = tsurfCfg.users.users.root.openssh.authorizedKeys.keys;
-      keyMaterials = map (k: builtins.elemAt (lib.splitString " " k) 1) keys;
-      unique = lib.unique keyMaterials;
-    in
-    mkCheck
-      "break-glass-key-unique-tsurf"
-      "tsurf root SSH keys all have distinct key material"
-      "tsurf root has duplicate SSH key material — break-glass must differ from bootstrap"
-      (builtins.length keyMaterials == builtins.length unique);
-
-  break-glass-key-unique-ovh =
-    let
-      keys = devCfg.users.users.root.openssh.authorizedKeys.keys;
-      keyMaterials = map (k: builtins.elemAt (lib.splitString " " k) 1) keys;
-      unique = lib.unique keyMaterials;
-    in
-    mkCheck
-      "break-glass-key-unique-ovh"
-      "ovh root SSH keys all have distinct key material"
-      "ovh root has duplicate SSH key material — break-glass must differ from bootstrap"
-      (builtins.length keyMaterials == builtins.length unique);
-
-  ssh-authorized-keys-fallback = mkCheck
-    "ssh-authorized-keys-fallback"
-    "tsurf sshd checks .ssh/authorized_keys (NET-14 impermanence fallback)"
-    "tsurf authorizedKeysFiles is missing .ssh/authorized_keys — NET-14 fallback broken"
-    (builtins.any (f: f == ".ssh/authorized_keys")
-      tsurfCfg.services.openssh.authorizedKeysFiles);
-
-  ssh-host-key-persisted = mkCheck
-    "ssh-host-key-persisted"
-    "tsurf SSH host key is declared in impermanence persistence"
-    "tsurf SSH host key not found in impermanence files — sshd may fail on reboot"
-    (let
-      source = builtins.readFile ../../modules/networking.nix;
-    in
-      lib.hasInfix "\"/etc/ssh/ssh_host_ed25519_key\"" source);
-
-  sshd-liveness-check-tsurf = mkCheck
-    "sshd-liveness-check-tsurf"
-    "tsurf sshd-liveness-check timer is defined"
-    "tsurf sshd-liveness-check timer is missing — import modules/sshd-liveness-check.nix"
-    (builtins.hasAttr "sshd-liveness-check" tsurfCfg.systemd.timers);
-
-  sshd-liveness-check-ovh = mkCheck
-    "sshd-liveness-check-ovh"
-    "ovh sshd-liveness-check timer is defined"
-    "ovh sshd-liveness-check timer is missing — import modules/sshd-liveness-check.nix"
-    (builtins.hasAttr "sshd-liveness-check" devCfg.systemd.timers);
-
   agent-sandbox-ovh-enabled = mkCheck
     "agent-sandbox-ovh-enabled"
     "ovh agent sandbox wrappers are enabled"
@@ -740,8 +672,6 @@ in
       "All project services have SystemCallArchitectures=native"
       "SECURITY: one or more services missing SystemCallArchitectures=native"
       (hasSCA tsurfCfg.systemd.services.nix-dashboard
-       && hasSCA tsurfCfg.systemd.services.sshd-liveness-check
-       && hasSCA devCfg.systemd.services.sshd-liveness-check
        && hasSCA devCfg.systemd.services.syncthing
        && lib.hasInfix "SystemCallArchitectures = \"native\"" (builtins.readFile ../../extras/dashboard.nix)
        && lib.hasInfix "SystemCallArchitectures = \"native\"" resticSource

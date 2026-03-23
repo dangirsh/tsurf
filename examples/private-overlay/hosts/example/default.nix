@@ -9,7 +9,6 @@
     # After configuring Tailscale and SSH host keys, import:
     # "${inputs.tsurf}/modules/networking.nix"
     # "${inputs.tsurf}/modules/secrets.nix"  # after creating encrypted secrets file
-    # "${inputs.tsurf}/modules/sshd-liveness-check.nix"
   ];
 
   networking.hostName = "example-REPLACE";

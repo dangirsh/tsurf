@@ -68,7 +68,6 @@
 
         # Import networking.nix after configuring Tailscale, SSH host keys, and impermanence.
         # Import secrets.nix after creating your encrypted secrets file, or write your own secrets module.
-        # Import sshd-liveness-check.nix after networking.nix assertions are satisfied.
       ];
     in {
       nixosConfigurations.example = nixpkgs.lib.nixosSystem {

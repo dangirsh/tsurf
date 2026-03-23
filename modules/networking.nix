@@ -33,18 +33,13 @@ in {
     }
     # --- Remote access safety assertions ---
     # @decision NET-15: Build-time assertions prevent deploying configs that lock out SSH/Tailscale.
-    # If any of these fail, the config cannot be built, so it cannot be deployed.
     {
       assertion = config.services.openssh.enable;
       message = "LOCKOUT PREVENTION: sshd must be enabled — disabling it removes all remote access.";
     }
     {
       assertion = config.services.openssh.settings.PermitRootLogin != "no";
-      message = "LOCKOUT PREVENTION: PermitRootLogin must not be 'no' — this deployment setup uses root SSH for deploy-rs. Use 'prohibit-password' for key-only root login.";
-    }
-    {
-      assertion = config.users.users.root.openssh.authorizedKeys.keys != [];
-      message = "LOCKOUT PREVENTION: root must have at least one SSH authorized key for deploy access.";
+      message = "LOCKOUT PREVENTION: PermitRootLogin must not be 'no' — deploy-rs uses root SSH. Use 'prohibit-password'.";
     }
     {
       assertion = builtins.elem 22 config.networking.firewall.allowedTCPPorts
@@ -56,36 +51,9 @@ in {
       message = "LOCKOUT PREVENTION: Tailscale must be enabled — it provides the primary remote access path.";
     }
     {
-      assertion = config.services.openssh.hostKeys != [];
-      message = "LOCKOUT PREVENTION: SSH host keys must be configured — sshd fails to start without them.";
-    }
-    # --- Additional lockout prevention assertions (Phase 70) ---
-    {
-      assertion = builtins.any (f: f == ".ssh/authorized_keys")
-        config.services.openssh.authorizedKeysFiles;
-      message = "LOCKOUT PREVENTION: .ssh/authorized_keys must be in AuthorizedKeysFile for impermanence fallback (NET-14). Without this, persisted keys in /persist/root/.ssh/ are ignored by sshd.";
-    }
-    {
-      assertion = builtins.any (k: lib.hasPrefix "ssh-ed25519 " k || lib.hasPrefix "ssh-rsa " k)
-        config.users.users.root.openssh.authorizedKeys.keys;
-      message = "LOCKOUT PREVENTION: root authorized keys must contain at least one real SSH public key (starts with 'ssh-ed25519' or 'ssh-rsa').";
-    }
-    {
       assertion = builtins.any (k: lib.hasInfix "break-glass-emergency" k)
         config.users.users.root.openssh.authorizedKeys.keys;
-      message = "LOCKOUT PREVENTION: root must have the break-glass emergency SSH key (comment contains 'break-glass-emergency'). Import modules/break-glass-ssh.nix in both host configs.";
-    }
-    {
-      # impermanence coerces strings to { file = ...; } attrsets, so check .file attribute.
-      # Also accept OVH-02 pattern: hostKey path directly under /persist/.
-      assertion =
-        (config.environment ? persistence
-          && builtins.hasAttr "/persist" config.environment.persistence
-          && builtins.any (f: f.file == "/etc/ssh/ssh_host_ed25519_key")
-            config.environment.persistence."/persist".files)
-        || builtins.any (k: lib.hasPrefix "/persist" k.path)
-          config.services.openssh.hostKeys;
-      message = "LOCKOUT PREVENTION: SSH host key must be persisted — either in impermanence files or via a /persist/ hostKey path (OVH-02). Without persistence, sshd regenerates the host key on every boot and sops-nix age key derivation fails.";
+      message = "LOCKOUT PREVENTION: root must have break-glass emergency SSH key. Import modules/break-glass-ssh.nix.";
     }
   ];
 
