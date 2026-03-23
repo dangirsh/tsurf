@@ -43,7 +43,7 @@ examples/
   private-overlay/     # Forkable starting point for a private overlay
 secrets/               # sops-encrypted secrets (age keys, gitignored)
 tests/
-  eval/config-checks.nix  # 47 offline eval assertions
+  eval/config-checks.nix  # Offline eval assertions
   vm/sandbox-behavioral.nix # NixOS VM sandbox test (requires KVM)
   live/*.bats              # Live BATS tests over SSH
 ```
@@ -113,7 +113,6 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
 | VM sandbox (requires KVM) | `nix build .#vm-test-sandbox` | Requires KVM |
 | Live tests over SSH | `nix run .#test-live -- --host tsurf` | After deploy only |
 | Live sandbox behavioral | `nix run .#test-live -- --host tsurf-dev tests/live/sandbox-behavioral.bats` | After deploy (tsurf-dev host) |
-| JSON output | `scripts/run-tests.sh --live --json` | After deploy only |
 
 Sandbox testing has three tiers:
 - **Eval checks**: Source-text regression guards (fast, every commit) — catch structural regressions
@@ -166,64 +165,28 @@ Run before every module or service commit:
 8. **Break-glass key** — NEVER remove `modules/break-glass-ssh.nix` from either host config.
 9. **Validation** — `nix flake check` passes.
 
-### Accepted Risks (documented, not actionable)
+### Accepted Risks
 
-- **Pre-built binaries:** zmx and cass lack signature verification — mitigated by SHA256 hash pinning.
-- **Sandbox read access:** Sandboxed agents have read-only access to the current git repo root (not all of `/data/projects`). No `.env` files on server (sops-nix handles secrets). Unrestricted network egress (agents need API/git access; nono allowlist filtering not yet available on headless servers). Metadata endpoint blocked at nftables level.
-- **Public template users:** `users.allowNoPasswordLogin = true` required for eval without real credential hashes. Private overlay replaces `users.nix` entirely.
-- **srvos defaults:** Relied upon implicitly (fail2ban, SSH hardening, systemd-networkd). Specific overrides documented per-host with `mkForce`.
-- **Break-glass key:** Public repo uses a placeholder. Private overlay MUST replace with a dedicated offline-stored key before deploying.
-- **fail2ban disabled:** SSH brute-force protection relies on key-only auth, MaxAuthTries 3, and srvos defaults. Re-enable if brute-force attempts become problematic.
-- **nono proxy_credentials:** (RESOLVED in Phase 118) Proxy credential mode now active using `env://` URIs — no system keystore needed. Child processes receive only phantom tokens.
-- **dev-agent bypassPermissions:** `dev-agent.nix` runs claude with `--permission-mode=bypassPermissions` inside nono sandbox. Sandbox provides the actual permission boundary.
-- **Manual internalOnlyPorts:** Must be kept in sync with actual service ports. Mitigated by existing firewall assertion.
-- **SEC105-01:** (UPDATED Phase 134) Host source files are secure by default. Insecure defaults (placeholder SSH keys, passwordless sudo, empty-password login) exist only in the clearly named eval fixtures `.#eval-tsurf` and `.#eval-tsurf-dev` so `nix flake check` can evaluate without real credentials. The public flake exports no deploy nodes. Private overlay uses `mkHost` directly.
-- **SEC105-02:** Unrestricted network egress for sandboxed agents (`--net-allow`). nono upstream does not yet support allowlist-based outbound filtering on headless servers. UID-based nftables egress filtering is now available as opt-in via `services.agentSandbox.egressControl.enable` (restricts agent user to whitelisted TCP destination ports).
-- **SEC105-03:** Public repo size (dashboard, cost-tracker, restic, syncthing, dev-agent, deploy.sh in core). Moving to `examples/` is large structural work; current modules serve both public template and private overlay.
-- **SEC105-04:** Service modules coupled to dashboard via `services.dashboard.entries.*`. Catalog abstraction is YAGNI at current scale.
-- **SEC105-05:** Hard-coded `dev` username, `/home/dev`, `/data/projects` paths for the operator user. Agent-specific paths (`/home/agent`, agent user) are parameterized via `tsurf.agent.*` options. `dev` remains hard-coded as the operator user.
-- **SEC105-06:** (RESOLVED in Phase 106) `home-manager.users.dev` moved to per-host config.
-- **SEC105-07:** `deploy.sh` is 558 lines with custom logic. Serves its purpose for private overlay deployment; public users can use bare `deploy-rs`.
-- **SEC114-01:** (RESOLVED in Phase 117) File-based audit log removed. Launch logging is now journald-only (`journalctl -t agent-launch`), root-owned and append-only. Only structured metadata is logged — no raw arguments or prompts.
-- **SEC114-02:** (RESOLVED in Phase 118) Proxy credential mode active. Real API keys no longer reach the sandboxed child process — only per-session phantom tokens via nono's reverse proxy. Real keys stay in the parent (nono proxy) process, stored in `Zeroizing<String>` (wiped on drop).
-- **SEC115-01:** (RESOLVED in Phase 122) `tailscale0` removed from `trustedInterfaces`. Localhost-first model: internal services bind 127.0.0.1, no blanket tailnet trust. Private overlay can expose specific ports via `networking.firewall.interfaces.tailscale0.allowedTCPPorts`. `--accept-routes` removed from default Tailscale flags. See SECURITY.md "Tailnet Segmentation".
-- **SEC116-01:** Agent resource limits via `tsurf-agents.slice` set aggregate ceilings (8G/300%/1024 tasks). Per-unit limits on dev-agent (4G/200%/256 tasks, OOMPolicy=kill). Limits are conservative defaults; production may need tuning based on workload.
-- **SEC116-02:** Syncthing defaults to tailnet-only operation (global announce, local announce, relays, NAT all disabled). Public BEP port 22000 requires explicit `publicBep` opt-in. Private overlay should enable `publicBep` only if non-Tailscale peers are needed.
-- **SEC119-01:** Brokered launch model uses dedicated per-agent launchers plus `systemd-run --uid=agent` for interactive sessions. Sudoers lists immutable launcher commands only; no SETENV or caller-chosen binary/profile/credential tuple crosses the privileged boundary.
-- **SEC119-02:** (UPDATED Phase 124) `dev-agent.nix` defaults WorkingDirectory to `agentCfg.projectRoot` (not the control-plane repo). Private overlay should set `services.devAgent.workingDirectory` to a specific workspace repo. Workspace directories under `/data/projects` must be accessible to the `agent` user for the brokered launcher's `--same-dir` to work. See SECURITY.md "Control-Plane vs Workspace Separation".
+See `SECURITY.md` "Accepted Risks" section for the complete list with rationale and mitigations.
 
 ## Sandbox Awareness
 
-When running inside the nono sandbox (as the `agent` user — no wheel):
-
-- **Brokered execution**: When operator (`dev`) invokes `claude` or any enabled extra wrapper such as `codex`, `pi`, or `opencode`, the wrapper uses `sudo` + `systemd-run --uid=agent` to drop to the `agent` user before any sandbox or credential logic runs. The operator never directly execs agent binaries with credentials. When already running as `agent` (e.g. `dev-agent.nix`), the wrapper execs directly (no double privilege drop).
-- **Immutable launchers**: The privileged path is one launcher per agent (`tsurf-launch-claude`, `tsurf-launch-codex`, etc.), not a generic env-configurable root helper.
-- Launch from inside `/data/projects`; wrapper scripts reject sandboxed launches outside that root.
-- Read access is scoped to the current git repo root, not all of `/data/projects`.
-- API keys are loaded from `/run/secrets/` by the wrapper (running as `agent`) into the parent env. nono's reverse proxy reads them via `env://` URIs and passes only per-session phantom tokens to the sandboxed child (`--credential` flag).
-- Denied paths include `/run/secrets/`, `~/.ssh`, `~/.bash_history`, `~/.gnupg`, `~/.aws`, and `~/.docker`.
-- Public wrappers do not expose `--no-sandbox`; any trusted unsandboxed workflow must be added in a private overlay.
-- Each interactive session gets per-session cgroup limits (MemoryMax=4G, CPUQuota=200%, TasksMax=256) in `tsurf-agents.slice`.
-- Launch events are logged to journald only (`journalctl -t agent-launch`). Structured metadata (mode, agent, user, uid, repo_scope) — no raw arguments, prompts, or file paths.
-- For guided workflows, use `/nix-module` for module authoring and `/nix-test` for test execution + `.test-status`.
+- **Brokered execution**: Operator (`dev`) wrappers use `sudo` + `systemd-run --uid=agent` to drop privileges. Immutable per-agent launchers — no env-configurable root helper.
+- **Scoped access**: Read access scoped to current git repo root. API keys become per-session phantom tokens via nono proxy. Denied: `/run/secrets/`, `~/.ssh`, `~/.bash_history`.
+- No `--no-sandbox` escape hatch in public wrappers.
+- Per-session cgroup limits in `tsurf-agents.slice`. Launch events logged to journald (`journalctl -t agent-launch`).
+- See `SECURITY.md` for the full credential flow and access control model.
 
 ## Deployment Rules
 
-**CRITICAL — read before running any deploy:**
+- **ALL deploys from the PRIVATE overlay**: `cd /path/to/private-tsurf && ./scripts/deploy.sh [--node tsurf|tsurf-dev]`
+- **This public repo refuses all deploys** (`tsurf.url` guard in `extras/scripts/deploy.sh`)
+- **NEVER** run `nixos-rebuild switch` directly — it bypasses deploy.sh's safety guard, watchdog, and shared lock
+- Public flake outputs (`.#eval-tsurf`, `.#eval-tsurf-dev`) are eval fixtures, not deployable configs
 
-- **ALL deploys MUST come from the PRIVATE overlay** — both hosts run private config:
-  ```
-  cd /path/to/private-tsurf && ./scripts/deploy.sh [--node tsurf|tsurf-dev]
-  ```
-- **`extras/scripts/deploy.sh` in this public repo refuses ALL deploys** (enforced: `tsurf.url` guard detects public repo)
-- **NEVER run `nixos-rebuild switch --flake .#eval-tsurf`** or `.#eval-tsurf-dev` from this repo — those are placeholder-enabled eval fixtures, not real host configs
-- **NEVER run `nixos-rebuild switch` from ANY repo** (parts, home-assistant-config, or any other) — even with the correct flake, this bypasses deploy.sh's safety guard, watchdog, and shared deploy lock. The ONLY safe deploy path is `./scripts/deploy.sh` from the private overlay
+## Recovery
 
-## Recovery (Out-of-Band)
-
-If SSH access is lost, use your provider's console or rescue mode to log in as root. From there: `nixos-rebuild switch --rollback` or mount the persist subvolume (`mount /dev/sda3 /mnt -o subvol=persist`) and fix `/persist/root/.ssh/authorized_keys` directly.
-
-After recovery: identify root cause (`journalctl -b -1 -p err`), deploy via private overlay only, verify break-glass key is present.
+If SSH is lost: provider console/rescue mode → `nixos-rebuild switch --rollback` or mount persist subvolume and fix authorized_keys. After recovery: check `journalctl -b -1 -p err`, deploy via private overlay, verify break-glass key.
 
 ## Private Overlay
 

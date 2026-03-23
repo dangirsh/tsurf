@@ -9,12 +9,13 @@
 #
 # Run: nix build .#vm-test-sandbox
 # Requires: KVM (not available on GitHub Actions ubuntu-latest)
-{ pkgs, lib, ... }:
+{ pkgs, lib, impermanenceModule, ... }:
 pkgs.testers.nixosTest {
   name = "sandbox-behavioral";
 
   nodes.machine = { config, pkgs, ... }: {
     imports = [
+      impermanenceModule
       ../../modules/users.nix
     ];
 

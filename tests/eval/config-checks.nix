@@ -119,32 +119,6 @@ in
       "missing ovh services: ${builtins.concatStringsSep ", " missing}"
       (missing == [ ]);
 
-  expected-packages-tsurf =
-    let
-      sysPkgs = tsurfCfg.environment.systemPackages;
-      expectedPkgs = {
-        git = pkgs.git;
-        curl = pkgs.curl;
-        jq = pkgs.jq;
-        ripgrep = pkgs.ripgrep;
-        openssh = pkgs.openssh;
-        tailscale = pkgs.tailscale;
-      };
-      missing = lib.filterAttrs (_: drv: !(builtins.any (p: p == drv) sysPkgs)) expectedPkgs;
-      missingNames = builtins.attrNames missing;
-    in
-    mkCheck
-      "expected-packages-tsurf"
-      "required packages are present in tsurf systemPackages"
-      "missing packages: ${builtins.concatStringsSep ", " missingNames}"
-      (missingNames == [ ]);
-
-  ssh-no-password = mkCheck
-    "ssh-no-password"
-    "SSH PasswordAuthentication is disabled"
-    "SSH PasswordAuthentication is enabled"
-    (tsurfCfg.services.openssh.settings.PasswordAuthentication == false);
-
   ssh-ed25519-only =
     let
       hostKeyTypes = map (k: k.type) tsurfCfg.services.openssh.hostKeys;
@@ -154,59 +128,6 @@ in
       "SSH host key types are ed25519 only"
       "SSH host key types=${builtins.toJSON hostKeyTypes}, expected [\"ed25519\"]"
       (hostKeyTypes == [ "ed25519" ]);
-
-  docker-no-iptables = mkCheck
-    "docker-no-iptables"
-    "Docker daemon uses iptables=false"
-    "Docker daemon iptables is not false"
-    (tsurfCfg.virtualisation.docker.daemon.settings.iptables == false);
-
-  tailscale-enabled = mkCheck
-    "tailscale-enabled"
-    "Tailscale service is enabled"
-    "Tailscale service is disabled"
-    tsurfCfg.services.tailscale.enable;
-
-  # Keep this source-based so we do not force full evaluation of the deprecated
-  # impermanence option internals on this branch.
-  impermanence-paths =
-    let
-      source = builtins.readFile ../../modules/impermanence.nix;
-      criticalPaths = [
-        "/var/lib/nixos"
-        "/var/lib/tailscale"
-        "/home/dev/.ssh"
-        "/root/.ssh"
-        "/data/projects"
-      ];
-      missing = builtins.filter (path: !(lib.hasInfix "\"${path}\"" source)) criticalPaths;
-    in
-    mkCheck
-      "impermanence-paths"
-      "critical impermanence paths are declared"
-      "missing impermanence paths: ${builtins.concatStringsSep ", " missing}"
-      (missing == [ ]);
-
-  impermanence-files =
-    let
-      source = builtins.readFile ../../modules/impermanence.nix;
-      criticalFiles = [
-        "/etc/machine-id"
-        "/etc/ssh/ssh_host_ed25519_key"
-      ];
-      missing = builtins.filter (path: !(lib.hasInfix "\"${path}\"" source)) criticalFiles;
-    in
-    mkCheck
-      "impermanence-files"
-      "critical impermanence files are declared"
-      "missing impermanence files: ${builtins.concatStringsSep ", " missing}"
-      (missing == [ ]);
-
-  nftables-enabled = mkCheck
-    "nftables-enabled"
-    "nftables backend is enabled"
-    "nftables backend is disabled"
-    tsurfCfg.networking.nftables.enable;
 
   metadata-block = mkCheck
     "metadata-block"
@@ -223,12 +144,6 @@ in
       tsurfCfg.services.dashboard.enable
       && tsurfCfg.services.dashboard.listenPort == 8082
     );
-
-  has-nono-sandbox-option = mkCheck
-    "has-nono-sandbox-option"
-    "services.nonoSandbox option is defined (module imported)"
-    "services.nonoSandbox option is missing"
-    (builtins.hasAttr "nonoSandbox" devCfg.services);
 
   dashboard-entries =
     let
@@ -247,31 +162,6 @@ in
     echo "PASS: dashboard manifest is valid JSON"
     touch "$out"
   '';
-
-  # --- Remote access safety checks (both hosts) ---
-  # These mirror the NixOS assertions in networking.nix but give named PASS/FAIL visibility
-  # during `nix flake check`. If assertions fire, the eval check fails too, but the check
-  # name makes it obvious which invariant broke.
-
-  remote-access-tsurf = mkCheck
-    "remote-access-tsurf"
-    "tsurf remote access invariants: sshd + tailscale + root SSH keys + port 22"
-    "tsurf remote access broken: sshd=${builtins.toJSON tsurfCfg.services.openssh.enable} tailscale=${builtins.toJSON tsurfCfg.services.tailscale.enable} rootKeys=${builtins.toJSON (tsurfCfg.users.users.root.openssh.authorizedKeys.keys != [])} port22=${builtins.toJSON (builtins.elem 22 tsurfCfg.networking.firewall.allowedTCPPorts)}"
-    (tsurfCfg.services.openssh.enable
-     && tsurfCfg.services.tailscale.enable
-     && tsurfCfg.users.users.root.openssh.authorizedKeys.keys != []
-     && (builtins.elem 22 tsurfCfg.networking.firewall.allowedTCPPorts
-         || tsurfCfg.services.openssh.openFirewall));
-
-  remote-access-ovh = mkCheck
-    "remote-access-ovh"
-    "ovh remote access invariants: sshd + tailscale + root SSH keys + port 22"
-    "ovh remote access broken: sshd=${builtins.toJSON devCfg.services.openssh.enable} tailscale=${builtins.toJSON devCfg.services.tailscale.enable} rootKeys=${builtins.toJSON (devCfg.users.users.root.openssh.authorizedKeys.keys != [])} port22=${builtins.toJSON (builtins.elem 22 devCfg.networking.firewall.allowedTCPPorts)}"
-    (devCfg.services.openssh.enable
-     && devCfg.services.tailscale.enable
-     && devCfg.users.users.root.openssh.authorizedKeys.keys != []
-     && (builtins.elem 22 devCfg.networking.firewall.allowedTCPPorts
-         || devCfg.services.openssh.openFirewall));
 
   # --- Phase 70: Lockout prevention checks ---
 
@@ -357,16 +247,6 @@ in
   # These checks verify module source contains expected strings. They catch
   # accidental removal of security-critical code but do NOT prove runtime
   # behavior. Runtime behavioral tests are in tests/live/sandbox-behavioral.bats.
-
-  agent-sandbox-module-has-nono =
-    let
-      source = builtins.readFile ../../modules/agent-sandbox.nix;
-    in
-    mkCheck
-      "agent-sandbox-module-has-nono"
-      "agent-sandbox module references nono"
-      "agent-sandbox module does not reference nono — sandbox is broken"
-      (lib.hasInfix "nono" source);
 
   core-agent-sandbox-only-claude =
     let

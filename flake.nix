@@ -119,6 +119,7 @@
         # Run: nix build .#vm-test-sandbox
         vm-test-sandbox = import ./tests/vm/sandbox-behavioral.nix {
           inherit pkgs lib;
+          impermanenceModule = impermanence.nixosModules.impermanence;
         };
 
         test-live = pkgs.writeShellApplication {

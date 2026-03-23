@@ -9,13 +9,13 @@
 #   --node NAME         Flake node to deploy (default: tsurf; choices: tsurf, tsurf-dev)
 #   --target USER@HOST  Override SSH target (default depends on --node)
 #   --first-deploy  Disable magic rollback once for migration from nixos-rebuild
-#   --no-magic-rollback  Disable magic rollback for intentional network/SSH changes
+#   --magic-rollback  Enable deploy-rs magic rollback with 300s confirm timeout
 #   --help         Print usage
 #
 # @decision Manual deploy only — no CI/CD. NixOS handles incrementality.
 # @decision Full deploy-rs system activation every deploy — no partial/container-only.
-# @decision Magic rollback enabled by default with 300s confirm timeout.
-# @decision Service health polling (30s) — checks core systemd services per node.
+# @decision Magic rollback opt-in via --magic-rollback (300s confirm timeout).
+# @decision Single-pass service health check after deploy.
 # @decision No auto-commit of flake.lock — print reminder instead.
 # @decision DEPLOY-114-01: No repo-controlled post-deploy hooks — require explicit --post-hook.
 # @decision Remote build default (DEPLOY-01): tsurf has 18 vCPU / 96 GB RAM — faster than
@@ -29,13 +29,12 @@ TARGET_SET=false
 MODE="remote"
 FAST_MODE=false
 FIRST_DEPLOY=false
-NO_MAGIC_ROLLBACK=false
+MAGIC_ROLLBACK=false
 POST_HOOK=""
 SKIP_UPDATE=true
 SECONDS=0
 
 SYSTEMD_SERVICES=()
-DOCKER_CONTAINERS=()
 DEPLOY_COMPLETED=false
 PREV_SYSTEM=""
 WATCHDOG_ACTIVE=false
@@ -71,8 +70,7 @@ print(json.dumps({
     "mkdir -p /var/lib/deploy-status && cat > /var/lib/deploy-status/status.json" 2>/dev/null || true
 }
 
-# @decision Two-level deploy locking: local flock + remote mkdir
-LOCAL_LOCK=""
+# @decision Remote mkdir deploy locking (prevents concurrent deploys from any machine).
 REMOTE_LOCK_DIR=""
 REMOTE_LOCK_HELD=false
 
@@ -104,13 +102,13 @@ Usage: $(basename "$0") [OPTIONS]
 Deploy tsurf NixOS config to the selected deploy node.
 
 Options:
-  --node NAME           Deploy flake node (tsurf|tsurf-dev|all, default: tsurf)
+  --node NAME           Deploy flake node (tsurf|tsurf-dev, default: tsurf)
   --mode remote         Build on target host via deploy-rs --remote-build (default)
   --mode local          Build locally, deploy remotely
   --target U@H          Override SSH target (default by node)
   --first-deploy        Disable magic rollback for one-time migration
   --fast                Local build, single evaluation (no --remote-build)
-  --no-magic-rollback   Disable magic rollback for this deploy
+  --magic-rollback      Enable deploy-rs magic rollback (300s confirm timeout)
   --post-hook PATH      Run script at absolute PATH after successful deploy (subprocess, not sourced)
   --update-inputs       Pull latest flake inputs before building
   --help                Show this help
@@ -120,10 +118,9 @@ Examples:
   ./scripts/deploy.sh --fast                       # Fast mode: local build, single eval (<90s for trivial changes)
   ./scripts/deploy.sh --update-inputs              # Deploy and update flake inputs first
   ./scripts/deploy.sh --node tsurf-dev          # Deploy OVH dev node only
-  ./scripts/deploy.sh --node all                  # Deploy BOTH nodes in parallel
   ./scripts/deploy.sh --mode local                # Local build (fallback if server unreachable)
   ./scripts/deploy.sh --first-deploy               # First migration deploy from nixos-rebuild
-  ./scripts/deploy.sh --no-magic-rollback          # Intentional networking change deploy
+  ./scripts/deploy.sh --magic-rollback             # Enable magic rollback with 300s confirm
   ./scripts/deploy.sh --target root@1.2.3.4        # Explicit SSH target override
 USAGE
 }
@@ -152,8 +149,12 @@ while [[ $# -gt 0 ]]; do
       FIRST_DEPLOY=true
       shift
       ;;
+    --magic-rollback)
+      MAGIC_ROLLBACK=true
+      shift
+      ;;
     --no-magic-rollback)
-      NO_MAGIC_ROLLBACK=true
+      # Deprecated alias (magic rollback is now off by default)
       shift
       ;;
     --update-inputs)
@@ -185,8 +186,8 @@ if [[ "$MODE" != "local" && "$MODE" != "remote" ]]; then
   exit 1
 fi
 
-if [[ "$NODE" != "tsurf" && "$NODE" != "tsurf-dev" && "$NODE" != "all" ]]; then
-  echo "Error: --node must be 'tsurf', 'tsurf-dev', or 'all', got '$NODE'"
+if [[ "$NODE" != "tsurf" && "$NODE" != "tsurf-dev" ]]; then
+  echo "Error: --node must be 'tsurf' or 'tsurf-dev', got '$NODE'"
   exit 1
 fi
 
@@ -199,50 +200,6 @@ if [[ -n "$POST_HOOK" ]]; then
     echo "Error: --post-hook path does not exist: $POST_HOOK"
     exit 1
   fi
-fi
-
-# --- Parallel deploy: --node all spawns independent processes ---
-if [[ "$NODE" == "all" ]]; then
-  echo "==> Deploying ALL nodes in parallel..."
-  PIDS=()
-  LOGS=()
-  for n in tsurf tsurf-dev; do
-    LOG="$FLAKE_DIR/tmp/deploy-${n}.log"
-    LOGS+=("$LOG")
-    # Forward all flags except --node
-    EXTRA_ARGS=()
-    [[ "$MODE" != "remote" ]] && EXTRA_ARGS+=(--mode "$MODE")
-    [[ "$FAST_MODE" == true ]] && EXTRA_ARGS+=(--fast)
-    [[ "$FIRST_DEPLOY" == true ]] && EXTRA_ARGS+=(--first-deploy)
-    [[ "$NO_MAGIC_ROLLBACK" == true ]] && EXTRA_ARGS+=(--no-magic-rollback)
-    [[ "$SKIP_UPDATE" == false ]] && EXTRA_ARGS+=(--update-inputs)
-    "$0" --node "$n" "${EXTRA_ARGS[@]}" >"$LOG" 2>&1 &
-    PIDS+=($!)
-    echo "  Started $n deploy (PID $!, log: $LOG)"
-  done
-  echo ""
-  FAILED_NODES=()
-  for i in "${!PIDS[@]}"; do
-    n=$( [[ $i -eq 0 ]] && echo "tsurf" || echo "tsurf-dev" )
-    if wait "${PIDS[$i]}"; then
-      echo "  ✓ $n deploy succeeded"
-    else
-      echo "  ✗ $n deploy FAILED (see ${LOGS[$i]})"
-      FAILED_NODES+=("$n")
-    fi
-  done
-  echo ""
-  if [[ ${#FAILED_NODES[@]} -eq 0 ]]; then
-    echo "=== All deploys SUCCESS ==="
-  else
-    echo "=== Deploy FAILED for: ${FAILED_NODES[*]} ==="
-    echo "Review logs:"
-    for n in "${FAILED_NODES[@]}"; do
-      echo "  $FLAKE_DIR/tmp/deploy-${n}.log"
-    done
-    exit 1
-  fi
-  exit 0
 fi
 
 # Public IPs for post-deploy connectivity verification (independent of Tailscale).
@@ -294,21 +251,9 @@ elif [[ "$NODE" == "tsurf-dev" ]]; then
   SYSTEMD_SERVICES=("tailscaled" "sshd" "syncthing")
 fi
 
-LOCAL_LOCK="$FLAKE_DIR/tmp/tsurf-${NODE}-deploy.local.lock"
 REMOTE_LOCK_DIR="/var/lock/tsurf-${NODE}-deploy.lock"
 
-# --- Local lock (prevent concurrent deploys from same machine) ---
-exec 9>"$LOCAL_LOCK"
-if command -v flock &>/dev/null; then
-  if ! flock --nonblock 9; then
-    echo "ERROR: Another deploy is already running on this machine (lock: $LOCAL_LOCK)."
-    exit 1
-  fi
-else
-  echo "WARNING: flock not available — local concurrent-deploy protection skipped."
-fi
-
-# --- Remote lock (prevent concurrent deploys from different machines) ---
+# --- Remote lock (prevent concurrent deploys from any machine) ---
 GIT_SHA=$(git -C "$FLAKE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LOCK_INFO="holder=$(whoami)@$(hostname)
 pid=$$
@@ -347,7 +292,7 @@ fi
 # server that auto-reverts to the previous NixOS generation after 5 minutes. The watchdog runs as a
 # nohup process (survives systemd reload during activation). deploy.sh cancels it after verifying
 # remote access post-deploy. If SSH breaks, the watchdog fires and restores access automatically.
-if [[ "$FIRST_DEPLOY" == true || "$NO_MAGIC_ROLLBACK" == true ]]; then
+if [[ "$FIRST_DEPLOY" == true || "$MAGIC_ROLLBACK" != true ]]; then
   echo "==> Magic rollback disabled — running pre-deploy safety checks..."
 
   # Evaluate the target config to trigger NixOS remote-access assertions
@@ -395,13 +340,13 @@ if [[ "$FIRST_DEPLOY" == true || "$NO_MAGIC_ROLLBACK" == true ]]; then
 fi
 
 # --- Belt-and-suspenders watchdog for magic-rollback deploys ---
-# @decision DEPLOY-06: Even with magic rollback enabled, schedule a longer watchdog (10 min)
+# @decision DEPLOY-06: When magic rollback is enabled, schedule a longer watchdog (10 min)
 # as a safety net. Magic rollback can fail if activate-rs is killed by cgroup cleanup
 # (deploy-rs issue #153). The 600s timeout is well beyond the 300s confirm timeout,
 # so it only fires if magic rollback itself failed.
 # @decision DEPLOY-07: confirmTimeout bumped 120→300 — activation takes >120s on OVH due to
 # repo cloning + dbus session startup during NixOS switch-to-configuration.
-if [[ "$WATCHDOG_ACTIVE" != true && "$FIRST_DEPLOY" != true ]]; then
+if [[ "$WATCHDOG_ACTIVE" != true && "$MAGIC_ROLLBACK" == true ]]; then
   PREV_SYSTEM=$(ssh "${SSH_OPTS[@]}" "$TARGET" "readlink -f /nix/var/nix/profiles/system" 2>/dev/null || true)
   if [[ -n "$PREV_SYSTEM" ]]; then
     if ssh "${SSH_OPTS[@]}" "$TARGET" \
@@ -427,17 +372,15 @@ DEPLOY_ARGS=(
   "$FLAKE_DIR#$NODE"
   --skip-checks          # Pre-deploy test gate (nix flake check) in MC adapter handles this
   --fast-connection true  # VPS-to-VPS / Tailscale links are stable enough for fast mode
-  --confirm-timeout 300  # Must match flake.nix deploy.nodes.*.confirmTimeout
 )
-if [[ "$FIRST_DEPLOY" == true || "$NO_MAGIC_ROLLBACK" == true ]]; then
+if [[ "$MAGIC_ROLLBACK" == true && "$FIRST_DEPLOY" != true ]]; then
+  DEPLOY_ARGS+=(--confirm-timeout 300)
+  echo "==> Magic rollback enabled (300s confirm timeout)."
+else
   DEPLOY_ARGS+=(--magic-rollback false)
-fi
-
-if [[ "$FIRST_DEPLOY" == true ]]; then
-  echo "==> First deploy mode enabled: magic rollback disabled for migration."
-fi
-if [[ "$NO_MAGIC_ROLLBACK" == true ]]; then
-  echo "==> Magic rollback disabled for this deploy (intentional networking/SSH changes)."
+  if [[ "$FIRST_DEPLOY" == true ]]; then
+    echo "==> First deploy mode: magic rollback disabled for migration."
+  fi
 fi
 
 # Fast mode overrides MODE to local (single evaluation, no remote-build)
@@ -462,26 +405,14 @@ if [[ "$DEPLOY_RS_EXIT" -ne 0 ]]; then
 fi
 DEPLOY_COMPLETED=true
 
-# --- Verify services ---
-echo "==> Verifying services (polling up to 30s)..."
+# --- Verify services (single-pass) ---
+echo "==> Verifying services..."
 FAILED=0
-for attempt in $(seq 1 15); do
-  FAILED=0
-  ALL_RUNNING=true
-
-  # Check systemd services
-  for s in "${SYSTEMD_SERVICES[@]}"; do
-    if ! ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl is-active --quiet ${s}.service" 2>/dev/null; then
-      ALL_RUNNING=false
-      FAILED=1
-    fi
-  done
-
-  if [[ "$ALL_RUNNING" == true ]]; then
-    break
-  fi
-  sleep 2
-done
+if ! ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl is-active --quiet ${SYSTEMD_SERVICES[*]}" 2>/dev/null; then
+  FAILED=1
+  echo "  WARN: Some services not ready"
+  ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl --failed --no-legend" 2>/dev/null || true
+fi
 
 # --- Post-deploy: verify remote access ---
 # @decision DEPLOY-04: After deploy, verify SSH connectivity via both the deploy target (Tailscale)
@@ -572,7 +503,7 @@ if [[ "$FAILED" -eq 0 ]]; then
   write_deploy_status "success"
 else
   echo "=== Deploy FAILED ==="
-  echo "Services not active after 30s:"
+  echo "Services not active:"
   for s in "${SYSTEMD_SERVICES[@]}"; do
     if ! ssh "${SSH_OPTS[@]}" "$TARGET" "systemctl is-active --quiet ${s}.service" 2>/dev/null; then
       echo "  - ${s}.service"
