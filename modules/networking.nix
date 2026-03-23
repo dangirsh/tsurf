@@ -17,7 +17,7 @@
 { config, lib, pkgs, ... }:
 let
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
-  # Manual port-to-label map — kept in sync with dashboard-visible internal services.
+  # Manual port-to-label map — kept in sync with UI-visible internal services.
   internalOnlyPorts = {
     "8082" = "Dashboard";
     "8384" = "Syncthing";
@@ -122,23 +122,6 @@ in {
     authKeyFile = config.sops.secrets."tailscale-authkey".path;
     useRoutingFeatures = "client";   # auto-sets checkReversePath = "loose"
     extraUpFlags = [ ];
-  };
-
-  services.dashboard.entries.tailscale = {
-    name = "Tailscale";
-    description = "VPN mesh network";
-    systemdUnit = "tailscaled.service";
-    icon = "tailscale";
-    order = 5;
-    module = "networking.nix";
-  };
-
-  services.dashboard.entries.sshd = {
-    name = "SSH";
-    description = "Key-only, hardened (port 22)";
-    systemdUnit = "sshd.service";
-    order = 6;
-    module = "networking.nix";
   };
 
   # --- Persistence: network identity + SSH host keys ---
