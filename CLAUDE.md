@@ -186,6 +186,9 @@ that imports this repo's modules. The private flake:
 - YAGNI — do not add features "for later" unless they are in an active phase plan
 - One source of truth — packages declared in exactly one module (no duplicates across modules)
 - Prefer inline over separate files for small configs (<10 lines); extract larger bash/python to separate files
-- Let bindings for values used more than once (e.g., Tailscale IP in homepage.nix)
+- Let bindings for values used more than once
 - `tmp/` in project root for temporary files (never `/tmp/`) — convention from global CLAUDE.md
-- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (users.nix, agent-compute.nix), or when the entire content differs (homepage.nix, syncthing.nix). For service modules (automaton, openclaw, matrix), import from public and override only what differs.
+- `disabledModules` in private overlays is only justified when replacing a public
+  module entirely for host-specific behavior (for example, `users.nix` or
+  `syncthing.nix`); prefer importing public modules and overriding only what
+  differs.
