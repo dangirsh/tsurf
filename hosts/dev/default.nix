@@ -1,6 +1,6 @@
 # hosts/dev/default.nix — example agent/dev host
 # Role: agent development and sandboxed execution via agent-sandbox.nix + nono.nix.
-# Clone-repos activation script initializes project directories on first boot.
+# Clone-repos helper script is available at extras/scripts/clone-repos.sh for private overlays.
 # Private overlay replaces this with real host config, repo lists, and agent fleet wiring.
 { config, inputs, lib, pkgs, ... }: {
   imports = [
@@ -29,15 +29,6 @@
   i18n.defaultLocale = "C.UTF-8";
 
   networking.useDHCP = true;
-
-  # @decision AGENT-01, AGENT-02: Idempotent repo cloning on activation (clone-only, never pull)
-  system.activationScripts.clone-repos = {
-    deps = [ "users" ];
-    text = ''
-      GIT_BIN="${pkgs.git}/bin/git"
-      GITHUB_PAT_FILE="${config.sops.secrets."github-pat".path}"
-    '' + builtins.readFile ../../extras/scripts/clone-repos.sh;
-  };
 
   # --- Host-specific shared module settings ---
   boot.loader.grub.device = "/dev/sda"; # REPLACE
