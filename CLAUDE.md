@@ -188,4 +188,4 @@ that imports this repo's modules. The private flake:
 - Prefer inline over separate files for small configs (<10 lines); extract larger bash/python to separate files
 - Let bindings for values used more than once (e.g., Tailscale IP in homepage.nix)
 - `tmp/` in project root for temporary files (never `/tmp/`) — convention from global CLAUDE.md
-- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (users.nix, agent-compute.nix), or when the entire content differs (homepage.nix, syncthing.nix). For service modules (automaton, openclaw, matrix), import from public and override only what differs.
+- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (e.g., `users.nix`, `agent-compute.nix`), or when the entire module content differs (e.g., `syncthing.nix` for completely different sync setup).
