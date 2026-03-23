@@ -2,6 +2,13 @@
 # scripts/btrfs-rollback.sh — BTRFS root subvolume rollback (runs in initrd)
 # Moves current root to old_roots/<timestamp>, prunes snapshots >30d, creates fresh root.
 #
+# Why this exists: nix-community/impermanence only handles the persistence side
+# (bind-mounting paths from /persist onto the ephemeral root). It does not provide
+# a wipe mechanism. This script is the wipe — it deletes and recreates the root
+# BTRFS subvolume each boot ("Erase your darlings" pattern). We use BTRFS rollback
+# instead of tmpfs root because server workloads need disk-backed root (see @decision
+# IMP-01 in modules/impermanence.nix).
+#
 # Environment: NixOS traditional (non-systemd) initrd via boot.initrd.postResumeCommands.
 # Requires: bash, mount, btrfs, stat, date, find, mkdir, mv (all available in NixOS initrd).
 
