@@ -2,25 +2,9 @@
 # Frontend: ./scripts/dashboard-frontend.html (HTML/CSS/JS)
 # Backend:  ./scripts/dashboard-server.py (Python HTTP server)
 #
-# @decision DASH-01: Custom NixOS option namespace for dashboard entries.
-# @rationale: Each module self-describes via services.dashboard.entries.
-#   NixOS module system merges attrsOf across public + private overlays.
-#   No disabledModules needed — private modules just add entries.
-#
-# @decision DASH-02: Build-time JSON manifest via builtins.toJSON.
-# @rationale: Manifest represents declared config, not runtime state.
-#   Reproducible, cached, testable via nix eval.
-#
-# @decision DASH-03: Single Python stdlib HTTP server (writePython3Bin).
-# @rationale: Matches restic-status-server pattern.
-#   One process, one port, one systemd unit. No framework dependencies.
-#
-# @decision DASH-04: DynamicUser for the dashboard service.
-# @rationale: Dashboard needs no persistent state and no secrets.
-#   systemctl show is unprivileged. DynamicUser provides isolation.
-#
-# @decision DASH-05: Status via systemctl show (batch, <100ms).
-# @rationale: Decision locked: systemd unit status only, no HTTP checks.
+# Dashboard: modules self-register via services.dashboard.entries.
+# Build-time JSON manifest, single Python stdlib HTTP server,
+# DynamicUser isolation, systemctl-based status checks.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.dashboard;
