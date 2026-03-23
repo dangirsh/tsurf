@@ -1,7 +1,4 @@
 # extras/syncthing.nix
-# @decision SVC-02: Syncthing runs as user dev with fully declarative devices/folders.
-# @decision SVC-03: GUI binds 127.0.0.1 — access via Tailscale Serve or SSH tunnel only.
-# @decision SYNC-84-01: openDefaultPorts disabled to avoid exposing LAN discovery ports on VPS hosts.
 # @decision SYNC-116-01: Disable global announce, local announce, relays, and NAT by default.
 #   Tailnet-only mesh is the intended deployment model. Opt-in to public discovery via
 #   services.syncthingStarter.publicBep = true.
@@ -164,8 +161,6 @@ in
         folders = if hasMesh then meshSyncthingFolders else { };
 
         gui = {
-          # @decision SEC47-21: Host check re-enabled (default)
-          # @rationale: Only localhost access (homepage siteMonitor). 
           insecureSkipHostcheck = false;
         };
 
