@@ -1,6 +1,4 @@
 # modules/agent-compute.nix
-# @decision: Package names are `claude-code` and `codex` from llm-agents overlay
-#   (not `llm-agents-claude-code` — the overlay adds packages directly to pkgs namespace)
 # @decision SANDBOX-139-01: Core agent-compute no longer enables Podman by default.
 #   Container runtime integration is optional and belongs in private overlay/extras.
 { config, lib, pkgs, ... }:
