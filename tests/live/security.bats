@@ -82,7 +82,7 @@ bats_load_library bats-assert
   }
 
   # Must match internalOnlyPorts in modules/networking.nix (localhost-only, no firewall accept rules)
-  local internal_ports="8082 8384 9200"
+  local internal_ports="8082 9200"
   local port
   for port in $internal_ports; do
     if echo "$nft_output" | grep -E "tcp dport.*\\b${port}\\b.*accept" > /dev/null 2>&1; then

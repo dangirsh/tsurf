@@ -12,7 +12,6 @@
     ../../modules/users.nix
     ../../modules/networking.nix
     ../../modules/secrets.nix
-    ../../extras/syncthing.nix
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
     ../../extras/restic.nix
@@ -36,8 +35,6 @@
 
   # Contabo VPS uses scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;
-
-  services.syncthingStarter.enable = true;
 
   services.dashboard.enable = true;
   system.stateVersion = "25.11";

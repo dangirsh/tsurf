@@ -31,8 +31,8 @@ Additional wrappers such as `codex`, `pi`, and `opencode` are opt-in public extr
 Hosts running agent workloads should import all three agent infrastructure modules:
 
 - `modules/agent-compute.nix` -- provides `tsurf-agents.slice` cgroup limits and `/data/projects` persistence
-- `modules/agent-sandbox.nix` -- core `claude` wrapper and protected control-plane repo guards
-- `modules/nono.nix` -- nono binary, tsurf Landlock profile, and proxy credential injection
+- `modules/agent-sandbox.nix` -- core `claude` wrapper, protected control-plane repo guards, and the brokered launch path
+- `modules/nono.nix` -- nono binary and tsurf Landlock profile
 
 For unattended Claude work, also import `extras/dev-agent.nix`.
 
@@ -110,10 +110,10 @@ Then add workflow-specific credentials and execution policy in that same overlay
 
 ### Secret ownership for agent execution
 
-Ensure provider keys needed by agent-run workloads are readable by `config.tsurf.agent.user`:
+For the public brokered launcher model, keep provider keys root-owned. The launcher reads them before the privilege drop and exposes only per-session loopback tokens to the child:
 
 ```nix
-sops.secrets."anthropic-api-key".owner = config.tsurf.agent.user;
+sops.secrets."anthropic-api-key".owner = "root";
 ```
 
 ### Using the built-in interactive wrappers
@@ -130,6 +130,21 @@ The wrapper handles credential injection from `/run/secrets/`, enforces the git-
 It also refuses repos marked with `.tsurf-control-plane`, so keep that marker in infra/control-plane repos and launch agents from workspace repos.
 
 See `SECURITY.md` in the tsurf repo for the full access control model, credential flow architecture, and tailnet segmentation guidance.
+
+### Adding File Sync
+
+Public tsurf intentionally does not ship Syncthing or any other file-sync module. Peer topology, folder layout, and any public port exposure are deployment-specific, so keep sync in your private overlay.
+
+This template includes [`modules/syncthing.nix`](modules/syncthing.nix) as a starting point:
+
+```nix
+# hosts/my-host/default.nix
+imports = [ ../../modules/syncthing.nix ];
+
+services.syncthingStarter.enable = true;
+```
+
+The example module keeps the GUI on `127.0.0.1:8384`, supports the old mesh registry pattern, and makes public BEP exposure an explicit per-overlay opt-in.
 
 ### Adding Docker
 

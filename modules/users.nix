@@ -1,5 +1,7 @@
 # modules/users.nix
-# @decision SYS-01: dev with sudo (wheel); mutableUsers=false, execWheelOnly=true
+# @decision SYS-01: dev with sudo (wheel); mutableUsers=false, execWheelOnly=false
+#   so the dedicated agent user can receive an explicit immutable-launcher sudo rule
+#   without joining wheel.
 # @decision SEC-106-01: allowUnsafePlaceholders gates insecure template defaults.
 #   When false (default), assertions reject placeholder SSH keys and passwordless login.
 #   Public template hosts set this to true for eval; real deploys must not.
@@ -100,7 +102,7 @@ in
     # Insecure defaults gated by allowUnsafePlaceholders
     users.allowNoPasswordLogin = cfg.allowUnsafePlaceholders;
     security.sudo.wheelNeedsPassword = !cfg.allowUnsafePlaceholders;
-    security.sudo.execWheelOnly = true;
+    security.sudo.execWheelOnly = lib.mkForce false;
 
     # Agent user security invariants (unconditional — always enforced)
     assertions = [

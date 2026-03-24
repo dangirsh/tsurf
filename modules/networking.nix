@@ -15,7 +15,6 @@ let
   # Manual port-to-label map — kept in sync with UI-visible internal services.
   internalOnlyPorts = {
     "8082" = "Dashboard";
-    "8384" = "Syncthing";
     "9200" = "Restic status server";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
@@ -157,9 +156,7 @@ in {
     networking.firewall = {
       enable = true;
       allowPing = true;
-      allowedTCPPorts = [ 22 ]
-        ++ lib.optionals config.services.syncthingStarter.publicBep [ 22000 ]
-        ++ lib.optionals config.services.nginx.enable [ 80 443 ];
+      allowedTCPPorts = [ 22 ] ++ lib.optionals config.services.nginx.enable [ 80 443 ];
       allowedUDPPorts = [ config.services.tailscale.port ];
       trustedInterfaces = [ ];
     };

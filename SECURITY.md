@@ -13,6 +13,8 @@ strengthen or weaken these properties, so host-specific statements are called ou
 - [`examples/scripts/deploy.sh`](examples/scripts/deploy.sh)
   refuses to deploy unless it is being run from a private overlay flake that
   contains a `tsurf.url` input.
+- The public repo does not ship a file-sync module. Sync topology and exposure
+  policy are private-overlay concerns.
 - [`hosts/services/default.nix`](hosts/services/default.nix)
   is the service-host role. It does **not** import
   [`modules/agent-sandbox.nix`](modules/agent-sandbox.nix)
@@ -35,7 +37,8 @@ strengthen or weaken these properties, so host-specific statements are called ou
   - is not `dev`
   - is not in `wheel`
 - `users.mutableUsers = false`.
-- `security.sudo.execWheelOnly = true`.
+- `security.sudo.execWheelOnly = false`, but non-wheel sudo remains limited to
+  explicit immutable-launcher rules such as the brokered Claude path.
 - Raw agent binaries are not installed in `PATH` by
   [`modules/agent-compute.nix`](modules/agent-compute.nix).
   The intended interactive entrypoints are wrapper binaries such as `claude` and,
@@ -120,9 +123,9 @@ Security properties of that path:
 - The launcher still rejects any baked `AGENT_REAL_BINARY` outside `/nix/store`.
 - The caller cannot swap binaries, profiles, or credential tuples across the
   privileged sudo boundary.
-- If the wrapper is already running as the agent user, it skips the sudo/systemd
-  hop and execs `agent-wrapper.sh` directly. This is how `dev-agent` runs its
-  prompt or command payloads.
+- The dedicated `agent` user may invoke the immutable Claude launcher via sudo,
+  so unattended `dev-agent` sessions use the same brokered root-owned path
+  without ever gaining direct access to raw provider keys.
 - Launch events go to journald only (`journalctl -t agent-launch`).
   Logged fields are limited to `mode`, `agent`, `user`, `uid`, and `repo_scope`.
   Raw arguments, prompts, and file paths are not logged.
@@ -164,7 +167,6 @@ Enforced behavior:
   - `/run/secrets`
   - `~/.ssh`
   - `~/.bash_history`
-  - `~/.config/syncthing`
   - `~/.gnupg`
   - `~/.aws`
   - `~/.kube`
@@ -196,8 +198,8 @@ repo backs these claims with live sandbox tests on the dev host.
 
 | Secret | Owner |
 | --- | --- |
-| `anthropic-api-key` | agent user |
-| `openai-api-key` | agent user |
+| `anthropic-api-key` | root |
+| `openai-api-key` | root |
 | `google-api-key` | `dev` |
 | `xai-api-key` | `dev` |
 | `openrouter-api-key` | `dev` |
@@ -209,14 +211,13 @@ repo backs these claims with live sandbox tests on the dev host.
 
 - Each wrapper carries a per-wrapper `AGENT_CREDENTIALS` allowlist of
   `SERVICE:ENV_VAR:secret-file-name` triples.
-- `scripts/agent-wrapper.sh` reads only those named secret files from
-  `/run/secrets`.
+- `scripts/agent-wrapper.sh` runs on the root-owned brokered launch path and
+  reads only those named secret files from `/run/secrets`.
 - Missing secret files produce a warning and an empty env var.
-- Values prefixed with `PLACEHOLDER` are not passed to nono as live credentials.
-- [`modules/nono.nix`](modules/nono.nix) defines proxy-style
-  `custom_credentials` for Anthropic and OpenAI using `env://` URIs.
-- `nono` then injects per-session phantom tokens into the sandboxed child via
-  `--credential <service>`.
+- Values prefixed with `PLACEHOLDER` are skipped.
+- The wrapper starts a root-owned loopback credential proxy for the requested
+  providers, generates per-session random tokens, then launches the actual
+  agent binary as the `agent` user inside `nono` via `setpriv`.
 
 What the child process gets:
 
@@ -244,7 +245,6 @@ Credential scoping is least-privilege by wrapper. Core default: `claude`
 - `tailscale0` is **not** trusted.
 - Public TCP exposure is limited to:
   - `22` always
-  - `22000` only when `services.syncthingStarter.publicBep = true`
   - `80` and `443` only when `services.nginx.enable = true`
 - Cloud metadata access to `169.254.169.254` is dropped in nftables.
 
@@ -258,12 +258,6 @@ SSH defaults:
 - `KbdInteractiveAuthentication = false`
 - `MaxAuthTries = 3`
 - `fail2ban` is disabled
-
-Syncthing defaults:
-
-- GUI binds `127.0.0.1:8384`
-- global announce, local announce, relays, and NAT are disabled
-- public BEP exposure is opt-in
 
 ### Agent Egress
 
@@ -344,14 +338,15 @@ Eval-time checks:
 - [`tests/eval/config-checks.nix`](tests/eval/config-checks.nix)
   covers public-output safety, placeholder isolation, firewall exposure,
   break-glass requirements, Nix daemon restrictions, sandbox structure, read-scope
-  fail-closed behavior, sudo-boundary hardening, and proxy credential configuration.
+  fail-closed behavior, sudo-boundary hardening, and root-side credential broker structure.
 
 Live checks:
 
 - [`tests/live/security.bats`](tests/live/security.bats)
   verifies SSH hardening, kernel sysctls, metadata blocking, and firewall exposure.
 - [`tests/live/secrets.bats`](tests/live/secrets.bats)
-  verifies `/run/secrets` presence, ownership, and non-world-readable permissions.
+  verifies `/run/secrets` presence, root ownership for brokered provider keys,
+  and non-world-readable permissions.
 - [`tests/live/networking.bats`](tests/live/networking.bats)
   verifies Tailscale state, the metadata-block nftables rule, and the agent
   egress allowlist table.
@@ -362,13 +357,13 @@ Live checks:
   verifies wrapper script structure: nono invocation, journald logging, and absence
   of secret mounts.
 - [`tests/live/service-health.bats`](tests/live/service-health.bats)
-  verifies systemd unit health (tailscaled, syncthing, sshd, dashboard, restic timer)
+  verifies systemd unit health (tailscaled, sshd, dashboard, restic timer)
   and Tailscale backend state.
 - [`tests/live/impermanence.bats`](tests/live/impermanence.bats)
   verifies /persist mount, BTRFS filesystem type, critical persist directories, and
   machine-id persistence.
 - [`tests/live/api-endpoints.bats`](tests/live/api-endpoints.bats)
-  verifies HTTP endpoint health for localhost-bound services (syncthing GUI, dashboard).
+  verifies HTTP endpoint health for localhost-bound services (dashboard).
 
 ## Non-Goals And Accepted Risks
 
@@ -379,9 +374,9 @@ Live checks:
 - The public core does not grant the agent user Nix daemon access. Private
   overlays can loosen this boundary if needed.
 - [`extras/dev-agent.nix`](extras/dev-agent.nix) runs Claude
-  Code with `--permission-mode=bypassPermissions` inside the sandbox by default.
-  That is an explicit unattended-workflow tradeoff; operators can override
-  `services.devAgent.permissionMode`.
+  Code with `--permission-mode=bypassPermissions` inside the sandbox by default
+  and defaults its working directory to a dedicated workspace under project root
+  unless a private overlay overrides it.
 - The host-level agent egress allowlist is coarse by design. It is scoped by UID,
   not by individual wrapper or destination hostname.
 - Optional extras can widen access. Notable example:

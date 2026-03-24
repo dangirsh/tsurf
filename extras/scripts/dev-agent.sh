@@ -9,10 +9,14 @@ set -euo pipefail
 XDG_RUNTIME_DIR="/run/user/$(id -u)"
 export XDG_RUNTIME_DIR
 
-# API key loading is handled by agent-wrapper.sh via AGENT_CREDENTIALS.
+# API key loading handled by agent-wrapper.sh.
 # @decision DEV-AGENT-144-01: The long-lived systemd child is a small manager loop.
-# It keeps the zmx session present, initializes a dedicated workspace repo on first
-# boot, and lets systemd supervise the lifecycle instead of a detached oneshot.
+#   It keeps the zmx session present, initializes a dedicated workspace repo on
+#   first boot, and lets systemd supervise the lifecycle instead of a detached
+#   oneshot.
+# @decision DEV-AGENT-145-01: The Claude wrapper invoked from this session stays
+#   on the brokered launcher path, so the agent principal receives only opaque
+#   session tokens and never raw provider keys.
 
 if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
   git init -q

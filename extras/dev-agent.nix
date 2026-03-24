@@ -1,6 +1,8 @@
 # extras/dev-agent.nix
 # Persistent autonomous Claude Code agent running in a supervised zmx session
-# @decision SEC-115-04: dev-agent runs as agent user, not operator.
+# @decision SEC-115-04: dev-agent runs as the dedicated agent user, not operator.
+# @decision SEC-145-03: dev-agent reaches Claude through the same brokered
+#   immutable launcher path, so the agent principal never needs raw provider keys.
 # @decision DEV-AGENT-89: Systemd supervises a zmx manager loop so session health
 #   is visible in systemd and unattended agent workflows restart cleanly.
 # @decision DEV-AGENT-98: bypassPermissions is enabled only inside nono sandbox;

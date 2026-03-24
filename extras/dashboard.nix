@@ -23,7 +23,6 @@ let
   moduleLabels = {
     "networking.nix" = "Networking";
     "restic.nix" = "Backup";
-    "syncthing.nix" = "File Sync";
     "agent-compute.nix" = "Agent Compute";
     "dashboard.nix" = "Dashboard";
   };

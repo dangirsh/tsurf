@@ -3,16 +3,24 @@
 #   Additional wrappers and unattended workflows build on the same wrapper contract.
 # @decision AUDIT-117-01: Launch logging uses journald only (logger -t agent-launch).
 #   File-based audit logs remain removed.
-# @decision NONO-118-02: API keys are loaded into the parent env from /run/secrets/.
-#   nono reads them via env:// URIs and injects phantom tokens into the child.
-# @decision SEC-119-01: Interactive Claude sessions run as the dedicated agent user via
-#   systemd-run, not as the calling operator.
+# @decision NONO-145-02: The launcher path stays root-owned long enough to read
+#   provider secrets and start the per-session loopback credential proxy.
+# @decision SEC-119-01: Interactive Claude sessions stay brokered through
+#   systemd-run; the actual agent binary drops to the dedicated agent user inside
+#   the sandboxed command chain, not as the calling operator.
 # @decision SEC-135-01: The sudo boundary exposes one immutable Claude launcher.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentSandbox;
   agentCfg = config.tsurf.agent;
-  agentRuntimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.util-linux ];
+  agentRuntimePath = lib.makeBinPath [
+    pkgs.bash
+    pkgs.coreutils
+    pkgs.git
+    pkgs.nono
+    pkgs.python3
+    pkgs.util-linux
+  ];
   protectedRepoMarkers = lib.concatStringsSep ":" cfg.protectedRepoMarkers;
   protectedRepoRoots = lib.concatStringsSep ":" cfg.protectedRepoRoots;
 
@@ -27,6 +35,7 @@ let
       export AGENT_PROTECTED_REPO_MARKERS="${protectedRepoMarkers}"
       export AGENT_PROTECTED_REPO_ROOTS="${protectedRepoRoots}"
       export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
+      export AGENT_CREDENTIAL_PROXY="${../scripts/credential-proxy.py}"
       export AGENT_CREDENTIALS="anthropic:ANTHROPIC_API_KEY:anthropic-api-key"
 
       if [[ -t 0 && -t 1 ]]; then
@@ -36,7 +45,6 @@ let
       fi
 
       exec systemd-run \
-        --uid="${agentCfg.user}" --gid="${toString agentCfg.gid}" \
         "$stdio_flag" --same-dir --collect \
         --unit="agent-claude-$$" \
         --slice=tsurf-agents.slice \
@@ -44,14 +52,19 @@ let
         --property=CPUQuota=200% \
         --property=TasksMax=256 \
         --setenv=PATH="${agentRuntimePath}" \
-        --setenv=HOME="${agentCfg.home}" \
+        --setenv=AGENT_CHILD_PATH="${agentRuntimePath}" \
         --setenv=AGENT_NAME="$AGENT_NAME" \
         --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
         --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
         --setenv=AGENT_PROTECTED_REPO_MARKERS="$AGENT_PROTECTED_REPO_MARKERS" \
         --setenv=AGENT_PROTECTED_REPO_ROOTS="$AGENT_PROTECTED_REPO_ROOTS" \
         --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
+        --setenv=AGENT_CREDENTIAL_PROXY="$AGENT_CREDENTIAL_PROXY" \
         --setenv=AGENT_CREDENTIALS="$AGENT_CREDENTIALS" \
+        --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
+        --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
+        --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \
+        --setenv=AGENT_RUN_AS_HOME="${agentCfg.home}" \
         ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
     '';
   };
@@ -66,10 +79,11 @@ let
       export AGENT_PROTECTED_REPO_MARKERS="${protectedRepoMarkers}"
       export AGENT_PROTECTED_REPO_ROOTS="${protectedRepoRoots}"
       export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
+      export AGENT_CREDENTIAL_PROXY="${../scripts/credential-proxy.py}"
       export AGENT_CREDENTIALS="anthropic:ANTHROPIC_API_KEY:anthropic-api-key"
 
-      if [[ "$(id -un)" == "${agentCfg.user}" ]]; then
-        exec ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
+      if [[ "$(id -u)" == "0" ]]; then
+        exec ${launcher}/bin/${launcherName} "$@"
       fi
 
       exec /run/wrappers/bin/sudo ${launcher}/bin/${launcherName} "$@"
@@ -108,13 +122,22 @@ in
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ wrapper ];
 
-    security.sudo.extraRules = [{
-      groups = [ "wheel" ];
-      commands = [{
-        command = "${launcher}/bin/${launcherName}";
-        options = [ "NOPASSWD" ];
-      }];
-    }];
+    security.sudo.extraRules = [
+      {
+        groups = [ "wheel" ];
+        commands = [{
+          command = "${launcher}/bin/${launcherName}";
+          options = [ "NOPASSWD" ];
+        }];
+      }
+      {
+        users = [ agentCfg.user ];
+        commands = [{
+          command = "${launcher}/bin/${launcherName}";
+          options = [ "NOPASSWD" ];
+        }];
+      }
+    ];
 
     environment.persistence."/persist".directories =
       map (path: "${agentCfg.home}/${path}") [

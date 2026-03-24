@@ -20,11 +20,11 @@ modules/                 # Core — security/infrastructure essentials only
   break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
   impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
   networking.nix       # nftables, SSH (hardened), Tailscale, firewall assertions
-  nono.nix             # nono profile + proxy credential injection (phantom tokens)
+  nono.nix             # nono profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
   users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
 scripts/                 # Core scripts (sandbox, rollback, test runner)
-  agent-wrapper.sh     # nono sandbox entry — env setup, credential injection, exec
+  agent-wrapper.sh     # root-owned launch bridge — credential proxy, sandbox, privilege drop
   btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
   run-tests.sh         # Live BATS test runner (SSH-based)
   sandbox-probe.sh     # Sandbox boundary probe for live tests
@@ -36,7 +36,6 @@ extras/                  # Optional batteries — import what you need
   opencode.nix         # opencode agent wrapper (Anthropic + OpenAI, opt-in)
   pi.nix               # pi agent wrapper (Anthropic, opt-in)
   restic.nix           # Restic backup to B2 + status server
-  syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
   home/
     default.nix        # home-manager: git/ssh/direnv inlined
     cass.nix           # CASS indexer timer (opt-in)
@@ -64,10 +63,10 @@ tests/
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
 - **Agent tooling**: Public core ships two first-class agent paths: sandboxed interactive `claude` and the unattended `dev-agent` service. `codex`, `pi`, and `opencode` are opt-in extras; workflow-specific wrappers still belong in private overlays.
-- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, and protected control-plane repo markers/roots rejected up front. Proxy credential injection — nono generates per-session phantom tokens; real keys never reach the child process.
+- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, protected control-plane repo markers/roots rejected up front. A root-owned loopback credential proxy keeps real keys out of the agent principal and gives the child only per-session tokens.
 - **Agent egress**: Host nftables allowlists outbound agent traffic by UID. Defaults allow DNS plus TCP `22/80/443` and block private/link-local ranges.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
-- **Network model**: Only ports 22 + 22000 on public firewall by default. Ports 80/443 conditional on nginx. All internal services bind 127.0.0.1 (dashboard, syncthing GUI). Tailscale for internal access.
+- **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale is for internal access.
 - **Privilege model**: `dev` is the operator (wheel, human admin). `agent` runs sandboxed tools (no wheel). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
 - **Operator UID**: Configurable via `tsurf.template.devUid` (default 1000), defined in `modules/users.nix`.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
@@ -196,4 +195,4 @@ and can replace modules entirely or import and extend them.
 - Prefer inline over separate files for small configs (<10 lines); extract larger bash/python to separate files
 - Let bindings for values used more than once (e.g., Tailscale IP in homepage.nix)
 - `tmp/` in project root for temporary files (never `/tmp/`) — convention from global CLAUDE.md
-- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (e.g., `users.nix`, `agent-compute.nix`), or when the entire module content differs (e.g., `syncthing.nix` for completely different sync setup).
+- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (e.g., `users.nix`, `agent-compute.nix`), or when the entire module content differs and you are replacing that concern wholesale in the overlay.

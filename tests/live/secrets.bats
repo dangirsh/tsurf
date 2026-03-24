@@ -25,9 +25,14 @@ bats_load_library bats-assert
   assert_secret_exists "/run/secrets/tailscale-authkey" "root"
 }
 
-@test "${HOST}: wrapper API key secrets are owned by the configured agent user" {
-  assert_secret_exists "/run/secrets/anthropic-api-key" "${AGENT_USER}"
-  assert_secret_exists "/run/secrets/openai-api-key" "${AGENT_USER}"
+@test "${HOST}: wrapper API key secrets are root-owned" {
+  assert_secret_exists "/run/secrets/anthropic-api-key" "root"
+  assert_secret_exists "/run/secrets/openai-api-key" "root"
+}
+
+@test "${HOST}: agent user cannot read wrapper API key secrets directly" {
+  run remote "sudo -u ${AGENT_USER} test ! -r /run/secrets/anthropic-api-key && test ! -r /run/secrets/openai-api-key"
+  assert_success
 }
 
 @test "${HOST}: secret files are not world-readable" {
