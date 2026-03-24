@@ -1,22 +1,8 @@
-# extras/syncthing.nix
-# @decision SYNC-116-01: Disable global announce, local announce, relays, and NAT by default.
-#   Tailnet-only mesh is the intended deployment model. Opt-in to public discovery via
-#   services.syncthingStarter.publicBep = true.
-# @decision SYNC-93-01: tsurf.syncthing.mesh option for cross-host sync via device registry.
-#   When mesh.devices is populated, peer devices and shared folders are auto-wired.
-#   Placeholder devices/folders only appear when mesh is empty (unconfigured template).
-#
-# --- Mesh usage ---
-# 1. On each host, get the device ID: `syncthing -device-id` (or Syncthing GUI > Actions > Show ID)
-# 2. In your private overlay (or host config), set:
-#      tsurf.syncthing.mesh.devices = {
-#        "tsurf" = { id = "XXXXXXX-..."; addresses = [ "tcp://100.x.y.z:22000" ]; };
-#        "tsurf-dev" = { id = "YYYYYYY-..."; addresses = [ "tcp://100.a.b.c:22000" ]; };
-#      };
-#      tsurf.syncthing.mesh.folders.sync = {
-#        path = "/home/dev/Sync";
-#      };
-# 3. Deploy to all hosts — each host automatically peers with all others in the registry.
+# examples/private-overlay/modules/syncthing.nix
+# @decision PRVSYNC-01: File sync is private-overlay only because peer topology,
+#   folder layout, and any public port exposure are deployment-specific.
+# @decision PRVSYNC-02: Keep the GUI localhost-only by default; public BEP remains
+#   an explicit opt-in on the overlay side.
 { config, lib, ... }:
 let
   cfg = config.services.syncthingStarter;
@@ -24,13 +10,11 @@ let
   meshDeviceNames = builtins.attrNames meshCfg.devices;
   hasMesh = meshDeviceNames != [ ];
 
-  # Convert mesh devices to syncthing device format
   meshSyncthingDevices = lib.mapAttrs (_name: dev: {
     inherit (dev) id;
     addresses = dev.addresses;
   }) meshCfg.devices;
 
-  # Convert mesh folders to syncthing folder format, auto-populating device list
   meshSyncthingFolders = lib.mapAttrs (folderId: folder: {
     id = if folder.id != null then folder.id else folderId;
     label = if folder.label != null then folder.label else folderId;
@@ -58,9 +42,8 @@ in
             type = lib.types.listOf lib.types.str;
             default = [ "dynamic" ];
             description = ''
-              Syncthing addresses. Use Tailscale IPs for VPS-to-VPS sync:
+              Syncthing addresses. Use Tailscale IPs for private sync:
               [ "tcp://100.x.y.z:22000" ]
-              Default "dynamic" uses global discovery (requires openDefaultPorts).
             '';
           };
         };
@@ -68,8 +51,7 @@ in
       default = { };
       description = ''
         Syncthing device registry for automatic cross-host mesh.
-        Each entry maps a device name to its ID and network addresses.
-        All mesh devices automatically peer with each other.
+        All configured devices automatically peer with each other.
       '';
     };
 
@@ -105,7 +87,7 @@ in
               type = "staggered";
               params = {
                 cleanInterval = "3600";
-                maxAge = "7776000"; # 90 days
+                maxAge = "7776000";
               };
             };
             description = "Versioning config. Defaults to staggered with 90-day retention.";
@@ -121,6 +103,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    networking.firewall.allowedTCPPorts = lib.optionals cfg.publicBep [ 22000 ];
+
     systemd.services.syncthing.environment = {
       STNODEFAULTFOLDER = "true";
     };
@@ -132,8 +116,6 @@ in
       LockPersonality = true;
       ProtectClock = true;
       ProtectKernelLogs = true;
-      # @decision SYNC-125-01: ProtectHome/ProtectSystem/PrivateDevices omitted.
-      #   Syncthing needs filesystem access for sync operations.
     };
 
     systemd.tmpfiles.rules = [
@@ -152,17 +134,10 @@ in
       overrideFolders = true;
 
       settings = {
-        # When mesh is configured, use mesh devices.
-        # When unconfigured, show placeholder examples.
-        # When mesh is configured, devices/folders are auto-wired.
-        # When unconfigured, no devices/folders are registered (configure via
-        # tsurf.syncthing.mesh or private overlay).
         devices = if hasMesh then meshSyncthingDevices else { };
         folders = if hasMesh then meshSyncthingFolders else { };
 
-        gui = {
-          insecureSkipHostcheck = false;
-        };
+        gui.insecureSkipHostcheck = false;
 
         options = {
           urAccepted = -1;
@@ -174,7 +149,6 @@ in
       };
     };
 
-    # --- Persistence: syncthing device keys + sync folders ---
     environment.persistence."/persist".directories = [
       "/home/dev/.config/syncthing"
       "/home/dev/Sync"
@@ -185,7 +159,7 @@ in
       description = "File sync across devices";
       port = 8384;
       systemdUnit = "syncthing.service";
-      icon = "syncthing";
+      icon = "server";
       order = 20;
       module = "syncthing.nix";
     };

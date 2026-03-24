@@ -26,7 +26,7 @@ These lead to the following design goals:
 - **Fully declarative:** Agents get maximal system context from the source files. Imperative package management is disabled by convention (channels removed, NIX_PATH cleared). Undeclared state is wiped on boot via [BTRFS](https://btrfs.readthedocs.io/) subvolume rollback ([impermanence](https://github.com/nix-community/impermanence)).
 - **Robust multi-host deployment:** [deploy-rs](https://github.com/serokell/deploy-rs) with [automatic rollbacks](https://github.com/serokell/deploy-rs?tab=readme-ov-file#magic-rollback) and build-time lockout prevention.
 - **Hardened server configuration:** [srvos](https://github.com/nix-community/srvos) [server profile](https://github.com/nix-community/srvos/tree/main/nixos/server) (key-only SSH, immutable users, sudo wheel-only, systemd watchdogs, no emergency mode), [Tailscale](https://tailscale.com/) zero-trust networking (use [tailnet lock](https://tailscale.com/docs/features/tailnet-lock)), nftables default-deny firewall, and localhost-first internal services.
-- **Optional batteries** (in [`extras/`](#extras)): dashboard, cost tracking, backups, and file sync. Multi-agent workflows belong in your private overlay.
+- **Optional batteries** (in [`extras/`](#extras)): dashboard, cost tracking, and backups. File sync and multi-agent workflows belong in your private overlay.
 
 ## Example Use Cases
 
@@ -49,8 +49,8 @@ Service modules declare their own dashboard entries, and localhost-only service 
 | Category | Network | Examples |
 |----------|---------|----------|
 | Web | Public ([nginx](https://nginx.org/) + [ACME](https://letsencrypt.org/)) | personal sites |
-| Internal | Localhost-only (`127.0.0.1`) | dashboard, syncthing GUI, restic-status |
-| System | Public firewall | SSH (22), Syncthing BEP (22000) |
+| Internal | Localhost-only (`127.0.0.1`) | dashboard, restic-status |
+| System | Public firewall | SSH (22) |
 | Agent | outbound only | claude (core); custom agents in private overlay |
 | Worker | none/outbound | restic backup |
 
@@ -60,29 +60,29 @@ Optional modules in `extras/`. Import the file, then set the enable option:
 
 ```nix
 # hosts/my-host/default.nix
-imports = [ ../../extras/syncthing.nix ];
+imports = [ ../../extras/dashboard.nix ];
 
 # then in config:
-services.syncthingStarter.enable = true;
+services.dashboard.enable = true;
 ```
 
-`extras/dashboard.nix` and `extras/cost-tracker.nix` are optional utilities. All extras are opt-in via explicit host imports.
+`extras/dev-agent.nix` is a core agent extra for autonomous background agent runs. `extras/dashboard.nix` and `extras/cost-tracker.nix` are optional utilities. All extras are opt-in via explicit host imports.
 
 | Module | Enable option | Description |
 |--------|--------------|-------------|
 | [`dashboard.nix`](extras/dashboard.nix) | `services.dashboard.enable` | Service dashboard with live systemd status |
 | [`cost-tracker.nix`](extras/cost-tracker.nix) | `services.costTracker.enable` | API cost tracking (Anthropic, OpenAI) |
-| [`syncthing.nix`](extras/syncthing.nix) | `services.syncthingStarter.enable` | Cross-host file sync (tailnet-only by default) |
 | [`restic.nix`](extras/restic.nix) | `services.resticStarter.enable` | Encrypted backups to Backblaze B2 |
 | [`home/`](extras/home/) | _(import as home-manager module)_ | git, SSH, direnv for the operator user |
 | [`home/cass.nix`](extras/home/cass.nix) | `programs.cass.enable` | [CASS](https://github.com/Dicklesworthstone/coding_agent_session_search) agent session indexer |
 
-All enable options default to `false`. In a [private overlay](#private-overlay), use `"${inputs.tsurf}/extras/syncthing.nix"` as the import path.
+All enable options default to `false`. File sync is intentionally not shipped in public core; define it in your private overlay instead. The example private overlay includes [`modules/syncthing.nix`](examples/private-overlay/modules/syncthing.nix) as a starting point.
 
 ## Intentionally Absent
 
 - `secrets/*.yaml` is intentionally absent from the public repo. Secret declarations are public; encrypted secret files live in your private overlay.
 - Real SSH host keys are intentionally absent. Public eval fixtures keep placeholder material; private overlay hosts must provide real persisted keys.
+- File sync is intentionally absent from public core. Keep Syncthing or equivalent tooling in your private overlay, where peer topology and exposure policy can stay deployment-specific.
 
 ## Private overlay
 

@@ -36,7 +36,6 @@ extras/                  # Optional batteries — import what you need
   opencode.nix         # opencode agent wrapper (Anthropic + OpenAI, opt-in)
   pi.nix               # pi agent wrapper (Anthropic, opt-in)
   restic.nix           # Restic backup to B2 + status server
-  syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
   home/
     default.nix        # home-manager: git/ssh/direnv inlined
     cass.nix           # CASS indexer timer (opt-in)
@@ -66,7 +65,7 @@ tests/
 - **Agent tooling**: Public core ships one first-class agent path: sandboxed `claude` only. Additional agent CLIs belong in private overlays.
 - **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo. Proxy credential injection — nono generates per-session phantom tokens; real keys never reach the child process.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
-- **Network model**: Only ports 22 + 22000 on public firewall by default. Ports 80/443 conditional on nginx. All internal services bind 127.0.0.1 (dashboard, syncthing GUI). Tailscale for internal access.
+- **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale is for internal access.
 - **Privilege model**: `dev` is the operator (wheel, human admin). `agent` runs sandboxed tools (no wheel). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
 - **Operator UID**: Configurable via `tsurf.template.devUid` (default 1000), defined in `modules/users.nix`.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
@@ -195,4 +194,4 @@ and can replace modules entirely or import and extend them.
 - Prefer inline over separate files for small configs (<10 lines); extract larger bash/python to separate files
 - Let bindings for values used more than once (e.g., Tailscale IP in homepage.nix)
 - `tmp/` in project root for temporary files (never `/tmp/`) — convention from global CLAUDE.md
-- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (e.g., `users.nix`, `agent-compute.nix`), or when the entire module content differs (e.g., `syncthing.nix` for completely different sync setup).
+- `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (e.g., `users.nix`, `agent-compute.nix`), or when the entire module content differs and you are replacing that concern wholesale in the overlay.

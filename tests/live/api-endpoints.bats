@@ -6,10 +6,6 @@ load "../lib/common"
 bats_load_library bats-support
 bats_load_library bats-assert
 
-@test "${HOST}: syncthing GUI responds on localhost:8384" {
-  assert_http_ok "http://localhost:8384" "Syncthing GUI"
-}
-
 @test "${HOST}: nix-dashboard responds on localhost:8082 (if present)" {
   if ! remote systemctl is-active --quiet nix-dashboard.service 2>/dev/null; then
     skip "nix-dashboard not active on this host"

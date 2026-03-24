@@ -37,31 +37,27 @@ in
     touch "$out"
   '';
 
-  # Ports are conditional: 22000 on publicBep opt-in, 80/443 on nginx.enable.
-  # Public template has no nginx and publicBep defaults to false.
+  # Ports are conditional: 80/443 on nginx.enable.
+  # Public template has no nginx by default.
   firewall-ports-services =
     let
       actual = builtins.sort builtins.lessThan servicesCfg.networking.firewall.allowedTCPPorts;
-      expected = [ 22 ]
-        ++ lib.optionals servicesCfg.services.syncthingStarter.publicBep [ 22000 ]
-        ++ lib.optionals servicesCfg.services.nginx.enable [ 80 443 ];
+      expected = [ 22 ] ++ lib.optionals servicesCfg.services.nginx.enable [ 80 443 ];
     in
     mkCheck
       "firewall-ports-services"
-      "services host firewall ports match publicBep/nginx state"
+      "services host firewall ports match nginx state"
       "services host allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
   firewall-ports-dev =
     let
       actual = builtins.sort builtins.lessThan devCfg.networking.firewall.allowedTCPPorts;
-      expected = [ 22 ]
-        ++ lib.optionals devCfg.services.syncthingStarter.publicBep [ 22000 ]
-        ++ lib.optionals devCfg.services.nginx.enable [ 80 443 ];
+      expected = [ 22 ] ++ lib.optionals devCfg.services.nginx.enable [ 80 443 ];
     in
     mkCheck
       "firewall-ports-dev"
-      "dev host firewall ports match publicBep/nginx state"
+      "dev host firewall ports match nginx state"
       "dev host allowedTCPPorts=${builtins.toJSON actual} expected=${builtins.toJSON expected}"
       (actual == expected);
 
@@ -94,7 +90,6 @@ in
     let
       expectedServices = [
         "tailscaled"
-        "syncthing"
         "nix-dashboard"
       ];
       missing = builtins.filter (name: !(builtins.hasAttr name servicesCfg.systemd.services)) expectedServices;
@@ -109,7 +104,6 @@ in
     let
       expectedServices = [
         "tailscaled"
-        "syncthing"
       ];
       missing = builtins.filter (name: !(builtins.hasAttr name devCfg.systemd.services)) expectedServices;
     in
@@ -152,9 +146,9 @@ in
     in
     mkCheck
       "dashboard-entries"
-      "dashboard has ${toString entryCount} entries (>= 4)"
+      "dashboard has ${toString entryCount} entries (>= 3)"
       "dashboard has too few entries: ${toString entryCount}"
-      (entryCount >= 4);
+      (entryCount >= 3);
 
   dashboard-manifest = pkgs.runCommand "dashboard-manifest" { } ''
     echo '${builtins.toJSON (builtins.fromJSON servicesCfg.environment.etc."dashboard/manifest.json".text)}' \
@@ -200,15 +194,6 @@ in
      in lib.hasInfix "journal_log" src
         && !lib.hasInfix "audit_log" src
         && !lib.hasInfix "AGENT_AUDIT_LOG" src);
-
-  syncthing-mesh-option = mkCheck
-    "syncthing-mesh-option"
-    "tsurf.syncthing.mesh option exists on both hosts"
-    "tsurf.syncthing.mesh option missing — import extras/syncthing.nix"
-    (builtins.hasAttr "syncthing" servicesCfg.tsurf
-     && builtins.hasAttr "mesh" servicesCfg.tsurf.syncthing
-     && builtins.hasAttr "syncthing" devCfg.tsurf
-     && builtins.hasAttr "mesh" devCfg.tsurf.syncthing);
 
   # --- Phase 119: Secure-by-default host configs + eval fixture checks ---
 
@@ -408,25 +393,6 @@ in
       && altAgentCfg.services.nonoSandbox.enable
     );
 
-  # --- Phase 116: structural hardening regression guards ---
-
-  syncthing-discovery-disabled = mkCheck
-    "syncthing-discovery-disabled"
-    "Syncthing global announce and relays disabled by default"
-    "Syncthing global announce or relays still enabled"
-    (servicesCfg.services.syncthing.settings.options.globalAnnounceEnabled == false
-     && servicesCfg.services.syncthing.settings.options.relaysEnabled == false);
-
-  syncthing-no-public-bep =
-    let
-      ports = servicesCfg.networking.firewall.allowedTCPPorts;
-    in
-    mkCheck
-      "syncthing-no-public-bep"
-      "Port 22000 not in allowedTCPPorts (publicBep is off)"
-      "Port 22000 in allowedTCPPorts but publicBep is false"
-      (!(builtins.elem 22000 ports));
-
   agent-binaries-not-in-path =
     let
       source = builtins.readFile ../../modules/agent-compute.nix;
@@ -599,7 +565,6 @@ in
       "All project services have SystemCallArchitectures=native"
       "SECURITY: one or more services missing SystemCallArchitectures=native"
       (hasSCA servicesCfg.systemd.services.nix-dashboard
-       && hasSCA devCfg.systemd.services.syncthing
        && lib.hasInfix "SystemCallArchitectures = \"native\"" (builtins.readFile ../../extras/dashboard.nix)
        && lib.hasInfix "SystemCallArchitectures = \"native\"" resticSource
        && lib.hasInfix "SystemCallArchitectures = \"native\"" costTrackerSource

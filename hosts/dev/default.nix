@@ -12,7 +12,6 @@
     ../../modules/users.nix
     ../../modules/networking.nix
     ../../modules/secrets.nix
-    ../../extras/syncthing.nix
     ../../modules/agent-compute.nix
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
@@ -49,7 +48,6 @@
     { type = "ed25519"; path = "/persist/etc/ssh/ssh_host_ed25519_key"; }
   ];
 
-  services.syncthingStarter.enable = true;
   services.agentCompute.enable = true;
   services.agentSandbox.enable = true;
   services.nonoSandbox.enable = true;

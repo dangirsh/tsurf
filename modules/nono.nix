@@ -75,7 +75,6 @@ let
         "/run/secrets"
         "${cfg.homeDir}/.ssh"
         "${cfg.homeDir}/.bash_history"
-        "${cfg.homeDir}/.config/syncthing"
         "${cfg.homeDir}/.gnupg"
         "${cfg.homeDir}/.aws"
         "${cfg.homeDir}/.kube"

@@ -128,6 +128,21 @@ The wrapper handles credential injection from `/run/secrets/`, enforces the git-
 
 See `SECURITY.md` in the tsurf repo for the full access control model, credential flow architecture, and tailnet segmentation guidance.
 
+### Adding File Sync
+
+Public tsurf intentionally does not ship Syncthing or any other file-sync module. Peer topology, folder layout, and any public port exposure are deployment-specific, so keep sync in your private overlay.
+
+This template includes [`modules/syncthing.nix`](modules/syncthing.nix) as a starting point:
+
+```nix
+# hosts/my-host/default.nix
+imports = [ ../../modules/syncthing.nix ];
+
+services.syncthingStarter.enable = true;
+```
+
+The example module keeps the GUI on `127.0.0.1:8384`, supports the old mesh registry pattern, and makes public BEP exposure an explicit per-overlay opt-in.
+
 ### Adding Docker
 
 Docker is not included in the public template. To add it in your private overlay:

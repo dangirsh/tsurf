@@ -13,6 +13,8 @@ strengthen or weaken these properties, so host-specific statements are called ou
 - [`examples/scripts/deploy.sh`](examples/scripts/deploy.sh)
   refuses to deploy unless it is being run from a private overlay flake that
   contains a `tsurf.url` input.
+- The public repo does not ship a file-sync module. Sync topology and exposure
+  policy are private-overlay concerns.
 - [`hosts/services/default.nix`](hosts/services/default.nix)
   is the service-host role. It does **not** import
   [`modules/agent-sandbox.nix`](modules/agent-sandbox.nix)
@@ -153,7 +155,6 @@ Enforced behavior:
   - `/run/secrets`
   - `~/.ssh`
   - `~/.bash_history`
-  - `~/.config/syncthing`
   - `~/.gnupg`
   - `~/.aws`
   - `~/.kube`
@@ -232,7 +233,6 @@ Credential scoping is least-privilege by wrapper. Core default: `claude`
 - `tailscale0` is **not** trusted.
 - Public TCP exposure is limited to:
   - `22` always
-  - `22000` only when `services.syncthingStarter.publicBep = true`
   - `80` and `443` only when `services.nginx.enable = true`
 - Cloud metadata access to `169.254.169.254` is dropped in nftables.
 
@@ -246,12 +246,6 @@ SSH defaults:
 - `KbdInteractiveAuthentication = false`
 - `MaxAuthTries = 3`
 - `fail2ban` is disabled
-
-Syncthing defaults:
-
-- GUI binds `127.0.0.1:8384`
-- global announce, local announce, relays, and NAT are disabled
-- public BEP exposure is opt-in
 
 ### Agent Egress
 
@@ -339,13 +333,13 @@ Live checks:
   verifies wrapper script structure: nono invocation, journald logging, and absence
   of secret mounts.
 - [`tests/live/service-health.bats`](tests/live/service-health.bats)
-  verifies systemd unit health (tailscaled, syncthing, sshd, dashboard, restic timer)
+  verifies systemd unit health (tailscaled, sshd, dashboard, restic timer)
   and Tailscale backend state.
 - [`tests/live/impermanence.bats`](tests/live/impermanence.bats)
   verifies /persist mount, BTRFS filesystem type, critical persist directories, and
   machine-id persistence.
 - [`tests/live/api-endpoints.bats`](tests/live/api-endpoints.bats)
-  verifies HTTP endpoint health for localhost-bound services (syncthing GUI, dashboard).
+  verifies HTTP endpoint health for localhost-bound services (dashboard).
 
 ## Non-Goals And Accepted Risks
 
