@@ -217,6 +217,21 @@ fi
 if [[ -n "${LANG:-}" ]]; then
   child_args+=("LANG=$LANG")
 fi
+# Claude managed settings: defense-in-depth deny rules (ecosystem review: Trail of Bits config)
+if [[ -f /etc/claude-agent-settings.json ]]; then
+  child_args+=("CLAUDE_CODE_MANAGED_SETTINGS_FILE=/etc/claude-agent-settings.json")
+fi
+# Supply chain hardening (ecosystem review: Trail of Bits devcontainer pattern)
+child_args+=("NPM_CONFIG_IGNORE_SCRIPTS=true")
+child_args+=("NPM_CONFIG_AUDIT=true")
+child_args+=("NPM_CONFIG_SAVE_EXACT=true")
+child_args+=("NPM_CONFIG_MINIMUM_RELEASE_AGE=1440")
+child_args+=("PYTHONDONTWRITEBYTECODE=1")
+# Telemetry suppression (ecosystem review: Trail of Bits config pattern)
+child_args+=("DISABLE_TELEMETRY=1")
+child_args+=("DISABLE_ERROR_REPORTING=1")
+child_args+=("CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1")
+
 child_args+=("${child_env[@]}" "$AGENT_REAL_BINARY" "$@")
 
 nono_args+=(-- "${child_args[@]}")

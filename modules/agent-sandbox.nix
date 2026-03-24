@@ -9,6 +9,12 @@
 #   systemd-run; the actual agent binary drops to the dedicated agent user inside
 #   the sandboxed command chain, not as the calling operator.
 # @decision SEC-135-01: The sudo boundary exposes one immutable Claude launcher.
+# @decision SEC-145-03: systemd-run properties enforce NoNewPrivileges, drop all
+#   capabilities, set rlimits, seccomp syscall blocklist, and 4h runtime timeout.
+#   Sourced from ecosystem review of nsjail, ai-jail, and clampdown patterns.
+# @decision SEC-145-04: Claude-level deny rules provide defense-in-depth for
+#   sensitive paths atop Landlock enforcement. enableAllProjectMcpServers=false
+#   prevents malicious repos from injecting MCP servers.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentSandbox;
@@ -51,6 +57,15 @@ let
         --property=MemoryMax=4G \
         --property=CPUQuota=200% \
         --property=TasksMax=256 \
+        --property=NoNewPrivileges=true \
+        --property=CapabilityBoundingSet= \
+        --property=OOMScoreAdjust=500 \
+        --property=LimitNOFILE=512 \
+        --property=LimitFSIZE=2G \
+        --property=LimitAS=8G \
+        --property=LimitCORE=0 \
+        --property=RuntimeMaxSec=14400 \
+        "--property=SystemCallFilter=~@mount @clock @cpu-emulation @debug @obsolete @raw-io @reboot @swap kexec_load kexec_file_load open_by_handle_at io_uring_setup io_uring_enter io_uring_register bpf" \
         --setenv=PATH="${agentRuntimePath}" \
         --setenv=AGENT_CHILD_PATH="${agentRuntimePath}" \
         --setenv=AGENT_NAME="$AGENT_NAME" \
@@ -120,6 +135,26 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Managed Claude settings: defense-in-depth deny rules atop Landlock enforcement.
+    # Written to the agent user's settings path so Claude Code loads them automatically.
+    environment.etc."claude-agent-settings.json".text = builtins.toJSON {
+      permissions = {
+        deny = [
+          "Read(/run/secrets/**)"
+          "Read(${agentCfg.home}/.ssh/**)"
+          "Read(/etc/nono/**)"
+          "Read(.env)"
+          "Read(.envrc)"
+          "Edit(.git/hooks/**)"
+          "Edit(.envrc)"
+          "Edit(.env)"
+          "Edit(.mcp.json)"
+          "Edit(.devcontainer/**)"
+        ];
+      };
+      enableAllProjectMcpServers = false;
+    };
+
     environment.systemPackages = [ wrapper ];
 
     security.sudo.extraRules = [
