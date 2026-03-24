@@ -1,12 +1,4 @@
 # extras/cost-tracker.nix
-# @decision COST-01: Separate module from dashboard — cost fetching needs
-#   network + secrets access; dashboard is DynamicUser with no secrets.
-# @decision COST-02: Provider-agnostic config — each provider is an attrset
-#   entry with type + keyFile. Private overlay adds admin keys to sops.
-# @decision COST-03: Write JSON to /run/ — ephemeral, dashboard reads it.
-#   Timer repopulates daily. Manual refresh via systemctl restart.
-# @decision COST-04: Multi-period costs (24h, 7d, 30d, 365d, 730d).
-#   Each provider fetched once per period. OpenAI supports project_ids filter.
 # @decision COST-05: DynamicUser=true — runs as ephemeral UID. CAP_DAC_READ_SEARCH
 #   is granted via AmbientCapabilities + CapabilityBoundingSet so the service can
 #   read configured secret files without running as root.

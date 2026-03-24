@@ -84,7 +84,6 @@ All enable options default to `false`. In a [private overlay](#private-overlay),
 
 - `secrets/*.yaml` is intentionally absent from the public repo. Secret declarations are public; encrypted secret files live in your private overlay.
 - Real SSH host keys are intentionally absent. Public eval fixtures keep placeholder material; private overlay hosts must provide real persisted keys.
-- `deploy.nodes` is intentionally absent from the public flake. Deploy targets belong in a private overlay, and public `deploy.sh` refuses to run.
 
 ## Private overlay
 

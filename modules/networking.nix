@@ -1,15 +1,8 @@
 # modules/networking.nix
 # @decision NET-01: port 22 open on public interface with key-only auth (srvos SSH hardening defaults).
-#   fail2ban is disabled (see NET-12). Brute-force mitigation via MaxAuthTries 3 + key-only auth.
+#   fail2ban is disabled; brute-force mitigation via MaxAuthTries 3 + key-only auth.
 #   Deliberate: Tailscale-preferred deploy, but public SSH enables bootstrap/recovery when
 #   Tailscale is unavailable (e.g., first boot, Tailscale misconfiguration).
-# @decision NET-02: default-deny nftables firewall, allowPing + allowDHCP for bringup
-# @decision NET-03: Tailscale VPN connected to tailnet
-# @decision NET-04: ports 22, 80, 443, 22000 on public interface; all other services internal
-# @decision NET-16: Public interface exposes SSH (22) + conditionally nginx (80/443).
-#   Syncthing BEP (22000) requires explicit publicBep opt-in. All other services Tailscale-only.
-# @decision NET-06: Tailscale reverse path filtering set to loose
-# @decision NET-08: Only ed25519 host key — matches injected key, avoids ephemeral RSA/ECDSA regeneration
 # @decision NET-122-01: No trustedInterfaces — localhost-first network model. Internal
 #   services bind 127.0.0.1 by default. Tailnet access via SSH tunnel, Tailscale Serve,
 #   or overlay adding ports to networking.firewall.interfaces.tailscale0.allowedTCPPorts.
@@ -32,7 +25,6 @@ in {
       message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain localhost-only. Use networking.firewall.interfaces.tailscale0.allowedTCPPorts in overlay if tailnet access is needed.";
     }
     # --- Remote access safety assertions ---
-    # @decision NET-15: Build-time assertions prevent deploying configs that lock out SSH/Tailscale.
     {
       assertion = config.services.openssh.enable;
       message = "LOCKOUT PREVENTION: sshd must be enabled — disabling it removes all remote access.";
@@ -73,9 +65,6 @@ in {
   networking.firewall = {
     enable = true;
     allowPing = true;
-    # @decision NET-10: ports 80/443 conditionally opened when nginx is enabled (ACME HTTP-01 + TLS)
-    # @decision NET-11: port 22000 for Syncthing BEP — conditional on publicBep opt-in
-    #   (default: off; tailnet-only mesh does not need public BEP port).
     allowedTCPPorts = [ 22 ]
       ++ lib.optionals config.services.syncthingStarter.publicBep [ 22000 ]
       ++ lib.optionals config.services.nginx.enable [ 80 443 ];
@@ -87,9 +76,6 @@ in {
   services.fail2ban.enable = false;
 
   # --- SSH hardening ---
-  # @decision NET-12: fail2ban disabled (see above); re-enable when active dev sessions are done.
-  # @decision NET-13: SSH hardened beyond key-auth — X11 off, MaxAuthTries 3, 30s grace window,
-  #   client keepalive 5min to detect stale connections.
   services.openssh = {
     enable = true;
     openFirewall = false;
@@ -107,12 +93,8 @@ in {
       ClientAliveCountMax = 3;
     };
     # @decision NET-14: Check .ssh/authorized_keys BEFORE /etc/ssh/authorized_keys.d/%u.
-    # NixOS with mutableUsers=false only generates /etc/ssh/authorized_keys.d/%u.
-    # On impermanence hosts, if activation fails (or StrictModes rejects /etc/ssh/),
-    # sshd falls back to .ssh/authorized_keys which persists via /persist/root/.ssh/.
-    # NOTE: extraConfig mkAfter is IGNORED by OpenSSH (first directive wins).
-    # Use authorizedKeysFiles to override the generated AuthorizedKeysFile directive.
-    # Impermanence persists /root/.ssh/ via /persist/root/.ssh/; keys placed there survive reboots.
+    # Impermanence fallback: if activation fails, persisted /root/.ssh/ keys still work.
+    # NOTE: must use authorizedKeysFiles (extraConfig mkAfter is ignored by OpenSSH).
     authorizedKeysFiles = lib.mkForce [ ".ssh/authorized_keys" "/etc/ssh/authorized_keys.d/%u" ];
   };
 

@@ -1,5 +1,4 @@
-# home/cass.nix
-# @decision SVC-03: CASS indexer as oneshot systemd user timer (every 30 min).
+# home/cass.nix — CASS indexer as oneshot systemd user timer (every 30 min).
 #   Pre-built binary from GitHub, patched with autoPatchelfHook.
 #   Opt-in: set programs.cass.enable = true in your private overlay.
 { config, lib, pkgs, ... }:

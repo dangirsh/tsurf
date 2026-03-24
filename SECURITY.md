@@ -10,19 +10,18 @@ strengthen or weaken these properties, so host-specific statements are called ou
   `eval-services`, `eval-dev`, and `eval-dev-alt-agent`.
 - The public flake exports no `deploy.nodes`; all exported
   `nixosConfigurations` are prefixed with `eval-`.
-- [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
+- [`extras/scripts/deploy.sh`](extras/scripts/deploy.sh)
   refuses to deploy unless it is being run from a private overlay flake that
   contains a `tsurf.url` input.
-- [`hosts/services/default.nix`](/data/projects/tsurf/hosts/services/default.nix)
+- [`hosts/services/default.nix`](hosts/services/default.nix)
   is the service-host role. It does **not** import
-  [`modules/agent-sandbox.nix`](/data/projects/tsurf/modules/agent-sandbox.nix)
-  or [`modules/nono.nix`](/data/projects/tsurf/modules/nono.nix).
-- [`hosts/dev/default.nix`](/data/projects/tsurf/hosts/dev/default.nix) is the
+  [`modules/agent-sandbox.nix`](modules/agent-sandbox.nix)
+  or [`modules/nono.nix`](modules/nono.nix).
+- [`hosts/dev/default.nix`](hosts/dev/default.nix) is the
   agent-execution role. It imports both sandbox modules and enables:
+  - `services.agentCompute.enable = true`
   - `services.agentSandbox.enable = true`
   - `services.nonoSandbox.enable = true`
-  - `services.agentSandbox.allowNixDaemon = true`
-  - `services.agentSandbox.egressControl.enable = true`
 
 ## Core Security Invariants
 
@@ -37,7 +36,7 @@ strengthen or weaken these properties, so host-specific statements are called ou
 - `users.mutableUsers = false`.
 - `security.sudo.execWheelOnly = true`.
 - Raw agent binaries are not installed in `PATH` by
-  [`modules/agent-compute.nix`](/data/projects/tsurf/modules/agent-compute.nix).
+  [`modules/agent-compute.nix`](modules/agent-compute.nix).
   The intended interactive entrypoints are wrapper binaries such as `claude` and,
   if enabled, `codex`, `pi`, or `opencode`.
 - The public wrapper/launcher path has no `--no-sandbox` or
@@ -84,8 +83,8 @@ Important nuances:
 ## Agent Sandbox
 
 This section applies only to hosts that import and enable both
-[`modules/agent-sandbox.nix`](/data/projects/tsurf/modules/agent-sandbox.nix)
-and [`modules/nono.nix`](/data/projects/tsurf/modules/nono.nix). In the public
+[`modules/agent-sandbox.nix`](modules/agent-sandbox.nix)
+and [`modules/nono.nix`](modules/nono.nix). In the public
 repo, that is the dev-host role.
 
 ### Launch Path
@@ -202,7 +201,7 @@ repo backs these claims with live sandbox tests on the dev host.
   `/run/secrets`.
 - Missing secret files produce a warning and an empty env var.
 - Values prefixed with `PLACEHOLDER` are not passed to nono as live credentials.
-- [`modules/nono.nix`](/data/projects/tsurf/modules/nono.nix) defines proxy-style
+- [`modules/nono.nix`](modules/nono.nix) defines proxy-style
   `custom_credentials` for Anthropic and OpenAI using `env://` URIs.
 - `nono` then injects per-session phantom tokens into the sandboxed child via
   `--credential <service>`.
@@ -217,12 +216,13 @@ What the child process does **not** get:
 - the raw `/run/secrets/*` file
 - the raw provider API key in its environment
 
-Credential scoping is least-privilege by wrapper:
+Credential scoping is least-privilege by wrapper. Core default: `claude`
+(Anthropic only). Optional extras when enabled:
 
-- `claude` defaults to Anthropic only
-- `codex` defaults to OpenAI only
-- `pi` defaults to Anthropic only
-- `opencode` defaults to Anthropic + OpenAI
+- `claude` — Anthropic only
+- `codex` — OpenAI only
+- `pi` — Anthropic only
+- `opencode` — Anthropic + OpenAI
 - extra agents must opt into credentials explicitly
 
 ## Network Model
@@ -267,7 +267,7 @@ Syncthing defaults:
 Public-repo safety properties:
 
 - The public flake exports no deploy targets.
-- [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
+- [`extras/scripts/deploy.sh`](extras/scripts/deploy.sh)
   refuses to deploy from the public repo, so public eval fixtures cannot be
   installed through the shipped deploy path.
 
@@ -283,12 +283,12 @@ Build-time lockout-prevention assertions require:
 
 Recovery mechanisms:
 
-- [`modules/break-glass-ssh.nix`](/data/projects/tsurf/modules/break-glass-ssh.nix)
+- [`modules/break-glass-ssh.nix`](modules/break-glass-ssh.nix)
   adds a hardcoded break-glass root key. In the public repo this key is
   placeholder material and must be replaced in a private overlay before any real
   deployment.
 - The private-overlay deploy path implemented in
-  [`extras/scripts/deploy.sh`](/data/projects/tsurf/extras/scripts/deploy.sh)
+  [`extras/scripts/deploy.sh`](extras/scripts/deploy.sh)
   schedules a 5-minute rollback watchdog via `systemd-run` before every deploy.
   The watchdog auto-reverts to the previous NixOS generation if SSH connectivity
   is not verified post-deploy. The public copy of that script refuses to run.
@@ -302,14 +302,14 @@ Recovery mechanisms:
   - `/etc/ssh/ssh_host_ed25519_key`
   - `/data/projects`
   - selected operator and agent home state
-- [`modules/impermanence.nix`](/data/projects/tsurf/modules/impermanence.nix)
+- [`modules/impermanence.nix`](modules/impermanence.nix)
   makes `setupSecrets` depend on `persist-files` so sops-nix can read the
   persisted SSH host key before decrypting `/run/secrets` after a hard reboot.
 
 Supply-chain properties:
 
 - Nix inputs are pinned by `flake.lock`.
-- Prebuilt binaries are SHA256-pinned, including `nono`, `pi`, and `zmx`.
+- Prebuilt binaries are SHA256-pinned, including `nono` and `zmx`.
 - `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
 - No signature verification is implemented for these prebuilt binaries.
 
@@ -319,22 +319,33 @@ Security claims in this file are backed by both eval checks and live tests.
 
 Eval-time checks:
 
-- [`tests/eval/config-checks.nix`](/data/projects/tsurf/tests/eval/config-checks.nix)
+- [`tests/eval/config-checks.nix`](tests/eval/config-checks.nix)
   covers public-output safety, placeholder isolation, firewall exposure,
   break-glass requirements, Nix daemon restrictions, sandbox structure, read-scope
   fail-closed behavior, sudo-boundary hardening, and proxy credential configuration.
 
 Live checks:
 
-- [`tests/live/security.bats`](/data/projects/tsurf/tests/live/security.bats)
+- [`tests/live/security.bats`](tests/live/security.bats)
   verifies SSH hardening, kernel sysctls, metadata blocking, and firewall exposure.
-- [`tests/live/secrets.bats`](/data/projects/tsurf/tests/live/secrets.bats)
+- [`tests/live/secrets.bats`](tests/live/secrets.bats)
   verifies `/run/secrets` presence, ownership, and non-world-readable permissions.
-- [`tests/live/networking.bats`](/data/projects/tsurf/tests/live/networking.bats)
+- [`tests/live/networking.bats`](tests/live/networking.bats)
   verifies Tailscale state and the metadata-block nftables rule.
-- [`tests/live/sandbox-behavioral.bats`](/data/projects/tsurf/tests/live/sandbox-behavioral.bats)
+- [`tests/live/sandbox-behavioral.bats`](tests/live/sandbox-behavioral.bats)
   proves that sandboxed agent code cannot read denied paths and can read/write the
   expected worktree paths.
+- [`tests/live/agent-sandbox.bats`](tests/live/agent-sandbox.bats)
+  verifies wrapper script structure: nono invocation, journald logging, and absence
+  of secret mounts.
+- [`tests/live/service-health.bats`](tests/live/service-health.bats)
+  verifies systemd unit health (tailscaled, syncthing, sshd, dashboard, restic timer)
+  and Tailscale backend state.
+- [`tests/live/impermanence.bats`](tests/live/impermanence.bats)
+  verifies /persist mount, BTRFS filesystem type, critical persist directories, and
+  machine-id persistence.
+- [`tests/live/api-endpoints.bats`](tests/live/api-endpoints.bats)
+  verifies HTTP endpoint health for localhost-bound services (syncthing GUI, dashboard).
 
 ## Non-Goals And Accepted Risks
 
@@ -342,14 +353,14 @@ Live checks:
 - The sandbox does not make the current worktree immutable. Launching an agent
   from the control-plane repo gives that agent write access to the repo.
 - `dev` remains a trusted administrative user with `wheel`.
-- The dev-host role explicitly grants the agent user access to the Nix daemon
-  socket as an allowed, but not trusted, user.
-- [`extras/dev-agent.nix`](/data/projects/tsurf/extras/dev-agent.nix) runs Claude
+- The public core does not grant the agent user Nix daemon access. Private
+  overlays can loosen this boundary if needed.
+- [`extras/dev-agent.nix`](extras/dev-agent.nix) runs Claude
   Code with `--permission-mode=bypassPermissions` inside the sandbox and defaults
   its working directory to the project root unless a private overlay overrides it.
-- Egress filtering is host-level and opt-in at the module level. The dev host
-  enables it; the service host does not need it because it does not import the
-  sandbox. nono itself is not enforcing an outbound allowlist here.
+- The public repo does not ship a per-agent egress allowlist module. Outbound
+  policy is the normal host network policy plus nono proxy credential routing.
+  Private overlays can add tighter egress controls if needed.
 - Optional extras can widen access. Notable example:
   `services.costTracker.enable` grants a DynamicUser service read-only
   `/run/secrets` access plus `CAP_DAC_READ_SEARCH` so it can read provider keys.
