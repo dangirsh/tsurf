@@ -55,6 +55,7 @@ run_wrapper_in_control_plane_fixture() {
   remote "sudo -u ${AGENT_USER} bash -lc 'cd ${CONTROL_PLANE_FIXTURE} && claude --help'"
 }
 
+# Validates SEC-011, SBX-001: agent user privilege separation in sandbox
 @test "${HOST}: agent user identity is correct inside sandbox" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe check-identity
@@ -62,6 +63,7 @@ run_wrapper_in_control_plane_fixture() {
   assert_output --partial "PASS: check-identity"
 }
 
+# Validates SBX-027: /run/secrets denied
 @test "${HOST}: sandbox denies read access to /run/secrets" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   # Critical regression test: finding 4 — secret-access denial.
@@ -70,6 +72,7 @@ run_wrapper_in_control_plane_fixture() {
   assert_output --partial "PASS: denied-secrets"
 }
 
+# Validates SBX-028: ~/.ssh denied
 @test "${HOST}: sandbox denies read access to ~/.ssh" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe denied-ssh
@@ -77,6 +80,7 @@ run_wrapper_in_control_plane_fixture() {
   assert_output --partial "PASS: denied-ssh"
 }
 
+# Validates SBX-030: ~/.gnupg denied
 @test "${HOST}: sandbox denies read access to ~/.gnupg" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe denied-gnupg
@@ -84,6 +88,7 @@ run_wrapper_in_control_plane_fixture() {
   assert_output --partial "PASS: denied-gnupg"
 }
 
+# Validates SBX-029: ~/.bash_history denied
 @test "${HOST}: sandbox denies read access to ~/.bash_history" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe denied-bash-history
@@ -91,6 +96,7 @@ run_wrapper_in_control_plane_fixture() {
   assert_output --partial "PASS: denied-bash-history"
 }
 
+# Validates SBX-022, SBX-026: scoped read access to git repo, workdir readwrite
 @test "${HOST}: sandbox allows reading files in current git repo" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe allowed-repo-read
@@ -98,6 +104,7 @@ run_wrapper_in_control_plane_fixture() {
   assert_output --partial "PASS: allowed-repo-read"
 }
 
+# Validates SBX-026: workdir.access = "readwrite"
 @test "${HOST}: sandbox allows writing files in workdir" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe allowed-workdir-write
@@ -105,6 +112,55 @@ run_wrapper_in_control_plane_fixture() {
   assert_output --partial "PASS: allowed-workdir-write"
 }
 
+# Validates SBX-031: ~/.aws denied
+@test "${HOST}: sandbox denies read access to ~/.aws" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+  run run_sandbox_probe denied-aws
+  assert_success
+  assert_output --partial "PASS: denied-aws"
+}
+
+# Validates SBX-032: ~/.kube denied
+@test "${HOST}: sandbox denies read access to ~/.kube" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+  run run_sandbox_probe denied-kube
+  assert_success
+  assert_output --partial "PASS: denied-kube"
+}
+
+# Validates SBX-033: ~/.docker denied
+@test "${HOST}: sandbox denies read access to ~/.docker" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+  run run_sandbox_probe denied-docker
+  assert_success
+  assert_output --partial "PASS: denied-docker"
+}
+
+# Validates SBX-034: ~/.npmrc denied
+@test "${HOST}: sandbox denies read access to ~/.npmrc" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+  run run_sandbox_probe denied-npmrc
+  assert_success
+  assert_output --partial "PASS: denied-npmrc"
+}
+
+# Validates SBX-038: ~/.git-credentials denied
+@test "${HOST}: sandbox denies read access to ~/.git-credentials" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+  run run_sandbox_probe denied-git-credentials
+  assert_success
+  assert_output --partial "PASS: denied-git-credentials"
+}
+
+# Validates SBX-039: /etc/nono denied
+@test "${HOST}: sandbox denies read access to /etc/nono" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+  run run_sandbox_probe denied-etc-nono
+  assert_success
+  assert_output --partial "PASS: denied-etc-nono"
+}
+
+# Validates SBX-024, SBX-025: protected control-plane repos refused by marker
 @test "${HOST}: wrapper refuses protected control-plane repos" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_wrapper_in_control_plane_fixture

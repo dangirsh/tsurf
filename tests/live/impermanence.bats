@@ -11,6 +11,7 @@ require_impermanence() {
   remote test -d /persist || skip "not an impermanence-activated system (/persist missing)"
 }
 
+# Validates IMP-001: BTRFS subvolume rollback with /persist mount
 @test "${HOST}: /persist is a mounted filesystem" {
   require_impermanence
 
@@ -21,6 +22,7 @@ require_impermanence() {
   }
 }
 
+# Validates IMP-001: BTRFS root (not tmpfs)
 @test "${HOST}: /persist filesystem type is btrfs" {
   require_impermanence
 
@@ -35,6 +37,7 @@ require_impermanence() {
   fi
 }
 
+# Validates IMP-016, IMP-017, IMP-018, IMP-025: network, SSH, user, project persistence
 @test "${HOST}: critical persist directories are present" {
   require_impermanence
 
@@ -57,6 +60,7 @@ require_impermanence() {
   fi
 }
 
+# Validates IMP-013: /etc/machine-id persisted (journal continuity)
 @test "${HOST}: /etc/machine-id is persisted via /persist" {
   require_impermanence
 
@@ -76,6 +80,7 @@ require_impermanence() {
   }
 }
 
+# Validates IMP-001: BTRFS root filesystem
 @test "${HOST}: root filesystem type is btrfs" {
   require_impermanence
 

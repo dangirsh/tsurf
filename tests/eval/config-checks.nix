@@ -699,6 +699,146 @@ in
        && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" wrapperSource)
        && !(lib.hasInfix "AGENT_ALLOW_NOSANDBOX" launcherSource));
 
+  # --- Phase 147: Spec-driven test coverage ---
+
+  # Validates SEC-019, BAS-009: Nix channels disabled, nixPath cleared
+  nix-channels-disabled = mkCheck
+    "nix-channels-disabled"
+    "Nix channels disabled on all hosts"
+    "nix.channel.enable is true or nixPath is not empty"
+    (!servicesCfg.nix.channel.enable && !devCfg.nix.channel.enable);
+
+  # Validates BAS-010: defaultPackages emptied
+  default-packages-empty = mkCheck
+    "default-packages-empty"
+    "environment.defaultPackages is empty (declarative-only)"
+    "environment.defaultPackages is non-empty"
+    (servicesCfg.environment.defaultPackages == [] && devCfg.environment.defaultPackages == []);
+
+  # Validates SEC-014: users.mutableUsers = false
+  mutable-users-disabled = mkCheck
+    "mutable-users-disabled"
+    "users.mutableUsers is false on all hosts"
+    "users.mutableUsers is true — runtime user modification possible"
+    (!servicesCfg.users.mutableUsers && !devCfg.users.mutableUsers);
+
+  # Validates NET-001: nftables backend enabled
+  nftables-enabled = mkCheck
+    "nftables-enabled"
+    "nftables backend enabled on all hosts"
+    "networking.nftables.enable is false"
+    (servicesCfg.networking.nftables.enable && devCfg.networking.nftables.enable);
+
+  # Validates NET-021: fail2ban disabled
+  fail2ban-disabled = mkCheck
+    "fail2ban-disabled"
+    "fail2ban is disabled (key-only auth + MaxAuthTries is sufficient)"
+    "services.fail2ban.enable is true"
+    (!servicesCfg.services.fail2ban.enable && !devCfg.services.fail2ban.enable);
+
+  # Validates IMP-015: hideMounts = true
+  impermanence-hide-mounts =
+    let
+      source = builtins.readFile ../../modules/impermanence.nix;
+    in
+    mkCheck
+      "impermanence-hide-mounts"
+      "impermanence hideMounts is true"
+      "modules/impermanence.nix missing hideMounts = true"
+      (lib.hasInfix "hideMounts = true" source);
+
+  # Validates IMP-026: setupSecrets depends on persist-files
+  secrets-depend-on-persist =
+    let
+      source = builtins.readFile ../../modules/impermanence.nix;
+    in
+    mkCheck
+      "secrets-depend-on-persist"
+      "setupSecrets activation depends on persist-files"
+      "modules/impermanence.nix missing setupSecrets.deps persist-files dependency"
+      (lib.hasInfix "setupSecrets" source && lib.hasInfix "persist-files" source);
+
+  # Validates SBX-005: AGENT_REAL_BINARY must be in /nix/store
+  wrapper-nix-store-guard =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck
+      "wrapper-nix-store-guard"
+      "agent-wrapper.sh validates AGENT_REAL_BINARY is in /nix/store"
+      "agent-wrapper.sh missing /nix/store guard for AGENT_REAL_BINARY"
+      (lib.hasInfix "/nix/store" source && lib.hasInfix "AGENT_REAL_BINARY must be in /nix/store" source);
+
+  # Validates SCR-013: credential proxy started before privilege drop
+  wrapper-credential-proxy-flow =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck
+      "wrapper-credential-proxy-flow"
+      "agent-wrapper.sh starts credential proxy and generates per-session tokens"
+      "agent-wrapper.sh missing credential proxy flow (generate_session_token, proxy_port_file)"
+      (lib.hasInfix "generate_session_token" source
+       && lib.hasInfix "proxy_port_file" source
+       && lib.hasInfix "TSURF_PROXY_ROUTE" source);
+
+  # Validates SEC-030: supply chain env vars set in wrapper
+  wrapper-supply-chain-hardening =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck
+      "wrapper-supply-chain-hardening"
+      "agent-wrapper.sh sets supply chain hardening env vars"
+      "agent-wrapper.sh missing NPM_CONFIG_IGNORE_SCRIPTS or NPM_CONFIG_AUDIT"
+      (lib.hasInfix "NPM_CONFIG_IGNORE_SCRIPTS=true" source
+       && lib.hasInfix "NPM_CONFIG_AUDIT=true" source
+       && lib.hasInfix "NPM_CONFIG_SAVE_EXACT=true" source);
+
+  # Validates SEC-031: telemetry suppression
+  wrapper-telemetry-suppression =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck
+      "wrapper-telemetry-suppression"
+      "agent-wrapper.sh suppresses telemetry"
+      "agent-wrapper.sh missing DISABLE_TELEMETRY or DISABLE_ERROR_REPORTING"
+      (lib.hasInfix "DISABLE_TELEMETRY=1" source
+       && lib.hasInfix "DISABLE_ERROR_REPORTING=1" source);
+
+  # Validates SBX-048: enableAllProjectMcpServers = false
+  claude-settings-mcp-disabled =
+    let
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "claude-settings-mcp-disabled"
+      "Claude managed settings disable MCP auto-loading"
+      "agent-sandbox.nix missing enableAllProjectMcpServers = false"
+      (lib.hasInfix "enableAllProjectMcpServers" source
+       && lib.hasInfix "false" source);
+
+  # Validates SBX-019: seccomp syscall blocklist
+  launcher-seccomp-filter =
+    let
+      source = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "launcher-seccomp-filter"
+      "agent-sandbox.nix launcher includes seccomp SystemCallFilter"
+      "agent-sandbox.nix missing SystemCallFilter for @mount/@debug/bpf"
+      (lib.hasInfix "SystemCallFilter" source
+       && lib.hasInfix "@mount" source
+       && lib.hasInfix "bpf" source);
+
+  # Validates BAS-005: non-systemd initrd
+  no-systemd-initrd = mkCheck
+    "no-systemd-initrd"
+    "boot.initrd.systemd.enable is false on all hosts"
+    "boot.initrd.systemd.enable is true — non-systemd initrd required for BTRFS rollback"
+    (!servicesCfg.boot.initrd.systemd.enable && !devCfg.boot.initrd.systemd.enable);
+
 }
 
 # --- Private overlay test extension pattern ---

@@ -137,6 +137,46 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 | `tests/live/impermanence.bats` | /persist mount, BTRFS type, critical persist dirs, machine-id |
 | `tests/live/api-endpoints.bats` | HTTP endpoint health for localhost-bound services |
 
+## Phase 147: New Eval Checks
+
+| ID | Claim | Check |
+|----|-------|-------|
+| TST-065 | SEC-019, BAS-009: Nix channels disabled | `nix-channels-disabled` |
+| TST-066 | BAS-010: defaultPackages empty | `default-packages-empty` |
+| TST-067 | SEC-014: mutableUsers = false | `mutable-users-disabled` |
+| TST-068 | NET-001: nftables enabled | `nftables-enabled` |
+| TST-069 | NET-021: fail2ban disabled | `fail2ban-disabled` |
+| TST-070 | IMP-015: hideMounts = true | `impermanence-hide-mounts` |
+| TST-071 | IMP-026: setupSecrets depends on persist-files | `secrets-depend-on-persist` |
+| TST-072 | SBX-005: AGENT_REAL_BINARY /nix/store guard | `wrapper-nix-store-guard` |
+| TST-073 | SCR-013: credential proxy flow | `wrapper-credential-proxy-flow` |
+| TST-074 | SEC-030: supply chain env vars | `wrapper-supply-chain-hardening` |
+| TST-075 | SEC-031: telemetry suppression | `wrapper-telemetry-suppression` |
+| TST-076 | SBX-048: MCP auto-loading disabled | `claude-settings-mcp-disabled` |
+| TST-077 | SBX-019: seccomp syscall filter | `launcher-seccomp-filter` |
+| TST-078 | BAS-005: non-systemd initrd | `no-systemd-initrd` |
+
+## Phase 147: New Live Sandbox Probes
+
+| Claim | Probe | Test |
+|-------|-------|------|
+| SBX-031 | `denied-aws` | sandbox denies ~/.aws |
+| SBX-032 | `denied-kube` | sandbox denies ~/.kube |
+| SBX-033 | `denied-docker` | sandbox denies ~/.docker |
+| SBX-034 | `denied-npmrc` | sandbox denies ~/.npmrc |
+| SBX-038 | `denied-git-credentials` | sandbox denies ~/.git-credentials |
+| SBX-039 | `denied-etc-nono` | sandbox denies /etc/nono |
+
+## Phase 147: New Live Security Tests
+
+| Claim | Test |
+|-------|------|
+| SEC-023 | net.core.bpf_jit_harden = 2 |
+| SEC-025 | net.ipv4.conf.all.log_martians = 1 |
+| NET-015 | SSH PermitRootLogin is prohibit-password |
+| NET-017 | SSH MaxAuthTries is 3 |
+| NET-004 | no trusted firewall interfaces |
+
 ## Coverage Map
 
 Claims with no test coverage (candidates for future tests):
@@ -144,7 +184,7 @@ Claims with no test coverage (candidates for future tests):
 | Spec File | Uncovered Claims |
 |-----------|-----------------|
 | `secrets.md` | SCR-015 (session token randomness), SCR-020 (proxy port timeout) |
-| `sandbox.md` | SBX-010 through SBX-019 (systemd-run properties — live runtime only) |
+| `sandbox.md` | SBX-010 through SBX-018 (systemd-run resource properties — live runtime only) |
 | `deployment.md` | DEP-007 through DEP-011 (watchdog — requires deploy target) |
-| `backup.md` | BAK-007/BAK-008 (schedule/retention — requires deployed restic) |
-| `impermanence.md` | IMP-001 through IMP-005 (rollback — requires reboot) |
+| `backup.md` | BAK-008 (retention policy — requires deployed restic) |
+| `impermanence.md` | IMP-002 through IMP-005 (rollback script — requires reboot) |

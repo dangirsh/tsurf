@@ -79,9 +79,57 @@ case "$check" in
     fi
     ;;
 
+  denied-aws)
+    # ~/.aws must be inaccessible inside the sandbox.
+    if ls ~/.aws/ >/dev/null 2>&1; then
+      echo "FAIL: agent can list ~/.aws/" >&2
+      exit 1
+    fi
+    ;;
+
+  denied-kube)
+    # ~/.kube must be inaccessible inside the sandbox.
+    if ls ~/.kube/ >/dev/null 2>&1; then
+      echo "FAIL: agent can list ~/.kube/" >&2
+      exit 1
+    fi
+    ;;
+
+  denied-docker)
+    # ~/.docker must be inaccessible inside the sandbox.
+    if ls ~/.docker/ >/dev/null 2>&1; then
+      echo "FAIL: agent can list ~/.docker/" >&2
+      exit 1
+    fi
+    ;;
+
+  denied-npmrc)
+    # ~/.npmrc must be inaccessible inside the sandbox.
+    if cat ~/.npmrc >/dev/null 2>&1; then
+      echo "FAIL: agent can read ~/.npmrc" >&2
+      exit 1
+    fi
+    ;;
+
+  denied-git-credentials)
+    # ~/.git-credentials must be inaccessible inside the sandbox.
+    if cat ~/.git-credentials >/dev/null 2>&1; then
+      echo "FAIL: agent can read ~/.git-credentials" >&2
+      exit 1
+    fi
+    ;;
+
+  denied-etc-nono)
+    # /etc/nono must be inaccessible inside the sandbox.
+    if ls /etc/nono/ >/dev/null 2>&1; then
+      echo "FAIL: agent can list /etc/nono/" >&2
+      exit 1
+    fi
+    ;;
+
   *)
     echo "Unknown check: $check" >&2
-    echo "Available: denied-secrets denied-ssh denied-gnupg denied-bash-history allowed-repo-read allowed-workdir-write check-identity" >&2
+    echo "Available: denied-secrets denied-ssh denied-gnupg denied-bash-history denied-aws denied-kube denied-docker denied-npmrc denied-git-credentials denied-etc-nono allowed-repo-read allowed-workdir-write check-identity" >&2
     exit 2
     ;;
 esac

@@ -6,6 +6,7 @@ load "../lib/common"
 bats_load_library bats-support
 bats_load_library bats-assert
 
+# Validates NET-023: Tailscale enabled on all hosts
 @test "${HOST}: tailscale has at least one peer" {
   local status_json
   status_json="$(remote tailscale status --json 2>&1)" || {
@@ -26,6 +27,7 @@ bats_load_library bats-assert
   fi
 }
 
+# Validates NET-034 (partial): DNS allowed for agent egress
 @test "${HOST}: DNS resolution works for external hosts" {
   remote host github.com >/dev/null 2>&1 || {
     remote curl -sf --max-time 5 https://github.com >/dev/null 2>&1 || {
@@ -36,6 +38,7 @@ bats_load_library bats-assert
   }
 }
 
+# Validates NET-010, NET-011: metadata block nftables table exists
 @test "${HOST}: nftables agent-metadata-block table exists" {
   local tables
   tables="$(remote nft list tables 2>&1)" || {
@@ -50,6 +53,7 @@ bats_load_library bats-assert
   fi
 }
 
+# Validates NET-010: metadata block rule drops 169.254.169.254
 @test "${HOST}: nftables metadata block rule drops 169.254.169.254" {
   local rules
   rules="$(remote nft list table ip agent-metadata-block 2>&1)" || {
@@ -69,6 +73,7 @@ bats_load_library bats-assert
   fi
 }
 
+# Validates NET-033: agent egress enforced at host nftables
 @test "${HOST}: nftables agent-egress table exists" {
   local tables
   tables="$(remote nft list tables 2>&1)" || {
@@ -83,6 +88,7 @@ bats_load_library bats-assert
   fi
 }
 
+# Validates NET-033, NET-034, NET-035, NET-039: egress UID scoping, port allowlist, private range block, terminal drop
 @test "${HOST}: nftables agent-egress policy scopes by uid and drops private ranges" {
   local rules
   rules="$(remote nft list table inet agent-egress 2>&1)" || {

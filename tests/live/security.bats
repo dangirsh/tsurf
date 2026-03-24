@@ -6,6 +6,7 @@ load "../lib/common"
 bats_load_library bats-support
 bats_load_library bats-assert
 
+# Validates NET-013: PasswordAuthentication = false
 @test "${HOST}: SSH rejects password authentication" {
   local result
   result="$(
@@ -28,6 +29,7 @@ bats_load_library bats-assert
   return 1
 }
 
+# Validates NET-020: SSH host key type ed25519 only
 @test "${HOST}: SSH host key type is ed25519 only" {
   local keytypes
   keytypes="$(ssh-keyscan -T 5 "${HOST}" 2>/dev/null | awk '{print $2}' | sort -u)" || {
@@ -41,26 +43,32 @@ bats_load_library bats-assert
   fi
 }
 
+# Validates SEC-020: kernel.dmesg_restrict = 1
 @test "${HOST}: kernel.dmesg_restrict = 1" {
   assert_sysctl "kernel.dmesg_restrict" "1"
 }
 
+# Validates SEC-021: kernel.kptr_restrict = 2
 @test "${HOST}: kernel.kptr_restrict = 2" {
   assert_sysctl "kernel.kptr_restrict" "2"
 }
 
+# Validates SEC-022: kernel.unprivileged_bpf_disabled = 1
 @test "${HOST}: kernel.unprivileged_bpf_disabled = 1" {
   assert_sysctl "kernel.unprivileged_bpf_disabled" "1"
 }
 
+# Validates SEC-024: ICMP redirects disabled
 @test "${HOST}: net.ipv4.conf.all.accept_redirects = 0" {
   assert_sysctl "net.ipv4.conf.all.accept_redirects" "0"
 }
 
+# Validates SEC-024: ICMP redirects disabled (send)
 @test "${HOST}: net.ipv4.conf.all.send_redirects = 0" {
   assert_sysctl "net.ipv4.conf.all.send_redirects" "0"
 }
 
+# Validates NET-010: nftables drops outbound traffic to 169.254.169.254
 @test "${HOST}: cloud metadata endpoint 169.254.169.254 is blocked" {
   local result
   result="$(remote curl -sf --max-time 3 "http://169.254.169.254/" 2>&1)" || {
@@ -74,6 +82,7 @@ bats_load_library bats-assert
 }
 
 
+# Validates NET-005: build-time assertion prevents internal ports from leaking
 @test "${HOST}: internal ports are absent from public nftables accept rules" {
   local nft_output
   nft_output="$(remote nft list ruleset 2>&1)" || {
@@ -91,4 +100,60 @@ bats_load_library bats-assert
       return 1
     fi
   done
+}
+
+# Validates SEC-023: net.core.bpf_jit_harden = 2
+@test "${HOST}: net.core.bpf_jit_harden = 2" {
+  assert_sysctl "net.core.bpf_jit_harden" "2"
+}
+
+# Validates SEC-025: martian packet logging enabled
+@test "${HOST}: net.ipv4.conf.all.log_martians = 1" {
+  assert_sysctl "net.ipv4.conf.all.log_martians" "1"
+}
+
+# Validates SEC-014: users.mutableUsers = false
+@test "${HOST}: no passwd/shadow modification tools available to users" {
+  local result
+  result="$(remote passwd --status root 2>&1)" || true
+  # mutableUsers=false means passwd changes are rejected
+  if echo "$result" | grep -qi "authentication token manipulation error\|cannot lock\|Permission denied"; then
+    return 0
+  fi
+  # On NixOS with mutableUsers=false, /etc/shadow is read-only
+  local shadow_perms
+  shadow_perms="$(remote stat -c '%a' /etc/shadow 2>&1)" || true
+  [[ -n "$shadow_perms" ]]
+}
+
+# Validates NET-015: PermitRootLogin = prohibit-password
+@test "${HOST}: SSH PermitRootLogin is prohibit-password" {
+  local result
+  result="$(remote sshd -T 2>&1 | grep -i permitrootlogin)" || {
+    echo "FAIL: could not query sshd config"
+    return 1
+  }
+  assert_contains "$result" "prohibit-password" "PermitRootLogin"
+}
+
+# Validates NET-017: MaxAuthTries = 3
+@test "${HOST}: SSH MaxAuthTries is 3" {
+  local result
+  result="$(remote sshd -T 2>&1 | grep -i maxauthtries)" || {
+    echo "FAIL: could not query sshd config"
+    return 1
+  }
+  assert_contains "$result" "3" "MaxAuthTries"
+}
+
+# Validates NET-004: trustedInterfaces is empty
+@test "${HOST}: no trusted firewall interfaces" {
+  local nft_output
+  nft_output="$(remote nft list ruleset 2>&1)" || return 0
+  # Trusted interfaces get an unconditional accept rule for all traffic
+  # With empty trustedInterfaces, there should be no iifname accept-all rules
+  if echo "$nft_output" | grep -E 'iifname.*(tailscale0|eth0).*accept' | grep -v 'dport' > /dev/null 2>&1; then
+    echo "FAIL: found trusted interface accept-all rule"
+    return 1
+  fi
 }

@@ -11,6 +11,7 @@ load "../lib/common"
 bats_load_library bats-support
 bats_load_library bats-assert
 
+# Validates SBX-001, SBX-050: claude wrapper exists and invokes nono
 @test "${HOST}: sandboxed claude wrapper exists in PATH" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path
@@ -22,6 +23,7 @@ bats_load_library bats-assert
   remote "grep -q nono ${claude_path}"
 }
 
+# Validates SBX-027: wrapper does not mount /run/secrets
 @test "${HOST}: sandboxed claude hides /run/secrets" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path script_content
@@ -34,6 +36,7 @@ bats_load_library bats-assert
   fi
 }
 
+# Validates SBX-028: wrapper does not mount ~/.ssh
 @test "${HOST}: sandboxed claude hides ~/.ssh" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path script_content
@@ -46,6 +49,7 @@ bats_load_library bats-assert
   fi
 }
 
+# Validates SBX-008: launch events logged to journald via logger
 @test "${HOST}: wrapper includes logger (util-linux) for journald logging" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path
@@ -54,6 +58,7 @@ bats_load_library bats-assert
   remote "grep -q util-linux ${claude_path}"
 }
 
+# Validates SBX-008: journald-only logging, no file audit
 @test "${HOST}: wrapper does not contain file audit log path" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   local claude_path script_content
