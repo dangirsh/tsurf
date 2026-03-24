@@ -19,7 +19,8 @@
     ../../extras/dashboard.nix
     ../../modules/agent-sandbox.nix
     ../../modules/nono.nix
-    # Optional extras belong in a private overlay.
+    ../../extras/dev-agent.nix
+    # Additional wrappers and host-specific workflows belong in a private overlay.
   ];
 
   home-manager.users.dev = import ../../extras/home;

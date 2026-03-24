@@ -135,6 +135,26 @@ in
     "agent-metadata-block nftables table not found"
     (builtins.hasAttr "agent-metadata-block" servicesCfg.networking.nftables.tables);
 
+  agent-egress-table = mkCheck
+    "agent-egress-table"
+    "agent-egress nftables table is defined"
+    "agent-egress nftables table not found"
+    (builtins.hasAttr "agent-egress" servicesCfg.networking.nftables.tables);
+
+  agent-egress-policy =
+    let
+      content = servicesCfg.networking.nftables.tables.agent-egress.content;
+      agentUid = toString servicesCfg.tsurf.agent.uid;
+    in
+    mkCheck
+      "agent-egress-policy"
+      "agent-egress policy scopes by agent UID and blocks private ranges"
+      "agent-egress policy missing UID scoping, private-range drops, or HTTPS allowlist"
+      (lib.hasInfix "meta skuid ${agentUid}" content
+       && lib.hasInfix "100.64.0.0/10" content
+       && lib.hasInfix "443" content
+       && lib.hasInfix "drop" content);
+
 
   dashboard-enabled = mkCheck
     "dashboard-enabled"
@@ -613,20 +633,38 @@ in
     in
     mkCheck
       "dev-agent-not-control-plane"
-      "dev-agent.nix default WorkingDirectory is not the control-plane repo"
-      "SECURITY: dev-agent.nix WorkingDirectory defaults to /tsurf (control-plane repo) — use agentCfg.projectRoot"
-      (!(lib.hasInfix "projectRoot}/tsurf" source));
+      "dev-agent.nix defaults to a dedicated workspace instead of the control-plane repo"
+      "SECURITY: dev-agent.nix still defaults to the control-plane repo instead of a dedicated workspace"
+      (lib.hasInfix "dev-agent-workspace" source
+       && !(lib.hasInfix "default = agentCfg.projectRoot;" source));
 
-  dev-agent-script-no-control-plane-output =
+  dev-agent-supervised =
     let
-      source = builtins.readFile ../../extras/scripts/dev-agent.sh;
+      source = builtins.readFile ../../extras/dev-agent.nix;
     in
     mkCheck
-      "dev-agent-script-no-control-plane-output"
-      "dev-agent task writes research output to the configured working directory"
-      "SECURITY: dev-agent.sh hardcodes /data/projects/tsurf/RESEARCH.md instead of the current working directory"
-      (!(lib.hasInfix "/data/projects/tsurf/RESEARCH.md" source)
-       && lib.hasInfix "./RESEARCH.md" source);
+      "dev-agent-supervised"
+      "dev-agent runs as a supervised systemd service, not a detached oneshot"
+      "dev-agent.nix still uses detached oneshot lifecycle instead of a supervised manager loop"
+      (lib.hasInfix "Type = \"simple\"" source
+       && lib.hasInfix "ExecStop =" source
+       && !(lib.hasInfix "Type = \"oneshot\"" source)
+       && !(lib.hasInfix "RemainAfterExit = true" source));
+
+  dev-agent-parameterized-task =
+    let
+      moduleSource = builtins.readFile ../../extras/dev-agent.nix;
+      scriptSource = builtins.readFile ../../extras/scripts/dev-agent.sh;
+    in
+    mkCheck
+      "dev-agent-parameterized-task"
+      "dev-agent task configuration is parameterized and manager-driven"
+      "dev-agent still hardcodes a repo-specific task instead of prompt/command options and manager env vars"
+      (lib.hasInfix "prompt = lib.mkOption" moduleSource
+       && lib.hasInfix "command = lib.mkOption" moduleSource
+       && lib.hasInfix "DEV_AGENT_TASK_SCRIPT" scriptSource
+       && lib.hasInfix "zmx list --short" scriptSource
+       && !(lib.hasInfix "Conduct a literature search for projects similar to tsurf" scriptSource));
 
   cost-tracker-secret-capability =
     let
@@ -663,6 +701,25 @@ in
       "agent-wrapper.sh refuses to grant read access to entire project root"
       "agent-wrapper.sh missing project-root refusal — agents could read all repos"
       (lib.hasInfix "refusing to grant read access to the entire project root" source);
+
+  sandbox-refuses-protected-control-plane-repos =
+    let
+      wrapperSource = builtins.readFile ../../scripts/agent-wrapper.sh;
+      moduleSource = builtins.readFile ../../modules/agent-sandbox.nix;
+    in
+    mkCheck
+      "sandbox-refuses-protected-control-plane-repos"
+      "agent wrapper refuses repos marked as protected control-plane roots"
+      "agent wrapper missing protected control-plane repo guard or default marker wiring"
+      (lib.hasInfix "protected control-plane repo" wrapperSource
+       && lib.hasInfix ".tsurf-control-plane" moduleSource
+       && lib.hasInfix "AGENT_PROTECTED_REPO_MARKERS" wrapperSource);
+
+  control-plane-marker-file = mkCheck
+    "control-plane-marker-file"
+    "repo root carries the protected control-plane marker file"
+    "repo root missing .tsurf-control-plane marker"
+    (builtins.pathExists ../../.tsurf-control-plane);
 
   public-no-sandbox-removed =
     let

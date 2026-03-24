@@ -23,14 +23,17 @@ These lead to the following design goals:
 ## Core Features
 
 - **Agent sandboxing:** [nono](https://github.com/always-further/nono) isolates agents with [Landlock](https://docs.kernel.org/userspace-api/landlock.html) (kernel-level) and [proxy credential injection](https://nono.sh/blog/blog-credential-injection) (phantom token pattern; agents never see real API keys). Interactive sessions are brokered to an unprivileged `agent` user.
+- **Core agent paths:** public core ships the sandboxed interactive `claude` wrapper plus a first-class `dev-agent` service for unattended work on a dedicated workspace repo.
 - **Fully declarative:** Agents get maximal system context from the source files. Imperative package management is disabled by convention (channels removed, NIX_PATH cleared). Undeclared state is wiped on boot via [BTRFS](https://btrfs.readthedocs.io/) subvolume rollback ([impermanence](https://github.com/nix-community/impermanence)).
-- **Robust multi-host deployment:** [deploy-rs](https://github.com/serokell/deploy-rs) with [automatic rollbacks](https://github.com/serokell/deploy-rs?tab=readme-ov-file#magic-rollback) and build-time lockout prevention.
+- **Robust multi-host deployment:** [deploy-rs](https://github.com/serokell/deploy-rs) with [automatic rollbacks](https://github.com/serokell/deploy-rs?tab=readme-ov-file#magic-rollback), build-time lockout prevention, and opt-in dashboard/Syncthing extras for cross-host visibility and workspace sync.
 - **Hardened server configuration:** [srvos](https://github.com/nix-community/srvos) [server profile](https://github.com/nix-community/srvos/tree/main/nixos/server) (key-only SSH, immutable users, sudo wheel-only, systemd watchdogs, no emergency mode), [Tailscale](https://tailscale.com/) zero-trust networking (use [tailnet lock](https://tailscale.com/docs/features/tailnet-lock)), nftables default-deny firewall, and localhost-first internal services.
-- **Optional batteries** (in [`extras/`](#extras)): dashboard, cost tracking, backups, and file sync. Multi-agent workflows belong in your private overlay.
+- **Agent-aware outbound control:** agent traffic is allowlisted at the host firewall by UID. The default policy allows DNS plus TCP `22/80/443` and blocks private/link-local ranges.
+- **Optional batteries** (in [`extras/`](#extras)): dashboard, extra wrappers, cost tracking, backups, and file sync. Workflow-specific automation still belongs in your private overlay.
 
 ## Example Use Cases
 
 - Run a hardened Claude coding-agent path on a NixOS host.
+- Run a supervised dev agent against a dedicated workspace repo on a remote host.
 - Host personal assistant agents (e.g. [OpenClaw](https://openclaw.org/)).
 - Self-host autonomous agent experiments (e.g. [Conway Automata](https://conway.tech/))
 - Run [MCP](https://modelcontextprotocol.io/) servers for agents (e.g. access to Google services, DMs, X API)
@@ -51,7 +54,7 @@ Service modules declare their own dashboard entries, and localhost-only service 
 | Web | Public ([nginx](https://nginx.org/) + [ACME](https://letsencrypt.org/)) | personal sites |
 | Internal | Localhost-only (`127.0.0.1`) | dashboard, syncthing GUI, restic-status |
 | System | Public firewall | SSH (22), Syncthing BEP (22000) |
-| Agent | outbound only | claude (core); custom agents in private overlay |
+| Agent | outbound only | `claude`, `dev-agent`; opt-in `codex` / `pi` / `opencode` |
 | Worker | none/outbound | restic backup |
 
 ## Extras
@@ -66,10 +69,14 @@ imports = [ ../../extras/syncthing.nix ];
 services.syncthingStarter.enable = true;
 ```
 
-`extras/dashboard.nix` and `extras/cost-tracker.nix` are optional utilities. All extras are opt-in via explicit host imports.
+`extras/dev-agent.nix` is the supported unattended agent path. The other extras are opt-in utilities or alternative wrappers imported explicitly by the host or private overlay.
 
 | Module | Enable option | Description |
 |--------|--------------|-------------|
+| [`dev-agent.nix`](extras/dev-agent.nix) | `services.devAgent.enable` | First-class unattended Claude service (supervised `zmx` session on a dedicated workspace repo) |
+| [`codex.nix`](extras/codex.nix) | `services.codexAgent.enable` | Opt-in Codex wrapper (OpenAI) |
+| [`pi.nix`](extras/pi.nix) | `services.piAgent.enable` | Opt-in pi wrapper (Anthropic) |
+| [`opencode.nix`](extras/opencode.nix) | `services.opencodeAgent.enable` | Opt-in opencode wrapper; override `package` with a real build/pin |
 | [`dashboard.nix`](extras/dashboard.nix) | `services.dashboard.enable` | Service dashboard with live systemd status |
 | [`cost-tracker.nix`](extras/cost-tracker.nix) | `services.costTracker.enable` | API cost tracking (Anthropic, OpenAI) |
 | [`syncthing.nix`](extras/syncthing.nix) | `services.syncthingStarter.enable` | Cross-host file sync (tailnet-only by default) |
@@ -95,8 +102,9 @@ Personal services, real credentials, and host-specific config go in a separate p
 - **Requirements:** A VPS or bare-metal host running NixOS, an age key for sops secrets, and a private overlay for anything real. No KVM is needed for sandboxing; tsurf uses Landlock, not VMs.
 - **Deploys from this repo are intentionally blocked.** The public flake exposes `.#eval-services`, `.#eval-dev`, and `.#eval-dev-alt-agent` for eval/testing only, and exports no `deploy.nodes`. Real deployments require a [private overlay](#private-overlay) with your credentials and host config.
 - **Add your services:** fork [`examples/private-overlay/`](examples/private-overlay/) and import from `modules/` (core) and `extras/` (optional batteries).
-- **Agent CLI (core):** `claude` is the only first-class interactive wrapper in public core.
-- **Additional agents:** implement in your private overlay (see [private overlay walkthrough](examples/private-overlay/README.md#adding-a-custom-agent)).
+- **Interactive agent path:** `claude` is the first-class sandboxed wrapper in public core.
+- **Unattended agent path:** import `extras/dev-agent.nix`, set `services.devAgent.enable = true`, and provide either `services.devAgent.prompt` or `services.devAgent.command`.
+- **Additional wrappers:** `codex`, `pi`, and `opencode` ship as opt-in extras. Workflow-specific wrappers or agent orchestration still belong in your private overlay.
 
 ## Related projects
 

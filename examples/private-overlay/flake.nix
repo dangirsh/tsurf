@@ -60,10 +60,12 @@
         # nono.nix: nono binary, tsurf profile, NONO_PROFILE_PATH, proxy credentials
         "${inputs.tsurf}/modules/nono.nix"
         { services.nonoSandbox.enable = true; }
-        # agent-sandbox.nix: core claude wrapper plus hook for optional agent extras
+        # agent-sandbox.nix: core claude wrapper plus protected control-plane repo guards
         "${inputs.tsurf}/modules/agent-sandbox.nix"
         { services.agentSandbox.enable = true; }
-        # Example opt-in extras: Codex and pi register through agentSandbox.extraAgents.
+        # dev-agent.nix: first-class unattended Claude service (enable per host as needed)
+        "${inputs.tsurf}/extras/dev-agent.nix"
+        # Example opt-in extra wrappers:
         "${inputs.tsurf}/extras/codex.nix"
         "${inputs.tsurf}/extras/pi.nix"
         { services.codexAgent.enable = true; }

@@ -17,21 +17,26 @@ Minimal forkable template for a private tsurf overlay.
 
 ---
 
-## Adding a Custom Agent
+## Adding Agent Workloads
 
-Public tsurf core provides one first-class agent path: the sandboxed `claude` wrapper running as the unprivileged `agent` user under [nono](https://github.com/always-further/nono).
+Public tsurf core provides two first-class agent paths running as the unprivileged `agent` user under [nono](https://github.com/always-further/nono):
 
-If you need additional agents, implement them directly in your private overlay. Do not rely on public-core multi-agent framework APIs.
+- interactive `claude`
+- unattended `services.devAgent`
+
+Additional wrappers such as `codex`, `pi`, and `opencode` are opt-in public extras. Workflow-specific agents and orchestration still belong in your private overlay.
 
 ### Required modules for agent hosts
 
 Hosts running agent workloads should import all three agent infrastructure modules:
 
 - `modules/agent-compute.nix` -- provides `tsurf-agents.slice` cgroup limits and `/data/projects` persistence
-- `modules/agent-sandbox.nix` -- core `claude` wrapper and optional extra agent hooks
+- `modules/agent-sandbox.nix` -- core `claude` wrapper and protected control-plane repo guards
 - `modules/nono.nix` -- nono binary, tsurf Landlock profile, and proxy credential injection
 
-The private overlay template `flake.nix` already imports `agent-sandbox.nix` and `nono.nix`. Add `agent-compute.nix` and enable it with `services.agentCompute.enable = true` for any host that runs agent workloads.
+For unattended Claude work, also import `extras/dev-agent.nix`.
+
+The private overlay template `flake.nix` already imports `agent-sandbox.nix`, `nono.nix`, and `extras/dev-agent.nix`. Add `agent-compute.nix` and enable it with `services.agentCompute.enable = true` for any host that runs agent workloads.
 
 ### What agents can access
 
@@ -42,49 +47,46 @@ The private overlay template `flake.nix` already imports `agent-sandbox.nix` and
 | Agent config dirs (`~/.claude`, etc.) | Read + write | `filesystem.allow` in nono profile |
 | Nix store, SSL certs, `/etc` basics | Read only | Inherited from `extends = "claude-code"` |
 | Paths in `filesystem.allow` | Read + write | Your nono profile |
-| Outbound network (API calls, git) | Allowed | `network.block = false` in nono profile |
+| Outbound network (API calls, git) | Allowlisted | Host nftables policy for the dedicated agent UID |
 
 | Resource | Denied | Controlled by |
 |----------|--------|---------------|
 | `/run/secrets/` (API keys on disk) | Blocked | Landlock deny (nono profile inherits this) |
 | `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.docker` | Blocked | `filesystem.deny` in nono profile |
 | Other git repos (sibling projects) | Blocked | `agent-wrapper.sh` scopes read to current repo only |
+| Protected control-plane repos | Blocked | `.tsurf-control-plane` marker or `protectedRepoRoots` |
 | `wheel` / `sudo` | No access | Agent user has no `wheel` group (build-time assertion) |
 | Docker daemon | No access | Agent user has no `docker` group (build-time assertion) |
 | CPU / memory beyond limits | Killed | `tsurf-agents.slice` cgroup limits |
 
-### Minimal recurring workflow (Claude only)
+### First-class unattended workflow (`dev-agent`)
 
-Use a systemd timer in your private overlay and call the core `claude` wrapper directly:
+Use the shipped `dev-agent` module for the standard unattended Claude path:
 
 ```nix
-{ config, pkgs, ... }:
+{ config, inputs, ... }:
 {
-  systemd.services.greeter-agent = {
-    description = "Daily greeting agent (Claude)";
-    serviceConfig = {
-      Type = "oneshot";
-      User = config.tsurf.agent.user;
-      WorkingDirectory = "/var/lib/greeter";
-      ExecStart = "${pkgs.bash}/bin/bash -lc 'claude -p \"Write one short greeting with today\\'s date to /var/lib/greeter/greeting.txt\"'";
-    };
-  };
+  imports = [ "${inputs.tsurf}/extras/dev-agent.nix" ];
 
-  systemd.timers.greeter-agent = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "daily";
-      Persistent = true;
-    };
+  services.devAgent = {
+    enable = true;
+    workingDirectory = "/data/projects/my-workspace";
+    prompt = ''
+      Review the repository in the current working directory, continue the
+      highest-value concrete task you can verify locally, and leave a short
+      progress note in ./DEV-AGENT-STATUS.md.
+    '';
+    permissionMode = "bypassPermissions";
+    model = "claude-opus-4-6";
   };
 }
 ```
 
-This keeps the workflow explicit and local to your overlay.
+The service keeps a named `zmx` session alive, initializes the workspace as a Git repo if needed, and restarts cleanly under systemd supervision.
 
 ### Step-by-step: adding another wrapper command
 
-For additional workflows, add your own wrapper module in the private overlay:
+For workflow-specific wrappers beyond the shipped public set, add your own module in the private overlay:
 
 ```nix
 # modules/my-agent-wrapper.nix
@@ -116,7 +118,7 @@ sops.secrets."anthropic-api-key".owner = config.tsurf.agent.user;
 
 ### Using the built-in interactive wrappers
 
-For interactive use, tsurf ships only the sandboxed `claude` wrapper in public core:
+For interactive use, tsurf ships the sandboxed `claude` wrapper in public core:
 
 ```bash
 # SSH in as operator, then:
@@ -125,6 +127,7 @@ claude   # wrapper broker-launches as agent user and runs in nono sandbox
 ```
 
 The wrapper handles credential injection from `/run/secrets/`, enforces the git-worktree requirement, and logs launches to journald (`journalctl -t agent-launch`).
+It also refuses repos marked with `.tsurf-control-plane`, so keep that marker in infra/control-plane repos and launch agents from workspace repos.
 
 See `SECURITY.md` in the tsurf repo for the full access control model, credential flow architecture, and tailnet segmentation guidance.
 

@@ -68,3 +68,46 @@ bats_load_library bats-assert
     return 1
   fi
 }
+
+@test "${HOST}: nftables agent-egress table exists" {
+  local tables
+  tables="$(remote nft list tables 2>&1)" || {
+    echo "FAIL: unable to list nftables tables"
+    return 1
+  }
+
+  if [[ "$tables" != *"agent-egress"* ]]; then
+    echo "FAIL: nftables table 'agent-egress' not found"
+    echo "DEBUG: tables: $tables"
+    return 1
+  fi
+}
+
+@test "${HOST}: nftables agent-egress policy scopes by uid and drops private ranges" {
+  local rules
+  rules="$(remote nft list table inet agent-egress 2>&1)" || {
+    echo "FAIL: unable to list nft table inet agent-egress"
+    return 1
+  }
+
+  if [[ "$rules" != *"meta skuid"* ]]; then
+    echo "FAIL: agent-egress table missing UID scoping"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" != *"100.64.0.0/10"* ]]; then
+    echo "FAIL: agent-egress table missing tailnet/private-range block"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" != *"443"* ]]; then
+    echo "FAIL: agent-egress table missing HTTPS allowlist"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" != *"drop"* ]]; then
+    echo "FAIL: agent-egress table missing terminal drop"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+}

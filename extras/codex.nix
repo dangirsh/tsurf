@@ -5,10 +5,13 @@
 let
   cfg = config.services.codexAgent;
   agentCfg = config.tsurf.agent;
+  sandboxCfg = config.services.agentSandbox;
   agentHome = config.tsurf.agent.home;
   devHome = config.users.users.dev.home;
   launcherName = "tsurf-launch-codex";
   runtimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.util-linux ];
+  protectedRepoMarkers = lib.concatStringsSep ":" sandboxCfg.protectedRepoMarkers;
+  protectedRepoRoots = lib.concatStringsSep ":" sandboxCfg.protectedRepoRoots;
 
   nonoProfile = pkgs.writeText "tsurf-codex-profile.json" (builtins.toJSON {
     extends = "tsurf";
@@ -28,6 +31,8 @@ let
       export AGENT_NAME="codex"
       export AGENT_REAL_BINARY="${cfg.package}/bin/codex"
       export AGENT_PROJECT_ROOT="${agentCfg.projectRoot}"
+      export AGENT_PROTECTED_REPO_MARKERS="${protectedRepoMarkers}"
+      export AGENT_PROTECTED_REPO_ROOTS="${protectedRepoRoots}"
       export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf-codex.json"
       export AGENT_CREDENTIALS="${lib.concatStringsSep " " cfg.credentials}"
 
@@ -41,6 +46,8 @@ let
         --setenv=AGENT_NAME="$AGENT_NAME" \
         --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
         --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
+        --setenv=AGENT_PROTECTED_REPO_MARKERS="$AGENT_PROTECTED_REPO_MARKERS" \
+        --setenv=AGENT_PROTECTED_REPO_ROOTS="$AGENT_PROTECTED_REPO_ROOTS" \
         --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
         --setenv=AGENT_CREDENTIALS="$AGENT_CREDENTIALS" \
         ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
@@ -54,6 +61,8 @@ let
       export AGENT_NAME="codex"
       export AGENT_REAL_BINARY="${cfg.package}/bin/codex"
       export AGENT_PROJECT_ROOT="${agentCfg.projectRoot}"
+      export AGENT_PROTECTED_REPO_MARKERS="${protectedRepoMarkers}"
+      export AGENT_PROTECTED_REPO_ROOTS="${protectedRepoRoots}"
       export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf-codex.json"
       export AGENT_CREDENTIALS="${lib.concatStringsSep " " cfg.credentials}"
 

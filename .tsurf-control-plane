@@ -1,0 +1,2 @@
+This repo is a protected tsurf control-plane repo.
+Sandboxed agent wrappers refuse to launch from git repos carrying this marker.

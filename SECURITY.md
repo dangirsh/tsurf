@@ -22,6 +22,7 @@ strengthen or weaken these properties, so host-specific statements are called ou
   - `services.agentCompute.enable = true`
   - `services.agentSandbox.enable = true`
   - `services.nonoSandbox.enable = true`
+  - `extras/dev-agent.nix` is imported, but `services.devAgent.enable` remains opt-in
 
 ## Core Security Invariants
 
@@ -39,6 +40,9 @@ strengthen or weaken these properties, so host-specific statements are called ou
   [`modules/agent-compute.nix`](modules/agent-compute.nix).
   The intended interactive entrypoints are wrapper binaries such as `claude` and,
   if enabled, `codex`, `pi`, or `opencode`.
+- The public repo also ships a first-class unattended agent path:
+  [`extras/dev-agent.nix`](extras/dev-agent.nix), which supervises a
+  parameterized Claude task inside the same sandbox boundary.
 - The public wrapper/launcher path has no `--no-sandbox` or
   `AGENT_ALLOW_NOSANDBOX` escape hatch.
 
@@ -117,7 +121,8 @@ Security properties of that path:
 - The caller cannot swap binaries, profiles, or credential tuples across the
   privileged sudo boundary.
 - If the wrapper is already running as the agent user, it skips the sudo/systemd
-  hop and execs `agent-wrapper.sh` directly. This is how `dev-agent` runs.
+  hop and execs `agent-wrapper.sh` directly. This is how `dev-agent` runs its
+  prompt or command payloads.
 - Launch events go to journald only (`journalctl -t agent-launch`).
   Logged fields are limited to `mode`, `agent`, `user`, `uid`, and `repo_scope`.
   Raw arguments, prompts, and file paths are not logged.
@@ -149,6 +154,12 @@ Enforced behavior:
   passes that path to nono with `--read`.
 - The wrapper refuses to run if the resolved Git root is exactly the project root.
   This prevents granting blanket read access to all repos under `/data/projects`.
+- The wrapper also refuses any Git repo whose root:
+  - matches an entry in `services.agentSandbox.protectedRepoRoots`, or
+  - carries a marker file from `services.agentSandbox.protectedRepoMarkers`
+    (default: `.tsurf-control-plane`)
+- This repo ships that marker at its root, so sandboxed agents cannot be launched
+  from the tsurf control-plane checkout by default.
 - The shipped nono profile denies:
   - `/run/secrets`
   - `~/.ssh`
@@ -161,15 +172,16 @@ Enforced behavior:
 
 Critical nuance:
 
-- The boundary is "current worktree vs sibling repos", not "workspace vs control
-  plane". The nono profile sets `workdir.access = "readwrite"`.
-- If an operator launches an agent from the tsurf repo itself, the current
-  working directory is writable, so the agent can modify that repo.
+- The boundary is still "current worktree is writable". The nono profile sets
+  `workdir.access = "readwrite"`.
+- What changed is the supported definition of "current worktree": protected
+  control-plane repos are blocked up front by marker/root checks, so the default
+  public path is now "workspace repo vs control-plane repo".
 - What is blocked is broad cross-repo access:
   - no blanket `/data/projects` read grant
   - no sibling-repo read access from the wrapper path
-- Private overlays should keep infrastructure repos operator-owned and launch
-  agents from workspace repos, not from the control-plane repo.
+- Private overlays should keep infrastructure repos operator-owned, carry the
+  marker file where possible, and launch agents from dedicated workspace repos.
 
 Because deny behavior depends on nono/Landlock behavior on the target host, the
 repo backs these claims with live sandbox tests on the dev host.
@@ -257,10 +269,20 @@ Syncthing defaults:
 
 - `nono` itself is configured with `network.block = false`; it is not the egress
   allowlist boundary here.
-- The public repo does not currently ship a separate per-agent egress allowlist
-  module. Outbound policy is therefore the normal host network policy plus any
-  nono proxy credential routing. Private overlays can add tighter egress
-  controls if needed.
+- The public repo enforces agent egress in nftables by `meta skuid` for the
+  dedicated agent user.
+- Default allowed outbound traffic for sandboxed agents is:
+  - loopback
+  - DNS on TCP/UDP `53`
+  - TCP `22`, `80`, and `443`
+- Default denied outbound traffic for sandboxed agents includes:
+  - RFC1918 IPv4 ranges
+  - Tailscale CGNAT range `100.64.0.0/10`
+  - link-local IPv4 `169.254.0.0/16`
+  - IPv6 ULA `fc00::/7`
+  - IPv6 link-local `fe80::/10`
+- This boundary applies to both interactive wrappers and the unattended
+  `dev-agent` service because both run as the dedicated agent UID.
 
 ## Deployment, Recovery, And Lockout Prevention
 
@@ -331,10 +353,11 @@ Live checks:
 - [`tests/live/secrets.bats`](tests/live/secrets.bats)
   verifies `/run/secrets` presence, ownership, and non-world-readable permissions.
 - [`tests/live/networking.bats`](tests/live/networking.bats)
-  verifies Tailscale state and the metadata-block nftables rule.
+  verifies Tailscale state, the metadata-block nftables rule, and the agent
+  egress allowlist table.
 - [`tests/live/sandbox-behavioral.bats`](tests/live/sandbox-behavioral.bats)
   proves that sandboxed agent code cannot read denied paths and can read/write the
-  expected worktree paths.
+  expected worktree paths, and that protected control-plane repos are refused.
 - [`tests/live/agent-sandbox.bats`](tests/live/agent-sandbox.bats)
   verifies wrapper script structure: nono invocation, journald logging, and absence
   of secret mounts.
@@ -350,17 +373,17 @@ Live checks:
 ## Non-Goals And Accepted Risks
 
 - The service-host role does not include the agent sandbox at all.
-- The sandbox does not make the current worktree immutable. Launching an agent
-  from the control-plane repo gives that agent write access to the repo.
+- The sandbox does not make the current workspace immutable. If an operator
+  points an agent at a normal workspace repo, that repo is writable by design.
 - `dev` remains a trusted administrative user with `wheel`.
 - The public core does not grant the agent user Nix daemon access. Private
   overlays can loosen this boundary if needed.
 - [`extras/dev-agent.nix`](extras/dev-agent.nix) runs Claude
-  Code with `--permission-mode=bypassPermissions` inside the sandbox and defaults
-  its working directory to the project root unless a private overlay overrides it.
-- The public repo does not ship a per-agent egress allowlist module. Outbound
-  policy is the normal host network policy plus nono proxy credential routing.
-  Private overlays can add tighter egress controls if needed.
+  Code with `--permission-mode=bypassPermissions` inside the sandbox by default.
+  That is an explicit unattended-workflow tradeoff; operators can override
+  `services.devAgent.permissionMode`.
+- The host-level agent egress allowlist is coarse by design. It is scoped by UID,
+  not by individual wrapper or destination hostname.
 - Optional extras can widen access. Notable example:
   `services.costTracker.enable` grants a DynamicUser service read-only
   `/run/secrets` access plus `CAP_DAC_READ_SEARCH` so it can read provider keys.

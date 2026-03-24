@@ -1,6 +1,6 @@
 # modules/agent-sandbox.nix
 # @decision SANDBOX-73-01: Public core exposes one sandboxed Claude wrapper.
-#   Extra agents and unattended workflows belong in optional modules or a private overlay.
+#   Additional wrappers and unattended workflows build on the same wrapper contract.
 # @decision AUDIT-117-01: Launch logging uses journald only (logger -t agent-launch).
 #   File-based audit logs remain removed.
 # @decision NONO-118-02: API keys are loaded into the parent env from /run/secrets/.
@@ -13,6 +13,8 @@ let
   cfg = config.services.agentSandbox;
   agentCfg = config.tsurf.agent;
   agentRuntimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.util-linux ];
+  protectedRepoMarkers = lib.concatStringsSep ":" cfg.protectedRepoMarkers;
+  protectedRepoRoots = lib.concatStringsSep ":" cfg.protectedRepoRoots;
 
   launcherName = "tsurf-launch-claude";
   launcher = pkgs.writeShellApplication {
@@ -22,6 +24,8 @@ let
       export AGENT_NAME="claude"
       export AGENT_REAL_BINARY="${pkgs.claude-code}/bin/claude"
       export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
+      export AGENT_PROTECTED_REPO_MARKERS="${protectedRepoMarkers}"
+      export AGENT_PROTECTED_REPO_ROOTS="${protectedRepoRoots}"
       export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
       export AGENT_CREDENTIALS="anthropic:ANTHROPIC_API_KEY:anthropic-api-key"
 
@@ -44,6 +48,8 @@ let
         --setenv=AGENT_NAME="$AGENT_NAME" \
         --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
         --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
+        --setenv=AGENT_PROTECTED_REPO_MARKERS="$AGENT_PROTECTED_REPO_MARKERS" \
+        --setenv=AGENT_PROTECTED_REPO_ROOTS="$AGENT_PROTECTED_REPO_ROOTS" \
         --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
         --setenv=AGENT_CREDENTIALS="$AGENT_CREDENTIALS" \
         ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
@@ -57,6 +63,8 @@ let
       export AGENT_NAME="claude"
       export AGENT_REAL_BINARY="${pkgs.claude-code}/bin/claude"
       export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
+      export AGENT_PROTECTED_REPO_MARKERS="${protectedRepoMarkers}"
+      export AGENT_PROTECTED_REPO_ROOTS="${protectedRepoRoots}"
       export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf.json"
       export AGENT_CREDENTIALS="anthropic:ANTHROPIC_API_KEY:anthropic-api-key"
 
@@ -76,6 +84,24 @@ in
       type = lib.types.str;
       default = config.tsurf.agent.projectRoot;
       description = "Root directory for sandboxed agent execution. PWD must be inside this path.";
+    };
+
+    protectedRepoMarkers = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ".tsurf-control-plane" ];
+      description = ''
+        Repo-root marker files that identify protected control-plane repositories.
+        The wrapper refuses to launch agents from any git repo containing one of these markers.
+      '';
+    };
+
+    protectedRepoRoots = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Absolute git repo roots that sandboxed agents must never run from.
+        Use this in private overlays for infra repos that cannot carry marker files.
+      '';
     };
   };
 
