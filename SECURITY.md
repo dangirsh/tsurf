@@ -118,8 +118,6 @@ Security properties of that path:
 - The launcher still rejects any baked `AGENT_REAL_BINARY` outside `/nix/store`.
 - The caller cannot swap binaries, profiles, or credential tuples across the
   privileged sudo boundary.
-- If the wrapper is already running as the agent user, it skips the sudo/systemd
-  hop and execs `agent-wrapper.sh` directly. This is how `dev-agent` runs.
 - Launch events go to journald only (`journalctl -t agent-launch`).
   Logged fields are limited to `mode`, `agent`, `user`, `uid`, and `repo_scope`.
   Raw arguments, prompts, and file paths are not logged.
@@ -185,8 +183,8 @@ repo backs these claims with live sandbox tests on the dev host.
 
 | Secret | Owner |
 | --- | --- |
-| `anthropic-api-key` | agent user |
-| `openai-api-key` | agent user |
+| `anthropic-api-key` | root |
+| `openai-api-key` | root |
 | `google-api-key` | `dev` |
 | `xai-api-key` | `dev` |
 | `openrouter-api-key` | `dev` |
@@ -198,14 +196,13 @@ repo backs these claims with live sandbox tests on the dev host.
 
 - Each wrapper carries a per-wrapper `AGENT_CREDENTIALS` allowlist of
   `SERVICE:ENV_VAR:secret-file-name` triples.
-- `scripts/agent-wrapper.sh` reads only those named secret files from
-  `/run/secrets`.
+- `scripts/agent-wrapper.sh` runs on the root-owned brokered launch path and
+  reads only those named secret files from `/run/secrets`.
 - Missing secret files produce a warning and an empty env var.
-- Values prefixed with `PLACEHOLDER` are not passed to nono as live credentials.
-- [`modules/nono.nix`](modules/nono.nix) defines proxy-style
-  `custom_credentials` for Anthropic and OpenAI using `env://` URIs.
-- `nono` then injects per-session phantom tokens into the sandboxed child via
-  `--credential <service>`.
+- Values prefixed with `PLACEHOLDER` are skipped.
+- The wrapper starts a root-owned loopback credential proxy for the requested
+  providers, generates per-session random tokens, then launches the actual
+  agent binary as the `agent` user inside `nono` via `setpriv`.
 
 What the child process gets:
 
@@ -253,7 +250,7 @@ SSH defaults:
   allowlist boundary here.
 - The public repo does not currently ship a separate per-agent egress allowlist
   module. Outbound policy is therefore the normal host network policy plus any
-  nono proxy credential routing. Private overlays can add tighter egress
+  root-side credential proxy routing. Private overlays can add tighter egress
   controls if needed.
 
 ## Deployment, Recovery, And Lockout Prevention
@@ -316,14 +313,15 @@ Eval-time checks:
 - [`tests/eval/config-checks.nix`](tests/eval/config-checks.nix)
   covers public-output safety, placeholder isolation, firewall exposure,
   break-glass requirements, Nix daemon restrictions, sandbox structure, read-scope
-  fail-closed behavior, sudo-boundary hardening, and proxy credential configuration.
+  fail-closed behavior, sudo-boundary hardening, and root-side credential broker structure.
 
 Live checks:
 
 - [`tests/live/security.bats`](tests/live/security.bats)
   verifies SSH hardening, kernel sysctls, metadata blocking, and firewall exposure.
 - [`tests/live/secrets.bats`](tests/live/secrets.bats)
-  verifies `/run/secrets` presence, ownership, and non-world-readable permissions.
+  verifies `/run/secrets` presence, root ownership for brokered provider keys,
+  and non-world-readable permissions.
 - [`tests/live/networking.bats`](tests/live/networking.bats)
   verifies Tailscale state and the metadata-block nftables rule.
 - [`tests/live/sandbox-behavioral.bats`](tests/live/sandbox-behavioral.bats)
@@ -353,7 +351,7 @@ Live checks:
   Code with `--permission-mode=bypassPermissions` inside the sandbox and defaults
   its working directory to the project root unless a private overlay overrides it.
 - The public repo does not ship a per-agent egress allowlist module. Outbound
-  policy is the normal host network policy plus nono proxy credential routing.
+  policy is the normal host network policy plus root-side credential proxy routing.
   Private overlays can add tighter egress controls if needed.
 - Optional extras can widen access. Notable example:
   `services.costTracker.enable` grants a DynamicUser service read-only

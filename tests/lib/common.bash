@@ -102,9 +102,8 @@ assert_http_ok() {
 }
 
 # Assert a secret file exists with correct ownership.
-# Wrapper API keys are agent-owned by declaration in modules/secrets.nix. Other
-# secrets may be root-, dev-, or service-owned. Callers should pass the
-# expected owner explicitly.
+# Brokered provider keys are root-owned in the public core. Other secrets may be
+# dev-, root-, or service-owned. Callers should pass the expected owner explicitly.
 assert_secret_exists() {
   local path="$1"
   local expected_owner="${2:?expected_owner required}"

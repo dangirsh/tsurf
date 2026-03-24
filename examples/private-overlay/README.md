@@ -29,7 +29,7 @@ Hosts running agent workloads should import all three agent infrastructure modul
 
 - `modules/agent-compute.nix` -- provides `tsurf-agents.slice` cgroup limits and `/data/projects` persistence
 - `modules/agent-sandbox.nix` -- core `claude` wrapper and optional extra agent hooks
-- `modules/nono.nix` -- nono binary, tsurf Landlock profile, and proxy credential injection
+- `modules/nono.nix` -- nono binary and tsurf Landlock profile
 
 The private overlay template `flake.nix` already imports `agent-sandbox.nix` and `nono.nix`. Add `agent-compute.nix` and enable it with `services.agentCompute.enable = true` for any host that runs agent workloads.
 
@@ -108,10 +108,10 @@ Then add workflow-specific credentials and execution policy in that same overlay
 
 ### Secret ownership for agent execution
 
-Ensure provider keys needed by agent-run workloads are readable by `config.tsurf.agent.user`:
+For the public brokered launcher model, keep provider keys root-owned. The launcher reads them before the privilege drop and exposes only per-session loopback tokens to the child:
 
 ```nix
-sops.secrets."anthropic-api-key".owner = config.tsurf.agent.user;
+sops.secrets."anthropic-api-key".owner = "root";
 ```
 
 ### Using the built-in interactive wrappers

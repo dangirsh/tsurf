@@ -1,6 +1,7 @@
 # extras/dev-agent.nix
 # Persistent autonomous Claude Code agent running in zmx session
-# @decision SEC-115-04: dev-agent runs as agent user, not operator.
+# @decision SEC-145-03: dev-agent stays on the brokered root-owned launcher path
+#   so the agent principal never needs raw provider key access.
 # @decision DEV-AGENT-89: Systemd service running claude in zmx
 #   with nono sandbox (via agent-sandbox.nix wrapper). Auto-restart on failure.
 # @decision DEV-AGENT-98: bypassPermissions is enabled only inside nono sandbox;
@@ -41,7 +42,7 @@ in
         # unit "active" so systemctl status reflects that the session was launched.
         Type = "oneshot";
         RemainAfterExit = true;
-        User = agentCfg.user;
+        User = "root";
         # @decision SEC-124-03: Default to project root, not control-plane repo.
         #   Private overlay should set services.devAgent.workingDirectory to a
         #   specific workspace repo path. See SECURITY.md "Control-Plane Separation".

@@ -5,10 +5,9 @@ set -euo pipefail
 XDG_RUNTIME_DIR="/run/user/$(id -u)"
 export XDG_RUNTIME_DIR
 
-# API key loading handled by agent-wrapper.sh via AGENT_CREDENTIALS.
-# @decision DEV-AGENT-118-01: No raw API keys reach the child process — wrapper reads
-#   from /run/secrets/ into the parent env, nono's proxy loads them via env:// URIs,
-#   and the child receives only per-session phantom tokens (--credential flag).
+# API key loading handled by agent-wrapper.sh.
+# @decision DEV-AGENT-145-01: The root-owned launcher keeps raw provider keys in
+#   a per-session loopback proxy and gives the child only opaque session tokens.
 
 # Write the claude invocation to an executable script, then have zmx run that
 # script directly. zmx run sends args through bash in the session, stripping

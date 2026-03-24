@@ -1,8 +1,8 @@
 # tests/vm/sandbox-behavioral.nix — NixOS VM test for sandbox boundary behavior.
 #
 # Tests the user privilege separation model: agent user exists, is not in
-# wheel, can read wrapper-consumed agent-owned secrets, and cannot read
-# root-owned operator secrets. This is an OS-level smoke test for the user and
+# wheel, cannot read root-owned wrapper secrets, and cannot read other
+# operator-only secrets. This is an OS-level smoke test for the user and
 # secret-ownership model, NOT a full nono Landlock test. The live BATS tests in
 # tests/live/sandbox-behavioral.bats exercise the full nono sandbox on a
 # deployed host.
@@ -25,13 +25,13 @@ pkgs.testers.nixosTest {
     # Create fake secret files via activation script.
     # sops-nix cannot be used in VM tests (no age key, no encrypted secrets
     # file). Model both ownership classes explicitly:
-    # - anthropic-api-key: wrapper-consumed API secret, owned by the agent user
+    # - anthropic-api-key: wrapper-consumed API secret, root-owned
     # - root-only-example: operator-only secret, unreadable to the agent user
     system.activationScripts.test-secrets = ''
       mkdir -p /run/secrets
       echo "test-key-value" > /run/secrets/anthropic-api-key
       chmod 400 /run/secrets/anthropic-api-key
-      chown ${config.tsurf.agent.user}:${config.tsurf.agent.user} /run/secrets/anthropic-api-key
+      chown root:root /run/secrets/anthropic-api-key
 
       echo "root-only-value" > /run/secrets/root-only-example
       chmod 600 /run/secrets/root-only-example
@@ -72,13 +72,10 @@ pkgs.testers.nixosTest {
     uid = machine.succeed(f"sudo -u {agent_user} id -u").strip()
     assert uid != "0", f"Agent has root UID: {uid}"
 
-    # 2. Wrapper-consumed API secrets are agent-owned in this fixture, so the
-    #    agent user can read them by normal Unix permissions. The live BATS
-    #    tests exercise the full nono path separately.
-    result = machine.succeed(
-        f"sudo -u {agent_user} cat /run/secrets/anthropic-api-key"
-    ).strip()
-    assert result == "test-key-value", f"Unexpected anthropic secret value: {result}"
+    # 2. Wrapper-consumed API secrets are root-owned in this fixture, so the
+    #    agent user cannot read them by normal Unix permissions. The live BATS
+    #    tests exercise the full brokered path separately.
+    machine.fail(f"sudo -u {agent_user} cat /run/secrets/anthropic-api-key")
 
     # 3. Agent can read files in a project directory it owns
     result = machine.succeed(

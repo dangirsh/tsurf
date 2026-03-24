@@ -14,7 +14,7 @@ let
   cfg = config.services.opencodeAgent;
   agentCfg = config.tsurf.agent;
   launcherName = "tsurf-launch-opencode";
-  runtimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.util-linux ];
+  runtimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.python3 pkgs.util-linux ];
 
   defaultPackage = pkgs.stdenv.mkDerivation rec {
     pname = "opencode";
@@ -59,20 +59,25 @@ let
       export AGENT_REAL_BINARY="${cfg.package}/bin/opencode"
       export AGENT_PROJECT_ROOT="${agentCfg.projectRoot}"
       export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf-opencode.json"
+      export AGENT_CREDENTIAL_PROXY="${../scripts/credential-proxy.py}"
       export AGENT_CREDENTIALS="${lib.concatStringsSep " " cfg.credentials}"
 
       exec systemd-run \
-        --uid="${agentCfg.user}" --gid="${toString agentCfg.gid}" \
         --same-dir --collect --pipe \
         --unit="agent-opencode-$$" \
         --slice=tsurf-agents.slice \
         --setenv=PATH="${runtimePath}" \
-        --setenv=HOME="${agentCfg.home}" \
+        --setenv=AGENT_CHILD_PATH="${runtimePath}" \
         --setenv=AGENT_NAME="$AGENT_NAME" \
         --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
         --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
         --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
+        --setenv=AGENT_CREDENTIAL_PROXY="$AGENT_CREDENTIAL_PROXY" \
         --setenv=AGENT_CREDENTIALS="$AGENT_CREDENTIALS" \
+        --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
+        --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
+        --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \
+        --setenv=AGENT_RUN_AS_HOME="${agentCfg.home}" \
         ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
     '';
   };
@@ -85,10 +90,11 @@ let
       export AGENT_REAL_BINARY="${cfg.package}/bin/opencode"
       export AGENT_PROJECT_ROOT="${agentCfg.projectRoot}"
       export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf-opencode.json"
+      export AGENT_CREDENTIAL_PROXY="${../scripts/credential-proxy.py}"
       export AGENT_CREDENTIALS="${lib.concatStringsSep " " cfg.credentials}"
 
-      if [[ "$(id -un)" == "${agentCfg.user}" ]]; then
-        exec ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
+      if [[ "$(id -u)" == "0" ]]; then
+        exec ${launcher}/bin/${launcherName} "$@"
       fi
 
       exec /run/wrappers/bin/sudo ${launcher}/bin/${launcherName} "$@"
@@ -114,7 +120,7 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" "openai:OPENAI_API_KEY:openai-api-key" ];
       description = ''
-        Credential triples for nono proxy injection (SERVICE:ENV_VAR:secret-file-name).
+        Credential triples for the root-owned credential broker (SERVICE:ENV_VAR:secret-file-name).
         Only triples whose secrets exist in /run/secrets/ are activated at runtime.
       '';
     };

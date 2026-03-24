@@ -1,27 +1,11 @@
 # modules/nono.nix
 # @decision NONO-89-01: Public core ships one tsurf nono profile for Claude.
-# @decision NONO-118-01: Proxy credential mode uses env:// URIs so the child never
-#   receives real API keys.
+# @decision NONO-145-01: Raw provider credentials stay outside nono. Credential
+#   brokering happens in the root-owned launcher path before the child drops to
+#   the agent user.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.nonoSandbox;
-
-  customCredentials = {
-    anthropic = {
-      upstream = "https://api.anthropic.com";
-      inject_header = "x-api-key";
-      credential_format = "{}";
-      credential_key = "env://ANTHROPIC_API_KEY";
-      env_var = "ANTHROPIC_API_KEY";
-    };
-    openai = {
-      upstream = "https://api.openai.com";
-      inject_header = "Authorization";
-      credential_format = "Bearer {}";
-      credential_key = "env://OPENAI_API_KEY";
-      env_var = "OPENAI_API_KEY";
-    };
-  };
 
   tsurfProfile = {
     extends = "claude-code";
@@ -83,7 +67,6 @@ let
     };
     network = {
       block = false;
-      custom_credentials = customCredentials;
     };
     workdir.access = "readwrite";
     interactive = true;

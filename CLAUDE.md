@@ -20,11 +20,11 @@ modules/                 # Core — security/infrastructure essentials only
   break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
   impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
   networking.nix       # nftables, SSH (hardened), Tailscale, firewall assertions
-  nono.nix             # nono profile + proxy credential injection (phantom tokens)
+  nono.nix             # nono profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
   users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
 scripts/                 # Core scripts (sandbox, rollback, test runner)
-  agent-wrapper.sh     # nono sandbox entry — env setup, credential injection, exec
+  agent-wrapper.sh     # root-owned launch bridge — credential proxy, sandbox, privilege drop
   btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
   run-tests.sh         # Live BATS test runner (SSH-based)
   sandbox-probe.sh     # Sandbox boundary probe for live tests
@@ -63,7 +63,7 @@ tests/
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
 - **Agent tooling**: Public core ships one first-class agent path: sandboxed `claude` only. Additional agent CLIs belong in private overlays.
-- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo. Proxy credential injection — nono generates per-session phantom tokens; real keys never reach the child process.
+- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo. A root-owned loopback credential proxy keeps real keys out of the agent principal and gives the child only per-session tokens.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
 - **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale is for internal access.
 - **Privilege model**: `dev` is the operator (wheel, human admin). `agent` runs sandboxed tools (no wheel). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
