@@ -48,6 +48,8 @@ extras/                  # Optional batteries — import what you need
     deploy.sh          # deploy-rs wrapper (locking, watchdog, health check)
     dev-agent.sh       # Dev-agent session launcher script
 examples/
+  scripts/
+    deploy.sh          # Private-overlay deploy wrapper reference (tsurf.url guard)
   private-overlay/     # Forkable starting point for a private overlay
 secrets/               # sops-encrypted secrets (age keys, gitignored)
 tests/
@@ -170,7 +172,7 @@ Run before every module or service commit:
 ## Deployment Rules
 
 - **ALL deploys from the PRIVATE overlay**: `cd /path/to/private-overlay && ./scripts/deploy.sh --node <your-host>`.
-- **This public repo refuses deploys** (`tsurf.url` guard in `extras/scripts/deploy.sh`) and exports eval fixtures only (`.#eval-services`, `.#eval-dev`).
+- **This public repo refuses deploys** (`tsurf.url` guard in `examples/scripts/deploy.sh`) and exports eval fixtures only (`.#eval-services`, `.#eval-dev`).
 - **NEVER** use `nixos-rebuild switch` for normal deploys; it bypasses the deploy safety guard and lock/watcher flow.
 
 ## Recovery
