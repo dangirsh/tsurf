@@ -23,18 +23,30 @@ modules/                 # Core — security/infrastructure essentials only
   nono.nix             # nono profile + proxy credential injection (phantom tokens)
   secrets.nix          # sops-nix secret declarations
   users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
+scripts/                 # Core scripts (sandbox, rollback, test runner)
+  agent-wrapper.sh     # nono sandbox entry — env setup, credential injection, exec
+  btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
+  run-tests.sh         # Live BATS test runner (SSH-based)
+  sandbox-probe.sh     # Sandbox boundary probe for live tests
 extras/                  # Optional batteries — import what you need
-  dashboard.nix        # Service dashboard from direct entry declarations
+  codex.nix            # Codex agent wrapper (OpenAI, opt-in)
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
+  dashboard.nix        # Service dashboard from direct entry declarations
   dev-agent.nix        # Persistent autonomous Claude agent (zmx + systemd)
+  opencode.nix         # opencode agent wrapper (Anthropic + OpenAI, opt-in)
+  pi.nix               # pi agent wrapper (Anthropic, opt-in)
   restic.nix           # Restic backup to B2 + status server
   syncthing.nix        # Syncthing file sync (127.0.0.1 GUI)
   home/
     default.nix        # home-manager: git/ssh/direnv inlined
     cass.nix           # CASS indexer timer (opt-in)
   scripts/             # Scripts for extras modules
-    deploy.sh          # deploy-rs wrapper (locking, watchdog, health check)
     clone-repos.sh     # Idempotent repo cloning activation script
+    cost-tracker.py    # Cost tracker HTTP server (Python)
+    dashboard-frontend.html  # Dashboard single-page frontend
+    dashboard-server.py      # Dashboard HTTP server (Python)
+    deploy.sh          # deploy-rs wrapper (locking, watchdog, health check)
+    dev-agent.sh       # Dev-agent session launcher script
 examples/
   private-overlay/     # Forkable starting point for a private overlay
 secrets/               # sops-encrypted secrets (age keys, gitignored)
@@ -54,6 +66,7 @@ tests/
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
 - **Network model**: Only ports 22 + 22000 on public firewall by default. Ports 80/443 conditional on nginx. All internal services bind 127.0.0.1 (dashboard, syncthing GUI). Tailscale for internal access.
 - **Privilege model**: `dev` is the operator (wheel, human admin). `agent` runs sandboxed tools (no wheel). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
+- **Operator UID**: Configurable via `tsurf.template.devUid` (default 1000), defined in `modules/users.nix`.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
 
 ## Module Conventions & Patterns
@@ -123,6 +136,8 @@ Sandbox testing has three tiers:
 
 ## Security
 
+See `SECURITY.md` for the complete security model, accepted risks, and verification approach.
+
 ### Hard-stop rules
 
 - **Never** add ports to `networking.firewall.allowedTCPPorts`; add to `internalOnlyPorts` in `modules/networking.nix`.
@@ -147,16 +162,10 @@ Run before every module or service commit:
 8. **Break-glass key** — NEVER remove `modules/break-glass-ssh.nix` from either host config.
 9. **Validation** — `nix flake check` passes.
 
-### Accepted Risks
-
-See `SECURITY.md` "Accepted Risks" section for the complete list with rationale and mitigations.
-
 ## Sandbox Awareness
 
-- The public core wrapper brokers through `sudo` + `systemd-run --uid=agent`.
-- Access stays repo-scoped; no public `--no-sandbox` path; denied paths include `/run/secrets/`, `~/.ssh`, and `~/.bash_history`.
-- Sessions run under `tsurf-agents.slice` limits and emit launch logs to journald (`journalctl -t agent-launch`).
-- See `SECURITY.md` for the full credential-flow and access-control model.
+- The public core wrapper brokers through `sudo` + `systemd-run --uid=agent`. See `SECURITY.md` for the full sandbox model, credential flow, and access control.
+- Launch logs: `journalctl -t agent-launch`
 
 ## Deployment Rules
 
@@ -172,12 +181,8 @@ Keep `modules/break-glass-ssh.nix` in both host configs and follow `SECURITY.md`
 ## Private Overlay
 
 Personal services, real credentials, and host-specific config go in a separate private flake
-that imports this repo's modules. The private flake:
-
-- Uses `follows` to share dependencies (nixpkgs, home-manager, sops-nix, etc.)
-- Imports public modules individually (no hub/default import)
-- Can replace modules entirely (users.nix, syncthing.nix) or import and extend
-- Extends eval checks by importing `tests/eval/config-checks.nix`
+that uses `follows` to share pinned dependencies, imports public modules individually (no hub),
+and can replace modules entirely or import and extend them.
 
 ## Simplicity Conventions
 

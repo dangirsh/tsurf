@@ -93,12 +93,8 @@ in {
       ClientAliveCountMax = 3;
     };
     # @decision NET-14: Check .ssh/authorized_keys BEFORE /etc/ssh/authorized_keys.d/%u.
-    # NixOS with mutableUsers=false only generates /etc/ssh/authorized_keys.d/%u.
-    # On impermanence hosts, if activation fails (or StrictModes rejects /etc/ssh/),
-    # sshd falls back to .ssh/authorized_keys which persists via /persist/root/.ssh/.
-    # NOTE: extraConfig mkAfter is IGNORED by OpenSSH (first directive wins).
-    # Use authorizedKeysFiles to override the generated AuthorizedKeysFile directive.
-    # Impermanence persists /root/.ssh/ via /persist/root/.ssh/; keys placed there survive reboots.
+    # Impermanence fallback: if activation fails, persisted /root/.ssh/ keys still work.
+    # NOTE: must use authorizedKeysFiles (extraConfig mkAfter is ignored by OpenSSH).
     authorizedKeysFiles = lib.mkForce [ ".ssh/authorized_keys" "/etc/ssh/authorized_keys.d/%u" ];
   };
 

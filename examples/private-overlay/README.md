@@ -23,6 +23,16 @@ Public tsurf core provides one first-class agent path: the sandboxed `claude` wr
 
 If you need additional agents, implement them directly in your private overlay. Do not rely on public-core multi-agent framework APIs.
 
+### Required modules for agent hosts
+
+Hosts running agent workloads should import all three agent infrastructure modules:
+
+- `modules/agent-compute.nix` -- provides `tsurf-agents.slice` cgroup limits and `/data/projects` persistence
+- `modules/agent-sandbox.nix` -- core `claude` wrapper and optional extra agent hooks
+- `modules/nono.nix` -- nono binary, tsurf Landlock profile, and proxy credential injection
+
+The private overlay template `flake.nix` already imports `agent-sandbox.nix` and `nono.nix`. Add `agent-compute.nix` and enable it with `services.agentCompute.enable = true` for any host that runs agent workloads.
+
 ### What agents can access
 
 | Resource | Access | Controlled by |

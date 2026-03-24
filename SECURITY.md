@@ -335,6 +335,17 @@ Live checks:
 - [`tests/live/sandbox-behavioral.bats`](tests/live/sandbox-behavioral.bats)
   proves that sandboxed agent code cannot read denied paths and can read/write the
   expected worktree paths.
+- [`tests/live/agent-sandbox.bats`](tests/live/agent-sandbox.bats)
+  verifies wrapper script structure: nono invocation, journald logging, and absence
+  of secret mounts.
+- [`tests/live/service-health.bats`](tests/live/service-health.bats)
+  verifies systemd unit health (tailscaled, syncthing, sshd, dashboard, restic timer)
+  and Tailscale backend state.
+- [`tests/live/impermanence.bats`](tests/live/impermanence.bats)
+  verifies /persist mount, BTRFS filesystem type, critical persist directories, and
+  machine-id persistence.
+- [`tests/live/api-endpoints.bats`](tests/live/api-endpoints.bats)
+  verifies HTTP endpoint health for localhost-bound services (syncthing GUI, dashboard).
 
 ## Non-Goals And Accepted Risks
 

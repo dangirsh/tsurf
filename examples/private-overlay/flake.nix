@@ -54,6 +54,9 @@
         "${inputs.tsurf}/modules/impermanence.nix"
         "${inputs.tsurf}/modules/break-glass-ssh.nix"
         "${inputs.tsurf}/extras/dashboard.nix"
+        # agent-compute.nix: tsurf-agents.slice cgroup limits and /data/projects persistence
+        "${inputs.tsurf}/modules/agent-compute.nix"
+        { services.agentCompute.enable = true; }
         # nono.nix: nono binary, tsurf profile, NONO_PROFILE_PATH, proxy credentials
         "${inputs.tsurf}/modules/nono.nix"
         { services.nonoSandbox.enable = true; }

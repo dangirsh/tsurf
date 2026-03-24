@@ -21,12 +21,8 @@
     #   signing keys at runtime.
     allowed-users = [ "root" "@wheel" ];
     trusted-users = lib.mkForce [ "root" ];
-    # Numtide: llm-agents overlay (claude-code, codex, etc.)
-    # Private overlay: add your own Cachix binary cache.
-    # After creating a cache at https://app.cachix.org, add:
-    #   "https://your-cache.cachix.org"
-    # And add the corresponding public key to extra-trusted-public-keys:
-    #   "your-cache.cachix.org-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    # Private overlay: add your Cachix URL to extra-substituters
+    # and its public key to extra-trusted-public-keys below.
     extra-substituters = [
       "https://cache.numtide.com"
     ];
