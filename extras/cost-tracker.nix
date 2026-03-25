@@ -123,13 +123,5 @@ in
       };
     };
 
-    services.dashboard.entries.cost-tracker = lib.mkIf config.services.dashboard.enable {
-      name = "Cost Tracker";
-      module = "cost-tracker.nix";
-      description = "Daily API provider spend";
-      systemdUnit = "tsurf-cost-tracker.service";
-      icon = "cost";
-      order = 90;
-    };
   };
 }

@@ -1,6 +1,6 @@
 # extras/restic.nix
 # @decision RESTIC-01: S3-compatible B2 backend (not native B2 — restic's B2 connector is unreliable per STACK.md)
-{ config, lib, pkgs, ... }:
+{ config, lib, ... }:
 let
   cfg = config.services.resticStarter;
 in
@@ -62,9 +62,7 @@ in
 
     backupCleanupCommand = ''
       # Private overlay: add service-specific post-backup hooks here if needed.
-      mkdir -p /var/lib/restic-status
-      echo "{\"timestamp\": $(date +%s), \"date\": \"$(date -Iseconds)\"}" \
-        > /var/lib/restic-status/status.json
+      true
     '';
   };
 
@@ -72,73 +70,6 @@ in
   environment.persistence."/persist".directories = [
     "/root/.cache/restic"
   ];
-
-  systemd.tmpfiles.rules = [ "d /var/lib/restic-status 0755 root root -" ];
-
-  # Minimal HTTP server so homepage can display last backup time without Prometheus.
-  systemd.services.restic-status-server = {
-    description = "Restic backup status server for homepage widget";
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      ExecStart = "${pkgs.python3}/bin/python3 -m http.server 9200 --bind 127.0.0.1 --directory /var/lib/restic-status";
-      Restart = "always";
-      StandardOutput = "null";
-      StandardError = "null";
-      # @decision SEC-116-04: DynamicUser for status server — no persistent state needed,
-      #   only reads /var/lib/restic-status (root-owned). Full hardening baseline applied.
-      DynamicUser = true;
-      NoNewPrivileges = true;
-      ProtectSystem = "strict";
-      ProtectHome = true;
-      PrivateTmp = true;
-      PrivateDevices = true;
-      ProtectClock = true;
-      ProtectKernelTunables = true;
-      ProtectKernelModules = true;
-      ProtectKernelLogs = true;
-      ProtectControlGroups = true;
-      SystemCallArchitectures = "native";
-      ProtectProc = "invisible";
-      ProcSubset = "pid";
-      RestrictSUIDSGID = true;
-      LockPersonality = true;
-      RestrictRealtime = true;
-      RestrictNamespaces = true;
-      MemoryDenyWriteExecute = true;
-      RestrictAddressFamilies = [ "AF_INET" "AF_INET6" ];
-      CapabilityBoundingSet = "";
-      UMask = "0077";
-      ReadOnlyPaths = [ "/var/lib/restic-status" ];
-    };
-  };
-
-  services.dashboard.entries.restic-backup = {
-    name = "Restic B2 Backup";
-    description = "Daily backups — 7 daily, 5 weekly, 12 monthly retention";
-    systemdUnit = "restic-backups-b2.timer";
-    icon = "backblaze-b2";
-    order = 15;
-    module = "restic.nix";
-  };
-
-  services.dashboard.entries.restic-status = {
-    name = "Backup Status Server";
-    description = "HTTP status endpoint for dashboard widgets";
-    port = 9200;
-    systemdUnit = "restic-status-server.service";
-    order = 16;
-    module = "restic.nix";
-  };
-
-  services.dashboard.entries.backblaze-b2 = {
-    name = "Backblaze B2";
-    description = "Cloud backup storage";
-    url = "https://secure.backblaze.com/b2_buckets.htm";
-    icon = "backblaze-b2";
-    external = true;
-    order = 17;
-    module = "restic.nix";
-  };
 
   }; # end lib.mkIf
 }

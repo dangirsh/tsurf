@@ -19,7 +19,7 @@ modules/                 # Core — security/infrastructure essentials only
   boot.nix             # GRUB bootloader + BTRFS root rollback
   break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
   impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
-  networking.nix       # nftables, SSH (hardened), Tailscale, firewall assertions
+  networking.nix       # nftables, SSH (hardened), firewall assertions
   nono.nix             # nono profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
   users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
@@ -31,19 +31,16 @@ scripts/                 # Core scripts (sandbox, rollback, test runner)
 extras/                  # Optional batteries — import what you need
   codex.nix            # Codex agent wrapper (OpenAI, opt-in)
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
-  dashboard.nix        # Service dashboard from direct entry declarations
   dev-agent.nix        # First-class unattended Claude agent (supervised zmx + systemd)
   opencode.nix         # opencode agent wrapper (Anthropic + OpenAI, opt-in)
   pi.nix               # pi agent wrapper (Anthropic, opt-in)
-  restic.nix           # Restic backup to B2 + status server
+  restic.nix           # Restic backup to B2
   home/
     default.nix        # home-manager: git/ssh/direnv inlined
     cass.nix           # CASS indexer timer (opt-in)
   scripts/             # Scripts for extras modules
     clone-repos.sh     # Idempotent repo cloning activation script
     cost-tracker.py    # Cost tracker HTTP server (Python)
-    dashboard-frontend.html  # Dashboard single-page frontend
-    dashboard-server.py      # Dashboard HTTP server (Python)
     deploy.sh          # deploy-rs wrapper (locking, watchdog, health check)
     dev-agent.sh       # Dev-agent session launcher script
 examples/
@@ -60,13 +57,13 @@ tests/
 ## Key Decisions
 
 - **Flakes + home-manager**: Reproducible, lockfile-pinned (nixos-25.11)
-- **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API)
+- **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API, opt-in extra)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
 - **Agent tooling**: Public core ships two first-class agent paths: sandboxed interactive `claude` and the unattended `dev-agent` service. `codex`, `pi`, and `opencode` are opt-in extras; workflow-specific wrappers still belong in private overlays.
 - **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, protected control-plane repo markers/roots rejected up front. A root-owned loopback credential proxy keeps real keys out of the agent principal and gives the child only per-session tokens.
 - **Agent egress**: Host nftables allowlists outbound agent traffic by UID. Defaults allow DNS plus TCP `22/80/443` and block private/link-local ranges.
-- **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults); deploy prefers Tailscale MagicDNS
-- **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale is for internal access.
+- **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults)
+- **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale belongs in the private overlay.
 - **Privilege model**: `dev` is the operator (wheel, human admin). `agent` runs sandboxed tools (no wheel). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
 - **Operator UID**: Configurable via `tsurf.template.devUid` (default 1000), defined in `modules/users.nix`.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
@@ -78,7 +75,7 @@ tests/
 - Secrets managed via sops-nix (age key derived from SSH host key).
 - All service configs are declarative — no imperative setup steps.
 - Infrastructure repos cloned via activation scripts (clone-only, never pull).
-- Internal services bind `127.0.0.1` (localhost-only). Overlay can expose on tailnet via `networking.firewall.interfaces.tailscale0.allowedTCPPorts`.
+- Internal services bind `127.0.0.1` (localhost-only).
 - `@decision` annotations on security-relevant choices in module headers.
 
 ### NixOS module authoring
@@ -86,9 +83,6 @@ tests/
 - Module anatomy: start with header comments and `@decision` annotations, use
   `{ config, lib, pkgs, ... }:` as the function signature, define repeated values in `let`,
   and keep the declarative body in the final attrset.
-- Register services on the dashboard with `services.dashboard.entries.<name>` (from
-  `extras/dashboard.nix`). Required fields: `name`, `description`, `icon`, `order`.
-  Add the service port to `internalOnlyPorts` in `modules/networking.nix` manually.
 - `@decision` annotation format: `@decision ID: Description.` in module header comments.
   Use these for security choices, port exposure decisions, and design trade-offs.
 - Secrets pattern: declare `sops.secrets."<name>"` with minimal `owner`, and render env files with
@@ -157,7 +151,7 @@ Run before every module or service commit:
 
 1. **Port exposure** — New port? Add to `internalOnlyPorts` in `modules/networking.nix`. NEVER add to `networking.firewall.allowedTCPPorts`.
 2. **Secrets** — New secret? Add to `secrets.nix` with minimal `owner`/permissions. Use `sops.templates` for env files. NEVER embed credentials in URLs, CLI args, or committed files.
-3. **New service** — Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts` and dashboard entry to `services.dashboard.entries`.
+3. **New service** — Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts`.
 4. **Sandbox impact** — Modifying `agent-compute.nix` or `nono.nix`? Verify `/run/secrets` and `~/.ssh` remain in the deny list. NEVER weaken nono sandbox defaults.
 5. **Agent execution** — Public core `claude` and `dev-agent` must stay sandboxed. Protect control-plane repos with `.tsurf-control-plane` (or `services.agentSandbox.protectedRepoRoots`) and launch agents from workspace repos.
 7. **Package management** — NEVER use `nix-env`, `nix profile install`, or re-enable `nix.channel.enable` / `nix.nixPath`.

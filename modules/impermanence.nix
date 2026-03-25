@@ -23,7 +23,7 @@
       "/var/lib/systemd/timers"            # Timer stamps for Persistent=true timers
       "/var/lib/systemd/timesync"          # NTP clock file
       "/var/lib/systemd/linger"            # User linger state for dev
-      "/var/lib/private"                   # DynamicUser services (dashboard, etc.)
+      "/var/lib/private"                   # DynamicUser services
     ];
 
     files = [
