@@ -30,19 +30,24 @@ strengthen or weaken these properties, so host-specific statements are called ou
 
 - The public repo is intentionally non-deployable. Real deployments are expected
   to come from a private overlay.
-- The operator and agent identities are separate:
-  - `dev` is the human/operator account.
+- Two-user model: `root` (operator/admin) and `agent` (sandboxed tools).
+  - `root` handles deploy, maintenance, and SSH access.
   - `tsurf.agent.user` defaults to `agent` and is the sandboxed agent account.
-- Build-time assertions enforce that the agent user:
-  - is not `dev`
-  - is not in `wheel`
+  - The agent user is in `wheel` for sudo access to immutable launchers only.
+- Build-time assertions enforce that the agent user is not in `docker`.
 - `users.mutableUsers = false`.
-- `security.sudo.execWheelOnly = false`, but non-wheel sudo remains limited to
-  explicit immutable-launcher rules such as the brokered Claude path.
+- `security.sudo.execWheelOnly = false`, but sudo rules are limited to
+  explicit immutable-launcher commands.
+- Agents must not be given access to deploy changes to their own security
+  boundaries. This is enforced by operational policy, not technical controls.
 - Raw agent binaries are not installed in `PATH` by
   [`modules/agent-compute.nix`](modules/agent-compute.nix).
   The intended interactive entrypoints are wrapper binaries such as `claude` and,
-  if enabled, `codex`, `pi`, or `opencode`.
+  if enabled, `codex`.
+- A generic agent launcher ([`modules/agent-launcher.nix`](modules/agent-launcher.nix))
+  provides the shared sandbox infrastructure. Agent-specific modules like
+  [`modules/agent-sandbox.nix`](modules/agent-sandbox.nix) declare their
+  configuration on top of it.
 - The public repo also ships a first-class unattended agent path:
   [`extras/dev-agent.nix`](extras/dev-agent.nix), which supervises a
   parameterized Claude task inside the same sandbox boundary.
@@ -53,23 +58,22 @@ strengthen or weaken these properties, so host-specific statements are called ou
 
 | Identity | Default groups | Purpose | Enforced by |
 | --- | --- | --- | --- |
-| `dev` | `wheel` | human admin, deploy, maintenance | `modules/users.nix` |
-| `agent` | `users` | sandboxed agent execution | `modules/users.nix` assertions |
-| `root` | n/a | activation, secrets, deploy, recovery | NixOS/systemd |
+| `root` | n/a | operator, deploy, maintenance, secrets, recovery | NixOS/systemd |
+| `agent` | `users`, `wheel` | sandboxed agent execution, SSH access | `modules/users.nix` |
 
 Important nuances:
 
-- `dev` is always an administrative user in the template. The
-  `allowUnsafePlaceholders` flag does **not** remove `dev` from `wheel`; it only
-  controls placeholder-key assertions plus:
+- The agent user is in `wheel` to allow sudo access to the immutable per-agent
+  launchers (e.g., `tsurf-launch-claude`). Sudo rules only grant `NOPASSWD`
+  access to specific launcher binaries, not general root.
+- The `allowUnsafePlaceholders` flag controls placeholder-key assertions plus:
   - `users.allowNoPasswordLogin`
   - `security.sudo.wheelNeedsPassword`
 - Base Nix daemon policy is:
   - `allowed-users = [ "root" "@wheel" ]`
   - `trusted-users = [ "root" ]`
-- The public core does **not** grant the agent user direct Nix daemon access.
-  Private overlays can loosen that boundary, but this repo does not ship such an
-  option today.
+- The agent user has Nix daemon access via `@wheel` in `allowed-users`, but is
+  not in `trusted-users`. Private overlays can tighten this if needed.
 
 ## Template And Fixture Safety
 
@@ -99,14 +103,15 @@ repo, that is the dev-host role.
 Interactive wrapper execution is brokered:
 
 ```text
-dev
-  -> wrapper stub (exports AGENT_* env)
+agent (or root)
+  -> wrapper stub (checks uid, calls sudo if needed)
     -> sudo tsurf-launch-<agent>
-      -> systemd-run --uid=<agent> --gid=<agent gid> --same-dir --collect
-         --slice=tsurf-agents.slice
+      -> systemd-run --same-dir --collect --slice=tsurf-agents.slice
         -> scripts/agent-wrapper.sh
-          -> nono run --profile /etc/nono/profiles/tsurf.json
-            -> real agent binary
+          -> credential-proxy.py (root-owned, per-session tokens)
+          -> nono run --profile /etc/nono/profiles/tsurf-<name>.json
+            -> setpriv --reuid=<agent>
+              -> real agent binary
 ```
 
 Security properties of that path:
@@ -114,18 +119,14 @@ Security properties of that path:
 - `security.sudo.extraRules` exposes only immutable per-agent launchers such as
   `tsurf-launch-claude`. There is no generic root helper.
 - Those sudo rules use `NOPASSWD` only. They do **not** use `SETENV`, and the
-  wrapper no longer uses `sudo --preserve-env`.
+  wrapper does not use `sudo --preserve-env`.
 - Each root-owned launcher bakes in:
   - the real binary path
   - the nono profile path
   - the credential allowlist
-  - whether Nix daemon access is enabled
-- The launcher still rejects any baked `AGENT_REAL_BINARY` outside `/nix/store`.
+- The launcher rejects any `AGENT_REAL_BINARY` outside `/nix/store`.
 - The caller cannot swap binaries, profiles, or credential tuples across the
   privileged sudo boundary.
-- The dedicated `agent` user may invoke the immutable Claude launcher via sudo,
-  so unattended `dev-agent` sessions use the same brokered root-owned path
-  without ever gaining direct access to raw provider keys.
 - Launch events go to journald only (`journalctl -t agent-launch`).
   Logged fields are limited to `mode`, `agent`, `user`, `uid`, and `repo_scope`.
   Raw arguments, prompts, and file paths are not logged.
@@ -150,19 +151,13 @@ filesystem rules.
 
 Enforced behavior:
 
-- The wrapper requires `$PWD` to be inside `services.agentSandbox.projectRoot`
+- The wrapper requires `$PWD` to be inside `services.agentLauncher.projectRoot`
   (default `/data/projects`).
 - The wrapper requires `$PWD` to be inside a Git worktree.
 - The wrapper resolves the Git toplevel with `git rev-parse --show-toplevel` and
   passes that path to nono with `--read`.
 - The wrapper refuses to run if the resolved Git root is exactly the project root.
   This prevents granting blanket read access to all repos under `/data/projects`.
-- The wrapper also refuses any Git repo whose root:
-  - matches an entry in `services.agentSandbox.protectedRepoRoots`, or
-  - carries a marker file from `services.agentSandbox.protectedRepoMarkers`
-    (default: `.tsurf-control-plane`)
-- This repo ships that marker at its root, so sandboxed agents cannot be launched
-  from the tsurf control-plane checkout by default.
 - The shipped nono profile denies:
   - `/run/secrets`
   - `~/.ssh`
@@ -176,14 +171,12 @@ Critical nuance:
 
 - The boundary is still "current worktree is writable". The nono profile sets
   `workdir.access = "readwrite"`.
-- What changed is the supported definition of "current worktree": protected
-  control-plane repos are blocked up front by marker/root checks, so the default
-  public path is now "workspace repo vs control-plane repo".
 - What is blocked is broad cross-repo access:
   - no blanket `/data/projects` read grant
   - no sibling-repo read access from the wrapper path
-- Private overlays should keep infrastructure repos operator-owned, carry the
-  marker file where possible, and launch agents from dedicated workspace repos.
+- Agents must not be given access to deploy changes to their own security
+  boundaries. This is enforced by operational policy (launch agents from
+  workspace repos, not infrastructure repos), not technical controls.
 
 Because deny behavior depends on nono/Landlock behavior on the target host, the
 repo backs these claims with live sandbox tests on the dev host.
@@ -200,10 +193,10 @@ repo backs these claims with live sandbox tests on the dev host.
 | --- | --- |
 | `anthropic-api-key` | root |
 | `openai-api-key` | root |
-| `google-api-key` | `dev` |
-| `xai-api-key` | `dev` |
-| `openrouter-api-key` | `dev` |
-| `github-pat` | `dev` |
+| `google-api-key` | `agent` |
+| `xai-api-key` | `agent` |
+| `openrouter-api-key` | `agent` |
+| `github-pat` | `agent` |
 | `tailscale-authkey` | root/default |
 | `b2-account-id`, `b2-account-key`, `restic-password` | root/default |
 
@@ -234,9 +227,7 @@ Credential scoping is least-privilege by wrapper. Core default: `claude`
 
 - `claude` — Anthropic only
 - `codex` — OpenAI only
-- `pi` — Anthropic only
-- `opencode` — Anthropic + OpenAI
-- extra agents must opt into credentials explicitly
+- extra agents must opt into credentials explicitly via the generic launcher
 
 ## Network Model
 
@@ -317,7 +308,7 @@ Recovery mechanisms:
   - `/var/lib/tailscale`
   - `/etc/ssh/ssh_host_ed25519_key`
   - `/data/projects`
-  - selected operator and agent home state
+  - selected root and agent home state
 - [`modules/impermanence.nix`](modules/impermanence.nix)
   makes `setupSecrets` depend on `persist-files` so sops-nix can read the
   persisted SSH host key before decrypting `/run/secrets` after a hard reboot.
@@ -338,7 +329,7 @@ Eval-time checks:
 - [`tests/eval/config-checks.nix`](tests/eval/config-checks.nix)
   covers public-output safety, placeholder isolation, firewall exposure,
   break-glass requirements, Nix daemon restrictions, sandbox structure, read-scope
-  fail-closed behavior, sudo-boundary hardening, and root-side credential broker structure.
+  fail-closed behavior, launcher hardening, and root-side credential broker structure.
 
 Live checks:
 
@@ -352,7 +343,7 @@ Live checks:
   egress allowlist table.
 - [`tests/live/sandbox-behavioral.bats`](tests/live/sandbox-behavioral.bats)
   proves that sandboxed agent code cannot read denied paths and can read/write the
-  expected worktree paths, and that protected control-plane repos are refused.
+  expected worktree paths.
 - [`tests/live/agent-sandbox.bats`](tests/live/agent-sandbox.bats)
   verifies wrapper script structure: nono invocation, journald logging, and absence
   of secret mounts.
@@ -368,11 +359,8 @@ Live checks:
 ## Non-Goals And Accepted Risks
 
 - The service-host role does not include the agent sandbox at all.
-- The sandbox does not make the current workspace immutable. If an operator
+- The sandbox does not make the current workspace immutable. If a user
   points an agent at a normal workspace repo, that repo is writable by design.
-- `dev` remains a trusted administrative user with `wheel`.
-- The public core does not grant the agent user Nix daemon access. Private
-  overlays can loosen this boundary if needed.
 - [`extras/dev-agent.nix`](extras/dev-agent.nix) runs Claude
   Code with `--permission-mode=bypassPermissions` inside the sandbox by default
   and defaults its working directory to a dedicated workspace under project root

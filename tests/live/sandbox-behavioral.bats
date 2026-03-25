@@ -11,7 +11,6 @@ bats_load_library bats-support
 bats_load_library bats-assert
 
 SANDBOX_WORKSPACE="/data/projects/sandbox-fixture"
-CONTROL_PLANE_FIXTURE="/data/projects/control-plane-fixture"
 
 # Copy sandbox-probe.sh to the remote host once per test file.
 setup_file() {
@@ -19,16 +18,12 @@ setup_file() {
 
   remote "bash -lc '
     set -euo pipefail
-    rm -rf ${SANDBOX_WORKSPACE} ${CONTROL_PLANE_FIXTURE}
+    rm -rf ${SANDBOX_WORKSPACE}
     install -d -m 0755 -o ${AGENT_USER} -g ${AGENT_USER} ${SANDBOX_WORKSPACE}
     install -d -m 0755 -o ${AGENT_USER} -g ${AGENT_USER} ${SANDBOX_WORKSPACE}/scripts
-    install -d -m 0755 -o ${AGENT_USER} -g ${AGENT_USER} ${CONTROL_PLANE_FIXTURE}
     git -C ${SANDBOX_WORKSPACE} init -q
-    git -C ${CONTROL_PLANE_FIXTURE} init -q
     printf \"# sandbox fixture\n\" > ${SANDBOX_WORKSPACE}/README.md
-    printf \"# control-plane fixture\n\" > ${CONTROL_PLANE_FIXTURE}/README.md
-    touch ${CONTROL_PLANE_FIXTURE}/.tsurf-control-plane
-    chown -R ${AGENT_USER}:${AGENT_USER} ${SANDBOX_WORKSPACE} ${CONTROL_PLANE_FIXTURE}
+    chown -R ${AGENT_USER}:${AGENT_USER} ${SANDBOX_WORKSPACE}
   '"
 
   # Upload probe script to a workspace repo the agent user can access inside the sandbox.
@@ -41,7 +36,7 @@ setup_file() {
 
 teardown_file() {
   if ! has_agent_sandbox; then return; fi
-  remote "rm -rf ${SANDBOX_WORKSPACE} ${CONTROL_PLANE_FIXTURE}"
+  remote "rm -rf ${SANDBOX_WORKSPACE}"
 }
 
 # Helper: run a probe check inside the nono sandbox as the agent user.
@@ -49,10 +44,6 @@ teardown_file() {
 run_sandbox_probe() {
   local check="$1"
   remote "sudo -u ${AGENT_USER} bash -lc 'cd ${SANDBOX_WORKSPACE} && EXPECTED_AGENT_USER=${AGENT_USER} nono run --profile tsurf --read ${SANDBOX_WORKSPACE} -- bash scripts/sandbox-probe.sh ${check}'"
-}
-
-run_wrapper_in_control_plane_fixture() {
-  remote "sudo -u ${AGENT_USER} bash -lc 'cd ${CONTROL_PLANE_FIXTURE} && claude --help'"
 }
 
 # Validates SEC-011, SBX-001: agent user privilege separation in sandbox
@@ -158,12 +149,4 @@ run_wrapper_in_control_plane_fixture() {
   run run_sandbox_probe denied-etc-nono
   assert_success
   assert_output --partial "PASS: denied-etc-nono"
-}
-
-# Validates SBX-024, SBX-025: protected control-plane repos refused by marker
-@test "${HOST}: wrapper refuses protected control-plane repos" {
-  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
-  run run_wrapper_in_control_plane_fixture
-  assert_failure
-  assert_output --partial "protected control-plane repo"
 }

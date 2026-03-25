@@ -56,7 +56,7 @@ pkgs.testers.nixosTest {
     machine.wait_for_unit("multi-user.target")
 
     agent_user = machine.succeed(
-        "getent passwd | awk -F: '$3 >= 1000 && $1 != \"dev\" { print $1; exit }'"
+        "getent passwd | awk -F: '$3 >= 1000 && $1 != \"nobody\" { print $1; exit }'"
     ).strip()
     assert agent_user != "", "Could not determine configured agent user"
 

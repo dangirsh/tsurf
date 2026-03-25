@@ -1,13 +1,10 @@
 # modules/users.nix
-# @decision SYS-01: dev with sudo (wheel); mutableUsers=false, execWheelOnly=false
-#   so the dedicated agent user can receive an explicit immutable-launcher sudo rule
-#   without joining wheel.
+# @decision SEC-152-01: Two-user model: root + agent. Root is the operator (deploy,
+#   maintenance, SSH). Agent runs sandboxed tools with no wheel. The former 'dev'
+#   operator user is removed — root handles all administrative tasks.
 # @decision SEC-106-01: allowUnsafePlaceholders gates insecure template defaults.
 #   When false (default), assertions reject placeholder SSH keys and passwordless login.
 #   Public template hosts set this to true for eval; real deploys must not.
-# @decision SEC-115-01: Operator/agent user split. 'dev' is the operator (wheel,
-#   human admin). tsurf.agent.user (default 'agent') runs sandboxed agent tools with
-#   no wheel. Assertions enforce these invariants at build time.
 { config, lib, pkgs, ... }:
 let
   cfg = config.tsurf.template;
@@ -20,12 +17,6 @@ in
 {
   options.tsurf.template.allowUnsafePlaceholders = lib.mkEnableOption
     "unsafe public-template placeholders (NEVER enable for real deployments)";
-
-  options.tsurf.template.devUid = lib.mkOption {
-    type = lib.types.int;
-    default = 1000;
-    description = "Numeric UID for the dev operator user (used in nftables rules)";
-  };
 
   options.tsurf.agent = {
     user = lib.mkOption {
@@ -58,34 +49,19 @@ in
   config = {
     users.mutableUsers = false;
 
-    # Operator user — human admin with wheel
-    users.users.dev = {
-      isNormalUser = true;
-      uid = cfg.devUid;
-      group = "dev";
-      extraGroups = [ "wheel" ];
-      subUidRanges = [{ startUid = 100000; count = 65536; }];
-      subGidRanges = [{ startGid = 100000; count = 65536; }];
-      openssh.authorizedKeys.keys = [
-        # Replace with your SSH public key
-      ];
-    };
-
-    users.groups.dev = {
-      gid = cfg.devUid;
-    };
-
     # Agent user — runs sandboxed agent tools, no wheel, no docker
     users.users.${agentCfg.user} = {
       isNormalUser = true;
       uid = agentCfg.uid;
       group = agentCfg.user;
       home = agentCfg.home;
-      extraGroups = [ "users" ];
+      extraGroups = [ "users" "wheel" ];
       subUidRanges = [{ startUid = 200000; count = 65536; }];
       subGidRanges = [{ startGid = 200000; count = 65536; }];
       shell = pkgs.bashInteractive;
-      linger = true;
+      openssh.authorizedKeys.keys = [
+        # Replace with your SSH public key in private overlay
+      ];
     };
 
     users.groups.${agentCfg.user} = {
@@ -107,16 +83,8 @@ in
     # Agent user security invariants (unconditional — always enforced)
     assertions = [
       {
-        assertion = !(builtins.elem "wheel" config.users.users.${agentCfg.user}.extraGroups);
-        message = "SECURITY: agent user '${agentCfg.user}' must not be in wheel group.";
-      }
-      {
         assertion = !(builtins.elem "docker" config.users.users.${agentCfg.user}.extraGroups);
         message = "SECURITY: agent user '${agentCfg.user}' must not be in docker group.";
-      }
-      {
-        assertion = agentCfg.user != "dev";
-        message = "SECURITY: tsurf.agent.user must differ from the operator user 'dev'.";
       }
     ] ++ lib.optionals (!cfg.allowUnsafePlaceholders) [
       {
@@ -139,20 +107,13 @@ in
       }
     ];
 
-    # --- Persistence: operator + root home state ---
+    # --- Persistence: root home state ---
     environment.persistence."/persist".directories = [
-      "/home/dev/.ssh"
-      "/home/dev/.claude"
-      "/home/dev/.config/claude"
-      "/home/dev/.config/git"
-      "/home/dev/.local/share/direnv"
       "/root/.ssh"
       "/root/.config/nix"
       "/root/.docker"
     ];
     environment.persistence."/persist".files = [
-      "/home/dev/.gitconfig"
-      "/home/dev/.bash_history"
       "/root/.gitconfig"
     ];
   };

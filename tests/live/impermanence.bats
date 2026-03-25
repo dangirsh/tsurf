@@ -44,7 +44,7 @@ require_impermanence() {
   local required_dirs=(
     "/persist/var/lib/tailscale"
     "/persist/etc/ssh"
-    "/persist/home/dev"
+    "/persist/home/agent"
     "/persist/data"
   )
 

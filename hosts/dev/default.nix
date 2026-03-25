@@ -15,13 +15,14 @@
     ../../modules/agent-compute.nix
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
+    ../../modules/agent-launcher.nix
     ../../modules/agent-sandbox.nix
     ../../modules/nono.nix
     ../../extras/dev-agent.nix
     # Additional wrappers and host-specific workflows belong in a private overlay.
   ];
 
-  home-manager.users.dev = import ../../extras/home;
+  home-manager.users.${config.tsurf.agent.user} = import ../../extras/home;
 
   networking.hostName = "dev"; # REPLACE in private overlay
   time.timeZone = "UTC"; # REPLACE

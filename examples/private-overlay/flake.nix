@@ -56,19 +56,19 @@
         # agent-compute.nix: tsurf-agents.slice cgroup limits and /data/projects persistence
         "${inputs.tsurf}/modules/agent-compute.nix"
         { services.agentCompute.enable = true; }
-        # nono.nix: nono binary, tsurf profile, NONO_PROFILE_PATH, proxy credentials
+        # nono.nix: nono binary, tsurf base profile, NONO_PROFILE_PATH
         "${inputs.tsurf}/modules/nono.nix"
         { services.nonoSandbox.enable = true; }
-        # agent-sandbox.nix: core claude wrapper plus protected control-plane repo guards
+        # agent-launcher.nix: generic sandboxed agent launcher infrastructure
+        "${inputs.tsurf}/modules/agent-launcher.nix"
+        # agent-sandbox.nix: core claude wrapper
         "${inputs.tsurf}/modules/agent-sandbox.nix"
         { services.agentSandbox.enable = true; }
         # dev-agent.nix: first-class unattended Claude service (enable per host as needed)
         "${inputs.tsurf}/extras/dev-agent.nix"
-        # Example opt-in extra wrappers:
+        # Example opt-in extra wrapper:
         "${inputs.tsurf}/extras/codex.nix"
-        "${inputs.tsurf}/extras/pi.nix"
         { services.codexAgent.enable = true; }
-        { services.piAgent.enable = true; }
 
         # Import networking.nix after configuring Tailscale, SSH host keys, and impermanence.
         # Import secrets.nix after creating your encrypted secrets file, or write your own secrets module.

@@ -14,26 +14,25 @@ hosts/
   dev/                 # Example agent/dev host
 modules/                 # Core — security/infrastructure essentials only
   agent-compute.nix    # Agent runtime support (resource controls + shared tooling)
-  agent-sandbox.nix    # First-class sandboxed `claude` wrapper path + protected repo guards
+  agent-launcher.nix   # Generic sandboxed agent launcher (wrapper, systemd-run, nono, credentials)
+  agent-sandbox.nix    # Claude agent declaration on top of the generic launcher
   base.nix             # Nix settings, system packages, kernel sysctl hardening
   boot.nix             # GRUB bootloader + BTRFS root rollback
   break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
   impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
   networking.nix       # nftables, SSH (hardened), firewall assertions
-  nono.nix             # nono profile for the filesystem/network sandbox
+  nono.nix             # nono base profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
-  users.nix            # Operator (dev) + agent user split, tsurf.agent.* options, sudo, SSH keys
+  users.nix            # Root + agent user model, tsurf.agent.* options, SSH keys
 scripts/                 # Core scripts (sandbox, rollback, test runner)
   agent-wrapper.sh     # root-owned launch bridge — credential proxy, sandbox, privilege drop
   btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
   run-tests.sh         # Live BATS test runner (SSH-based)
   sandbox-probe.sh     # Sandbox boundary probe for live tests
 extras/                  # Optional batteries — import what you need
-  codex.nix            # Codex agent wrapper (OpenAI, opt-in)
+  codex.nix            # Codex agent wrapper (OpenAI, opt-in, uses generic launcher)
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
   dev-agent.nix        # First-class unattended Claude agent (supervised zmx + systemd)
-  opencode.nix         # opencode agent wrapper (Anthropic + OpenAI, opt-in)
-  pi.nix               # pi agent wrapper (Anthropic, opt-in)
   restic.nix           # Restic backup to B2
   home/
     default.nix        # home-manager: git/ssh/direnv inlined
@@ -59,13 +58,12 @@ tests/
 - **Flakes + home-manager**: Reproducible, lockfile-pinned (nixos-25.11)
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API, opt-in extra)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
-- **Agent tooling**: Public core ships two first-class agent paths: sandboxed interactive `claude` and the unattended `dev-agent` service. `codex`, `pi`, and `opencode` are opt-in extras; workflow-specific wrappers still belong in private overlays.
-- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo, protected control-plane repo markers/roots rejected up front. A root-owned loopback credential proxy keeps real keys out of the agent principal and gives the child only per-session tokens.
+- **Agent tooling**: Public core ships two first-class agent paths: sandboxed interactive `claude` and the unattended `dev-agent` service. `codex` is an opt-in extra; workflow-specific wrappers still belong in private overlays. All agents use the generic launcher (`modules/agent-launcher.nix`).
+- **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo. A root-owned loopback credential proxy keeps real keys out of the agent principal and gives the child only per-session tokens.
 - **Agent egress**: Host nftables allowlists outbound agent traffic by UID. Defaults allow DNS plus TCP `22/80/443` and block private/link-local ranges.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults)
 - **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale belongs in the private overlay.
-- **Privilege model**: `dev` is the operator (wheel, human admin). `agent` runs sandboxed tools (no wheel). Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
-- **Operator UID**: Configurable via `tsurf.template.devUid` (default 1000), defined in `modules/users.nix`.
+- **Privilege model**: Two-user model: `root` (operator/deploy/admin) and `agent` (sandboxed tools, SSH access). Agent is in `wheel` for sudo to immutable launchers only. Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
 
 ## Module Conventions & Patterns
@@ -154,14 +152,14 @@ Run before every module or service commit:
 2. **Secrets** — New secret? Add to `secrets.nix` with minimal `owner`/permissions. Use `sops.templates` for env files. NEVER embed credentials in URLs, CLI args, or committed files.
 3. **New service** — Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts`.
 4. **Sandbox impact** — Modifying `agent-compute.nix` or `nono.nix`? Verify `/run/secrets` and `~/.ssh` remain in the deny list. NEVER weaken nono sandbox defaults.
-5. **Agent execution** — Public core `claude` and `dev-agent` must stay sandboxed. Protect control-plane repos with `.tsurf-control-plane` (or `services.agentSandbox.protectedRepoRoots`) and launch agents from workspace repos.
+5. **Agent execution** — Public core `claude` and `dev-agent` must stay sandboxed. Launch agents from workspace repos, not infrastructure repos (operational policy).
 7. **Package management** — NEVER use `nix-env`, `nix profile install`, or re-enable `nix.channel.enable` / `nix.nixPath`.
 8. **Break-glass key** — NEVER remove `modules/break-glass-ssh.nix` from either host config.
 9. **Validation** — `nix flake check` passes.
 
 ## Sandbox Awareness
 
-- The public core wrapper brokers through `sudo` + `systemd-run --uid=agent`. See `SECURITY.md` for the full sandbox model, credential flow, and access control.
+- The public core wrapper brokers through `sudo` + `systemd-run` + `setpriv --reuid=agent`. See `SECURITY.md` for the full sandbox model, credential flow, and access control.
 - Launch logs: `journalctl -t agent-launch`
 
 ## Deployment Rules

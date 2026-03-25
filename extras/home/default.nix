@@ -1,6 +1,7 @@
-{ config, pkgs, ... }: {
-  home.username = "dev";
-  home.homeDirectory = "/home/dev";
+{ config, lib, pkgs, ... }: {
+  # Default to agent user; the alt-agent fixture overrides these via home-manager config.
+  home.username = lib.mkDefault "agent";
+  home.homeDirectory = lib.mkDefault "/home/agent";
   home.stateVersion = "25.11";
   programs.home-manager.enable = true;
 

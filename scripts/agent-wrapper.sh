@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# Agent sandbox wrapper — called by launcher stubs generated in modules/agent-sandbox.nix.
+# Agent sandbox wrapper — called by launcher stubs generated in modules/agent-launcher.nix.
 # Configuration is passed via environment variables set by the Nix launcher:
 #   AGENT_NAME              — wrapper name (for messages and launch log)
 #   AGENT_REAL_BINARY       — full path to the real agent binary
 #   AGENT_PROJECT_ROOT      — sandboxed agents must run inside this directory
-#   AGENT_PROTECTED_REPO_MARKERS — colon-separated repo-root marker files that
-#                             identify protected control-plane repos
-#   AGENT_PROTECTED_REPO_ROOTS — colon-separated absolute repo roots that agents
-#                             must never run from
 #   AGENT_NONO_PROFILE      — full path to nono profile JSON
 #   AGENT_RUN_AS_USER       — target Unix user for the actual agent binary
 #   AGENT_RUN_AS_UID        — target Unix uid for the actual agent binary
@@ -23,9 +19,7 @@
 #   Single sink: journald via logger -t agent-launch (root-owned, append-only).
 #   Only structured metadata is logged — no raw arguments, prompts, or file paths.
 #
-# @decision AUDIT-117-01: Single-sink journald launch logging. File-based audit log removed
-#   (was user-owned/tamperable and leaked raw arguments). journald is root-owned and
-#   append-only from the agent user's perspective.
+# @decision AUDIT-117-01: Single-sink journald launch logging. File-based audit log removed.
 # @decision SEC-145-01: Raw provider keys stay on the root-owned side of the broker.
 #   The child gets only per-session loopback tokens and base URLs.
 
@@ -41,9 +35,6 @@ set -euo pipefail
 : "${AGENT_RUN_AS_GID:?must be set}"
 : "${AGENT_RUN_AS_HOME:?must be set}"
 : "${AGENT_CHILD_PATH:?must be set}"
-
-protected_repo_markers="${AGENT_PROTECTED_REPO_MARKERS:-.tsurf-control-plane}"
-protected_repo_roots="${AGENT_PROTECTED_REPO_ROOTS:-}"
 
 case "$AGENT_REAL_BINARY" in
   /nix/store/*) ;;
@@ -165,29 +156,6 @@ if [[ "$git_root" == "$AGENT_PROJECT_ROOT" ]]; then
   echo "ERROR: refusing to grant read access to the entire project root ($AGENT_PROJECT_ROOT)" >&2
   exit 1
 fi
-
-IFS=: read -ra protected_root_list <<< "$protected_repo_roots"
-for protected_root in "${protected_root_list[@]}"; do
-  [[ -n "$protected_root" ]] || continue
-  if resolved_root="$(readlink -f "$protected_root" 2>/dev/null)"; then
-    :
-  else
-    resolved_root="$protected_root"
-  fi
-  if [[ "$git_root" == "$resolved_root" ]]; then
-    echo "ERROR: refusing to run inside protected control-plane repo ($git_root)" >&2
-    exit 1
-  fi
-done
-
-IFS=: read -ra protected_marker_list <<< "$protected_repo_markers"
-for marker in "${protected_marker_list[@]}"; do
-  [[ -n "$marker" ]] || continue
-  if [[ -e "$git_root/$marker" ]]; then
-    echo "ERROR: refusing to run inside protected control-plane repo ($git_root); marker '$marker' present" >&2
-    exit 1
-  fi
-done
 repo_scope="git-worktree"
 
 # Build nono arguments. Raw provider keys stay in the root-owned proxy process;
@@ -217,9 +185,9 @@ fi
 if [[ -n "${LANG:-}" ]]; then
   child_args+=("LANG=$LANG")
 fi
-# Claude managed settings: defense-in-depth deny rules (ecosystem review: Trail of Bits config)
-if [[ -f /etc/claude-agent-settings.json ]]; then
-  child_args+=("CLAUDE_CODE_MANAGED_SETTINGS_FILE=/etc/claude-agent-settings.json")
+# Agent managed settings: defense-in-depth deny rules
+if [[ -f "/etc/${AGENT_NAME}-agent-settings.json" ]]; then
+  child_args+=("CLAUDE_CODE_MANAGED_SETTINGS_FILE=/etc/${AGENT_NAME}-agent-settings.json")
 fi
 # Supply chain hardening (ecosystem review: Trail of Bits devcontainer pattern)
 child_args+=("NPM_CONFIG_IGNORE_SCRIPTS=true")

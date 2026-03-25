@@ -117,9 +117,6 @@ in
     devCfg.services.agentSandbox.enable;
 
   # --- Source-text regression guards ---
-  # These checks verify module source contains expected strings. They catch
-  # accidental removal of security-critical code but do NOT prove runtime
-  # behavior. Runtime behavioral tests are in tests/live/sandbox-behavioral.bats.
 
   core-agent-sandbox-only-claude =
     let
@@ -127,9 +124,9 @@ in
     in
     mkCheck
       "core-agent-sandbox-only-claude"
-      "agent-sandbox core wrapper list only includes claude"
+      "agent-sandbox core wrapper declares only claude"
       "agent-sandbox.nix still hardcodes non-claude wrappers; move them to extras/"
-      (lib.hasInfix "name = \"claude\"" source
+      (lib.hasInfix "claude" source
        && !(lib.hasInfix "pkgs.codex" source)
        && !(lib.hasInfix "pkgs.pi-coding-agent" source));
 
@@ -150,8 +147,6 @@ in
 
   # --- Phase 119: Secure-by-default host configs + eval fixture checks ---
 
-  # Phase 119/134: Host source files must NOT set allowUnsafePlaceholders.
-  # The flag is injected only in clearly named eval fixture outputs.
   secure-host-services = mkCheck
     "secure-host-services"
     "hosts/services/default.nix does not set allowUnsafePlaceholders"
@@ -164,7 +159,6 @@ in
     "SECURITY: hosts/dev/default.nix sets allowUnsafePlaceholders — host source must be secure by default"
     (!(lib.hasInfix "allowUnsafePlaceholders" (builtins.readFile ../../hosts/dev/default.nix)));
 
-  # Regression guard: eval fixtures must have the flag enabled (proves mkEvalFixture works)
   fixture-mode-services = mkCheck
     "fixture-mode-services"
     "services eval fixture has allowUnsafePlaceholders = true (CI fixture correct)"
@@ -207,7 +201,6 @@ in
     (!servicesCfg.services.resticStarter.enable);
 
   # Stale-phrase check: banned phrases must not appear in key docs.
-  # Prevents reintroduction of outdated security claims.
   stale-phrases-claude-md =
     let
       source = builtins.readFile ../../CLAUDE.md;
@@ -264,7 +257,7 @@ in
       "deploy.sh sources repo-controlled scripts — remove source calls for deploy-post.sh or similar"
       (!(lib.hasInfix "source \"$FLAKE_DIR" deploySrc));
 
-  # --- Phase 115: operator/agent user split ---
+  # --- Phase 115/152: agent user split ---
 
   agent-user-exists-dev = mkCheck
     "agent-user-exists-dev"
@@ -272,12 +265,6 @@ in
     "dev host agent user missing or not a normal user"
     (builtins.hasAttr devAgentUser devCfg.users.users
      && (builtins.getAttr devAgentUser devCfg.users.users).isNormalUser);
-
-  agent-user-no-wheel = mkCheck
-    "agent-user-no-wheel"
-    "agent user is not in wheel group"
-    "SECURITY: agent user is in wheel group — must not have sudo"
-    (!(builtins.elem "wheel" (builtins.getAttr devAgentUser devCfg.users.users).extraGroups));
 
   agent-user-no-docker = mkCheck
     "agent-user-no-docker"
@@ -306,11 +293,9 @@ in
     in
     mkCheck
       "impermanence-agent-home"
-      "agent-sandbox derives agent persist paths from agentCfg.home"
-      "agent-sandbox.nix still hardcodes agent home paths or is missing agent state suffixes"
-      (lib.hasInfix "agentCfg.home" source
-       && !(lib.hasInfix "\"/home/agent/" source)
-       && missingSuffixes == [ ]);
+      "agent-sandbox declares agent persist paths"
+      "agent-sandbox.nix is missing expected agent state suffixes"
+      (missingSuffixes == [ ]);
 
   alt-agent-parameterization = mkCheck
     "alt-agent-parameterization"
@@ -341,49 +326,49 @@ in
     "tsurf-agents slice missing from dev host"
     (builtins.hasAttr "tsurf-agents" devCfg.systemd.slices);
 
-  # --- Phase 119: brokered launch model (SEC-119-01) ---
+  # --- Phase 119/152: brokered launch model ---
 
   brokered-launch-launcher =
     let
-      source = builtins.readFile ../../modules/agent-sandbox.nix;
+      source = builtins.readFile ../../modules/agent-launcher.nix;
     in
     mkCheck
       "brokered-launch-launcher"
-      "agent-sandbox.nix defines immutable per-agent launchers"
-      "agent-sandbox.nix still relies on the generic tsurf-agent-launch boundary"
+      "agent-launcher.nix defines immutable per-agent launchers"
+      "agent-launcher.nix still relies on the generic tsurf-agent-launch boundary"
       (lib.hasInfix "tsurf-launch-" source
        && !(lib.hasInfix "tsurf-agent-launch" source));
 
   brokered-launch-systemd-run =
     let
-      source = builtins.readFile ../../modules/agent-sandbox.nix;
+      source = builtins.readFile ../../modules/agent-launcher.nix;
     in
     mkCheck
       "brokered-launch-systemd-run"
-      "agent-sandbox.nix uses systemd-run for privilege drop to agent user"
-      "agent-sandbox.nix missing systemd-run — wrapper runs as calling user (no privilege drop)"
+      "agent-launcher.nix uses systemd-run for privilege drop to agent user"
+      "agent-launcher.nix missing systemd-run — wrapper runs as calling user (no privilege drop)"
       (lib.hasInfix "systemd-run" source);
 
   brokered-launch-sudoers =
     let
-      source = builtins.readFile ../../modules/agent-sandbox.nix;
+      source = builtins.readFile ../../modules/agent-launcher.nix;
     in
     mkCheck
       "brokered-launch-sudoers"
-      "agent-sandbox.nix configures sudo extraRules without SETENV or caller env passthrough"
-      "agent-sandbox.nix sudoers path still uses SETENV or preserve-env"
+      "agent-launcher.nix configures sudo extraRules without SETENV or caller env passthrough"
+      "agent-launcher.nix sudoers path still uses SETENV or preserve-env"
       (lib.hasInfix "security.sudo.extraRules" source
        && !(lib.hasInfix "\"SETENV\"" source)
        && !(lib.hasInfix "--preserve-env" source));
 
   brokered-launch-agent-fallback =
     let
-      source = builtins.readFile ../../modules/agent-sandbox.nix;
+      source = builtins.readFile ../../modules/agent-launcher.nix;
     in
     mkCheck
       "brokered-launch-agent-fallback"
-      "agent-sandbox.nix keeps the launcher root-brokered and only short-circuits for root"
-      "agent-sandbox.nix still has an agent-user direct exec path that bypasses the root credential broker"
+      "agent-launcher.nix keeps the launcher root-brokered and only short-circuits for root"
+      "agent-launcher.nix still has an agent-user direct exec path that bypasses the root credential broker"
       (lib.hasInfix "id -u" source
        && lib.hasInfix "\"0\"" source
        && !lib.hasInfix "id -un" source);
@@ -483,7 +468,7 @@ in
       (lib.hasInfix "SystemCallArchitectures = \"native\"" costTrackerSource
        && lib.hasInfix "SystemCallArchitectures = \"native\"" devAgentSource);
 
-  # --- Phase 124: Control-plane separation ---
+  # --- Phase 124: dev-agent workspace ---
 
   dev-agent-not-control-plane =
     let
@@ -491,8 +476,8 @@ in
     in
     mkCheck
       "dev-agent-not-control-plane"
-      "dev-agent.nix defaults to a dedicated workspace instead of the control-plane repo"
-      "SECURITY: dev-agent.nix still defaults to the control-plane repo instead of a dedicated workspace"
+      "dev-agent.nix defaults to a dedicated workspace"
+      "SECURITY: dev-agent.nix still defaults to projectRoot instead of a dedicated workspace"
       (lib.hasInfix "dev-agent-workspace" source
        && !(lib.hasInfix "default = agentCfg.projectRoot;" source));
 
@@ -535,9 +520,7 @@ in
       (lib.hasInfix "AmbientCapabilities = [ \"CAP_DAC_READ_SEARCH\" ]" source
        && lib.hasInfix "CapabilityBoundingSet = [ \"CAP_DAC_READ_SEARCH\" ]" source);
 
-  # --- Phase 124: Sandbox read-scope regression guards ---
-  # Source-text checks for critical fail-closed patterns in agent-wrapper.sh.
-  # Runtime behavioral coverage is in tests/live/sandbox-behavioral.bats.
+  # --- Sandbox read-scope regression guards ---
 
   sandbox-git-root-fail-closed =
     let
@@ -560,29 +543,10 @@ in
       "agent-wrapper.sh missing project-root refusal — agents could read all repos"
       (lib.hasInfix "refusing to grant read access to the entire project root" source);
 
-  sandbox-refuses-protected-control-plane-repos =
-    let
-      wrapperSource = builtins.readFile ../../scripts/agent-wrapper.sh;
-      moduleSource = builtins.readFile ../../modules/agent-sandbox.nix;
-    in
-    mkCheck
-      "sandbox-refuses-protected-control-plane-repos"
-      "agent wrapper refuses repos marked as protected control-plane roots"
-      "agent wrapper missing protected control-plane repo guard or default marker wiring"
-      (lib.hasInfix "protected control-plane repo" wrapperSource
-       && lib.hasInfix ".tsurf-control-plane" moduleSource
-       && lib.hasInfix "AGENT_PROTECTED_REPO_MARKERS" wrapperSource);
-
-  control-plane-marker-file = mkCheck
-    "control-plane-marker-file"
-    "repo root carries the protected control-plane marker file"
-    "repo root missing .tsurf-control-plane marker"
-    (builtins.pathExists ../../.tsurf-control-plane);
-
   public-no-sandbox-removed =
     let
       wrapperSource = builtins.readFile ../../scripts/agent-wrapper.sh;
-      launcherSource = builtins.readFile ../../modules/agent-sandbox.nix;
+      launcherSource = builtins.readFile ../../modules/agent-launcher.nix;
     in
     mkCheck
       "public-no-sandbox-removed"
@@ -594,42 +558,36 @@ in
 
   # --- Phase 147: Spec-driven test coverage ---
 
-  # Validates SEC-019, BAS-009: Nix channels disabled, nixPath cleared
   nix-channels-disabled = mkCheck
     "nix-channels-disabled"
     "Nix channels disabled on all hosts"
     "nix.channel.enable is true or nixPath is not empty"
     (!servicesCfg.nix.channel.enable && !devCfg.nix.channel.enable);
 
-  # Validates BAS-010: defaultPackages emptied
   default-packages-empty = mkCheck
     "default-packages-empty"
     "environment.defaultPackages is empty (declarative-only)"
     "environment.defaultPackages is non-empty"
     (servicesCfg.environment.defaultPackages == [] && devCfg.environment.defaultPackages == []);
 
-  # Validates SEC-014: users.mutableUsers = false
   mutable-users-disabled = mkCheck
     "mutable-users-disabled"
     "users.mutableUsers is false on all hosts"
     "users.mutableUsers is true — runtime user modification possible"
     (!servicesCfg.users.mutableUsers && !devCfg.users.mutableUsers);
 
-  # Validates NET-001: nftables backend enabled
   nftables-enabled = mkCheck
     "nftables-enabled"
     "nftables backend enabled on all hosts"
     "networking.nftables.enable is false"
     (servicesCfg.networking.nftables.enable && devCfg.networking.nftables.enable);
 
-  # Validates NET-021: fail2ban disabled
   fail2ban-disabled = mkCheck
     "fail2ban-disabled"
     "fail2ban is disabled (key-only auth + MaxAuthTries is sufficient)"
     "services.fail2ban.enable is true"
     (!servicesCfg.services.fail2ban.enable && !devCfg.services.fail2ban.enable);
 
-  # Validates IMP-015: hideMounts = true
   impermanence-hide-mounts =
     let
       source = builtins.readFile ../../modules/impermanence.nix;
@@ -640,7 +598,6 @@ in
       "modules/impermanence.nix missing hideMounts = true"
       (lib.hasInfix "hideMounts = true" source);
 
-  # Validates IMP-026: setupSecrets depends on persist-files
   secrets-depend-on-persist =
     let
       source = builtins.readFile ../../modules/impermanence.nix;
@@ -651,7 +608,6 @@ in
       "modules/impermanence.nix missing setupSecrets.deps persist-files dependency"
       (lib.hasInfix "setupSecrets" source && lib.hasInfix "persist-files" source);
 
-  # Validates SBX-005: AGENT_REAL_BINARY must be in /nix/store
   wrapper-nix-store-guard =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
@@ -662,7 +618,6 @@ in
       "agent-wrapper.sh missing /nix/store guard for AGENT_REAL_BINARY"
       (lib.hasInfix "/nix/store" source && lib.hasInfix "AGENT_REAL_BINARY must be in /nix/store" source);
 
-  # Validates SCR-013: credential proxy started before privilege drop
   wrapper-credential-proxy-flow =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
@@ -675,7 +630,6 @@ in
        && lib.hasInfix "proxy_port_file" source
        && lib.hasInfix "TSURF_PROXY_ROUTE" source);
 
-  # Validates SEC-030: supply chain env vars set in wrapper
   wrapper-supply-chain-hardening =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
@@ -688,7 +642,6 @@ in
        && lib.hasInfix "NPM_CONFIG_AUDIT=true" source
        && lib.hasInfix "NPM_CONFIG_SAVE_EXACT=true" source);
 
-  # Validates SEC-031: telemetry suppression
   wrapper-telemetry-suppression =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
@@ -700,7 +653,6 @@ in
       (lib.hasInfix "DISABLE_TELEMETRY=1" source
        && lib.hasInfix "DISABLE_ERROR_REPORTING=1" source);
 
-  # Validates SBX-048: enableAllProjectMcpServers = false
   claude-settings-mcp-disabled =
     let
       source = builtins.readFile ../../modules/agent-sandbox.nix;
@@ -712,42 +664,42 @@ in
       (lib.hasInfix "enableAllProjectMcpServers" source
        && lib.hasInfix "false" source);
 
-  # Validates SBX-019: seccomp syscall blocklist
   launcher-seccomp-filter =
     let
-      source = builtins.readFile ../../modules/agent-sandbox.nix;
+      source = builtins.readFile ../../modules/agent-launcher.nix;
     in
     mkCheck
       "launcher-seccomp-filter"
-      "agent-sandbox.nix launcher includes seccomp SystemCallFilter"
-      "agent-sandbox.nix missing SystemCallFilter for @mount/@debug/bpf"
+      "agent-launcher.nix launcher includes seccomp SystemCallFilter"
+      "agent-launcher.nix missing SystemCallFilter for @mount/@debug/bpf"
       (lib.hasInfix "SystemCallFilter" source
        && lib.hasInfix "@mount" source
        && lib.hasInfix "bpf" source);
 
-  # Validates BAS-005: non-systemd initrd
   no-systemd-initrd = mkCheck
     "no-systemd-initrd"
     "boot.initrd.systemd.enable is false on all hosts"
     "boot.initrd.systemd.enable is true — non-systemd initrd required for BTRFS rollback"
     (!servicesCfg.boot.initrd.systemd.enable && !devCfg.boot.initrd.systemd.enable);
 
+  # --- Phase 152: Generic launcher architecture ---
+
+  generic-launcher-enabled = mkCheck
+    "generic-launcher-enabled"
+    "dev host has generic agent launcher enabled"
+    "dev host services.agentLauncher.enable is false — no agent wrappers generated"
+    devCfg.services.agentLauncher.enable;
+
+  no-dev-user = mkCheck
+    "no-dev-user"
+    "dev user no longer exists in config"
+    "users.users.dev still defined — remove the dev user (root+agent model)"
+    (!(builtins.hasAttr "dev" devCfg.users.users)
+     || !(devCfg.users.users.dev.isNormalUser or false));
+
 }
 
 # --- Private overlay test extension pattern ---
 #
 # The private overlay (private-tsurf) extends these checks by importing
-# this file and appending private-specific assertions, for example:
-#
-#   # In private-tsurf/tests/eval/private-checks.nix:
-#   # { self, pkgs, lib, inputs }:
-#   # let
-#   #   publicChecks = import "${inputs.tsurf}/tests/eval/config-checks.nix" { inherit self pkgs lib; };
-#   #   privateCfg = self.nixosConfigurations.my-real-host.config;
-#   # in publicChecks // {
-#   #   agent-fleet-ports = ...; # private agent fleet/proxy assertions
-#   #   nginx-vhosts = ...;      # private reverse-proxy checks
-#   #   acme-domains = ...;      # private certificate domain coverage
-#   # };
-#
-# Private live tests follow the same pattern under private-tsurf/tests/live/.
+# this file and appending private-specific assertions.

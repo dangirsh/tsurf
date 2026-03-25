@@ -19,7 +19,7 @@
     # Private overlay: add personal service modules (nginx, etc.) here
   ];
 
-  home-manager.users.dev = import ../../extras/home;
+  home-manager.users.${config.tsurf.agent.user} = import ../../extras/home;
 
   networking.hostName = "services"; # REPLACE in private overlay
   time.timeZone = "UTC"; # REPLACE

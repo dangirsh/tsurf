@@ -1,86 +1,10 @@
 # extras/codex.nix
-# Optional: Codex CLI sandboxed through a self-contained wrapper + launcher.
-# Requires: services.agentSandbox.enable = true and services.nonoSandbox.enable = true.
+# Optional: Codex CLI sandboxed through the generic agent launcher.
+# Requires: services.agentLauncher.enable = true and services.nonoSandbox.enable = true.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.codexAgent;
-  agentCfg = config.tsurf.agent;
-  sandboxCfg = config.services.agentSandbox;
   agentHome = config.tsurf.agent.home;
-  devHome = config.users.users.dev.home;
-  launcherName = "tsurf-launch-codex";
-  runtimePath = lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nono pkgs.python3 pkgs.util-linux ];
-  protectedRepoMarkers = lib.concatStringsSep ":" sandboxCfg.protectedRepoMarkers;
-  protectedRepoRoots = lib.concatStringsSep ":" sandboxCfg.protectedRepoRoots;
-
-  nonoProfile = pkgs.writeText "tsurf-codex-profile.json" (builtins.toJSON {
-    extends = "tsurf";
-    meta = {
-      name = "tsurf-codex";
-      version = "1.0.0";
-      description = "tsurf codex profile extension";
-      author = "tsurf";
-    };
-    filesystem = { allow = [ "${agentHome}/.codex" ]; };
-  });
-
-  launcher = pkgs.writeShellApplication {
-    name = launcherName;
-    runtimeInputs = [ pkgs.systemd pkgs.coreutils ];
-    text = ''
-      export AGENT_NAME="codex"
-      export AGENT_REAL_BINARY="${cfg.package}/bin/codex"
-      export AGENT_PROJECT_ROOT="${agentCfg.projectRoot}"
-      export AGENT_PROTECTED_REPO_MARKERS="${protectedRepoMarkers}"
-      export AGENT_PROTECTED_REPO_ROOTS="${protectedRepoRoots}"
-      export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf-codex.json"
-      export AGENT_CREDENTIAL_PROXY="${../scripts/credential-proxy.py}"
-      export AGENT_CREDENTIALS="${lib.concatStringsSep " " cfg.credentials}"
-
-      exec systemd-run \
-        --same-dir --collect --pipe \
-        --unit="agent-codex-$$" \
-        --slice=tsurf-agents.slice \
-        --setenv=PATH="${runtimePath}" \
-        --setenv=AGENT_CHILD_PATH="${runtimePath}" \
-        --setenv=AGENT_NAME="$AGENT_NAME" \
-        --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
-        --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
-        --setenv=AGENT_PROTECTED_REPO_MARKERS="$AGENT_PROTECTED_REPO_MARKERS" \
-        --setenv=AGENT_PROTECTED_REPO_ROOTS="$AGENT_PROTECTED_REPO_ROOTS" \
-        --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
-        --setenv=AGENT_CREDENTIAL_PROXY="$AGENT_CREDENTIAL_PROXY" \
-        --setenv=AGENT_CREDENTIALS="$AGENT_CREDENTIALS" \
-        --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
-        --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
-        --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \
-        --setenv=AGENT_RUN_AS_HOME="${agentCfg.home}" \
-        ${pkgs.bash}/bin/bash ${../scripts/agent-wrapper.sh} "$@"
-    '';
-  };
-
-  wrapper = (pkgs.writeShellApplication {
-    name = "codex";
-    runtimeInputs = [ pkgs.coreutils ];
-    text = ''
-      export AGENT_NAME="codex"
-      export AGENT_REAL_BINARY="${cfg.package}/bin/codex"
-      export AGENT_PROJECT_ROOT="${agentCfg.projectRoot}"
-      export AGENT_PROTECTED_REPO_MARKERS="${protectedRepoMarkers}"
-      export AGENT_PROTECTED_REPO_ROOTS="${protectedRepoRoots}"
-      export AGENT_NONO_PROFILE="/etc/nono/profiles/tsurf-codex.json"
-      export AGENT_CREDENTIAL_PROXY="${../scripts/credential-proxy.py}"
-      export AGENT_CREDENTIALS="${lib.concatStringsSep " " cfg.credentials}"
-
-      if [[ "$(id -u)" == "0" ]]; then
-        exec ${launcher}/bin/${launcherName} "$@"
-      fi
-
-      exec /run/wrappers/bin/sudo ${launcher}/bin/${launcherName} "$@"
-    '';
-  }).overrideAttrs (old: {
-    meta = (old.meta or { }) // { priority = 4; };
-  });
 in
 {
   options.services.codexAgent = {
@@ -105,8 +29,8 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = config.services.agentSandbox.enable;
-        message = "extras/codex.nix: services.agentSandbox.enable must be true";
+        assertion = config.services.agentLauncher.enable;
+        message = "extras/codex.nix: services.agentLauncher.enable must be true";
       }
       {
         assertion = config.services.nonoSandbox.enable;
@@ -114,20 +38,13 @@ in
       }
     ];
 
-    environment.systemPackages = [ wrapper ];
-    environment.etc."nono/profiles/tsurf-codex.json".source = nonoProfile;
-
-    security.sudo.extraRules = [{
-      groups = [ "wheel" ];
-      commands = [{
-        command = "${launcher}/bin/${launcherName}";
-        options = [ "NOPASSWD" ];
-      }];
-    }];
-
-    environment.persistence."/persist".directories = [
-      "${devHome}/.codex"
-      "${agentHome}/.codex"
-    ];
+    services.agentLauncher.agents.codex = {
+      command = "codex";
+      package = cfg.package;
+      wrapperName = "codex";
+      credentials = cfg.credentials;
+      nonoProfile.extraAllow = [ "${agentHome}/.codex" ];
+      persistence.directories = [ ".codex" ];
+    };
   };
 }

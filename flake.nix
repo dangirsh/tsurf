@@ -106,6 +106,8 @@
         {
           tsurf.agent.user = "sandbox";
           tsurf.agent.home = "/srv/sandbox";
+          home-manager.users.sandbox.home.username = lib.mkForce "sandbox";
+          home-manager.users.sandbox.home.homeDirectory = lib.mkForce "/srv/sandbox";
         }
       ];
 

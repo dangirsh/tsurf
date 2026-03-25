@@ -1,11 +1,11 @@
 # modules/nono.nix
-# @decision NONO-89-01: Public core ships one tsurf nono profile for Claude.
+# @decision NONO-89-01: Public core ships one tsurf nono base profile for all agents.
 # @decision NONO-145-01: Raw provider credentials stay outside nono. Credential
 #   brokering happens in the root-owned launcher path before the child drops to
 #   the agent user.
 # @decision NONO-145-03: Extended deny list covers package registry tokens and
 #   cloud credential directories. Workdir-relative paths (.git/hooks, .envrc)
-#   are protected via Claude-level deny rules in agent-sandbox.nix.
+#   are protected via agent-level deny rules in agent-sandbox.nix.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.nonoSandbox;
@@ -15,7 +15,7 @@ let
     meta = {
       name = "tsurf";
       version = "1.0.0";
-      description = "tsurf dev host - NixOS Claude sandbox profile";
+      description = "tsurf agent sandbox base profile";
       author = "tsurf";
     };
     security = {
@@ -86,7 +86,7 @@ let
 in
 {
   options.services.nonoSandbox = {
-    enable = lib.mkEnableOption "nono sandbox support for the core Claude wrapper";
+    enable = lib.mkEnableOption "nono sandbox base profile for agent wrappers";
 
     homeDir = lib.mkOption {
       type = lib.types.str;

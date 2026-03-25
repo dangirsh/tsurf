@@ -24,19 +24,20 @@ Public tsurf core provides two first-class agent paths running as the unprivileg
 - interactive `claude`
 - unattended `services.devAgent`
 
-Additional wrappers such as `codex`, `pi`, and `opencode` are opt-in public extras. Workflow-specific agents and orchestration still belong in your private overlay.
+Additional wrappers such as `codex` are opt-in public extras. Workflow-specific agents and orchestration still belong in your private overlay.
 
 ### Required modules for agent hosts
 
 Hosts running agent workloads should import all three agent infrastructure modules:
 
 - `modules/agent-compute.nix` -- provides `tsurf-agents.slice` cgroup limits and `/data/projects` persistence
-- `modules/agent-sandbox.nix` -- core `claude` wrapper, protected control-plane repo guards, and the brokered launch path
+- `modules/agent-launcher.nix` -- generic sandboxed agent launcher infrastructure
+- `modules/agent-sandbox.nix` -- core `claude` wrapper declaration on top of the generic launcher
 - `modules/nono.nix` -- nono binary and tsurf Landlock profile
 
 For unattended Claude work, also import `extras/dev-agent.nix`.
 
-The private overlay template `flake.nix` already imports `agent-sandbox.nix`, `nono.nix`, and `extras/dev-agent.nix`. Add `agent-compute.nix` and enable it with `services.agentCompute.enable = true` for any host that runs agent workloads.
+The private overlay template `flake.nix` already imports `agent-launcher.nix`, `agent-sandbox.nix`, `nono.nix`, and `extras/dev-agent.nix`. Add `agent-compute.nix` and enable it with `services.agentCompute.enable = true` for any host that runs agent workloads.
 
 ### What agents can access
 
@@ -54,8 +55,7 @@ The private overlay template `flake.nix` already imports `agent-sandbox.nix`, `n
 | `/run/secrets/` (API keys on disk) | Blocked | Landlock deny (nono profile inherits this) |
 | `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.docker` | Blocked | `filesystem.deny` in nono profile |
 | Other git repos (sibling projects) | Blocked | `agent-wrapper.sh` scopes read to current repo only |
-| Protected control-plane repos | Blocked | `.tsurf-control-plane` marker or `protectedRepoRoots` |
-| `wheel` / `sudo` | No access | Agent user has no `wheel` group (build-time assertion) |
+| `sudo` | Limited | Agent user has sudo only for immutable launchers (no general root access) |
 | Docker daemon | No access | Agent user has no `docker` group (build-time assertion) |
 | CPU / memory beyond limits | Killed | `tsurf-agents.slice` cgroup limits |
 
@@ -127,7 +127,6 @@ claude   # wrapper broker-launches as agent user and runs in nono sandbox
 ```
 
 The wrapper handles credential injection from `/run/secrets/`, enforces the git-worktree requirement, and logs launches to journald (`journalctl -t agent-launch`).
-It also refuses repos marked with `.tsurf-control-plane`, so keep that marker in infra/control-plane repos and launch agents from workspace repos.
 
 See `SECURITY.md` in the tsurf repo for the full access control model, credential flow architecture, and tailnet segmentation guidance.
 
@@ -159,12 +158,11 @@ Docker is not included in the public template. To add it in your private overlay
 }
 ```
 
-2. Import it in your host config and add `dev` to the `docker` group:
+2. Import it in your host config:
 
 ```nix
 # hosts/my-host/default.nix
 imports = [ ../../modules/docker.nix ];
-users.users.dev.extraGroups = [ "wheel" "docker" ];
 ```
 
 3. Add a `/docker` BTRFS subvolume in your disko config for overlay2 storage:
