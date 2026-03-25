@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Post-commit hook: complexity metric warning.
+# Activate: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+BASELINE_FILE="${REPO_ROOT}/.complexity-baseline"
+THRESHOLD=50
+
+# Count effective lines (non-blank, non-comment) in tracked files
+count_loc() {
+  local total=0
+  while IFS= read -r file; do
+    [[ -f "${REPO_ROOT}/${file}" ]] || continue
+    local count
+    count=$(sed -e '/^[[:space:]]*$/d' \
+                -e '/^[[:space:]]*#/d' \
+                -e '/^[[:space:]]*\/\//d' \
+                "${REPO_ROOT}/${file}" | wc -l)
+    total=$((total + count))
+  done < <(git -C "${REPO_ROOT}" ls-files -- '*.nix' '*.sh' '*.py')
+  echo "${total}"
+}
+
+CURRENT=$(count_loc)
+
+if [[ -f "${BASELINE_FILE}" ]]; then
+  PREVIOUS=$(cat "${BASELINE_FILE}")
+  DELTA=$((CURRENT - PREVIOUS))
+  if [[ ${DELTA} -gt ${THRESHOLD} ]]; then
+    echo "WARNING: Complexity increased by +${DELTA} eLOC (threshold: +${THRESHOLD}). Current: ${CURRENT} eLOC."
+  fi
+fi
+
+# Always update the baseline after commit
+echo "${CURRENT}" > "${BASELINE_FILE}"

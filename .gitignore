@@ -10,6 +10,7 @@ result
 *.png
 Screenshot*
 .test-status
+.complexity-baseline
 src/
 secrets/*.yaml
 tsurf_code_review*.md
