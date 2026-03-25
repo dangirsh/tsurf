@@ -20,6 +20,11 @@ let
         ];
         description = "API provider type";
       };
+      label = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Optional display label used in the emitted JSON payload.";
+      };
       keyFile = lib.mkOption {
         type = lib.types.path;
         description = "Path to sops-decrypted API key file";
@@ -33,10 +38,15 @@ let
   };
 
   providerJson = builtins.toJSON (
-    lib.mapAttrs (_: p: {
-      inherit (p) type extraConfig;
-      key_file = p.keyFile;
-    }) cfg.providers
+    lib.mapAttrs (_: p:
+      {
+        inherit (p) type extraConfig;
+        key_file = p.keyFile;
+      }
+      // lib.optionalAttrs (p.label != null) {
+        label = p.label;
+      }
+    ) cfg.providers
   );
 
   costTrackerScript = pkgs.writers.writePython3Bin "tsurf-cost-tracker" {

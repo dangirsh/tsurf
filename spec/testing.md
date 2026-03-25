@@ -143,6 +143,8 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 | TST-076 | SBX-048: MCP auto-loading disabled | `claude-settings-mcp-disabled` |
 | TST-077 | SBX-019: seccomp syscall filter | `launcher-seccomp-filter` |
 | TST-078 | BAS-005: non-systemd initrd | `no-systemd-initrd` |
+| TST-079 | LAUNCHER-152: per-agent `extraDeny` options are wired into generated nono profiles | `agent-launcher-extra-deny-wired` |
+| TST-080 | EXT-020: cost-tracker provider labels are exposed and serialized | `cost-tracker-provider-label` |
 
 ## Phase 147: New Live Sandbox Probes
 

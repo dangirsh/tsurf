@@ -260,6 +260,16 @@ in
     in
       builtins.elem "/run/secrets" profile.filesystem.deny);
 
+  agent-launcher-extra-deny-wired =
+    let
+      source = builtins.readFile ../../modules/agent-launcher.nix;
+    in
+    mkCheck
+      "agent-launcher-extra-deny-wired"
+      "agent-launcher wires per-agent extraDeny entries into generated nono profiles"
+      "modules/agent-launcher.nix defines extraDeny but does not merge it into filesystem.deny"
+      (lib.hasInfix "deny = agentDef.nonoProfile.extraDeny;" source);
+
   deploy-no-repo-source =
     let
       deploySrc = builtins.readFile ../../scripts/deploy.sh;
@@ -571,6 +581,17 @@ in
       "cost-tracker.nix bounds CAP_DAC_READ_SEARCH without AmbientCapabilities — DynamicUser service cannot read configured secret files"
       (lib.hasInfix "AmbientCapabilities = [ \"CAP_DAC_READ_SEARCH\" ]" source
        && lib.hasInfix "CapabilityBoundingSet = [ \"CAP_DAC_READ_SEARCH\" ]" source);
+
+  cost-tracker-provider-label =
+    let
+      source = builtins.readFile ../../extras/cost-tracker.nix;
+    in
+    mkCheck
+      "cost-tracker-provider-label"
+      "cost-tracker exposes and serializes optional provider labels"
+      "extras/cost-tracker.nix drops provider labels even though cost-tracker.py reads them"
+      (lib.hasInfix "label = lib.mkOption" source
+       && lib.hasInfix "label = p.label;" source);
 
   # --- Sandbox read-scope regression guards ---
 

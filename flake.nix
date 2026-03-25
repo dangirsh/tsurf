@@ -318,7 +318,9 @@ EOF
           } ''
             export TSURF_TEST_TMPDIR="$TMPDIR/tsurf-unit-tests"
             mkdir -p "$TSURF_TEST_TMPDIR"
-            bash "$src"/tests/unit/deploy-script.bash
+            for test in "$src"/tests/unit/*.bash; do
+              bash "$test"
+            done
             python3 -m unittest discover -s "$src"/tests/unit -p 'test_*.py'
             touch "$out"
           '';
