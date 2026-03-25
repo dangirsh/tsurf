@@ -43,6 +43,7 @@ FIRST_DEPLOY=false
 MAGIC_ROLLBACK=false
 POST_HOOK=""
 PUBLIC_IP=""
+DEPRECATED_FLAGS=()
 SECONDS=0
 
 # SSH multiplexing: reuse a single connection for locking/health-check calls.
@@ -79,7 +80,7 @@ Options:
   --magic-rollback      Enable deploy-rs magic rollback (300s confirm timeout)
   --public-ip IP        Public IP for post-deploy connectivity check (optional)
   --post-hook PATH      Run script at absolute PATH after successful deploy
-  --update-inputs       Pull latest flake inputs before building
+  --update-inputs       Deprecated; update flake inputs explicitly before deploy
   --help                Show this help
 
 Examples:
@@ -96,8 +97,6 @@ if [[ "${TSURF_DEPLOY_LIB_ONLY:-0}" == "1" && "${BASH_SOURCE[0]}" != "$0" ]]; th
   return 0
 fi
 
-mkdir -p "$FLAKE_DIR/tmp"
-
 # --- Argument parsing ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -108,14 +107,23 @@ while [[ $# -gt 0 ]]; do
     --first-deploy) FIRST_DEPLOY=true; shift ;;
     --magic-rollback) MAGIC_ROLLBACK=true; shift ;;
     --no-magic-rollback) shift ;;  # deprecated no-op
-    --update-inputs) shift ;;
+    --update-inputs) DEPRECATED_FLAGS+=("$1"); shift ;;
     --post-hook)   POST_HOOK="$2";    shift 2 ;;
     --public-ip)   PUBLIC_IP="$2";    shift 2 ;;
-    --skip-update) shift ;;  # no-op
+    --skip-update) DEPRECATED_FLAGS+=("$1"); shift ;;
     --help)        usage; exit 0 ;;
     *)             echo "Unknown option: $1"; usage; exit 1 ;;
   esac
 done
+
+if (( ${#DEPRECATED_FLAGS[@]} > 0 )); then
+  printf 'Error: %s no longer does anything in deploy.sh.\n' "$(printf '%s ' "${DEPRECATED_FLAGS[@]}" | sed 's/ $//')"
+  echo "Update flake inputs explicitly before deploy, for example:"
+  echo "  nix flake update"
+  exit 1
+fi
+
+mkdir -p "$FLAKE_DIR/tmp"
 
 if [[ "$MODE" != "local" && "$MODE" != "remote" ]]; then
   echo "Error: --mode must be 'local' or 'remote', got '$MODE'"
