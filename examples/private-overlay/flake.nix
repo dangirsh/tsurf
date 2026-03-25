@@ -53,7 +53,6 @@
         "${inputs.tsurf}/modules/users.nix"
         "${inputs.tsurf}/modules/impermanence.nix"
         "${inputs.tsurf}/modules/break-glass-ssh.nix"
-        "${inputs.tsurf}/extras/dashboard.nix"
         # agent-compute.nix: tsurf-agents.slice cgroup limits and /data/projects persistence
         "${inputs.tsurf}/modules/agent-compute.nix"
         { services.agentCompute.enable = true; }

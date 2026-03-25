@@ -5,7 +5,7 @@
     # REPLACE with your own hardware config.
     "${inputs.tsurf}/hosts/hardware.nix"
     "${inputs.tsurf}/hosts/disko-config.nix"
-    # Optional private-only modules such as ../../modules/syncthing.nix belong here.
+    # Optional private-only modules belong here.
 
     # After configuring Tailscale and SSH host keys, import:
     # "${inputs.tsurf}/modules/networking.nix"
@@ -22,8 +22,6 @@
 
   # When you import secrets.nix, set:
   # sops.defaultSopsFile = ../../secrets/example.yaml;
-
-  services.dashboard.enable = true;
 
   system.stateVersion = "25.11";
 }

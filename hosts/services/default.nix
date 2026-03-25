@@ -1,5 +1,5 @@
 # hosts/services/default.nix — example services host
-# Role: runs long-lived services (containers, backups, file sync, dashboard).
+# Role: runs long-lived services (containers, backups, file sync).
 # Imports restic.nix for backups and omits agent-sandbox.nix by default.
 # Private overlay replaces this with real host config, user settings, and networking.
 { config, pkgs, inputs, lib, ... }: {
@@ -15,7 +15,6 @@
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
     ../../extras/restic.nix
-    ../../extras/dashboard.nix
     ../../extras/cost-tracker.nix
     # Private overlay: add personal service modules (nginx, etc.) here
   ];
@@ -36,6 +35,5 @@
   # Contabo VPS uses scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;
 
-  services.dashboard.enable = true;
   system.stateVersion = "25.11";
 }

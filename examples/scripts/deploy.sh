@@ -51,7 +51,7 @@ PREV_SYSTEM=""
 WATCHDOG_ACTIVE=false
 DEPLOY_SUMMARY=""
 
-# Write deploy status JSON to remote host for dashboard consumption.
+# Write deploy status JSON to remote host for status consumption.
 # Called from success, failure, and rollback paths.
 write_deploy_status() {
   local status="$1"

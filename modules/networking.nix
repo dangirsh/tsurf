@@ -1,12 +1,10 @@
 # modules/networking.nix
 # @decision NET-01: port 22 open on public interface with key-only auth (srvos SSH hardening defaults).
 #   fail2ban is disabled; brute-force mitigation via MaxAuthTries 3 + key-only auth.
-#   Deliberate: Tailscale-preferred deploy, but public SSH enables bootstrap/recovery when
-#   Tailscale is unavailable (e.g., first boot, Tailscale misconfiguration).
+#   Public SSH enables bootstrap/recovery. Tailscale belongs in the private overlay.
 # @decision NET-122-01: No trustedInterfaces — localhost-first network model. Internal
-#   services bind 127.0.0.1 by default. Tailnet access via SSH tunnel, Tailscale Serve,
-#   or overlay adding ports to networking.firewall.interfaces.tailscale0.allowedTCPPorts.
-#   See SECURITY.md "Network Model" section.
+#   services bind 127.0.0.1 by default. Tailnet access via SSH tunnel or overlay
+#   adding ports to networking.firewall.interfaces.tailscale0.allowedTCPPorts.
 { config, lib, pkgs, ... }:
 let
   agentCfg = config.tsurf.agent;
@@ -14,8 +12,6 @@ let
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
   # Manual port-to-label map — kept in sync with UI-visible internal services.
   internalOnlyPorts = {
-    "8082" = "Dashboard";
-    "9200" = "Restic status server";
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;
@@ -98,10 +94,6 @@ in {
         message = "LOCKOUT PREVENTION: SSH port 22 must be reachable — add to allowedTCPPorts or set services.openssh.openFirewall = true.";
       }
       {
-        assertion = config.services.tailscale.enable;
-        message = "LOCKOUT PREVENTION: Tailscale must be enabled — it provides the primary remote access path.";
-      }
-      {
         assertion = builtins.any (k: lib.hasInfix "break-glass-emergency" k)
           config.users.users.root.openssh.authorizedKeys.keys;
         message = "LOCKOUT PREVENTION: root must have break-glass emergency SSH key. Import modules/break-glass-ssh.nix.";
@@ -157,7 +149,7 @@ in {
       enable = true;
       allowPing = true;
       allowedTCPPorts = [ 22 ] ++ lib.optionals config.services.nginx.enable [ 80 443 ];
-      allowedUDPPorts = [ config.services.tailscale.port ];
+      allowedUDPPorts = [ ];
       trustedInterfaces = [ ];
     };
 
@@ -187,18 +179,7 @@ in {
       authorizedKeysFiles = lib.mkForce [ ".ssh/authorized_keys" "/etc/ssh/authorized_keys.d/%u" ];
     };
 
-    # --- Tailscale VPN ---
-    services.tailscale = {
-      enable = true;
-      authKeyFile = config.sops.secrets."tailscale-authkey".path;
-      useRoutingFeatures = "client";   # auto-sets checkReversePath = "loose"
-      extraUpFlags = [ ];
-    };
-
-    # --- Persistence: network identity + SSH host keys ---
-    environment.persistence."/persist".directories = [
-      "/var/lib/tailscale"                 # Device keys, auth state, node identity
-    ];
+    # --- Persistence: SSH host keys ---
     environment.persistence."/persist".files = [
       "/etc/ssh/ssh_host_ed25519_key"      # SSH host key — sops-nix age key derivation chain
       "/etc/ssh/ssh_host_ed25519_key.pub"  # SSH host key (public)

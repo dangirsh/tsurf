@@ -8,8 +8,6 @@ let
   devAgentUser = devCfg.tsurf.agent.user;
   altAgentUser = altAgentCfg.tsurf.agent.user;
   altAgentHome = altAgentCfg.tsurf.agent.home;
-  jq = "${pkgs.jq}/bin/jq";
-
   mkCheck = name: passMessage: failMessage: condition:
     pkgs.runCommand name { } ''
       ${if condition then ''
@@ -74,44 +72,6 @@ in
     "SECURITY: dev host has tailscale0 in trustedInterfaces — remove it, use per-service firewall.interfaces rules"
     (!(builtins.elem "tailscale0" devCfg.networking.firewall.trustedInterfaces));
 
-  no-accept-routes-services = mkCheck
-    "no-accept-routes-services"
-    "services host Tailscale extraUpFlags does not include --accept-routes"
-    "services host Tailscale extraUpFlags contains --accept-routes — remove from default, add in overlay if needed"
-    (!(builtins.elem "--accept-routes" servicesCfg.services.tailscale.extraUpFlags));
-
-  no-accept-routes-dev = mkCheck
-    "no-accept-routes-dev"
-    "dev host Tailscale extraUpFlags does not include --accept-routes"
-    "dev host Tailscale extraUpFlags contains --accept-routes — remove from default, add in overlay if needed"
-    (!(builtins.elem "--accept-routes" devCfg.services.tailscale.extraUpFlags));
-
-  expected-services-services =
-    let
-      expectedServices = [
-        "tailscaled"
-        "nix-dashboard"
-      ];
-      missing = builtins.filter (name: !(builtins.hasAttr name servicesCfg.systemd.services)) expectedServices;
-    in
-    mkCheck
-      "expected-services-services"
-      "all expected services host services are defined"
-      "missing services host services: ${builtins.concatStringsSep ", " missing}"
-      (missing == [ ]);
-
-  expected-services-dev =
-    let
-      expectedServices = [
-        "tailscaled"
-      ];
-      missing = builtins.filter (name: !(builtins.hasAttr name devCfg.systemd.services)) expectedServices;
-    in
-    mkCheck
-      "expected-services-dev"
-      "all expected dev host services are defined"
-      "missing dev host services: ${builtins.concatStringsSep ", " missing}"
-      (missing == [ ]);
 
   ssh-ed25519-only =
     let
@@ -149,33 +109,6 @@ in
        && lib.hasInfix "443" content
        && lib.hasInfix "drop" content);
 
-
-  dashboard-enabled = mkCheck
-    "dashboard-enabled"
-    "nix-dashboard is enabled on port 8082"
-    "nix-dashboard disabled or wrong port"
-    (
-      servicesCfg.services.dashboard.enable
-      && servicesCfg.services.dashboard.listenPort == 8082
-    );
-
-  dashboard-entries =
-    let
-      entryCount =
-        builtins.length (builtins.attrNames servicesCfg.services.dashboard.entries);
-    in
-    mkCheck
-      "dashboard-entries"
-      "dashboard has ${toString entryCount} entries (>= 3)"
-      "dashboard has too few entries: ${toString entryCount}"
-      (entryCount >= 3);
-
-  dashboard-manifest = pkgs.runCommand "dashboard-manifest" { } ''
-    echo '${builtins.toJSON (builtins.fromJSON servicesCfg.environment.etc."dashboard/manifest.json".text)}' \
-      | ${jq} . > /dev/null
-    echo "PASS: dashboard manifest is valid JSON"
-    touch "$out"
-  '';
 
   agent-sandbox-dev-enabled = mkCheck
     "agent-sandbox-dev-enabled"
@@ -321,27 +254,6 @@ in
     in
       builtins.elem "/run/secrets" profile.filesystem.deny);
 
-  dashboard-security-headers =
-    let
-      serverSrc = builtins.readFile ../../extras/scripts/dashboard-server.py;
-      hasHeader = header: lib.hasInfix header serverSrc;
-    in
-    mkCheck
-      "dashboard-security-headers"
-      "dashboard server includes security response headers"
-      "dashboard-server.py missing security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)"
-      (hasHeader "X-Content-Type-Options" && hasHeader "X-Frame-Options" && hasHeader "Referrer-Policy");
-
-  dashboard-no-innerhtml-xss =
-    let
-      htmlSrc = builtins.readFile ../../extras/scripts/dashboard-frontend.html;
-    in
-    mkCheck
-      "dashboard-no-innerhtml-xss"
-      "dashboard frontend has no innerHTML XSS sinks"
-      "dashboard-frontend.html still uses innerHTML — use textContent/createElement instead"
-      (!(lib.hasInfix ".innerHTML =" htmlSrc));
-
   deploy-no-repo-source =
     let
       deploySrc = builtins.readFile ../../examples/scripts/deploy.sh;
@@ -428,16 +340,6 @@ in
     "tsurf-agents systemd slice defined on dev host"
     "tsurf-agents slice missing from dev host"
     (builtins.hasAttr "tsurf-agents" devCfg.systemd.slices);
-
-  restic-status-dynamic-user =
-    let
-      source = builtins.readFile ../../extras/restic.nix;
-    in
-    mkCheck
-      "restic-status-dynamic-user"
-      "restic-status-server uses DynamicUser"
-      "restic-status-server should use DynamicUser for least privilege"
-      (lib.hasInfix "DynamicUser = true" source);
 
   # --- Phase 119: brokered launch model (SEC-119-01) ---
 
@@ -571,12 +473,6 @@ in
 
   systemd-hardening-baseline =
     let
-      hasSCA = svc:
-        let sca = svc.serviceConfig.SystemCallArchitectures or null;
-        in if sca == null then false
-           else if builtins.isList sca then builtins.elem "native" sca
-           else sca == "native";
-      resticSource = builtins.readFile ../../extras/restic.nix;
       costTrackerSource = builtins.readFile ../../extras/cost-tracker.nix;
       devAgentSource = builtins.readFile ../../extras/dev-agent.nix;
     in
@@ -584,10 +480,7 @@ in
       "systemd-hardening-baseline"
       "All project services have SystemCallArchitectures=native"
       "SECURITY: one or more services missing SystemCallArchitectures=native"
-      (hasSCA servicesCfg.systemd.services.nix-dashboard
-       && lib.hasInfix "SystemCallArchitectures = \"native\"" (builtins.readFile ../../extras/dashboard.nix)
-       && lib.hasInfix "SystemCallArchitectures = \"native\"" resticSource
-       && lib.hasInfix "SystemCallArchitectures = \"native\"" costTrackerSource
+      (lib.hasInfix "SystemCallArchitectures = \"native\"" costTrackerSource
        && lib.hasInfix "SystemCallArchitectures = \"native\"" devAgentSource);
 
   # --- Phase 124: Control-plane separation ---

@@ -15,7 +15,6 @@
     ../../modules/agent-compute.nix
     ../../modules/impermanence.nix
     ../../modules/break-glass-ssh.nix
-    ../../extras/dashboard.nix
     ../../modules/agent-sandbox.nix
     ../../modules/nono.nix
     ../../extras/dev-agent.nix

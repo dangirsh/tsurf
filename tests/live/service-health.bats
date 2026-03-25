@@ -6,8 +6,11 @@ load "../lib/common"
 bats_load_library bats-support
 bats_load_library bats-assert
 
-# Validates NET-023: Tailscale enabled
-@test "${HOST}: tailscaled.service is active" {
+# Validates NET-023: Tailscale enabled (private overlay)
+@test "${HOST}: tailscaled.service is active (if present)" {
+  if ! remote systemctl list-unit-files tailscaled.service --no-legend | grep -q tailscaled; then
+    skip "tailscaled not installed on this host"
+  fi
   assert_unit_active "tailscaled.service"
 }
 
@@ -22,17 +25,12 @@ bats_load_library bats-assert
   assert_success
 }
 
-@test "${HOST}: tailscaled.service is enabled" {
+@test "${HOST}: tailscaled.service is enabled (if present)" {
+  if ! remote systemctl list-unit-files tailscaled.service --no-legend | grep -q tailscaled; then
+    skip "tailscaled not installed on this host"
+  fi
   run remote systemctl is-enabled tailscaled.service
   assert_success
-}
-
-# Validates EXT-001, EXT-005: dashboard enabled and active
-@test "${HOST}: nix-dashboard.service is active (if present)" {
-  if ! remote systemctl list-unit-files nix-dashboard.service --no-legend | grep -q nix-dashboard; then
-    skip "nix-dashboard not installed on this host"
-  fi
-  assert_unit_active "nix-dashboard.service"
 }
 
 # Validates BAK-007: daily backup timer
@@ -55,8 +53,11 @@ bats_load_library bats-assert
   fi
 }
 
-# Validates NET-023: Tailscale backend running
-@test "${HOST}: tailscale backend state is Running" {
+# Validates NET-023: Tailscale backend running (private overlay)
+@test "${HOST}: tailscale backend state is Running (if present)" {
+  if ! remote systemctl list-unit-files tailscaled.service --no-legend | grep -q tailscaled; then
+    skip "tailscaled not installed on this host"
+  fi
   local status_json
   status_json="$(remote tailscale status --json 2>&1)" || {
     echo "FAIL: tailscale status --json failed"
@@ -77,7 +78,10 @@ bats_load_library bats-assert
   fi
 }
 
-@test "${HOST}: tailscale hostname matches expected prefix" {
+@test "${HOST}: tailscale hostname matches expected prefix (if present)" {
+  if ! remote systemctl list-unit-files tailscaled.service --no-legend | grep -q tailscaled; then
+    skip "tailscaled not installed on this host"
+  fi
   local status_json
   status_json="$(remote tailscale status --json 2>&1)" || {
     echo "FAIL: tailscale status --json failed"
