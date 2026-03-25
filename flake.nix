@@ -32,6 +32,10 @@
       url = "github:nix-community/nixos-anywhere";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-mineral = {
+      url = "github:cynicsketch/nix-mineral";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Private overlay: add your private inputs (parts, personal services, etc.) in a separate private flake that imports this one.
@@ -46,6 +50,7 @@
     impermanence,
     srvos,
     nixos-anywhere,
+    nix-mineral,
     ...
   } @ inputs:
     let
@@ -63,6 +68,16 @@
         impermanence.nixosModules.impermanence
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
+        nix-mineral.nixosModules.nix-mineral
+        # Compat shim: nix-mineral targets nixpkgs-unstable which has
+        # services.resolved.settings (INI-based); nixos-25.11 still uses
+        # per-option services.resolved.{dnssec,llmnr,...}. Stub the option
+        # so nix-mineral's dnssec module definition has somewhere to land.
+        { options.services.resolved.settings = lib.mkOption {
+            type = lib.types.anything;
+            default = {};
+          };
+        }
         {
           nixpkgs.overlays = [
             llm-agents.overlays.default

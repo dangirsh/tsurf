@@ -29,26 +29,21 @@
     options = "--delete-older-than 30d";
   };
 
-  # @decision SEC-17-01: Standard Linux server kernel hardening via sysctl
-  boot.kernel.sysctl = {
-    "kernel.dmesg_restrict" = 1;
-    "kernel.kptr_restrict" = 2;
-    "kernel.unprivileged_bpf_disabled" = 1;
-    "net.core.bpf_jit_harden" = 2;
-    "net.ipv4.conf.all.accept_redirects" = false;
-    "net.ipv4.conf.default.accept_redirects" = false;
-    "net.ipv4.conf.all.send_redirects" = false;
-    "net.ipv6.conf.all.accept_redirects" = false;
-    "net.ipv6.conf.default.accept_redirects" = false;
-    "net.ipv4.conf.all.log_martians" = true;
-  };
+  # @decision SEC-145-05: nix-mineral provides comprehensive kernel, mount, entropy,
+  #   and debug hardening (~80 settings). Compatibility preset + overrides for agent
+  #   workloads and nixos-25.11 compat. Replaces manual sysctl hardening (SEC-17-01)
+  #   and subsumes SEC-153-01 (coredumps) and SEC-153-02 (kexec). Source: ecosystem
+  #   review Phase 145. Previous sysctl entries (dmesg_restrict, kptr_restrict,
+  #   unprivileged_bpf_disabled, bpf_jit_harden, accept_redirects, send_redirects,
+  #   log_martians) are now covered by nix-mineral submodules.
+  nix-mineral.enable = true;
+  nix-mineral.preset = "compatibility";
 
-  # @decision SEC-153-01: Disable coredumps — no diagnostic value on headless agent servers,
-  #   prevents leaking in-memory secrets to disk.
-  systemd.coredump.enable = false;
-
-  # @decision SEC-153-02: Prevent kexec-based kernel replacement (rootkit vector).
-  security.protectKernelImage = true;
+  # Agent-workload overrides beyond compatibility preset defaults:
+  nix-mineral.settings.kernel.cpu-mitigations = "smt-on";  # VPS: hypervisor controls SMT
+  nix-mineral.settings.kernel.slab-debug = false;          # Performance: heavy alloc overhead
+  nix-mineral.settings.etc.generic-machine-id = false;     # Conflicts with impermanence /persist
+  nix-mineral.settings.misc.dnssec = false;                # services.resolved.settings absent in nixos-25.11
 
   # srvos installs: gitMinimal, curl, dnsutils, htop, jq, tmux.
   # We add full git (for agents) and search/transfer tools. Project-specific

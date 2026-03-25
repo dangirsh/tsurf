@@ -35,6 +35,19 @@ in
     touch "$out"
   '';
 
+  # Phase 145: nix-mineral hardening must be enabled on all hosts. [SEC-145-05]
+  nix-mineral-services = mkCheck
+    "nix-mineral-services"
+    "services host has nix-mineral hardening enabled"
+    "SECURITY: services host does not have nix-mineral enabled"
+    servicesCfg.nix-mineral.enable;
+
+  nix-mineral-dev = mkCheck
+    "nix-mineral-dev"
+    "dev host has nix-mineral hardening enabled"
+    "SECURITY: dev host does not have nix-mineral enabled"
+    devCfg.nix-mineral.enable;
+
   # Ports are conditional: 80/443 on nginx.enable.
   # Public template has no nginx by default.
   firewall-ports-services =

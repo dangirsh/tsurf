@@ -32,7 +32,7 @@
   boot.loader.grub.device = "/dev/sda"; # REPLACE
   sops.defaultSopsFile = ../../secrets/example.yaml; # REPLACE with per-host secrets
 
-  # Contabo VPS uses scripted networking for static IP, not systemd-networkd
+  # Use scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;
 
   system.stateVersion = "25.11";
