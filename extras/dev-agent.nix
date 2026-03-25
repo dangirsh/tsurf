@@ -11,14 +11,17 @@ let
   commandConfigured = cfg.command != null;
   taskScript =
     if promptConfigured then
+      let
+        cmdParts =
+          [ "/run/current-system/sw/bin/claude" ]
+          ++ lib.optionals (cfg.model != null) [ "--model" cfg.model ]
+          ++ cfg.extraArgs
+          ++ [ "-p" "--permission-mode=${cfg.permissionMode}" cfg.prompt ];
+        cmdStr = lib.concatMapStringsSep " " lib.escapeShellArg cmdParts;
+      in
       pkgs.writeShellScript "tsurf-dev-agent-task" ''
         set -euo pipefail
-        exec /run/current-system/sw/bin/claude \
-        ${lib.optionalString (cfg.model != null) "  --model ${lib.escapeShellArg cfg.model} \\\n"}
-        ${lib.optionalString (cfg.extraArgs != [ ]) "  ${lib.concatMapStringsSep " \\\n  " lib.escapeShellArg cfg.extraArgs} \\\n"}
-          -p \
-          --permission-mode=${lib.escapeShellArg cfg.permissionMode} \
-          ${lib.escapeShellArg cfg.prompt}
+        exec ${cmdStr}
       ''
     else if commandConfigured then
       pkgs.writeShellScript "tsurf-dev-agent-task" ''

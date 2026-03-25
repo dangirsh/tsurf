@@ -12,8 +12,8 @@
 # Environment: NixOS traditional (non-systemd) initrd via boot.initrd.postResumeCommands.
 # Requires: bash, mount, btrfs, stat, date, find, mkdir, mv (all available in NixOS initrd).
 
-mkdir /btrfs_tmp || { echo "btrfs-rollback: failed to create /btrfs_tmp"; }
-mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp || { echo "btrfs-rollback: failed to mount root"; }
+mkdir /btrfs_tmp || { echo "btrfs-rollback: failed to create /btrfs_tmp"; exit 1; }
+mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp || { echo "btrfs-rollback: failed to mount root"; exit 1; }
 if [[ -e /btrfs_tmp/root ]]; then
   mkdir -p /btrfs_tmp/old_roots
   timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")

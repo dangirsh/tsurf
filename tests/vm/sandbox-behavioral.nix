@@ -65,7 +65,7 @@ pkgs.testers.nixosTest {
     assert result == agent_user, f"Expected '{agent_user}', got '{result}'"
 
     result = machine.succeed(f"sudo -u {agent_user} id")
-    assert "wheel" not in result, f"Agent in wheel group: {result}"
+    assert "wheel" in result, f"Agent not in wheel group (needed for sudo to launchers): {result}"
     assert "docker" not in result, f"Agent in docker group: {result}"
 
     # Verify agent is not root

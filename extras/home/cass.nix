@@ -37,7 +37,7 @@ in
       Service = {
         Type = "oneshot";
         ExecStart = "${cass}/bin/cass index --full";
-        Environment = [ "HOME=/home/agent" ];
+        Environment = [ "HOME=${config.home.homeDirectory}" ];
         CPUQuota = "50%";
         MemoryMax = "512M";
       };
