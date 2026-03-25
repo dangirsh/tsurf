@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Deploy tsurf NixOS config to tsurf server
+description: Deploy tsurf NixOS config to a server
 user_invocable: true
 ---
 
@@ -9,7 +9,7 @@ user_invocable: true
 Deploy the tsurf NixOS configuration via deploy-rs.
 
 **CRITICAL: ALL deploys MUST run from the private overlay.** The public repo's
-`deploy.sh` refuses all deploys because both hosts run the private overlay config.
+`deploy.sh` refuses all deploys because hosts run the private overlay config.
 
 ## How to Deploy
 
@@ -17,7 +17,7 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
 
 1. **Always use the private overlay**:
    ```bash
-   cd /path/to/private-tsurf
+   cd /path/to/private-overlay
    ```
 
 2. **If public tsurf was updated**, refresh the input first:
@@ -27,78 +27,70 @@ When the user asks to deploy (or invokes `/deploy`), follow these steps:
 
 3. **Execute the deploy script**:
    ```bash
-   # Deploy Contabo (services host) only:
-   ./scripts/deploy.sh --node tsurf
+   # Deploy a specific host:
+   ./scripts/deploy.sh --node <hostname>
 
-   # Deploy OVH (dev host) only:
-   ./scripts/deploy.sh --node ovh
+   # Local build fallback (if server can't build):
+   ./scripts/deploy.sh --node <hostname> --mode local
 
-   # Deploy BOTH hosts in parallel:
-   ./scripts/deploy.sh --node all
+   # Fast mode (local build, single eval):
+   ./scripts/deploy.sh --node <hostname> --fast
 
-   # Pull latest parts first (Contabo only):
-   ./scripts/deploy.sh --node tsurf --update-parts
-
-   # Local build fallback (if server unreachable):
-   ./scripts/deploy.sh --node ovh --mode local
+   # First migration deploy from nixos-rebuild:
+   ./scripts/deploy.sh --node <hostname> --first-deploy
    ```
 
 4. **Monitor output**:
-   - Single node: shows progress inline (build → activate → health check).
-   - `--node all`: spawns parallel processes, shows per-node success/failure summary.
-     Logs written to `tmp/deploy-tsurf.log` and `tmp/deploy-ovh.log`.
+   - Shows progress inline (build, activate, health check).
 
 5. **Verify deployment**:
-   - deploy.sh runs service health checks automatically (private overlay defines which services).
+   - deploy.sh runs service health checks automatically.
    - On success, prints duration and service status.
 
 6. **Commit flake.lock if updated**:
-   - If you ran `--update-input tsurf` or `--update-parts`, commit the updated `flake.lock` in the private overlay.
+   - If you ran `--update-input tsurf`, commit the updated `flake.lock` in the private overlay.
 
 ## Targeting Rules
 
 | User says | Action |
 |-----------|--------|
 | "deploy" (no qualifier) | Ask which node, or deploy the node relevant to current work |
-| "deploy to OVH" / "deploy dev" | `--node ovh` |
-| "deploy to Contabo" / "deploy services" | `--node tsurf` |
-| "deploy both" / "deploy all" / "deploy everything" | `--node all` |
+| "deploy to <hostname>" | `--node <hostname>` |
+| "deploy both" / "deploy all" | Deploy each node separately in sequence |
 
-**Never deploy Contabo when only OVH changes were made, and vice versa.**
-Hosts are independent — deploy only what changed.
+**Never deploy a host when only a different host's changes were made.**
+Hosts are independent -- deploy only what changed.
 
 ## Flags
 
 | Flag | Description |
 |------|-------------|
-| `--node NAME` | Deploy flake node (`tsurf`, `ovh`, or `all`; default: `tsurf`) |
-| `--update-parts` | Pull latest `parts` flake input before building (Contabo only) |
-| `--skip-update` | No-op (parts update is skipped by default) |
+| `--node NAME` | Flake node to deploy (required) |
 | `--mode remote` | (default) Build on target host via deploy-rs `--remote-build` |
 | `--mode local` | Build locally, push closure + switch remotely |
-| `--target USER@HOST` | Override SSH target (default: `root@tsurf` or `root@tsurf-dev`) |
+| `--target USER@HOST` | Override SSH target (default: `root@<node>`) |
 | `--first-deploy` | Disable magic rollback for one-time migration |
-| `--no-magic-rollback` | Disable magic rollback for this deploy |
+| `--fast` | Local build, single evaluation |
+| `--magic-rollback` | Enable deploy-rs magic rollback (300s confirm timeout) |
+| `--public-ip IP` | Public IP for post-deploy connectivity check |
+| `--post-hook PATH` | Run script at absolute PATH after successful deploy |
 
 ## What It Does
 
-1. **Nix build** — Builds the full NixOS system closure (remote by default, local if `--mode local`)
-2. **deploy-rs switch** — Atomically switches the server to the new config with magic rollback
-3. **Service health poll** — Checks systemd services are running (30s timeout)
-4. **Remote access verify** — Tests SSH via both Tailscale and public IP
-5. **Cachix push** — Pushes system closure to cache after successful deploy (Contabo only)
+1. **Safety guard** -- Refuses to deploy from the public repo (no `tsurf.url` in flake.nix)
+2. **Remote lock** -- Prevents concurrent deploys via remote directory lock
+3. **Nix build** -- Builds the full NixOS system closure (remote by default, local if `--mode local`)
+4. **deploy-rs switch** -- Atomically switches the server to the new config
+5. **Service verification** -- Checks tailscaled and sshd are running
+6. **SSH connectivity** -- Verifies fresh SSH connection (non-multiplexed)
 
 ## Troubleshooting
 
-- **Rollback**: `ssh root@tsurf nixos-rebuild switch --rollback` (or `root@tsurf-dev`)
-- **Service logs**: `ssh root@tsurf journalctl -u <service> -n 50`
+- **Rollback**: `ssh root@<hostname> nixos-rebuild switch --rollback`
+- **Service logs**: `ssh root@<hostname> journalctl -u <service> -n 50`
 - **Lock stuck**: If a previous deploy crashed, remove the remote lock:
   ```bash
-  # Contabo:
-  ssh root@tsurf rm -rf /var/lock/tsurf-tsurf-deploy.lock
-  # OVH:
-  ssh root@tsurf-dev rm -rf /var/lock/tsurf-ovh-deploy.lock
+  ssh root@<hostname> rm -rf /var/lock/deploy-<node>.lock
   ```
 - **Build failures**: Check Nix build output for derivation errors.
 - **Stale tsurf input**: Run `nix flake lock --update-input tsurf` in the private overlay.
-- **Parallel deploy logs**: Check `tmp/deploy-tsurf.log` and `tmp/deploy-ovh.log`.

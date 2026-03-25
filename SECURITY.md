@@ -10,7 +10,7 @@ strengthen or weaken these properties, so host-specific statements are called ou
   `eval-services`, `eval-dev`, and `eval-dev-alt-agent`.
 - The public flake exports no `deploy.nodes`; all exported
   `nixosConfigurations` are prefixed with `eval-`.
-- [`examples/scripts/deploy.sh`](examples/scripts/deploy.sh)
+- [`scripts/deploy.sh`](scripts/deploy.sh)
   refuses to deploy unless it is being run from a private overlay flake that
   contains a `tsurf.url` input.
 - The public repo does not ship a file-sync module. Sync topology and exposure
@@ -274,7 +274,7 @@ SSH defaults:
 Public-repo safety properties:
 
 - The public flake exports no deploy targets.
-- [`examples/scripts/deploy.sh`](examples/scripts/deploy.sh)
+- [`scripts/deploy.sh`](scripts/deploy.sh)
   refuses to deploy from the public repo, so public eval fixtures cannot be
   installed through the shipped deploy path.
 
@@ -295,7 +295,7 @@ Recovery mechanisms:
   placeholder material and must be replaced in a private overlay before any real
   deployment.
 - The private-overlay deploy path implemented in
-  [`examples/scripts/deploy.sh`](examples/scripts/deploy.sh)
+  [`scripts/deploy.sh`](scripts/deploy.sh)
   schedules a 5-minute rollback watchdog via `systemd-run` before every deploy.
   The watchdog auto-reverts to the previous NixOS generation if SSH connectivity
   is not verified post-deploy. The public copy of that script refuses to run.

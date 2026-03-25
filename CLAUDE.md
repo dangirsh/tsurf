@@ -24,9 +24,10 @@ modules/                 # Core — security/infrastructure essentials only
   nono.nix             # nono base profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
   users.nix            # Root + agent user model, tsurf.agent.* options, SSH keys
-scripts/                 # Core scripts (sandbox, rollback, test runner)
+scripts/                 # Core scripts (sandbox, rollback, deploy, test runner)
   agent-wrapper.sh     # root-owned launch bridge — credential proxy, sandbox, privilege drop
   btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
+  deploy.sh            # deploy-rs wrapper (locking, health check, safety guard)
   run-tests.sh         # Live BATS test runner (SSH-based)
   sandbox-probe.sh     # Sandbox boundary probe for live tests
 extras/                  # Optional batteries — import what you need
@@ -40,11 +41,8 @@ extras/                  # Optional batteries — import what you need
   scripts/             # Scripts for extras modules
     clone-repos.sh     # Idempotent repo cloning activation script
     cost-tracker.py    # Cost tracker HTTP server (Python)
-    deploy.sh          # deploy-rs wrapper (locking, watchdog, health check)
     dev-agent.sh       # Dev-agent session launcher script
 examples/
-  scripts/
-    deploy.sh          # Private-overlay deploy wrapper reference (tsurf.url guard)
   private-overlay/     # Forkable starting point for a private overlay
 secrets/               # sops-encrypted secrets (age keys, gitignored)
 tests/
@@ -165,7 +163,7 @@ Run before every module or service commit:
 ## Deployment Rules
 
 - **ALL deploys from the PRIVATE overlay**: `cd /path/to/private-overlay && ./scripts/deploy.sh --node <your-host>`.
-- **This public repo refuses deploys** (`tsurf.url` guard in `examples/scripts/deploy.sh`) and exports eval fixtures only (`.#eval-services`, `.#eval-dev`).
+- **This public repo refuses deploys** (`tsurf.url` guard in `scripts/deploy.sh`) and exports eval fixtures only (`.#eval-services`, `.#eval-dev`).
 - **NEVER** use `nixos-rebuild switch` for normal deploys; it bypasses the deploy safety guard and lock/watcher flow.
 
 ## Recovery
