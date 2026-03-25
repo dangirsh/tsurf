@@ -728,6 +728,17 @@ in
        && lib.hasInfix "@mount" source
        && lib.hasInfix "bpf" source);
 
+  launcher-extra-deny-plumbed =
+    let
+      source = builtins.readFile ../../modules/agent-launcher.nix;
+    in
+    mkCheck
+      "launcher-extra-deny-plumbed"
+      "agent-launcher.nix propagates per-agent nonoProfile.extraDeny into generated profiles"
+      "agent-launcher.nix declares extraDeny but does not render filesystem.deny overrides"
+      (lib.hasInfix "agentDef.nonoProfile.extraDeny != []" source
+       && lib.hasInfix "deny = agentDef.nonoProfile.extraDeny;" source);
+
   no-systemd-initrd = mkCheck
     "no-systemd-initrd"
     "boot.initrd.systemd.enable is false on all hosts"
