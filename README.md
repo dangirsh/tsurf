@@ -33,8 +33,8 @@ These lead to the following design goals:
 - Two public host roles. `hosts/dev` is the agent-execution fixture;
   `hosts/services` is the service-host fixture. The public flake exports
   `eval-*` configurations only, not deploy targets.
-- Declarative, recovery-oriented base. `srvos`, `nix-mineral`, BTRFS rollback,
-  impermanence, lockout-prevention assertions, and private-overlay deploy
+- Declarative, recovery-oriented base. [srvos](https://github.com/nix-community/srvos), [nix-mineral](https://github.com/cynicsketch/nix-mineral), [BTRFS](https://btrfs.readthedocs.io/) rollback,
+  [impermanence](https://github.com/nix-community/impermanence), lockout-prevention assertions, and private-overlay deploy
   tooling are built in.
 - Optional batteries. Public extras include `dev-agent`, `codex`,
   `cost-tracker`, `restic`, and a home-manager profile for the agent user.
