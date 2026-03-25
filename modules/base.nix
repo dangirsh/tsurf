@@ -5,9 +5,6 @@
   ];
 
   # @decision SYS-02: declarative-only enforcement — no imperative package management.
-  # nix-channel is removed so `nix-env` cannot resolve packages by channel name.
-  # NIX_PATH is explicitly cleared as belt-and-suspenders.
-  # defaultPackages is emptied so nothing lands on the system outside of a Nix declaration.
   nix.channel.enable = false;
   nix.nixPath = lib.mkForce [];
   environment.defaultPackages = lib.mkForce [];
@@ -16,16 +13,11 @@
     experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
     # @decision SEC-124-01: Restrict Nix daemon access to root and wheel group.
-    #   Agent user stays excluded in the public core. trusted-users is root-only
-    #   (no @wheel) to prevent wheel users from adding arbitrary substituters or
-    #   signing keys at runtime.
+    #   trusted-users is root-only (overrides srvos @wheel default) to prevent
+    #   wheel users from adding arbitrary substituters or signing keys at runtime.
     allowed-users = [ "root" "@wheel" ];
     trusted-users = lib.mkForce [ "root" ];
-    # Private overlay: add your Cachix URL to extra-substituters
-    # and its public key to extra-trusted-public-keys below.
-    extra-substituters = [
-      "https://cache.numtide.com"
-    ];
+    extra-substituters = [ "https://cache.numtide.com" ];
     extra-trusted-public-keys = [
       "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
     ];
@@ -39,37 +31,38 @@
 
   # @decision SEC-17-01: Standard Linux server kernel hardening via sysctl
   boot.kernel.sysctl = {
-    "kernel.dmesg_restrict" = 1; # Restrict dmesg to root
-    "kernel.kptr_restrict" = 2; # Hide kernel pointers from non-root
-    "kernel.unprivileged_bpf_disabled" = 1; # Disable unprivileged eBPF
-    "net.core.bpf_jit_harden" = 2; # Harden eBPF JIT compiler
-    "net.ipv4.conf.all.accept_redirects" = false; # Prevent ICMP redirect MITM
+    "kernel.dmesg_restrict" = 1;
+    "kernel.kptr_restrict" = 2;
+    "kernel.unprivileged_bpf_disabled" = 1;
+    "net.core.bpf_jit_harden" = 2;
+    "net.ipv4.conf.all.accept_redirects" = false;
     "net.ipv4.conf.default.accept_redirects" = false;
     "net.ipv4.conf.all.send_redirects" = false;
     "net.ipv6.conf.all.accept_redirects" = false;
     "net.ipv6.conf.default.accept_redirects" = false;
-    "net.ipv4.conf.all.log_martians" = true; # Log suspicious packets
+    "net.ipv4.conf.all.log_martians" = true;
   };
 
+  # @decision SEC-153-01: Disable coredumps — no diagnostic value on headless agent servers,
+  #   prevents leaking in-memory secrets to disk.
+  systemd.coredump.enable = false;
+
+  # @decision SEC-153-02: Prevent kexec-based kernel replacement (rootkit vector).
+  security.protectKernelImage = true;
+
+  # srvos installs: gitMinimal, curl, dnsutils, htop, jq, tmux.
+  # We add full git (for agents) and search/transfer tools. Project-specific
+  # deps are declared in each project's flake.nix, not here.
   environment.systemPackages = with pkgs; [
-    git
-    curl
-    rsync
-    jq
-    yq-go
-    ripgrep
-    fd
+    git       # full git (srvos ships gitMinimal; agents need full features)
+    rsync     # file transfer for backups and deploys
+    ripgrep   # fast code search (agent tooling)
+    fd        # fast file finder (agent tooling)
   ];
 
-  # --- srvos overrides (shared across all hosts) ---
-  # Agents don't need man pages or command-not-found suggestions
+  # --- srvos overrides ---
   srvos.server.docs.enable = false;
   programs.command-not-found.enable = false;
-
-  # Operator convenience (opt-in for human sessions, not needed for agents):
-  #   environment.systemPackages = [ pkgs.btop ];
-  #   srvos.server.docs.enable = true;
-  #   programs.command-not-found.enable = true;
-  # Guard against future srvos enabling systemd initrd
+  # srvos enables systemd initrd by default; we need script-based initrd for BTRFS rollback
   boot.initrd.systemd.enable = lib.mkForce false;
 }
