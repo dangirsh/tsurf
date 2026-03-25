@@ -1,5 +1,9 @@
 # modules/agent-sandbox.nix
 # Claude agent declaration on top of the generic agent launcher.
+# @decision SANDBOX-73-01: Public core exposes one sandboxed Claude wrapper. Additional
+#   wrappers build on the same generic launcher infrastructure.
+# @decision LAUNCHER-152-02: Agents must not deploy changes to their own security boundaries.
+#   Enforced by operational policy, not technical controls.
 # @decision SEC-145-04: Claude-level deny rules provide defense-in-depth atop Landlock.
 #   enableAllProjectMcpServers=false prevents malicious repos from injecting MCP servers.
 { config, lib, pkgs, ... }:
