@@ -99,6 +99,12 @@ tests/
 
 ## Testing Workflow
 
+**Git hooks**: Activate the project hooks once after cloning:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 Before committing, stage new files before evaluation (flakes only see tracked files):
 
 ```bash
