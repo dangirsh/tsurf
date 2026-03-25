@@ -33,7 +33,9 @@
     wants = [ "network-online.target" ];
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = "${config.services.agentLauncher.agents.code-review.package}/bin/claude -p \"Review the git log for the last 24 hours. Summarize changes, flag potential issues, and write a brief report to ./REVIEW.md.\"";
+      # Use the generated wrapper so the scheduled run stays on the brokered
+      # launcher path with the nono sandbox and root-owned credential proxy.
+      ExecStart = "/run/current-system/sw/bin/code-review";
       WorkingDirectory = "/data/projects/my-project";
       User = config.tsurf.agent.user;
       Slice = "tsurf-agents.slice";

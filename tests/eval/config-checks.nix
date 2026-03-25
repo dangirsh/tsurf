@@ -392,6 +392,17 @@ in
        && lib.hasInfix "\"0\"" source
        && !lib.hasInfix "id -un" source);
 
+  launcher-extra-deny =
+    let
+      source = builtins.readFile ../../modules/agent-launcher.nix;
+    in
+    mkCheck
+      "launcher-extra-deny"
+      "agent-launcher.nix merges per-agent nonoProfile.extraDeny rules"
+      "agent-launcher.nix defines extraDeny but does not write deny rules into generated profiles"
+      (lib.hasInfix "extraDeny" source
+       && lib.hasInfix "deny = agentDef.nonoProfile.extraDeny;" source);
+
   # --- Phase 120: agent API key ownership (SEC-04) ---
 
   agent-api-key-ownership-dev = mkCheck
@@ -461,6 +472,17 @@ in
        && !(lib.hasInfix "mktemp /tmp" devAgentSource)
        && !(lib.hasInfix "/tmp/dev-agent-task" devAgentSource));
 
+  tsurf-status-persistent-services =
+    let
+      source = builtins.readFile ../../scripts/tsurf-status.sh;
+    in
+    mkCheck
+      "tsurf-status-persistent-services"
+      "tsurf-status checks only persistent units and documents supported arguments accurately"
+      "scripts/tsurf-status.sh still references transient agent-launch-claude or the unsupported all keyword"
+      (!(lib.hasInfix "agent-launch-claude" source)
+       && !(lib.hasInfix "<hostname|all>" source));
+
   # --- Phase 124: Cost-tracker least privilege ---
 
   cost-tracker-dynamic-user =
@@ -472,6 +494,17 @@ in
       "cost-tracker uses DynamicUser for least privilege"
       "cost-tracker.nix missing DynamicUser = true — service runs as root"
       (lib.hasInfix "DynamicUser = true" source);
+
+  example-code-review-uses-wrapper =
+    let
+      source = builtins.readFile ../../examples/private-overlay/modules/code-review.nix;
+    in
+    mkCheck
+      "example-code-review-uses-wrapper"
+      "example scheduled code-review agent uses the generated sandboxed wrapper"
+      "examples/private-overlay/modules/code-review.nix bypasses the brokered wrapper path with a raw claude ExecStart"
+      (lib.hasInfix "/run/current-system/sw/bin/code-review" source
+       && !(lib.hasInfix "package}/bin/claude" source));
 
   # --- Phase 125: systemd hardening baseline ---
 

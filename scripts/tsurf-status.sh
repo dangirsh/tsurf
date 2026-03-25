@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # tsurf-status.sh — Check systemd service status on tsurf hosts.
-# Usage: tsurf-status <hostname|all> [hostname2 ...]
+# Usage: tsurf-status <hostname> [hostname2 ...]
+# @decision OPS-156-01: Report only persistent systemd services. Interactive
+#   agent sessions run as transient units with per-launch names, so they are
+#   intentionally omitted from this status summary.
 set -euo pipefail
 
-# Services to check — agent/infra related
+# Services to check — persistent agent/infra related units only.
 SERVICES=(
   sshd
   nftables
   sops-install-secrets
-  agent-launch-claude
   dev-agent
   restic-backups
   cost-tracker

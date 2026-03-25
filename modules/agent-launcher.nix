@@ -33,13 +33,20 @@ let
           description = "tsurf ${name} sandbox profile";
           author = "tsurf";
         };
-      } // lib.optionalAttrs (agentDef.nonoProfile.extraAllow != [] || agentDef.nonoProfile.extraAllowFile != []) {
+      } // lib.optionalAttrs (
+        agentDef.nonoProfile.extraAllow != []
+        || agentDef.nonoProfile.extraAllowFile != []
+        || agentDef.nonoProfile.extraDeny != []
+      ) {
         filesystem = {}
           // lib.optionalAttrs (agentDef.nonoProfile.extraAllow != []) {
             allow = agentDef.nonoProfile.extraAllow;
           }
           // lib.optionalAttrs (agentDef.nonoProfile.extraAllowFile != []) {
             allow_file = agentDef.nonoProfile.extraAllowFile;
+          }
+          // lib.optionalAttrs (agentDef.nonoProfile.extraDeny != []) {
+            deny = agentDef.nonoProfile.extraDeny;
           };
       }));
 
