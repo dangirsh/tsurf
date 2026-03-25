@@ -150,6 +150,7 @@ See `SECURITY.md` for the complete security model, accepted risks, and verificat
 - **Never** add packages imperatively (`nix-env`, `nix profile install`) or re-enable `nix.channel.enable` / `nix.nixPath`.
 - **Never** remove `modules/break-glass-ssh.nix` from either host config.
 - **Never** omit `@decision` annotations for security-relevant module choices.
+- **Never** commit `.planning/` — it is local-only agent state (gitignored, blocked by `.githooks/pre-commit`).
 
 ### Pre-flight checklist
 

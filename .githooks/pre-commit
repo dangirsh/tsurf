@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Pre-commit hook: reject staged files under .planning/ (local-only state).
+# Activate: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+if git diff --cached --name-only | grep -q '^\.planning/'; then
+    echo "ERROR: .planning/ is local-only state and must never be committed." >&2
+    echo "Remove staged .planning/ files:  git reset HEAD .planning/" >&2
+    exit 1
+fi
