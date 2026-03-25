@@ -1,13 +1,7 @@
 # extras/dev-agent.nix
 # Persistent autonomous Claude Code agent running in a supervised zmx session.
-# @decision DEV-AGENT-89: Systemd supervises a zmx manager loop so session health
-#   is visible in systemd and unattended agent workflows restart cleanly.
-# @decision DEV-AGENT-98: bypassPermissions is enabled only inside nono sandbox;
-#   nono is the real permission boundary, so auto-approval in-sandbox is accepted risk (SEC98-01).
+# @decision DEV-AGENT-98: bypassPermissions inside nono sandbox — nono is the real boundary.
 # @decision DEV-AGENT-106: Opt-in via services.devAgent.enable (default: false).
-# @decision DEV-AGENT-152: zmx is kept over tmux: it is purpose-built for supervised
-#   agent sessions with simpler lifecycle management, no .tmux.conf interaction,
-#   and a cleaner attach/detach model for systemd-supervised loops.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.devAgent;

@@ -13,9 +13,6 @@
 #   --magic-rollback    Enable deploy-rs magic rollback with 300s confirm timeout
 #   --help              Print usage
 #
-# @decision DEPLOY-154-01: Simplified deploy template — core deploy-rs wrapper with
-#   SSH multiplexing, remote locking, service verification, and connectivity check.
-#   Watchdog timer and deploy-status JSON removed for clarity.
 # @decision DEPLOY-114-01: No repo-controlled post-deploy hooks — require explicit --post-hook.
 set -euo pipefail
 
@@ -264,7 +261,6 @@ echo ""
 if [[ "$FAILED" -eq 0 ]]; then
   echo "=== Deploy SUCCESS ($((DURATION / 60))m $((DURATION % 60))s) ==="
 
-  # @decision DEPLOY-114-01: Post-hook must be an absolute path outside the repo.
   if [[ -n "$POST_HOOK" ]]; then
     echo "==> Running post-deploy hook: $POST_HOOK"
     bash --noprofile --norc "$POST_HOOK"

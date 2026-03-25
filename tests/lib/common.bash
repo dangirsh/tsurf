@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# tests/lib/common.bash — Shared helpers for tsurf BATS live tests
-# @decision TEST-48-01: Shared SSH + assertion helpers keep BATS cases single-assertion and readable.
+# tests/lib/common.bash — Shared helpers for tsurf BATS live tests.
+# Provides SSH, assertion, and retry helpers for all live BATS test files.
 #
 # Usage: load '../lib/common' at the top of each .bats file
 # Requires: TSURF_TEST_HOST env var (target hostname)

@@ -193,12 +193,8 @@ repo backs these claims with live sandbox tests on the dev host.
 | --- | --- |
 | `anthropic-api-key` | root |
 | `openai-api-key` | root |
-| `google-api-key` | `agent` |
-| `xai-api-key` | `agent` |
-| `openrouter-api-key` | `agent` |
 | `github-pat` | `agent` |
-| `tailscale-authkey` | root/default |
-| `b2-account-id`, `b2-account-key`, `restic-password` | root/default |
+| `restic-password`, `restic-b2-*` | root/default |
 
 ### Injection Model
 
@@ -284,7 +280,6 @@ Build-time lockout-prevention assertions require:
 - root login not set to `no`
 - at least one root SSH authorized key
 - SSH port `22` reachable
-- Tailscale enabled
 - SSH host keys configured and persisted
 - a break-glass emergency SSH key present
 
@@ -294,18 +289,16 @@ Recovery mechanisms:
   adds a hardcoded break-glass root key. In the public repo this key is
   placeholder material and must be replaced in a private overlay before any real
   deployment.
-- The private-overlay deploy path implemented in
+- The deploy path implemented in
   [`scripts/deploy.sh`](scripts/deploy.sh)
-  schedules a 5-minute rollback watchdog via `systemd-run` before every deploy.
-  The watchdog auto-reverts to the previous NixOS generation if SSH connectivity
-  is not verified post-deploy. The public copy of that script refuses to run.
+  supports magic rollback via deploy-rs with a 300s confirm timeout.
+  The public copy of that script refuses to run from the public repo.
 
 ## Persistence And Supply Chain
 
 - Root rollback uses a BTRFS post-resume rollback script.
 - Persisted security-critical state includes:
   - `/var/lib/nixos`
-  - `/var/lib/tailscale`
   - `/etc/ssh/ssh_host_ed25519_key`
   - `/data/projects`
   - selected root and agent home state
@@ -348,13 +341,11 @@ Live checks:
   verifies wrapper script structure: nono invocation, journald logging, and absence
   of secret mounts.
 - [`tests/live/service-health.bats`](tests/live/service-health.bats)
-  verifies systemd unit health (tailscaled, sshd, dashboard, restic timer)
+  verifies systemd unit health (tailscaled, sshd, restic timer)
   and Tailscale backend state.
 - [`tests/live/impermanence.bats`](tests/live/impermanence.bats)
   verifies /persist mount, BTRFS filesystem type, critical persist directories, and
   machine-id persistence.
-- [`tests/live/api-endpoints.bats`](tests/live/api-endpoints.bats)
-  verifies HTTP endpoint health for localhost-bound services (dashboard).
 
 ## Non-Goals And Accepted Risks
 

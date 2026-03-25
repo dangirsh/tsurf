@@ -9,3 +9,11 @@ if git diff --cached --name-only | grep -q '^\.planning/'; then
     echo "Remove staged .planning/ files:  git reset HEAD .planning/" >&2
     exit 1
 fi
+
+# Block autonomous README.md edits. Humans can bypass with --no-verify.
+if git diff --cached --name-only | grep -q '^README\.md$'; then
+    echo "ERROR: README.md must not be modified autonomously." >&2
+    echo "Append changes to tmp/readme-updates.md for human review." >&2
+    echo "To override: git commit --no-verify" >&2
+    exit 1
+fi

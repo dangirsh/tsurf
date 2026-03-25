@@ -11,10 +11,8 @@ Source: `modules/networking.nix`, `SECURITY.md`
 |----|-------|--------|
 | NET-001 | nftables backend enabled | `modules/networking.nix` line 112 |
 | NET-002 | Public TCP ports: `22` always; `80` and `443` only when `services.nginx.enable = true` | `modules/networking.nix` line 159, `@decision NET-01` |
-| NET-003 | UDP port for Tailscale allowed | `modules/networking.nix` line 160 |
-| NET-004 | `trustedInterfaces = [ ]` — no interface is trusted, including `tailscale0` | `modules/networking.nix` line 161, `@decision NET-122-01` |
-| NET-005 | Build-time assertion prevents internal service ports from leaking into `allowedTCPPorts` | `modules/networking.nix` lines 16-21, 81-84, `@decision NET-07` |
-| NET-006 | Internal-only port registry: `8082` (Dashboard), `9200` (Restic status) | `modules/networking.nix` lines 17-18 |
+| NET-004 | `trustedInterfaces = [ ]` — no interface is trusted, including `tailscale0` | `modules/networking.nix` line 136, `@decision NET-122-01` |
+| NET-005 | Build-time assertion prevents internal service ports from leaking into `allowedTCPPorts` | `modules/networking.nix` lines 15-18, `@decision NET-07` |
 | NET-007 | Firewall ports match nginx state on both service and dev hosts | `tests/eval/config-checks.nix:firewall-ports-services`, `firewall-ports-dev` |
 | NET-008 | `tailscale0` not in `trustedInterfaces` on either host | `tests/eval/config-checks.nix:no-trusted-tailscale0-services`, `no-trusted-tailscale0-dev` |
 | NET-009 | `allowPing = true` | `modules/networking.nix` line 158 |
@@ -42,16 +40,6 @@ Source: `modules/networking.nix`, `SECURITY.md`
 | NET-021 | `fail2ban` disabled (brute-force mitigation via MaxAuthTries 3 + key-only auth) | `modules/networking.nix` line 165, `@decision NET-01` |
 | NET-022 | AuthorizedKeysFiles order: `.ssh/authorized_keys` before `/etc/ssh/authorized_keys.d/%u` (impermanence fallback) | `modules/networking.nix` line 187, `@decision NET-14` |
 
-## Tailscale
-
-| ID | Claim | Source |
-|----|-------|--------|
-| NET-023 | Tailscale enabled on all hosts | `modules/networking.nix` line 192, `tests/eval/config-checks.nix` assertion |
-| NET-024 | Auth key from sops secret `tailscale-authkey` | `modules/networking.nix` line 193 |
-| NET-025 | `useRoutingFeatures = "client"` (auto-sets `checkReversePath = "loose"`) | `modules/networking.nix` line 194 |
-| NET-026 | No `--accept-routes` in default `extraUpFlags` | `tests/eval/config-checks.nix:no-accept-routes-services`, `no-accept-routes-dev` |
-| NET-027 | Tailscale state persisted at `/var/lib/tailscale` | `modules/networking.nix` line 200 |
-
 ## Lockout Prevention Assertions
 
 | ID | Claim | Source |
@@ -59,8 +47,7 @@ Source: `modules/networking.nix`, `SECURITY.md`
 | NET-028 | sshd must be enabled | `modules/networking.nix` lines 88-89 |
 | NET-029 | `PermitRootLogin` must not be `"no"` (deploy-rs uses root SSH) | `modules/networking.nix` lines 92-93 |
 | NET-030 | SSH port 22 must be reachable | `modules/networking.nix` lines 96-98 |
-| NET-031 | Tailscale must be enabled | `modules/networking.nix` lines 101-102 |
-| NET-032 | Root must have break-glass emergency SSH key | `modules/networking.nix` lines 105-107 |
+| NET-032 | Root must have break-glass emergency SSH key | `modules/networking.nix` lines 84-86 |
 
 ## Agent Egress
 

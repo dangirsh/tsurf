@@ -1,3 +1,6 @@
+# flake.nix
+# Entrypoint for the tsurf NixOS configuration template.
+# Defines inputs, eval fixtures, test infrastructure, and the tsurf overlay.
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";

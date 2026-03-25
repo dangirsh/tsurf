@@ -1,6 +1,6 @@
 # home/cass.nix — CASS indexer as oneshot systemd user timer (every 30 min).
 #   Pre-built binary from GitHub, patched with autoPatchelfHook.
-#   Opt-in: set programs.cass.enable = true in your private overlay.
+#   Indexes agent session history for search — useful for all agent workflows.
 { config, lib, pkgs, ... }:
 let
   cfg = config.programs.cass;
@@ -38,6 +38,8 @@ in
         Type = "oneshot";
         ExecStart = "${cass}/bin/cass index --full";
         Environment = [ "HOME=/home/agent" ];
+        CPUQuota = "50%";
+        MemoryMax = "512M";
       };
     };
 

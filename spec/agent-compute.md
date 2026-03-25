@@ -46,7 +46,7 @@ Source: `modules/agent-compute.nix`, `modules/agent-sandbox.nix`, `extras/dev-ag
 | AGT-015 | Dev-agent reaches Claude through the same brokered immutable launcher path | `extras/dev-agent.nix` line 122 (invokes `/run/current-system/sw/bin/claude`), `@decision SEC-145-03` |
 | AGT-016 | Dev-agent requires agentSandbox, nonoSandbox, and agentCompute all enabled — enforced by assertions | `extras/dev-agent.nix` lines 108-125 |
 | AGT-017 | Dev-agent requires exactly one of `prompt` or `command` — enforced by assertion | `extras/dev-agent.nix` lines 122-124 |
-| AGT-018 | Default working directory: `${projectRoot}/dev-agent-workspace` (not the control-plane repo) | `extras/dev-agent.nix` line 48, `tests/eval/config-checks.nix:dev-agent-not-control-plane` |
+| AGT-018 | Default working directory: `${projectRoot}/dev-agent-workspace` | `extras/dev-agent.nix` line 48 |
 | AGT-019 | Dev-agent runs as supervised systemd service (`Type=simple`) with `ExecStop` for zmx cleanup | `extras/dev-agent.nix` lines 132-143, `tests/eval/config-checks.nix:dev-agent-supervised` |
 | AGT-020 | Task configuration parameterized via `prompt`/`command`/`model`/`permissionMode`/`extraArgs` | `extras/dev-agent.nix` lines 67-104, `tests/eval/config-checks.nix:dev-agent-parameterized-task` |
 | AGT-021 | Default `permissionMode = "bypassPermissions"` — accepted risk, nono is the real boundary | `extras/dev-agent.nix` line 93, `@decision DEV-AGENT-98` |

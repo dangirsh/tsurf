@@ -1,3 +1,6 @@
+# tests/unit/test_credential_proxy.py
+# Unit tests for the root-owned credential proxy (scripts/credential-proxy.py).
+# Validates session token auth, upstream key injection, and wrong-token rejection.
 import http.client
 import importlib.util
 import json

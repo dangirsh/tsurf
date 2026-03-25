@@ -1,3 +1,5 @@
+# examples/private-overlay/flake.nix
+# Forkable starting point for a private tsurf overlay.
 # This is a TEMPLATE — it will not evaluate as-is.
 # You must customize placeholder values, add host-specific modules
 # (networking.nix, secrets.nix), and configure real hardware before

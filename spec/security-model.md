@@ -9,9 +9,9 @@ Source: `SECURITY.md`, `modules/users.nix`, `modules/networking.nix`, `modules/a
 ## Threat Model
 
 The system assumes:
-- The operator (`dev`) is trusted with full administrative access.
+- Root is the operator, trusted with full administrative access (deploy, maintenance, SSH).
 - The agent user is untrusted — it runs LLM-directed code that may be adversarial.
-- The host network is partially hostile (public internet on eth0, trusted tailnet for internal).
+- The host network is partially hostile (public internet on eth0).
 - Secrets are high-value targets (API keys, SSH keys).
 
 ## Non-Deployability
@@ -37,10 +37,9 @@ The system assumes:
 
 | ID | Claim | Source |
 |----|-------|--------|
-| SEC-010 | `dev` user is in `wheel` group (human operator/admin) | `modules/users.nix` line 66 |
-| SEC-011 | Agent user (default `agent`) is NOT in `wheel` group — enforced by build-time assertion | `modules/users.nix` line 110 |
-| SEC-012 | Agent user is NOT in `docker` group — enforced by build-time assertion | `modules/users.nix` line 114 |
-| SEC-013 | Agent user name must differ from operator user `dev` — enforced by build-time assertion | `modules/users.nix` line 118 |
+| SEC-010 | Two-user model: `root` (operator) and `agent` (sandboxed tools) | `modules/users.nix`, `@decision SEC-152-01` |
+| SEC-011 | Agent user is in `wheel` for sudo access to immutable launchers only | `modules/users.nix` line 58 |
+| SEC-012 | Agent user is NOT in `docker` group — enforced by build-time assertion | `modules/users.nix` line 86 |
 | SEC-014 | `users.mutableUsers = false` — no runtime user modification | `modules/users.nix` line 59 |
 | SEC-015 | Agent user identity is parameterized via `tsurf.agent.{user, uid, gid, home, projectRoot}` | `modules/users.nix` lines 30-56 |
 | SEC-016 | Non-default agent identity propagates correctly through users and sandbox modules | `tests/eval/config-checks.nix:alt-agent-parameterization` |
@@ -49,7 +48,7 @@ The system assumes:
 
 | ID | Claim | Source |
 |----|-------|--------|
-| SEC-017 | `nix.settings.allowed-users = [ "root" "@wheel" ]` — agent user excluded | `modules/base.nix` line 22, `@decision SEC-124-01` |
+| SEC-017 | `nix.settings.allowed-users = [ "root" "@wheel" ]` | `modules/base.nix` line 21, `@decision SEC-124-01` |
 | SEC-018 | `nix.settings.trusted-users = [ "root" ]` — no `@wheel`, root-only | `modules/base.nix` line 23 |
 | SEC-019 | Nix channels disabled, nixPath cleared, defaultPackages emptied | `modules/base.nix` lines 11-13, `@decision SYS-02` |
 
@@ -57,12 +56,7 @@ The system assumes:
 
 | ID | Claim | Source |
 |----|-------|--------|
-| SEC-020 | `kernel.dmesg_restrict = 1` — restrict dmesg to root | `modules/base.nix` line 42 |
-| SEC-021 | `kernel.kptr_restrict = 2` — hide kernel pointers from non-root | `modules/base.nix` line 43 |
-| SEC-022 | `kernel.unprivileged_bpf_disabled = 1` | `modules/base.nix` line 44 |
-| SEC-023 | `net.core.bpf_jit_harden = 2` | `modules/base.nix` line 45 |
-| SEC-024 | ICMP redirects disabled (all interfaces, send and accept) | `modules/base.nix` lines 46-50 |
-| SEC-025 | Martian packet logging enabled | `modules/base.nix` line 51 |
+| SEC-020 | Kernel hardening via nix-mineral (compatibility preset): dmesg_restrict, kptr_restrict, bpf hardening, ICMP redirects, etc. | `modules/base.nix`, `@decision SEC-145-05` |
 
 ## Supply Chain
 
@@ -88,7 +82,7 @@ The system assumes:
 |----|------|--------|
 | SEC-AR-001 | Service-host role does not include agent sandbox | `SECURITY.md` |
 | SEC-AR-002 | Sandbox does not make current workspace immutable — writable by design | `SECURITY.md` |
-| SEC-AR-003 | `dev` remains a trusted wheel user | `SECURITY.md` |
+| SEC-AR-003 | Agent in `wheel` group allows sudo to immutable launchers — accepted risk | `SECURITY.md` |
 | SEC-AR-004 | Agent egress allowlist is coarse (UID-scoped, not per-wrapper or per-destination) | `SECURITY.md` |
 | SEC-AR-005 | No signature verification for prebuilt binaries | `SECURITY.md` |
 | SEC-AR-006 | `dev-agent` runs with `bypassPermissions` inside nono sandbox | `extras/dev-agent.nix`, `@decision DEV-AGENT-98` |

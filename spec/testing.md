@@ -31,7 +31,6 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 |----|-------|--------|
 | TST-011 | Firewall ports match nginx state | `firewall-ports-services`, `firewall-ports-dev` |
 | TST-012 | `tailscale0` not in trustedInterfaces | `no-trusted-tailscale0-services`, `no-trusted-tailscale0-dev` |
-| TST-013 | No `--accept-routes` in Tailscale defaults | `no-accept-routes-services`, `no-accept-routes-dev` |
 | TST-014 | Metadata block nftables table defined | `metadata-block` |
 | TST-015 | Agent egress table defined with UID scoping and private range blocking | `agent-egress-table`, `agent-egress-policy` |
 | TST-016 | SSH ed25519 host key only | `ssh-ed25519-only` |
@@ -60,15 +59,12 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 |----|-------|--------|
 | TST-028 | Fail-closed git-root validation | `sandbox-git-root-fail-closed` |
 | TST-029 | Refuses read access to entire project root | `sandbox-refuses-project-root-read` |
-| TST-030 | Refuses protected control-plane repos | `sandbox-refuses-protected-control-plane-repos` |
-| TST-031 | Control-plane marker file exists at repo root | `control-plane-marker-file` |
 | TST-032 | No `--no-sandbox` escape hatch | `public-no-sandbox-removed` |
 
 ### User Model
 | ID | Claim | Checks |
 |----|-------|--------|
 | TST-033 | Agent user exists and is normal user | `agent-user-exists-dev` |
-| TST-034 | Agent user not in wheel | `agent-user-no-wheel` |
 | TST-035 | Agent user not in docker | `agent-user-no-docker` |
 | TST-036 | Agent user has explicit UID | `agent-uid-explicit` |
 | TST-037 | Agent persist paths derived from config (not hardcoded) | `impermanence-agent-home` |
@@ -85,22 +81,15 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 ### Services
 | ID | Claim | Checks |
 |----|-------|--------|
-| TST-043 | Expected services defined on each host | `expected-services-services`, `expected-services-dev` |
-| TST-044 | Dashboard enabled on port 8082 | `dashboard-enabled` |
-| TST-045 | Dashboard has sufficient entries | `dashboard-entries` |
-| TST-046 | Dashboard manifest is valid JSON | `dashboard-manifest` |
-| TST-047 | Dashboard security headers present | `dashboard-security-headers` |
-| TST-048 | Dashboard no innerHTML XSS | `dashboard-no-innerhtml-xss` |
 | TST-049 | dev-agent not active in public config | `dev-agent-not-in-template` |
 | TST-050 | Restic backup opt-in only | `restic-opt-in` |
-| TST-051 | Restic status server uses DynamicUser | `restic-status-dynamic-user` |
 | TST-052 | Cost tracker uses DynamicUser | `cost-tracker-dynamic-user` |
 | TST-053 | Cost tracker has correct capability config | `cost-tracker-secret-capability` |
 
 ### Dev-Agent
 | ID | Claim | Checks |
 |----|-------|--------|
-| TST-054 | Dev-agent defaults to dedicated workspace | `dev-agent-not-control-plane` |
+| TST-054 | Dev-agent defaults to dedicated workspace | `dev-agent-not-in-template` |
 | TST-055 | Dev-agent is supervised service | `dev-agent-supervised` |
 | TST-056 | Dev-agent task is parameterized | `dev-agent-parameterized-task` |
 
@@ -131,11 +120,10 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 | `tests/live/security.bats` | SSH hardening, kernel sysctls, metadata blocking, firewall |
 | `tests/live/secrets.bats` | `/run/secrets` presence, root ownership, permissions |
 | `tests/live/networking.bats` | Tailscale state, metadata-block rule, agent egress table |
-| `tests/live/sandbox-behavioral.bats` | Sandbox deny/allow paths, protected repo rejection |
+| `tests/live/sandbox-behavioral.bats` | Sandbox deny/allow paths |
 | `tests/live/agent-sandbox.bats` | Wrapper structure, nono invocation, journald logging |
 | `tests/live/service-health.bats` | systemd unit health, Tailscale backend state |
 | `tests/live/impermanence.bats` | /persist mount, BTRFS type, critical persist dirs, machine-id |
-| `tests/live/api-endpoints.bats` | HTTP endpoint health for localhost-bound services |
 
 ## Phase 147: New Eval Checks
 

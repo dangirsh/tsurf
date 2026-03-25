@@ -1,10 +1,6 @@
 # modules/users.nix
-# @decision SEC-152-01: Two-user model: root + agent. Root is the operator (deploy,
-#   maintenance, SSH). Agent runs sandboxed tools, in wheel for sudo to immutable
-#   launchers only. The former 'dev' operator user is removed.
-# @decision SEC-106-01: allowUnsafePlaceholders gates insecure template defaults.
-#   When false (default), assertions reject placeholder SSH keys and passwordless login.
-#   Public template hosts set this to true for eval; real deploys must not.
+# @decision SEC-152-01: Two-user model: root + agent. Agent in wheel for sudo to immutable launchers only.
+# @decision SEC-106-01: allowUnsafePlaceholders gates insecure template defaults for eval only.
 { config, lib, pkgs, ... }:
 let
   cfg = config.tsurf.template;

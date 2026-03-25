@@ -1,12 +1,8 @@
 # modules/agent-launcher.nix
 # Generic sandboxed agent launcher infrastructure.
-# @decision LAUNCHER-152-01: Generic agent launcher replaces per-agent boilerplate.
-#   Each agent declaration produces a wrapper script, systemd-run launcher, nono
-#   profile, and sudo rule. The wrapper brokers through root-owned systemd-run so
-#   raw provider keys never reach the agent principal.
-# @decision LAUNCHER-152-02: Agents must not be given access to deploy changes to
-#   their own security boundaries. This is enforced by operational policy, not
-#   technical controls.
+# @decision LAUNCHER-152-01: Generic agent launcher — each agent produces a wrapper,
+#   systemd-run launcher, nono profile, and sudo rule. Raw keys never reach the agent.
+# @decision LAUNCHER-152-02: Agents must not deploy changes to their own security boundaries.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentLauncher;

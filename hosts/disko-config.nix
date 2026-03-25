@@ -1,3 +1,6 @@
+# hosts/disko-config.nix
+# Shared disko partition layout: GPT with BTRFS subvolumes (root, nix, persist, log).
+# Used by both host roles; neededForBoot marks /persist and /var/log for initrd.
 { ... }: {
   disko.devices = {
     disk.main = {

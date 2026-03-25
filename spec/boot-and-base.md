@@ -36,7 +36,7 @@ Source: `modules/boot.nix`, `modules/base.nix`, `hosts/hardware.nix`, `hosts/dis
 
 | ID | Claim | Source |
 |----|-------|--------|
-| BAS-013 | System packages: git, curl, rsync, jq, yq-go, ripgrep, fd | `modules/base.nix` lines 54-62 |
+| BAS-013 | System packages: git, rsync, ripgrep, fd | `modules/base.nix` lines 54-59 |
 
 ## srvos Integration
 

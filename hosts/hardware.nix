@@ -1,3 +1,6 @@
+# hosts/hardware.nix
+# Shared QEMU VPS hardware config for all hosts.
+# Loads virtio drivers and BTRFS initrd support for the disko partition layout.
 { config, lib, pkgs, modulesPath, ... }: {
   imports = [
     (modulesPath + "/profiles/qemu-guest.nix")

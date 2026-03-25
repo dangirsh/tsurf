@@ -22,12 +22,11 @@ Source: `modules/impermanence.nix`, `modules/boot.nix`, `scripts/btrfs-rollback.
 
 | ID | Claim | Source |
 |----|-------|--------|
-| IMP-007 | `/var/lib/nixos` persisted (UID/GID maps, declarative users/groups) | `modules/impermanence.nix` line 21 |
-| IMP-008 | `/var/lib/systemd/coredump` persisted | `modules/impermanence.nix` line 22 |
-| IMP-009 | `/var/lib/systemd/timers` persisted (Persistent=true timer stamps) | `modules/impermanence.nix` line 23 |
-| IMP-010 | `/var/lib/systemd/timesync` persisted (NTP clock file) | `modules/impermanence.nix` line 24 |
-| IMP-011 | `/var/lib/systemd/linger` persisted (user linger state) | `modules/impermanence.nix` line 25 |
-| IMP-012 | `/var/lib/private` persisted (DynamicUser services) | `modules/impermanence.nix` line 26 |
+| IMP-007 | `/var/lib/nixos` persisted (UID/GID maps, declarative users/groups) | `modules/impermanence.nix` line 36 |
+| IMP-009 | `/var/lib/systemd/timers` persisted (Persistent=true timer stamps) | `modules/impermanence.nix` line 37 |
+| IMP-010 | `/var/lib/systemd/timesync` persisted (NTP clock file) | `modules/impermanence.nix` line 38 |
+| IMP-011 | `/var/lib/systemd/linger` persisted (user linger state) | `modules/impermanence.nix` line 39 |
+| IMP-012 | `/var/lib/private` persisted (DynamicUser services) | `modules/impermanence.nix` line 40 |
 | IMP-013 | `/etc/machine-id` persisted (journal continuity) | `modules/impermanence.nix` line 30 |
 | IMP-014 | `/var/lib/systemd/random-seed` persisted (kernel entropy) | `modules/impermanence.nix` line 31 |
 | IMP-015 | `hideMounts = true` | `modules/impermanence.nix` line 18 |
@@ -36,17 +35,14 @@ Source: `modules/impermanence.nix`, `modules/boot.nix`, `scripts/btrfs-rollback.
 
 | ID | Claim | Source |
 |----|-------|--------|
-| IMP-016 | `/var/lib/tailscale` persisted (device keys, auth state, node identity) | `modules/networking.nix` line 200 |
-| IMP-017 | SSH host keys persisted (`/etc/ssh/ssh_host_ed25519_key` and `.pub`) | `modules/networking.nix` lines 202-204 |
+| IMP-017 | SSH host keys persisted (`/etc/ssh/ssh_host_ed25519_key` and `.pub`) | `modules/networking.nix` lines 160-163 |
 
-### User Home State (Operator)
+### Root Home State
 
 | ID | Claim | Source |
 |----|-------|--------|
-| IMP-018 | `/home/dev/.ssh`, `.claude`, `.config/claude`, `.config/git`, `.local/share/direnv` persisted | `modules/users.nix` lines 144-148 |
-| IMP-019 | `/home/dev/.gitconfig`, `.bash_history` persisted (files) | `modules/users.nix` lines 153-155 |
-| IMP-020 | `/root/.ssh`, `.config/nix`, `.docker` persisted | `modules/users.nix` lines 149-151 |
-| IMP-021 | `/root/.gitconfig` persisted (file) | `modules/users.nix` line 156 |
+| IMP-020 | `/root/.ssh`, `.config/nix`, `.docker` persisted | `modules/users.nix` lines 113-117 |
+| IMP-021 | `/root/.gitconfig` persisted (file) | `modules/users.nix` line 119 |
 
 ### Agent Home State
 

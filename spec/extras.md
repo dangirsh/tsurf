@@ -1,27 +1,9 @@
 # Extras Specification
 
 This document specifies the optional batteries: additional agent wrappers,
-dashboard, cost tracker, home-manager profile, and other opt-in features.
+cost tracker, home-manager profile, and other opt-in features.
 
 Source: `extras/*.nix`, `extras/home/default.nix`
-
-## Dashboard
-
-| ID | Claim | Source |
-|----|-------|--------|
-| EXT-001 | Dashboard enabled via `services.dashboard.enable` | `extras/dashboard.nix` line 61 |
-| EXT-002 | Modules self-register via `services.dashboard.entries.<name>` | `extras/dashboard.nix` lines 75-125 |
-| EXT-003 | Build-time JSON manifest generated at `/etc/dashboard/manifest.json` | `extras/dashboard.nix` line 144 |
-| EXT-004 | Dashboard manifest is valid JSON | `tests/eval/config-checks.nix:dashboard-manifest` |
-| EXT-005 | HTTP server binds `127.0.0.1` on configurable port (default 8082) | `extras/dashboard.nix` lines 63-72 |
-| EXT-006 | Dashboard service uses `DynamicUser=true` | `extras/dashboard.nix` line 189 |
-| EXT-007 | Dashboard fully hardened: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateDevices`, `CapabilityBoundingSet=""`, `MemoryDenyWriteExecute`, etc. | `extras/dashboard.nix` lines 190-213 |
-| EXT-008 | Dashboard has security response headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` | `tests/eval/config-checks.nix:dashboard-security-headers` |
-| EXT-009 | Dashboard frontend has no `innerHTML` XSS sinks | `tests/eval/config-checks.nix:dashboard-no-innerhtml-xss` |
-| EXT-010 | Dashboard enabled on services host with port 8082 | `tests/eval/config-checks.nix:dashboard-enabled` |
-| EXT-011 | Dashboard has >= 3 entries | `tests/eval/config-checks.nix:dashboard-entries` |
-| EXT-012 | Multi-host aggregation via `services.dashboard.extraManifests` | `extras/dashboard.nix` lines 127-137 |
-| EXT-013 | Tailscale and SSH entries always registered (unconditional config block) | `extras/dashboard.nix` lines 146-161 |
 
 ## Codex Agent Wrapper
 
@@ -49,7 +31,7 @@ Source: `extras/*.nix`, `extras/home/default.nix`
 
 | ID | Claim | Source |
 |----|-------|--------|
-| EXT-026 | Home profile for `dev` user with git, ssh, gh, direnv inlined | `extras/home/default.nix` |
+| EXT-026 | Home profile for agent user with git, ssh, gh, direnv, CASS indexer | `extras/home/default.nix` |
 | EXT-027 | Git identity uses placeholder values — private overlay replaces | `extras/home/default.nix` lines 14-15 |
 | EXT-028 | SSH: control multiplexing, hash known hosts, server alive interval | `extras/home/default.nix` lines 30-39 |
 | EXT-029 | direnv with nix-direnv integration | `extras/home/default.nix` lines 43-47 |
@@ -60,7 +42,7 @@ Source: `extras/*.nix`, `extras/home/default.nix`
 | ID | Claim | Source |
 |----|-------|--------|
 | EXT-031 | All project services have `SystemCallArchitectures = "native"` | `tests/eval/config-checks.nix:systemd-hardening-baseline` |
-| EXT-032 | Dashboard, restic-status, cost-tracker services all use `DynamicUser=true` | Various eval checks |
+| EXT-032 | Cost-tracker service uses `DynamicUser=true` | `tests/eval/config-checks.nix:cost-tracker-dynamic-user` |
 
 ## Script Safety
 

@@ -10,7 +10,7 @@ Source: `modules/agent-sandbox.nix`, `modules/nono.nix`, `scripts/agent-wrapper.
 
 | ID | Claim | Source |
 |----|-------|--------|
-| SBX-001 | Interactive wrapper execution follows: `dev -> wrapper -> sudo tsurf-launch-<agent> -> systemd-run --uid=<agent> -> agent-wrapper.sh -> nono -> real binary` | `modules/agent-sandbox.nix`, `scripts/agent-wrapper.sh` |
+| SBX-001 | Interactive wrapper execution follows: `agent (or root) -> wrapper -> sudo tsurf-launch-<agent> -> systemd-run -> agent-wrapper.sh -> nono -> setpriv -> real binary` | `modules/agent-sandbox.nix`, `scripts/agent-wrapper.sh` |
 | SBX-002 | Sudo rules expose only immutable per-agent launchers (e.g., `tsurf-launch-claude`), not a generic root helper | `modules/agent-sandbox.nix` lines 160-175, `@decision SEC-135-01` |
 | SBX-003 | Sudo rules use `NOPASSWD` only — no `SETENV`, no `--preserve-env` | `tests/eval/config-checks.nix:brokered-launch-sudoers` |
 | SBX-004 | Each launcher bakes in: real binary path, nono profile path, credential allowlist, whether Nix daemon access is enabled | `modules/agent-sandbox.nix` lines 38-45 |
@@ -43,8 +43,6 @@ Source: `modules/agent-sandbox.nix`, `modules/nono.nix`, `scripts/agent-wrapper.
 | SBX-021 | Wrapper requires `$PWD` inside a Git worktree — fails closed if not in a git repo | `scripts/agent-wrapper.sh` lines 159-162, `tests/eval/config-checks.nix:sandbox-git-root-fail-closed` |
 | SBX-022 | Wrapper resolves Git toplevel and passes it to nono with `--read` for scoped read access | `scripts/agent-wrapper.sh` line 195 |
 | SBX-023 | Wrapper refuses to run if Git root equals the project root (prevents blanket `/data/projects` read) | `scripts/agent-wrapper.sh` lines 164-167, `tests/eval/config-checks.nix:sandbox-refuses-project-root-read` |
-| SBX-024 | Wrapper refuses repos matching `protectedRepoRoots` or carrying `protectedRepoMarkers` (default: `.tsurf-control-plane`) | `scripts/agent-wrapper.sh` lines 169-190, `tests/eval/config-checks.nix:sandbox-refuses-protected-control-plane-repos` |
-| SBX-025 | This repo ships `.tsurf-control-plane` marker at root | `tests/eval/config-checks.nix:control-plane-marker-file` |
 | SBX-026 | `workdir.access = "readwrite"` — current worktree is writable | `modules/nono.nix` line 81 |
 
 ## nono Profile Deny List
@@ -90,4 +88,4 @@ Source: `modules/agent-sandbox.nix`, `modules/nono.nix`, `scripts/agent-wrapper.
 | ID | Claim | Source |
 |----|-------|--------|
 | SBX-050 | `agent-sandbox.nix` core wrapper list only includes Claude — no codex, pi, opencode | `tests/eval/config-checks.nix:core-agent-sandbox-only-claude` |
-| SBX-051 | Additional agent wrappers (codex, pi, opencode) are opt-in extras that follow the same wrapper contract | `extras/codex.nix`, `extras/pi.nix`, `extras/opencode.nix` |
+| SBX-051 | Additional agent wrappers (codex) are opt-in extras that follow the same wrapper contract | `extras/codex.nix` |

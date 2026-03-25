@@ -1,11 +1,6 @@
 # modules/nono.nix
-# @decision NONO-89-01: Public core ships one tsurf nono base profile for all agents.
-# @decision NONO-145-01: Raw provider credentials stay outside nono. Credential
-#   brokering happens in the root-owned launcher path before the child drops to
-#   the agent user.
-# @decision NONO-145-03: Extended deny list covers package registry tokens and
-#   cloud credential directories. Workdir-relative paths (.git/hooks, .envrc)
-#   are protected via agent-level deny rules in agent-sandbox.nix.
+# @decision NONO-145-01: Raw provider credentials stay outside nono — brokered in root-owned launcher.
+# @decision NONO-145-03: Extended deny list covers registry tokens and cloud credential directories.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.nonoSandbox;

@@ -16,7 +16,7 @@ modules/                 # Core — security/infrastructure essentials only
   agent-compute.nix    # Agent runtime support (resource controls + shared tooling)
   agent-launcher.nix   # Generic sandboxed agent launcher (wrapper, systemd-run, nono, credentials)
   agent-sandbox.nix    # Claude agent declaration on top of the generic launcher
-  base.nix             # Nix settings, system packages, kernel sysctl hardening
+  base.nix             # Nix settings, system packages, nix-mineral kernel hardening
   boot.nix             # GRUB bootloader + BTRFS root rollback
   break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
   impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
@@ -27,17 +27,21 @@ modules/                 # Core — security/infrastructure essentials only
 scripts/                 # Core scripts (sandbox, rollback, deploy, test runner)
   agent-wrapper.sh     # root-owned launch bridge — credential proxy, sandbox, privilege drop
   btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
+  credential-proxy.py  # Root-owned per-session credential proxy for agent launches
+  complexity-metric.sh # Effective LOC counter for complexity tracking
   deploy.sh            # deploy-rs wrapper (locking, health check, safety guard)
   run-tests.sh         # Live BATS test runner (SSH-based)
   sandbox-probe.sh     # Sandbox boundary probe for live tests
+  tsurf-init.sh        # Bootstrap wizard: generate SSH keys, validate setup
+  tsurf-status.sh      # Check systemd service status on tsurf hosts
 extras/                  # Optional batteries — import what you need
   codex.nix            # Codex agent wrapper (OpenAI, opt-in, uses generic launcher)
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
   dev-agent.nix        # First-class unattended Claude agent (supervised zmx + systemd)
   restic.nix           # Restic backup to B2
   home/
-    default.nix        # home-manager: git/ssh/direnv inlined
-    cass.nix           # CASS indexer timer (opt-in)
+    default.nix        # home-manager: git/ssh/direnv/CASS inlined
+    cass.nix           # CASS session indexer timer (enabled by default in home config)
   scripts/             # Scripts for extras modules
     clone-repos.sh     # Idempotent repo cloning activation script
     cost-tracker.py    # Cost tracker HTTP server (Python)
@@ -49,6 +53,11 @@ tests/
   eval/config-checks.nix  # Offline eval assertions
   vm/sandbox-behavioral.nix # NixOS VM sandbox test (requires KVM)
   live/*.bats              # Live BATS tests over SSH
+  unit/                    # Unit tests (deploy script, credential proxy)
+  lib/common.bash          # Shared helpers for BATS live tests
+.githooks/
+  pre-commit             # Blocks .planning/ and README.md from autonomous commits
+  post-commit            # Complexity metric warning on LOC growth
 ```
 
 ## Key Decisions
@@ -184,6 +193,6 @@ and can replace modules entirely or import and extend them.
 - YAGNI — do not add features "for later" unless they are in an active phase plan
 - One source of truth — packages declared in exactly one module (no duplicates across modules)
 - Prefer inline over separate files for small configs (<10 lines); extract larger bash/python to separate files
-- Let bindings for values used more than once (e.g., Tailscale IP in homepage.nix)
+- Let bindings for values used more than once
 - `tmp/` in project root for temporary files (never `/tmp/`) — convention from global CLAUDE.md
 - `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (e.g., `users.nix`, `agent-compute.nix`), or when the entire module content differs and you are replacing that concern wholesale in the overlay.

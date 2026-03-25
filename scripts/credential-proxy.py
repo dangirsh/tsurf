@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # scripts/credential-proxy.py
-# @decision CREDPROXY-145-01: Provider API keys stay in a root-owned helper
-#   process and never enter the agent child's environment.
-# @decision CREDPROXY-145-02: The agent receives only per-session loopback
-#   tokens bound to this proxy process; killing the proxy invalidates them.
+# @decision CREDPROXY-145-01: Provider API keys stay in this root-owned process.
+#   The agent receives only per-session loopback tokens; killing the proxy invalidates them.
 
 import argparse
 import http.client

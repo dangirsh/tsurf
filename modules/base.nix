@@ -1,3 +1,6 @@
+# modules/base.nix
+# Nix settings, unfree allowlist, system packages, and kernel hardening via nix-mineral.
+# Provides the foundational system configuration shared by all hosts.
 { lib, pkgs, ... }:
 {
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
@@ -29,13 +32,8 @@
     options = "--delete-older-than 30d";
   };
 
-  # @decision SEC-145-05: nix-mineral provides comprehensive kernel, mount, entropy,
-  #   and debug hardening (~80 settings). Compatibility preset + overrides for agent
-  #   workloads and nixos-25.11 compat. Replaces manual sysctl hardening (SEC-17-01)
-  #   and subsumes SEC-153-01 (coredumps) and SEC-153-02 (kexec). Source: ecosystem
-  #   review Phase 145. Previous sysctl entries (dmesg_restrict, kptr_restrict,
-  #   unprivileged_bpf_disabled, bpf_jit_harden, accept_redirects, send_redirects,
-  #   log_martians) are now covered by nix-mineral submodules.
+  # @decision SEC-145-05: nix-mineral provides kernel/mount/entropy/debug hardening (~80 settings).
+  #   Compatibility preset with agent-workload overrides. Replaces manual sysctl hardening.
   nix-mineral.enable = true;
   nix-mineral.preset = "compatibility";
 

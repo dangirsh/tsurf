@@ -17,7 +17,7 @@ Each claim has a unique ID for cross-referencing with test cases.
 | [deployment.md](deployment.md) | Deploy safety, watchdog, locking, post-deploy verification | `DEP-` | 24 |
 | [boot-and-base.md](boot-and-base.md) | Bootloader, Nix config, base packages, srvos, flake inputs | `BAS-` | 22 |
 | [users-and-privileges.md](users-and-privileges.md) | User model, sudo, break-glass SSH, template safety | `USR-` | 19 |
-| [extras.md](extras.md) | Dashboard, codex wrapper, cost tracker, home-manager, hardening baseline | `EXT-` | 34 |
+| [extras.md](extras.md) | Codex wrapper, cost tracker, home-manager, hardening baseline | `EXT-` | 21 |
 | [testing.md](testing.md) | Test architecture, eval/live/VM layers, coverage map | `TST-` | 64 |
 
 ## Claim ID Reference

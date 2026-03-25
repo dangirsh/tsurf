@@ -1,3 +1,6 @@
+# extras/home/default.nix
+# Home-manager profile for the agent user: git, ssh, gh, direnv, CASS indexer.
+# Private overlay replaces git identity and adds project-specific config.
 { config, lib, pkgs, ... }: {
   # Default to agent user; the alt-agent fixture overrides these via home-manager config.
   home.username = lib.mkDefault "agent";
@@ -6,8 +9,12 @@
   programs.home-manager.enable = true;
 
   imports = [
-    # Private overlay: add cass.nix, agentic-dev-base.nix, project-specific git config, etc.
+    ./cass.nix
+    # Private overlay: add agentic-dev-base.nix, project-specific git config, etc.
   ];
+
+  # CASS session indexer — indexes agent session history for search.
+  programs.cass.enable = true;
 
   # Inlined from git.nix — private overlay replaces with real identity.
   # Set your git identity here, or override in your private overlay's home/default.nix.
