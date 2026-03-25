@@ -1,16 +1,17 @@
 # modules/networking.nix
-# @decision NET-01: port 22 open on public interface with key-only auth (srvos SSH hardening defaults).
-#   fail2ban is disabled; brute-force mitigation via MaxAuthTries 3 + key-only auth.
-#   Public SSH enables bootstrap/recovery. Tailscale belongs in the private overlay.
+# @decision NET-01: port 22 open on public interface with key-only auth.
+#   Brute-force mitigation via MaxAuthTries 3 + key-only auth (fail2ban disabled).
 # @decision NET-122-01: No trustedInterfaces — localhost-first network model. Internal
-#   services bind 127.0.0.1 by default. Tailnet access via SSH tunnel or overlay
-#   adding ports to networking.firewall.interfaces.tailscale0.allowedTCPPorts.
-{ config, lib, pkgs, ... }:
+#   services bind 127.0.0.1. Tailnet access via overlay firewall.interfaces rules.
+#
+# srvos provides: PasswordAuthentication=false, KbdInteractiveAuthentication=false,
+# X11Forwarding=false, firewall.enable=true, allowPing=true, openssh.enable=true.
+# We only set values that differ from srvos defaults.
+{ config, lib, ... }:
 let
   agentCfg = config.tsurf.agent;
   egressCfg = config.tsurf.agentEgress;
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
-  # Manual port-to-label map — kept in sync with UI-visible internal services.
   internalOnlyPorts = {
   };
   exposed = lib.filter (p: builtins.hasAttr (toString p) internalOnlyPorts) config.networking.firewall.allowedTCPPorts;
@@ -27,28 +28,19 @@ in {
     allowedTCPPorts = lib.mkOption {
       type = lib.types.listOf lib.types.port;
       default = [ 22 80 443 ];
-      description = ''
-        TCP destination ports that sandboxed agents may reach over the network.
-        Defaults cover Git over SSH plus standard HTTP(S) API traffic.
-      '';
+      description = "TCP destination ports agents may reach (Git SSH + HTTPS API).";
     };
 
     allowDns = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = ''
-        Allow outbound DNS on TCP/UDP 53 for the dedicated agent user.
-        This keeps resolver and Tailscale MagicDNS lookups working.
-      '';
+      description = "Allow outbound DNS (TCP/UDP 53) for the agent user.";
     };
 
     blockPrivateRanges = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = ''
-        Drop outbound agent traffic to RFC1918, tailnet, link-local, and ULA ranges.
-        This prevents sandboxed agents from reaching private infrastructure by default.
-      '';
+      description = "Drop agent traffic to RFC1918, tailnet, link-local, and ULA ranges.";
     };
 
     blockedIPv4Cidrs = lib.mkOption {
@@ -60,7 +52,7 @@ in {
         "100.64.0.0/10"
         "169.254.0.0/16"
       ];
-      description = "IPv4 CIDR ranges blocked for the dedicated agent user when blockPrivateRanges is enabled.";
+      description = "IPv4 CIDRs blocked for the agent user when blockPrivateRanges is enabled.";
     };
 
     blockedIPv6Cidrs = lib.mkOption {
@@ -69,7 +61,7 @@ in {
         "fc00::/7"
         "fe80::/10"
       ];
-      description = "IPv6 CIDR ranges blocked for the dedicated agent user when blockPrivateRanges is enabled.";
+      description = "IPv6 CIDRs blocked for the agent user when blockPrivateRanges is enabled.";
     };
   };
 
@@ -77,12 +69,7 @@ in {
     assertions = [
       {
         assertion = exposed == [];
-        message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain localhost-only. Use networking.firewall.interfaces.tailscale0.allowedTCPPorts in overlay if tailnet access is needed.";
-      }
-      # --- Remote access safety assertions ---
-      {
-        assertion = config.services.openssh.enable;
-        message = "LOCKOUT PREVENTION: sshd must be enabled — disabling it removes all remote access.";
+        message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain localhost-only.";
       }
       {
         assertion = config.services.openssh.settings.PermitRootLogin != "no";
@@ -91,7 +78,7 @@ in {
       {
         assertion = builtins.elem 22 config.networking.firewall.allowedTCPPorts
           || config.services.openssh.openFirewall;
-        message = "LOCKOUT PREVENTION: SSH port 22 must be reachable — add to allowedTCPPorts or set services.openssh.openFirewall = true.";
+        message = "LOCKOUT PREVENTION: SSH port 22 must be reachable.";
       }
       {
         assertion = builtins.any (k: lib.hasInfix "break-glass-emergency" k)
@@ -100,7 +87,7 @@ in {
       }
     ];
 
-    # --- nftables backend ---
+    # --- nftables ---
     networking.nftables.enable = true;
     networking.nftables.tables =
       {
@@ -115,9 +102,7 @@ in {
         };
       }
       // lib.optionalAttrs egressCfg.enable {
-        # @decision NET-144-01: Agent egress is enforced at the host firewall by UID.
-        # nono still carries the sandbox profile, but nftables is the supported outbound
-        # allowlist boundary for interactive and unattended agent workloads.
+        # @decision NET-144-01: Agent egress enforced at host firewall by UID.
         agent-egress = {
           family = "inet";
           content = ''
@@ -144,30 +129,23 @@ in {
         };
       };
 
-    # --- Firewall: per-interface trust ---
+    # --- Firewall ---
+    # srvos sets enable=true and allowPing=true; we only add our port policy.
     networking.firewall = {
-      enable = true;
-      allowPing = true;
       allowedTCPPorts = [ 22 ] ++ lib.optionals config.services.nginx.enable [ 80 443 ];
-      allowedUDPPorts = [ ];
       trustedInterfaces = [ ];
     };
 
-    # --- fail2ban: temporarily disabled (caused lockout during active dev sessions) ---
-    services.fail2ban.enable = false;
-
     # --- SSH hardening ---
+    # srvos sets: enable, PasswordAuthentication=false, KbdInteractiveAuthentication=false,
+    # X11Forwarding=false. We add: host key restriction, session limits, root login policy.
     services.openssh = {
-      enable = true;
       openFirewall = false;
       hostKeys = [
         { type = "ed25519"; path = "/etc/ssh/ssh_host_ed25519_key"; }
       ];
       settings = {
-        PasswordAuthentication = false;
-        KbdInteractiveAuthentication = false;
-        PermitRootLogin = "prohibit-password";  # key-only root access for deploy pipeline
-        X11Forwarding = false;
+        PermitRootLogin = "prohibit-password";
         MaxAuthTries = 3;
         LoginGraceTime = 30;
         ClientAliveInterval = 300;
@@ -175,14 +153,13 @@ in {
       };
       # @decision NET-14: Check .ssh/authorized_keys BEFORE /etc/ssh/authorized_keys.d/%u.
       # Impermanence fallback: if activation fails, persisted /root/.ssh/ keys still work.
-      # NOTE: must use authorizedKeysFiles (extraConfig mkAfter is ignored by OpenSSH).
       authorizedKeysFiles = lib.mkForce [ ".ssh/authorized_keys" "/etc/ssh/authorized_keys.d/%u" ];
     };
 
     # --- Persistence: SSH host keys ---
     environment.persistence."/persist".files = [
-      "/etc/ssh/ssh_host_ed25519_key"      # SSH host key — sops-nix age key derivation chain
-      "/etc/ssh/ssh_host_ed25519_key.pub"  # SSH host key (public)
+      "/etc/ssh/ssh_host_ed25519_key"
+      "/etc/ssh/ssh_host_ed25519_key.pub"
     ];
   };
 }
