@@ -44,6 +44,7 @@
   nix-mineral.settings.kernel.slab-debug = false;          # Performance: heavy alloc overhead
   nix-mineral.settings.etc.generic-machine-id = false;     # Conflicts with impermanence /persist
   nix-mineral.settings.misc.dnssec = false;                # services.resolved.settings absent in nixos-25.11
+  nix-mineral.filesystems.enable = false;                  # Conflicts with impermanence neededForBoot
 
   # srvos installs: gitMinimal, curl, dnsutils, htop, jq, tmux.
   # We add full git (for agents) and search/transfer tools. Project-specific
