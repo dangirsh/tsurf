@@ -249,7 +249,7 @@ in
 
   deploy-no-repo-source =
     let
-      deploySrc = builtins.readFile ../../examples/scripts/deploy.sh;
+      deploySrc = builtins.readFile ../../scripts/deploy.sh;
     in
     mkCheck
       "deploy-no-repo-source"
@@ -429,7 +429,7 @@ in
   agent-scripts-avoid-global-tmp =
     let
       cloneSource = builtins.readFile ../../extras/scripts/clone-repos.sh;
-      deploySource = builtins.readFile ../../examples/scripts/deploy.sh;
+      deploySource = builtins.readFile ../../scripts/deploy.sh;
       devAgentSource = builtins.readFile ../../extras/scripts/dev-agent.sh;
     in
     mkCheck

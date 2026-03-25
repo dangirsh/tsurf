@@ -20,7 +20,7 @@ The system assumes:
 |----|-------|--------|
 | SEC-001 | Public flake exports only eval-prefixed nixosConfigurations (`eval-services`, `eval-dev`, `eval-dev-alt-agent`) | `flake.nix` lines 103-110 |
 | SEC-002 | Public flake exports no `deploy.nodes` targets | `flake.nix`, `tests/eval/config-checks.nix:public-deploy-empty` |
-| SEC-003 | `examples/scripts/deploy.sh` refuses to deploy unless the enclosing flake contains a `tsurf.url` input | `examples/scripts/deploy.sh` line 234 |
+| SEC-003 | `scripts/deploy.sh` refuses to deploy unless the enclosing flake contains a `tsurf.url` input | `scripts/deploy.sh` safety guard |
 | SEC-004 | All exported nixosConfigurations are prefixed with `eval-` | `tests/eval/config-checks.nix:fixture-output-names` |
 
 ## Eval Fixture Isolation

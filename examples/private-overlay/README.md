@@ -4,31 +4,48 @@ Minimal forkable template for a private tsurf overlay.
 
 **This is a TEMPLATE. It will not evaluate until you customize placeholder values, add host-specific modules, and configure real hardware.**
 
+## User Model
+
+tsurf uses a two-user model:
+
+- **root** -- Operator, deploys, SSH access, all admin tasks.
+- **agent** -- Runs sandboxed agent tools. No general root access. SSH access for interactive agent sessions.
+
+There is no separate `dev` operator user. Root handles all administrative tasks directly.
+
 ## Quick Start
 
 1. Copy this directory into a new private repository.
 2. Edit `flake.nix`: replace `github:your-org/tsurf` and `REPLACE` placeholders.
-3. Replace placeholder recipients in `.sops.yaml` with real age public keys.
-4. Replace hardware references in `hosts/example/default.nix` with your host's config.
-5. After host-specific setup, import `networking.nix` and `secrets.nix` (requires Tailscale, persisted SSH host keys, and an encrypted sops file).
-6. Run `nix flake lock` in this private repo to generate `flake.lock`.
-7. Create `secrets/example.yaml`, encrypt it with sops, and set `sops.defaultSopsFile` when enabling `secrets.nix`.
-8. Deploy with deploy-rs using your real hostnames and SSH access.
+3. **Add your SSH public key to root's authorized keys** in your host config:
+   ```nix
+   users.users.root.openssh.authorizedKeys.keys = [
+     "ssh-ed25519 AAAA... your-key"
+   ];
+   ```
+   This replaces the bootstrap placeholder key from `modules/users.nix`.
+4. Replace placeholder recipients in `.sops.yaml` with real age public keys.
+5. Replace hardware references in `hosts/example/default.nix` with your host's config.
+6. After host-specific setup, import `networking.nix` and `secrets.nix` (requires Tailscale, persisted SSH host keys, and an encrypted sops file).
+7. Run `nix flake lock` in this private repo to generate `flake.lock`.
+8. Create `secrets/example.yaml`, encrypt it with sops, and set `sops.defaultSopsFile` when enabling `secrets.nix`.
+9. Deploy: `./scripts/deploy.sh --node example --first-deploy`
 
 ---
 
 ## Adding Agent Workloads
 
-Public tsurf core provides two first-class agent paths running as the unprivileged `agent` user under [nono](https://github.com/always-further/nono):
+Public tsurf core provides two first-class agent paths running as the `agent` user under [nono](https://github.com/always-further/nono) sandboxing:
 
-- interactive `claude`
-- unattended `services.devAgent`
+- **Interactive `claude`** -- sandboxed wrapper for interactive use
+- **Unattended `services.devAgent`** -- supervised Claude agent service
+- **Generic launcher** -- `services.agentLauncher.agents.<name>` for custom agents
 
-Additional wrappers such as `codex` are opt-in public extras. Workflow-specific agents and orchestration still belong in your private overlay.
+Additional wrappers such as `codex` are opt-in public extras. Workflow-specific agents and orchestration belong in your private overlay.
 
 ### Required modules for agent hosts
 
-Hosts running agent workloads should import all three agent infrastructure modules:
+Hosts running agent workloads should import these agent infrastructure modules:
 
 - `modules/agent-compute.nix` -- provides `tsurf-agents.slice` cgroup limits and `/data/projects` persistence
 - `modules/agent-launcher.nix` -- generic sandboxed agent launcher infrastructure
@@ -37,7 +54,11 @@ Hosts running agent workloads should import all three agent infrastructure modul
 
 For unattended Claude work, also import `extras/dev-agent.nix`.
 
-The private overlay template `flake.nix` already imports `agent-launcher.nix`, `agent-sandbox.nix`, `nono.nix`, and `extras/dev-agent.nix`. Add `agent-compute.nix` and enable it with `services.agentCompute.enable = true` for any host that runs agent workloads.
+The private overlay template `flake.nix` already imports all of these. Enable `services.agentCompute.enable = true` for any host that runs agent workloads.
+
+### Defining custom agents with the generic launcher
+
+The generic launcher (`services.agentLauncher.agents.<name>`) lets you define agents in a few lines. Each produces a wrapper script, nono sandbox profile, systemd-run launcher, and sudo rule automatically. See `modules/code-review.nix` for a complete example.
 
 ### What agents can access
 
@@ -84,29 +105,26 @@ Use the shipped `dev-agent` module for the standard unattended Claude path:
 
 The service keeps a named `zmx` session alive, initializes the workspace as a Git repo if needed, and restarts cleanly under systemd supervision.
 
-### Step-by-step: adding another wrapper command
+### Adding a custom agent via the generic launcher
 
-For workflow-specific wrappers beyond the shipped public set, add your own module in the private overlay:
+The preferred way to add agents is through the generic launcher. Each agent gets a sandboxed wrapper, nono profile, and sudo rule automatically:
 
 ```nix
-# modules/my-agent-wrapper.nix
+# modules/my-agent.nix
 { pkgs, ... }:
 {
-  environment.systemPackages = [
-    (pkgs.writeShellApplication {
-      name = "my-agent";
-      runtimeInputs = [ pkgs.claude-code ];
-      text = ''
-        # Start with the core Claude wrapper path; replace with your own
-        # private-overlay command model as needed.
-        exec claude "$@"
-      '';
-    })
-  ];
+  services.agentLauncher.agents.my-agent = {
+    command = "claude";
+    package = pkgs.claude-code;
+    wrapperName = "my-agent";
+    credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
+    defaultArgs = [ "-p" "Your default prompt here" ];
+    nonoProfile.extraAllow = [ "/data/projects/my-workspace" ];
+  };
 }
 ```
 
-Then add workflow-specific credentials and execution policy in that same overlay module.
+Then import it in your host config and optionally add a systemd timer.
 
 ### Secret ownership for agent execution
 
@@ -121,7 +139,7 @@ sops.secrets."anthropic-api-key".owner = "root";
 For interactive use, tsurf ships the sandboxed `claude` wrapper in public core:
 
 ```bash
-# SSH in as operator, then:
+# SSH in as root, then:
 cd /data/projects/my-repo
 claude   # wrapper broker-launches as agent user and runs in nono sandbox
 ```

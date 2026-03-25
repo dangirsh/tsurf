@@ -264,7 +264,7 @@ EOF
             nativeBuildInputs = [ pkgs.shellcheck ];
             src = ./.;
           } ''
-            shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/examples/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/extras/scripts/dev-agent.sh "$src"/scripts/sandbox-probe.sh
+            shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/extras/scripts/dev-agent.sh "$src"/scripts/sandbox-probe.sh
             # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
             # SC2317: BATS @test blocks appear unreachable to shellcheck
             shellcheck --exclude=SC2317 "$src"/tests/live/*.bats

@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 TSURF_DEPLOY_LIB_ONLY=1
 export TSURF_DEPLOY_LIB_ONLY
-source "$ROOT_DIR/examples/scripts/deploy.sh"
+source "$ROOT_DIR/scripts/deploy.sh"
 
 assert_eq() {
   local actual="$1"
@@ -23,14 +23,14 @@ assert_eq() {
 }
 
 assert_eq \
-  "$(resolve_flake_dir "$ROOT_DIR/examples/scripts/deploy.sh")" \
+  "$(resolve_flake_dir "$ROOT_DIR/scripts/deploy.sh")" \
   "$ROOT_DIR" \
-  "resolve_flake_dir finds repo root from examples/scripts path"
+  "resolve_flake_dir finds repo root from scripts path"
 
 WORKDIR="${TSURF_TEST_TMPDIR:-$PWD}/deploy-script"
 rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR/scripts"
-cp "$ROOT_DIR/examples/scripts/deploy.sh" "$WORKDIR/scripts/deploy.sh"
+cp "$ROOT_DIR/scripts/deploy.sh" "$WORKDIR/scripts/deploy.sh"
 touch "$WORKDIR/flake.nix"
 
 assert_eq \
