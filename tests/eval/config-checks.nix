@@ -279,6 +279,12 @@ in
     (builtins.hasAttr devAgentUser devCfg.users.users
      && (builtins.getAttr devAgentUser devCfg.users.users).isNormalUser);
 
+  agent-in-wheel = mkCheck
+    "agent-in-wheel"
+    "agent user is in wheel group (required for sudo to immutable launchers)"
+    "agent user is not in wheel group — launcher sudo rules will not work"
+    (builtins.elem "wheel" (builtins.getAttr devAgentUser devCfg.users.users).extraGroups);
+
   agent-user-no-docker = mkCheck
     "agent-user-no-docker"
     "agent user is not in docker group"
