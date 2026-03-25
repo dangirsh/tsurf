@@ -1,5 +1,7 @@
 # tsurf
 
+> **STALE**: This README is being updated as part of the Phases 150-157 overhaul. See `tmp/readme-updates.md` for pending changes.
+
 An agent-centric [NixOS](https://nixos.org/) configuration. See [example use cases](#example-use-cases).
 
 > This public repo is the base configuration. Real deployments come from a [private overlay](#private-overlay).
