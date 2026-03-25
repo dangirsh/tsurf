@@ -246,6 +246,30 @@ EOF
           program = "${script}/bin/persistence-audit";
           meta.description = "Print merged persistence paths for all eval fixtures";
         };
+        tsurf-init = let
+          script = pkgs.writeShellApplication {
+            name = "tsurf-init";
+            runtimeInputs = with pkgs; [ openssh coreutils ];
+            text = builtins.readFile ./scripts/tsurf-init.sh;
+          };
+        in {
+          type = "app";
+          program = "${script}/bin/tsurf-init";
+          meta.description = "Bootstrap tsurf: generate SSH key, validate setup";
+        };
+
+        tsurf-status = let
+          script = pkgs.writeShellApplication {
+            name = "tsurf-status";
+            runtimeInputs = with pkgs; [ openssh coreutils ];
+            text = builtins.readFile ./scripts/tsurf-status.sh;
+          };
+        in {
+          type = "app";
+          program = "${script}/bin/tsurf-status";
+          meta.description = "Check systemd service status on tsurf hosts";
+        };
+
         # @decision BOOT-06: Pinned nixos-anywhere via flake.lock (supply-chain safety).
         nixos-anywhere = {
           type = "app";
@@ -279,7 +303,7 @@ EOF
             nativeBuildInputs = [ pkgs.shellcheck ];
             src = ./.;
           } ''
-            shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/extras/scripts/dev-agent.sh "$src"/scripts/sandbox-probe.sh
+            shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/extras/scripts/dev-agent.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh "$src"/scripts/complexity-metric.sh "$src"/.githooks/post-commit
             # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
             # SC2317: BATS @test blocks appear unreachable to shellcheck
             shellcheck --exclude=SC2317 "$src"/tests/live/*.bats

@@ -92,8 +92,9 @@ in
           config.users.users.root.openssh.authorizedKeys.keys;
         message = ''
           Root SSH authorized_keys contains the placeholder bootstrap-key.
-          Replace with a real key before deploying, or set
-          tsurf.template.allowUnsafePlaceholders = true for template evaluation.
+          Run `nix run .#tsurf-init` to generate a real key, then replace the
+          placeholder in your private overlay's users.nix.
+          For template evaluation only, set tsurf.template.allowUnsafePlaceholders = true.
         '';
       }
       {
@@ -101,8 +102,9 @@ in
           config.users.users.root.openssh.authorizedKeys.keys;
         message = ''
           Root SSH authorized_keys contains the placeholder break-glass key.
-          Replace with a real key before deploying, or set
-          tsurf.template.allowUnsafePlaceholders = true for template evaluation.
+          Run `nix run .#tsurf-init` to generate a real key, then replace the
+          placeholder in your private overlay's break-glass-ssh.nix.
+          For template evaluation only, set tsurf.template.allowUnsafePlaceholders = true.
         '';
       }
     ];
