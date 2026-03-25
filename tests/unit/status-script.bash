@@ -11,7 +11,7 @@ mkdir -p "$FAKE_BIN"
 rm -f "$SSH_LOG"
 
 cat > "$FAKE_BIN/ssh" <<EOF
-#!/usr/bin/env bash
+#!${BASH}
 set -euo pipefail
 printf '%s\n' "\$*" >> "${SSH_LOG}"
 case "\$*" in
@@ -23,25 +23,25 @@ esac
 EOF
 chmod 700 "$FAKE_BIN/ssh"
 
-OUTPUT="$(
-  PATH="$FAKE_BIN:$PATH" \
-    bash "$ROOT_DIR/scripts/tsurf-status.sh" testhost
-)"
+PATH="$FAKE_BIN:$PATH" \
+  bash "$ROOT_DIR/scripts/tsurf-status.sh" testhost >/dev/null
 
-[[ "$OUTPUT" == *"tsurf-cost-tracker.timer"* ]] || {
-  echo "FAIL: expected tsurf-status.sh to check tsurf-cost-tracker.timer"
+SSH_TRACE="$(cat "$SSH_LOG")"
+
+[[ "$SSH_TRACE" == *"systemctl is-enabled 'tsurf-cost-tracker.timer'"* ]] || {
+  echo "FAIL: expected tsurf-status.sh to query tsurf-cost-tracker.timer"
   exit 1
 }
-[[ "$OUTPUT" == *"restic-backups-b2.timer"* ]] || {
-  echo "FAIL: expected tsurf-status.sh to check restic-backups-b2.timer"
+[[ "$SSH_TRACE" == *"systemctl is-enabled 'restic-backups-b2.timer'"* ]] || {
+  echo "FAIL: expected tsurf-status.sh to query restic-backups-b2.timer"
   exit 1
 }
-[[ "$OUTPUT" != *"agent-launch-claude"* ]] || {
-  echo "FAIL: tsurf-status.sh still reports ephemeral agent-launch-claude"
+[[ "$SSH_TRACE" != *"agent-launch-claude.service"* ]] || {
+  echo "FAIL: tsurf-status.sh still queries ephemeral agent-launch-claude"
   exit 1
 }
-[[ "$OUTPUT" != *" cost-tracker "* ]] || {
-  echo "FAIL: tsurf-status.sh still reports the wrong cost-tracker unit name"
+[[ "$SSH_TRACE" != *"cost-tracker.service"* ]] || {
+  echo "FAIL: tsurf-status.sh still queries the wrong cost-tracker unit name"
   exit 1
 }
 
