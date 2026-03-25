@@ -156,6 +156,11 @@ if [[ "$git_root" == "$AGENT_PROJECT_ROOT" ]]; then
   echo "ERROR: refusing to grant read access to the entire project root ($AGENT_PROJECT_ROOT)" >&2
   exit 1
 fi
+control_plane_marker=".tsurf-control-plane"
+if [[ -e "$git_root/$control_plane_marker" ]]; then
+  echo "ERROR: refusing to run in protected control-plane repo ($git_root) due to marker $control_plane_marker" >&2
+  exit 1
+fi
 repo_scope="git-worktree"
 
 # Build nono arguments. Raw provider keys stay in the root-owned proxy process;

@@ -5,6 +5,7 @@ let
   servicesCfg = self.nixosConfigurations."eval-services".config;
   devCfg = self.nixosConfigurations."eval-dev".config;
   altAgentCfg = self.nixosConfigurations."eval-dev-alt-agent".config;
+  extraDenyCfg = self.nixosConfigurations."eval-dev-extra-deny".config;
   devAgentUser = devCfg.tsurf.agent.user;
   altAgentUser = altAgentCfg.tsurf.agent.user;
   altAgentHome = altAgentCfg.tsurf.agent.home;
@@ -616,6 +617,23 @@ in
       "agent-wrapper.sh missing project-root refusal — agents could read all repos"
       (lib.hasInfix "refusing to grant read access to the entire project root" source);
 
+  control-plane-marker-file = mkCheck
+    "control-plane-marker-file"
+    "control-plane marker file exists at repo root"
+    "control-plane marker file is missing from the repo root"
+    (builtins.pathExists ../../.tsurf-control-plane);
+
+  sandbox-refuses-protected-control-plane-repos =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck
+      "sandbox-refuses-protected-control-plane-repos"
+      "agent-wrapper.sh refuses repos marked as protected control-plane repos"
+      "agent-wrapper.sh missing protected control-plane marker guard"
+      (lib.hasInfix ".tsurf-control-plane" source
+       && lib.hasInfix "refusing to run in protected control-plane repo" source);
+
   public-no-sandbox-removed =
     let
       wrapperSource = builtins.readFile ../../scripts/agent-wrapper.sh;
@@ -773,6 +791,16 @@ in
     "dev host has generic agent launcher enabled"
     "dev host services.agentLauncher.enable is false — no agent wrappers generated"
     devCfg.services.agentLauncher.enable;
+
+  launcher-extra-deny-propagates =
+    let
+      profile = builtins.fromJSON (builtins.readFile extraDenyCfg.environment.etc."nono/profiles/tsurf-review-check.json".source);
+    in
+    mkCheck
+      "launcher-extra-deny-propagates"
+      "agent-launcher propagates per-agent extraDeny rules into generated nono profiles"
+      "agent-launcher dropped extraDeny when rendering the generated nono profile"
+      (builtins.elem "/control-plane-deny" (profile.filesystem.deny or [ ]));
 
   no-dev-user = mkCheck
     "no-dev-user"

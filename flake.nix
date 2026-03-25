@@ -128,6 +128,16 @@
           home-manager.users.sandbox.home.homeDirectory = lib.mkForce "/srv/sandbox";
         }
       ];
+      nixosConfigurations."eval-dev-extra-deny" = mkEvalFixture ./hosts/dev [
+        {
+          services.agentLauncher.agents.review-check = {
+            command = "hello";
+            package = pkgs.hello;
+            wrapperName = "review-check";
+            nonoProfile.extraDeny = [ "/control-plane-deny" ];
+          };
+        }
+      ];
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
