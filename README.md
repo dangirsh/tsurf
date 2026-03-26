@@ -2,7 +2,7 @@
 
 A suite of tools for agentic computing, implemented as a [NixOS](https://nixos.org/) configuration. See [example use cases](#example-use-cases).
 
-I use tsurf to manage coding/assistant agents across several remote servers. It enables me to rapidly experiment with new tools and approaches in agentic computing, without feeling like [this](https://www.youtube.com/watch?v=ipWuz6eZSl4).
+I use tsurf to manage coding/assistant agents across several remote servers. It enables me to rapidly experiment with new tools and approaches in agentic computing, without feeling like [this](https://www.youtube.com/watch?v=GFiWEjCedzY).
 
 > This public repo is the base configuration. Real deployments come from a [private overlay](#private-overlay).
 
