@@ -21,10 +21,6 @@ bats_load_library bats-assert
   fi
 }
 
-@test "${HOST}: tailscale-authkey secret exists and is root-owned" {
-  assert_secret_exists "/run/secrets/tailscale-authkey" "root"
-}
-
 @test "${HOST}: wrapper API key secrets are root-owned" {
   assert_secret_exists "/run/secrets/anthropic-api-key" "root"
   assert_secret_exists "/run/secrets/openai-api-key" "root"

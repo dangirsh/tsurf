@@ -1,12 +1,16 @@
 # modules/nono.nix
 # @decision NONO-145-01: Raw provider credentials stay outside nono — brokered in root-owned launcher.
 # @decision NONO-145-03: Extended deny list covers registry tokens and cloud credential directories.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.nonoSandbox;
 
   tsurfProfile = {
-    extends = "claude-code";
     meta = {
       name = "tsurf";
       version = "1.0.0";
@@ -19,8 +23,6 @@ let
         "node_runtime"
         "rust_runtime"
         "python_runtime"
-        "claude_code_linux"
-        "claude_cache_linux"
         "user_caches_linux"
         "unlink_protection"
       ];
@@ -29,8 +31,6 @@ let
     };
     filesystem = {
       allow = [
-        "${cfg.homeDir}/.claude"
-        "${cfg.homeDir}/.config/claude"
         "${cfg.homeDir}/.gitconfig"
         "/nix/var/nix/profiles"
         "/run/current-system"
@@ -39,11 +39,9 @@ let
         "/etc/ssl"
         "/etc/nix"
         "/etc/static"
-      ] ++ cfg.extraAllow;
-      allow_file = [
-        "${cfg.homeDir}/.claude.json"
-        "${cfg.homeDir}/.claude.json.lock"
-      ] ++ cfg.extraAllowFile;
+      ]
+      ++ cfg.extraAllow;
+      allow_file = cfg.extraAllowFile;
       read_file = [
         "${cfg.homeDir}/.gitconfig"
         "${cfg.homeDir}/.gitignore_global"
@@ -51,7 +49,8 @@ let
         "/etc/resolv.conf"
         "/etc/passwd"
         "/etc/group"
-      ] ++ cfg.extraReadFile;
+      ]
+      ++ cfg.extraReadFile;
       # @decision NONO-84-01: Deny sensitive home paths from sandboxed agents.
       # Extended by ecosystem review (Trail of Bits credential path list).
       deny = [
@@ -91,19 +90,19 @@ in
 
     extraAllow = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [];
+      default = [ ];
       description = "Additional filesystem.allow directory paths merged into the tsurf nono profile.";
     };
 
     extraAllowFile = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [];
+      default = [ ];
       description = "Additional filesystem.allow_file paths merged into the tsurf nono profile.";
     };
 
     extraReadFile = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [];
+      default = [ ];
       description = "Additional filesystem.read_file paths merged into the tsurf nono profile.";
     };
   };

@@ -6,7 +6,12 @@
 #   Enforced by operational policy, not technical controls.
 # @decision SEC-145-04: Claude-level deny rules provide defense-in-depth atop Landlock.
 #   enableAllProjectMcpServers=false prevents malicious repos from injecting MCP servers.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.agentSandbox;
   agentCfg = config.tsurf.agent;
@@ -31,6 +36,16 @@ in
       package = pkgs.claude-code;
       wrapperName = "claude";
       credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
+      nonoProfile = {
+        extraAllow = [
+          "${agentCfg.home}/.claude"
+          "${agentCfg.home}/.config/claude"
+        ];
+        extraAllowFile = [
+          "${agentCfg.home}/.claude.json"
+          "${agentCfg.home}/.claude.json.lock"
+        ];
+      };
 
       managedSettings = {
         permissions = {

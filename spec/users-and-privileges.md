@@ -1,16 +1,16 @@
 # Users and Privileges Specification
 
-This document specifies the user model, sudo configuration, and
+This document specifies the user model, launcher sudo configuration, and
 template safety mechanisms.
 
-Source: `modules/users.nix`, `modules/break-glass-ssh.nix`
+Source: `modules/users.nix`, `modules/agent-launcher.nix`
 
 ## User Identities
 
 | ID | Claim | Source |
 |----|-------|--------|
 | USR-001 | Two-user model: root (operator) + agent (sandboxed tools) | `modules/users.nix`, `@decision SEC-152-01` |
-| USR-002 | Agent user: default `agent`, UID 1001, GID 1001, home `/home/agent`, member of `users` and `wheel` | `modules/users.nix` lines 53-65 |
+| USR-002 | Agent user: default `agent`, UID 1001, GID 1001, home `/home/agent`, member of `users` only | `modules/users.nix` |
 | USR-003 | Agent user has sub-UID/GID ranges for rootless containers (200000+) | `modules/users.nix` lines 59-60 |
 | USR-005 | Agent user shell is `bashInteractive` | `modules/users.nix` line 61 |
 | USR-006 | `users.mutableUsers = false` | `modules/users.nix` line 50 |
@@ -19,31 +19,29 @@ Source: `modules/users.nix`, `modules/break-glass-ssh.nix`
 
 | ID | Claim | Source |
 |----|-------|--------|
-| USR-007 | `security.sudo.execWheelOnly = false` — allows agent (wheel) to use sudo for immutable launchers | `modules/users.nix` line 81 |
-| USR-008 | `security.sudo.wheelNeedsPassword` toggled by `allowUnsafePlaceholders` | `modules/users.nix` line 104 |
-| USR-009 | Agent sudo rules: only immutable per-agent launchers with `NOPASSWD`, no `SETENV` | `modules/agent-sandbox.nix` lines 160-175 |
+| USR-007 | `security.sudo.execWheelOnly = false` — allows the non-wheel agent user to invoke explicit sudo rules | `modules/users.nix` |
+| USR-008 | Agent sudo rules grant `NOPASSWD` access only to immutable per-agent launchers | `modules/agent-launcher.nix` |
+| USR-009 | Launcher sudo rules do not grant `SETENV` or general root access | `tests/eval/config-checks.nix:brokered-launch-sudoers` |
 
-## Break-Glass SSH
+## Root SSH Access
 
 | ID | Claim | Source |
 |----|-------|--------|
-| USR-010 | Break-glass emergency SSH key hardcoded in `break-glass-ssh.nix`, independent of sops-nix | `modules/break-glass-ssh.nix`, `@decision SEC-70-01` |
-| USR-011 | Key comment must contain `break-glass-emergency` — checked by build-time assertion | `modules/networking.nix` lines 105-107 |
-| USR-012 | Placeholder key material shipped in public repo — must be replaced before real deployment | `modules/break-glass-ssh.nix` lines 15-17 |
-| USR-013 | Break-glass key survives: sops activation failures, private overlay users.nix replacement, key-management misconfiguration | `@decision SEC-70-01` |
+| USR-010 | Real deployments must set at least one root SSH authorized key | `modules/users.nix` |
+| USR-011 | `tsurf-init` can materialize `modules/root-ssh.nix` for a private overlay | `scripts/tsurf-init.sh` |
+| USR-012 | `PermitRootLogin = "prohibit-password"` keeps root SSH key-only | `modules/networking.nix` |
 
 ## Root User
 
 | ID | Claim | Source |
 |----|-------|--------|
-| USR-014 | Root has bootstrap SSH key (placeholder in public repo) | `modules/users.nix` lines 95-99 |
-| USR-015 | Root has break-glass SSH key (separate from bootstrap) | `modules/break-glass-ssh.nix` |
-| USR-016 | `PermitRootLogin = "prohibit-password"` — key-only root access | `modules/networking.nix` line 177 |
+| USR-014 | Root authorized keys default to an empty list in the public repo | `modules/users.nix` |
+| USR-015 | Root home persistence includes `.ssh`, `.config/nix`, `.docker`, and `.gitconfig` | `modules/users.nix` |
 
 ## Template Safety Assertions
 
 | ID | Claim | Source |
 |----|-------|--------|
-| USR-017 | When `allowUnsafePlaceholders = false`: assertion rejects bootstrap-key in root authorized_keys | `modules/users.nix` lines 122-130 |
-| USR-018 | When `allowUnsafePlaceholders = false`: assertion rejects break-glass placeholder in root authorized_keys | `modules/users.nix` lines 131-139 |
-| USR-019 | Unconditional assertion: agent not in docker | `modules/users.nix` lines 84-87 |
+| USR-017 | When `allowUnsafePlaceholders = false`: assertion rejects an empty root authorized_keys list | `modules/users.nix` |
+| USR-018 | `allowUnsafePlaceholders` exists only for eval fixtures; real hosts must provide root SSH material, while fixtures also set `users.allowNoPasswordLogin = true` to bypass the NixOS lockout assertion | `flake.nix`, `modules/users.nix` |
+| USR-019 | Unconditional assertion: agent not in docker | `modules/users.nix` |

@@ -22,8 +22,9 @@ networking, secrets, and services.
 - Declarative, recovery-oriented base. `srvos`, `nix-mineral`, BTRFS rollback,
   impermanence, lockout-prevention assertions, and private-overlay deploy
   tooling are built in.
-- Optional batteries. Public extras include `dev-agent`, `codex`,
-  `cost-tracker`, `restic`, and a home-manager profile for the agent user.
+- Minimal extras with reusable building blocks. Public extras include the
+  low-priority CASS indexer, optional `codex`, `cost-tracker`, `restic`, and a
+  home-manager profile for the agent user.
 
 ## Quick Start
 
@@ -33,10 +34,11 @@ networking, secrets, and services.
    `nix flake check`
 3. Copy [`examples/private-overlay/`](examples/private-overlay/) into a private
    repository and replace the placeholders.
-4. Generate a break-glass key with `nix run .#tsurf-init`. If you run it on the
-   target host, add `--age` to derive the sops age identity from the persisted
-   SSH host key.
-5. Deploy from the private overlay only. The public repo intentionally blocks
+4. Generate a real root SSH key for the private overlay:
+   `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay`
+5. If you run `tsurf-init` on the target host, add `--age` to derive the sops
+   age identity from the persisted SSH host key.
+6. Deploy from the private overlay only. The public repo intentionally blocks
    real deploys in [`scripts/deploy.sh`](scripts/deploy.sh).
 
 ## Documentation

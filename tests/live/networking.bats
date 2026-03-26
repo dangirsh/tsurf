@@ -1,31 +1,10 @@
 #!/usr/bin/env bats
-# tests/live/networking.bats — Tailscale, DNS, and nftables deep validation.
+# tests/live/networking.bats — DNS and nftables deep validation.
 # @decision TEST-48-02: Networking tests focus on concrete connectivity and metadata endpoint blocking guarantees.
 
 load "../lib/common"
 bats_load_library bats-support
 bats_load_library bats-assert
-
-# Validates NET-023: Tailscale enabled on all hosts
-@test "${HOST}: tailscale has at least one peer" {
-  local status_json
-  status_json="$(remote tailscale status --json 2>&1)" || {
-    echo "FAIL: tailscale status --json failed"
-    echo "DEBUG: ssh ${SSH_USER}@${HOST} tailscale status"
-    return 1
-  }
-
-  local peers
-  peers="$(echo "$status_json" | jq '.Peer | length' 2>/dev/null)" || {
-    echo "FAIL: could not parse tailscale status JSON"
-    return 1
-  }
-  if [[ "$peers" -lt 1 ]]; then
-    echo "FAIL: tailscale peer count='$peers', expected >= 1"
-    echo "DEBUG: ssh ${SSH_USER}@${HOST} tailscale status"
-    return 1
-  fi
-}
 
 # Validates NET-034 (partial): DNS allowed for agent egress
 @test "${HOST}: DNS resolution works for external hosts" {
@@ -102,7 +81,7 @@ bats_load_library bats-assert
     return 1
   fi
   if [[ "$rules" != *"100.64.0.0/10"* ]]; then
-    echo "FAIL: agent-egress table missing tailnet/private-range block"
+    echo "FAIL: agent-egress table missing CGNAT/private-range block"
     echo "DEBUG: rules: $rules"
     return 1
   fi

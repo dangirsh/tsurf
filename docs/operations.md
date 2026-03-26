@@ -22,8 +22,8 @@ The public repo is not deployable by design. The intended workflow is:
    private repository.
 2. Update the private `flake.nix` to point `tsurf.url` at the repo you want to
    import and replace all placeholder host values.
-3. Run `nix run .#tsurf-init` to generate a break-glass SSH key. Replace the
-   placeholder bootstrap and break-glass keys in your private overlay.
+3. Run `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay` to
+   generate a real root SSH key and materialize `modules/root-ssh.nix`.
 4. Replace the placeholder age recipients in `.sops.yaml`, create your encrypted
    secrets file, and set `sops.defaultSopsFile` in the host config.
 5. Import `modules/networking.nix` and `modules/secrets.nix` only after the host
@@ -36,8 +36,8 @@ The public repo is not deployable by design. The intended workflow is:
 
 | Command | Purpose |
 |---------|---------|
-| `nix run .#tsurf-init` | Generate the operator break-glass SSH key; optionally derive an age key with `--age` |
-| `nix run .#tsurf-status -- <host>` | Check persistent service status over SSH |
+| `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay` | Generate the root SSH key for a private overlay and optionally derive an age key with `--age` |
+| `nix run .#tsurf-status -- <node\|host\|all>` | Check persistent fleet status over SSH |
 | `nix run .#test-live -- --host <host>` | Run live BATS checks against a deployed host |
 | `nix run .#persistence-audit` | Print the merged `/persist` manifest for the eval fixtures |
 | `nix run .#nixos-anywhere -- ...` | Use the pinned `nixos-anywhere` input |
@@ -74,6 +74,6 @@ produce it is `./scripts/run-tests.sh`.
 
 - Use `nix run .#tsurf-status -- <host>` for a quick persistent-unit health
   check.
-- Keep the break-glass SSH key out of any repo and off the target servers.
+- Keep the root SSH private key out of every repo and off every target host.
 - If a deploy breaks SSH, recover via console/rescue mode, repair access, and
   redeploy from the private overlay.

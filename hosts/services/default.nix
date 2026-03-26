@@ -2,7 +2,14 @@
 # Role: runs long-lived services (containers, backups, file sync).
 # Imports restic.nix for backups and omits agent-sandbox.nix by default.
 # Private overlay replaces this with real host config, user settings, and networking.
-{ config, pkgs, inputs, lib, ... }: {
+{
+  config,
+  pkgs,
+  inputs,
+  lib,
+  ...
+}:
+{
   imports = [
     ../hardware.nix
     ../disko-config.nix
@@ -13,7 +20,7 @@
     ../../modules/networking.nix
     ../../modules/secrets.nix
     ../../modules/impermanence.nix
-    ../../modules/break-glass-ssh.nix
+    ../../extras/cass.nix
     ../../extras/restic.nix
     ../../extras/cost-tracker.nix
     # Private overlay: add personal service modules (nginx, etc.) here

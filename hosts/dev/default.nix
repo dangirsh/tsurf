@@ -2,7 +2,14 @@
 # Role: agent development and sandboxed execution via agent-sandbox.nix + nono.nix.
 # Clone-repos helper script is available at extras/scripts/clone-repos.sh for private overlays.
 # Private overlay replaces this with real host config, repo lists, and agent fleet wiring.
-{ config, inputs, lib, pkgs, ... }: {
+{
+  config,
+  inputs,
+  lib,
+  pkgs,
+  ...
+}:
+{
   imports = [
     ../hardware.nix
     ../disko-config.nix
@@ -14,11 +21,10 @@
     ../../modules/secrets.nix
     ../../modules/agent-compute.nix
     ../../modules/impermanence.nix
-    ../../modules/break-glass-ssh.nix
     ../../modules/agent-launcher.nix
     ../../modules/agent-sandbox.nix
     ../../modules/nono.nix
-    ../../extras/dev-agent.nix
+    ../../extras/cass.nix
     # Additional wrappers and host-specific workflows belong in a private overlay.
   ];
 
@@ -46,7 +52,10 @@
   # it fails with "no such file". By pointing sshd directly at /persist/etc/ssh/,
   # we bypass sshd_config entirely — nixos-anywhere always places the host key there.
   services.openssh.hostKeys = lib.mkForce [
-    { type = "ed25519"; path = "/persist/etc/ssh/ssh_host_ed25519_key"; }
+    {
+      type = "ed25519";
+      path = "/persist/etc/ssh/ssh_host_ed25519_key";
+    }
   ];
 
   services.agentCompute.enable = true;

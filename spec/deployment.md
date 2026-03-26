@@ -33,15 +33,15 @@ Source: `scripts/deploy.sh`, `flake.nix`
 
 | ID | Claim | Source |
 |----|-------|--------|
-| DEP-015 | Service health check: verifies `tailscaled` and `sshd` active after deploy | `scripts/deploy.sh` |
+| DEP-015 | Service health check: verifies `sshd` and `nftables` after deploy | `scripts/deploy.sh` |
 | DEP-016 | SSH connectivity verified via non-multiplexed fresh connection (tests real path, not cached) | `scripts/deploy.sh`, `@decision DEPLOY-04` |
-| DEP-017 | Optional public IP connectivity check via `--public-ip` | `scripts/deploy.sh` |
+| DEP-017 | No separate public-IP probe path — deploy verification stays minimal and SSH-based | `scripts/deploy.sh` |
 
 ## Post-Deploy Hooks
 
 | ID | Claim | Source |
 |----|-------|--------|
-| DEP-021 | No repo-controlled post-deploy hooks — `--post-hook` must be an absolute path outside the repo, executed as subprocess (not sourced) | `scripts/deploy.sh`, `@decision DEPLOY-114-01` |
+| DEP-021 | No repo-controlled post-deploy hooks | `scripts/deploy.sh`, `@decision DEPLOY-114-01` |
 | DEP-022 | deploy.sh has no repo-controlled `source` calls | `tests/eval/config-checks.nix:deploy-no-repo-source` |
 
 ## SSH Multiplexing

@@ -24,7 +24,7 @@ strengthen or weaken these properties, so host-specific statements are called ou
   - `services.agentCompute.enable = true`
   - `services.agentSandbox.enable = true`
   - `services.nonoSandbox.enable = true`
-  - `extras/dev-agent.nix` is imported, but `services.devAgent.enable` remains opt-in
+  - `extras/cass.nix` is imported so CASS indexing runs as a low-priority system timer
 
 ## Core Security Invariants
 
@@ -33,7 +33,7 @@ strengthen or weaken these properties, so host-specific statements are called ou
 - Two-user model: `root` (operator/admin) and `agent` (sandboxed tools).
   - `root` handles deploy, maintenance, and SSH access.
   - `tsurf.agent.user` defaults to `agent` and is the sandboxed agent account.
-  - The agent user is in `wheel` for sudo access to immutable launchers only.
+  - The agent user is not in `wheel`; launcher sudo access comes from explicit sudoers rules only.
 - Build-time assertions enforce that the agent user is not in `docker`.
 - `users.mutableUsers = false`.
 - `security.sudo.execWheelOnly = false`, but sudo rules are limited to
@@ -48,9 +48,8 @@ strengthen or weaken these properties, so host-specific statements are called ou
   provides the shared sandbox infrastructure. Agent-specific modules like
   [`modules/agent-sandbox.nix`](modules/agent-sandbox.nix) declare their
   configuration on top of it.
-- The public repo also ships a first-class unattended agent path:
-  [`extras/dev-agent.nix`](extras/dev-agent.nix), which supervises a
-  parameterized Claude task inside the same sandbox boundary.
+- The public repo does not ship a separate unattended-agent supervisor. Use the
+  generated wrappers directly with `systemd` or `tmux` in private overlays.
 - The public wrapper/launcher path has no `--no-sandbox` or
   `AGENT_ALLOW_NOSANDBOX` escape hatch.
 
@@ -59,21 +58,20 @@ strengthen or weaken these properties, so host-specific statements are called ou
 | Identity | Default groups | Purpose | Enforced by |
 | --- | --- | --- | --- |
 | `root` | n/a | operator, deploy, maintenance, secrets, recovery | NixOS/systemd |
-| `agent` | `users`, `wheel` | sandboxed agent execution, SSH access | `modules/users.nix` |
+| `agent` | `users` | sandboxed agent execution, SSH access | `modules/users.nix` |
 
 Important nuances:
 
-- The agent user is in `wheel` to allow sudo access to the immutable per-agent
-  launchers (e.g., `tsurf-launch-claude`). Sudo rules only grant `NOPASSWD`
-  access to specific launcher binaries, not general root.
-- The `allowUnsafePlaceholders` flag controls placeholder-key assertions plus:
-  - `users.allowNoPasswordLogin`
-  - `security.sudo.wheelNeedsPassword`
+- The agent user is not in `wheel`. `security.sudo.extraRules` grants `NOPASSWD`
+  access only to specific immutable launcher binaries such as `tsurf-launch-claude`.
+- The `allowUnsafePlaceholders` flag exists only for eval fixtures. It relaxes
+  the root-login safety checks just enough for public evaluation by permitting
+  an empty root `authorized_keys` list and setting `users.allowNoPasswordLogin = true`.
 - Base Nix daemon policy is:
-  - `allowed-users = [ "root" "@wheel" ]`
+  - `allowed-users = [ "root" "<agent-user>" ]`
   - `trusted-users = [ "root" ]`
-- The agent user has Nix daemon access via `@wheel` in `allowed-users`, but is
-  not in `trusted-users`. Private overlays can tighten this if needed.
+- The agent user has Nix daemon access via its explicit username in
+  `allowed-users`, but is not in `trusted-users`.
 
 ## Template And Fixture Safety
 
@@ -81,15 +79,11 @@ Important nuances:
 - Host source files do **not** set that flag. The public flake injects it only
   into the clearly named eval fixtures so `nix flake check` can evaluate without
   real credentials.
-- When the flag is enabled, it permits placeholder bootstrap/break-glass keys and
-  flips:
-  - `users.allowNoPasswordLogin = true`
-  - `security.sudo.wheelNeedsPassword = false`
-- The public repo still contains placeholder bootstrap and break-glass keys in
-  source. That is acceptable only because:
-  - real deploy targets are not exported here
-  - the public deploy script refuses to run
-  - real deployments are expected to replace these values in a private overlay
+- When the flag is enabled, eval fixtures may leave
+  `users.users.root.openssh.authorizedKeys.keys` empty and bypass the NixOS
+  "no root login method configured" assertion.
+- Real deployments are expected to generate a root SSH key with
+  `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay`.
 
 ## Agent Sandbox
 
@@ -141,9 +135,6 @@ Security properties of that path:
   - `MemoryMax = 4G`
   - `CPUQuota = 200%`
   - `TasksMax = 256`
-- The optional `dev-agent` service also runs inside `tsurf-agents.slice` with
-  per-unit `4G / 200% / 256` and `OOMPolicy=kill`.
-
 ### Filesystem Boundary
 
 The sandbox is implemented by `nono` with a pinned profile and Landlock-backed
@@ -229,7 +220,7 @@ Credential scoping is least-privilege by wrapper. Core default: `claude`
 
 - nftables is enabled.
 - `trustedInterfaces = [ ]`.
-- `tailscale0` is **not** trusted.
+- `trustedInterfaces = [ ]`.
 - Public TCP exposure is limited to:
   - `22` always
   - `80` and `443` only when `services.nginx.enable = true`
@@ -262,8 +253,7 @@ SSH defaults:
   - link-local IPv4 `169.254.0.0/16`
   - IPv6 ULA `fc00::/7`
   - IPv6 link-local `fe80::/10`
-- This boundary applies to both interactive wrappers and the unattended
-  `dev-agent` service because both run as the dedicated agent UID.
+- This boundary applies to every process running as the dedicated agent UID.
 
 ## Deployment, Recovery, And Lockout Prevention
 
@@ -281,14 +271,12 @@ Build-time lockout-prevention assertions require:
 - at least one root SSH authorized key
 - SSH port `22` reachable
 - SSH host keys configured and persisted
-- a break-glass emergency SSH key present
 
 Recovery mechanisms:
 
-- [`modules/break-glass-ssh.nix`](modules/break-glass-ssh.nix)
-  adds a hardcoded break-glass root key. In the public repo this key is
-  placeholder material and must be replaced in a private overlay before any real
-  deployment.
+- Root SSH access is supplied by the private overlay. The recommended path is
+  `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay`, which writes
+  `modules/root-ssh.nix` for that overlay.
 - The deploy path implemented in
   [`scripts/deploy.sh`](scripts/deploy.sh)
   supports magic rollback via deploy-rs with a 300s confirm timeout.
@@ -309,7 +297,7 @@ Recovery mechanisms:
 Supply-chain properties:
 
 - Nix inputs are pinned by `flake.lock`.
-- Prebuilt binaries are SHA256-pinned, including `nono` and `zmx`.
+- Prebuilt binaries are SHA256-pinned, including `nono` and `cass`.
 - `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
 - No signature verification is implemented for these prebuilt binaries.
 
@@ -321,7 +309,7 @@ Eval-time checks:
 
 - [`tests/eval/config-checks.nix`](tests/eval/config-checks.nix)
   covers public-output safety, placeholder isolation, firewall exposure,
-  break-glass requirements, Nix daemon restrictions, sandbox structure, read-scope
+  root-key requirements, Nix daemon restrictions, sandbox structure, read-scope
   fail-closed behavior, launcher hardening, and root-side credential broker structure.
 
 Live checks:
@@ -332,7 +320,7 @@ Live checks:
   verifies `/run/secrets` presence, root ownership for brokered provider keys,
   and non-world-readable permissions.
 - [`tests/live/networking.bats`](tests/live/networking.bats)
-  verifies Tailscale state, the metadata-block nftables rule, and the agent
+  verifies DNS reachability, the metadata-block nftables rule, and the agent
   egress allowlist table.
 - [`tests/live/sandbox-behavioral.bats`](tests/live/sandbox-behavioral.bats)
   proves that sandboxed agent code cannot read denied paths and can read/write the
@@ -341,8 +329,7 @@ Live checks:
   verifies wrapper script structure: nono invocation, journald logging, and absence
   of secret mounts.
 - [`tests/live/service-health.bats`](tests/live/service-health.bats)
-  verifies systemd unit health (tailscaled, sshd, restic timer)
-  and Tailscale backend state.
+  verifies systemd unit health (`sshd`, backup timers, and the CASS timer when present).
 - [`tests/live/impermanence.bats`](tests/live/impermanence.bats)
   verifies /persist mount, BTRFS filesystem type, critical persist directories, and
   machine-id persistence.
@@ -352,10 +339,8 @@ Live checks:
 - The service-host role does not include the agent sandbox at all.
 - The sandbox does not make the current workspace immutable. If a user
   points an agent at a normal workspace repo, that repo is writable by design.
-- [`extras/dev-agent.nix`](extras/dev-agent.nix) runs Claude
-  Code with `--permission-mode=bypassPermissions` inside the sandbox by default
-  and defaults its working directory to a dedicated workspace under project root
-  unless a private overlay overrides it.
+- The public repo deliberately avoids a separate unattended-agent supervisor.
+  Private overlays can schedule the generated wrappers however they want.
 - The host-level agent egress allowlist is coarse by design. It is scoped by UID,
   not by individual wrapper or destination hostname.
 - Optional extras can widen access. Notable example:

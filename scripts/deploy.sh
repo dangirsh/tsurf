@@ -8,12 +8,12 @@
 #
 # Flags:
 #   --node NAME         Flake node to deploy (required)
-#   --target USER@HOST  Override SSH target (default: root@<node>)
+#   --target USER@HOST  Override SSH target for lock/status checks (default: root@<node>)
 #   --first-deploy      Disable magic rollback for initial migration
 #   --magic-rollback    Enable deploy-rs magic rollback with 300s confirm timeout
 #   --help              Print usage
 #
-# @decision DEPLOY-114-01: No repo-controlled post-deploy hooks — require explicit --post-hook.
+# @decision DEPLOY-114-01: Keep deploy.sh intentionally small: no repo-controlled hooks or alternate reachability probes.
 set -euo pipefail
 
 resolve_flake_dir() {
@@ -41,8 +41,6 @@ MODE="remote"
 FAST_MODE=false
 FIRST_DEPLOY=false
 MAGIC_ROLLBACK=false
-POST_HOOK=""
-PUBLIC_IP=""
 DEPRECATED_FLAGS=()
 SECONDS=0
 
@@ -78,8 +76,6 @@ Options:
   --first-deploy        Disable magic rollback for one-time migration
   --fast                Local build, single evaluation (no --remote-build)
   --magic-rollback      Enable deploy-rs magic rollback (300s confirm timeout)
-  --public-ip IP        Public IP for post-deploy connectivity check (optional)
-  --post-hook PATH      Run script at absolute PATH after successful deploy
   --update-inputs       Deprecated; update flake inputs explicitly before deploy
   --help                Show this help
 
@@ -108,8 +104,6 @@ while [[ $# -gt 0 ]]; do
     --magic-rollback) MAGIC_ROLLBACK=true; shift ;;
     --no-magic-rollback) shift ;;  # deprecated no-op
     --update-inputs) DEPRECATED_FLAGS+=("$1"); shift ;;
-    --post-hook)   POST_HOOK="$2";    shift 2 ;;
-    --public-ip)   PUBLIC_IP="$2";    shift 2 ;;
     --skip-update) DEPRECATED_FLAGS+=("$1"); shift ;;
     --help)        usage; exit 0 ;;
     *)             echo "Unknown option: $1"; usage; exit 1 ;;
@@ -134,17 +128,6 @@ if [[ -z "$NODE" ]]; then
   echo "Error: --node is required"
   usage
   exit 1
-fi
-
-if [[ -n "$POST_HOOK" ]]; then
-  if [[ "$POST_HOOK" != /* ]]; then
-    echo "Error: --post-hook must be an absolute path, got '$POST_HOOK'"
-    exit 1
-  fi
-  if [[ ! -f "$POST_HOOK" ]]; then
-    echo "Error: --post-hook path does not exist: $POST_HOOK"
-    exit 1
-  fi
 fi
 
 # SAFETY GUARD: All deploys MUST come from the private overlay.
@@ -230,7 +213,7 @@ if [[ "$DEPLOY_RS_EXIT" -ne 0 ]]; then
 fi
 
 # --- Service verification ---
-SYSTEMD_SERVICES=("tailscaled" "sshd")
+SYSTEMD_SERVICES=("sshd" "nftables")
 echo "==> Verifying services..."
 FAILED=0
 for s in "${SYSTEMD_SERVICES[@]}"; do
@@ -252,27 +235,12 @@ else
   FAILED=1
 fi
 
-if [[ -n "$PUBLIC_IP" ]]; then
-  if ssh -o ConnectTimeout=15 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ControlPath=none \
-      "root@$PUBLIC_IP" "systemctl is-active --quiet sshd.service" 2>/dev/null; then
-    echo "  Public IP ($PUBLIC_IP): SSH OK"
-  else
-    echo "  Public IP ($PUBLIC_IP): UNREACHABLE"
-    FAILED=1
-  fi
-fi
-
 # --- Result ---
 DURATION=$SECONDS
 echo ""
 
 if [[ "$FAILED" -eq 0 ]]; then
   echo "=== Deploy SUCCESS ($((DURATION / 60))m $((DURATION % 60))s) ==="
-
-  if [[ -n "$POST_HOOK" ]]; then
-    echo "==> Running post-deploy hook: $POST_HOOK"
-    bash --noprofile --norc "$POST_HOOK"
-  fi
 else
   echo "=== Deploy COMPLETED with WARNINGS ==="
   echo ""

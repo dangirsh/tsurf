@@ -30,15 +30,15 @@ The system assumes:
 | SEC-005 | `tsurf.template.allowUnsafePlaceholders` defaults to `false` | `modules/users.nix` line 21 |
 | SEC-006 | Host source files (`hosts/services/default.nix`, `hosts/dev/default.nix`) do not set `allowUnsafePlaceholders` | `tests/eval/config-checks.nix:secure-host-services`, `secure-host-dev` |
 | SEC-007 | Eval fixtures inject `allowUnsafePlaceholders = true` via `mkEvalFixture` only | `flake.nix` line 95 |
-| SEC-008 | When `allowUnsafePlaceholders` is false, build-time assertions reject placeholder SSH keys | `modules/users.nix` lines 121-139 |
-| SEC-009 | When `allowUnsafePlaceholders` is true, it permits `users.allowNoPasswordLogin` and disables `sudo.wheelNeedsPassword` | `modules/users.nix` lines 103-104 |
+| SEC-008 | When `allowUnsafePlaceholders` is false, build-time assertions require at least one root SSH authorized key | `modules/users.nix` |
+| SEC-009 | `allowUnsafePlaceholders` exists only to let eval fixtures omit private root SSH material and bypass the root-login lockout assertion (`users.allowNoPasswordLogin = true`) | `modules/users.nix`, `flake.nix` |
 
 ## Privilege Separation
 
 | ID | Claim | Source |
 |----|-------|--------|
 | SEC-010 | Two-user model: `root` (operator) and `agent` (sandboxed tools) | `modules/users.nix`, `@decision SEC-152-01` |
-| SEC-011 | Agent user is in `wheel` for sudo access to immutable launchers only | `modules/users.nix` line 58 |
+| SEC-011 | Agent user is not in `wheel`; launcher sudo access comes from explicit sudoers rules only | `modules/users.nix`, `modules/agent-launcher.nix` |
 | SEC-012 | Agent user is NOT in `docker` group — enforced by build-time assertion | `modules/users.nix` line 86 |
 | SEC-014 | `users.mutableUsers = false` — no runtime user modification | `modules/users.nix` line 59 |
 | SEC-015 | Agent user identity is parameterized via `tsurf.agent.{user, uid, gid, home, projectRoot}` | `modules/users.nix` lines 30-56 |
@@ -48,8 +48,8 @@ The system assumes:
 
 | ID | Claim | Source |
 |----|-------|--------|
-| SEC-017 | `nix.settings.allowed-users = [ "root" "@wheel" ]` | `modules/base.nix` line 21, `@decision SEC-124-01` |
-| SEC-018 | `nix.settings.trusted-users = [ "root" ]` — no `@wheel`, root-only | `modules/base.nix` line 23 |
+| SEC-017 | `nix.settings.allowed-users = [ "root" "<agent-user>" ]` | `modules/base.nix`, `@decision SEC-124-01` |
+| SEC-018 | `nix.settings.trusted-users = [ "root" ]` — root-only | `modules/base.nix` |
 | SEC-019 | Nix channels disabled, nixPath cleared, defaultPackages emptied | `modules/base.nix` lines 11-13, `@decision SYS-02` |
 
 ## Kernel Hardening
@@ -63,7 +63,7 @@ The system assumes:
 | ID | Claim | Source |
 |----|-------|--------|
 | SEC-026 | All Nix inputs pinned by `flake.lock` | `flake.nix` |
-| SEC-027 | Prebuilt binaries (nono, zmx) are SHA256-pinned | `packages/nono.nix`, `packages/zmx.nix` |
+| SEC-027 | Prebuilt binaries (`nono`, `cass`) are SHA256-pinned | `packages/nono.nix`, `extras/cass.nix` |
 | SEC-028 | `claude-code` and `codex` come from the pinned `llm-agents.nix` input | `flake.nix` line 18 |
 | SEC-029 | No signature verification for prebuilt binaries (accepted risk) | `SECURITY.md` |
 | SEC-030 | Supply chain env vars set in agent wrapper: `NPM_CONFIG_IGNORE_SCRIPTS=true`, `NPM_CONFIG_AUDIT=true`, `NPM_CONFIG_SAVE_EXACT=true`, `NPM_CONFIG_MINIMUM_RELEASE_AGE=1440` | `scripts/agent-wrapper.sh` lines 225-228 |
@@ -82,7 +82,6 @@ The system assumes:
 |----|------|--------|
 | SEC-AR-001 | Service-host role does not include agent sandbox | `SECURITY.md` |
 | SEC-AR-002 | Sandbox does not make current workspace immutable — writable by design | `SECURITY.md` |
-| SEC-AR-003 | Agent in `wheel` group allows sudo to immutable launchers — accepted risk | `SECURITY.md` |
-| SEC-AR-004 | Agent egress allowlist is coarse (UID-scoped, not per-wrapper or per-destination) | `SECURITY.md` |
-| SEC-AR-005 | No signature verification for prebuilt binaries | `SECURITY.md` |
-| SEC-AR-006 | `dev-agent` runs with `bypassPermissions` inside nono sandbox | `extras/dev-agent.nix`, `@decision DEV-AGENT-98` |
+| SEC-AR-003 | Agent egress allowlist is coarse (UID-scoped, not per-wrapper or per-destination) | `SECURITY.md` |
+| SEC-AR-004 | No signature verification for prebuilt binaries | `SECURITY.md` |
+| SEC-AR-005 | Operators must keep agents away from repos that define their own security boundaries; the public wrapper does not classify repos automatically | `SECURITY.md` |

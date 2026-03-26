@@ -152,7 +152,7 @@ bats_load_library bats-assert
   nft_output="$(remote nft list ruleset 2>&1)" || return 0
   # Trusted interfaces get an unconditional accept rule for all traffic
   # With empty trustedInterfaces, there should be no iifname accept-all rules
-  if echo "$nft_output" | grep -E 'iifname.*(tailscale0|eth0).*accept' | grep -v 'dport' > /dev/null 2>&1; then
+  if echo "$nft_output" | grep -E 'iifname.*accept' | grep -v 'dport' > /dev/null 2>&1; then
     echo "FAIL: found trusted interface accept-all rule"
     return 1
   fi

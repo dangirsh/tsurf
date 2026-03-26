@@ -16,7 +16,7 @@ Source: `modules/agent-sandbox.nix`, `modules/nono.nix`, `scripts/agent-wrapper.
 | SBX-004 | Each launcher bakes in: real binary path, nono profile path, credential allowlist, whether Nix daemon access is enabled | `modules/agent-sandbox.nix` lines 38-45 |
 | SBX-005 | Launcher rejects any `AGENT_REAL_BINARY` outside `/nix/store` | `scripts/agent-wrapper.sh` lines 48-54 |
 | SBX-006 | The caller cannot swap binaries, profiles, or credential tuples across the sudo boundary | `@decision SEC-135-01`, immutable launcher design |
-| SBX-007 | Both `wheel` group and the dedicated agent user can invoke the Claude launcher via sudo | `modules/agent-sandbox.nix` lines 160-175 |
+| SBX-007 | The dedicated agent user can invoke the Claude launcher via explicit sudoers rules without needing `wheel` membership | `modules/agent-launcher.nix`, `modules/users.nix` |
 | SBX-008 | Launch events logged to journald only (`logger -t agent-launch`), not file-based audit log | `scripts/agent-wrapper.sh` lines 73-78, `@decision AUDIT-117-01` |
 | SBX-009 | Logged fields limited to: `mode`, `agent`, `user`, `uid`, `repo_scope` — no raw arguments, prompts, or file paths | `scripts/agent-wrapper.sh` line 76 |
 
@@ -68,12 +68,12 @@ Source: `modules/agent-sandbox.nix`, `modules/nono.nix`, `scripts/agent-wrapper.
 
 | ID | Claim | Source |
 |----|-------|--------|
-| SBX-041 | Profile allows `~/.claude`, `~/.config/claude`, `~/.gitconfig` | `modules/nono.nix` lines 37-39 |
-| SBX-042 | Profile allows NixOS system paths: `/nix/var/nix/profiles`, `/run/current-system`, `/etc/profiles/per-user`, `/etc/ssl`, `/etc/nix`, `/etc/static` | `modules/nono.nix` lines 40-46 |
-| SBX-043 | Profile security groups: `nix_runtime`, `node_runtime`, `rust_runtime`, `python_runtime`, `claude_code_linux`, `claude_cache_linux`, `user_caches_linux`, `unlink_protection` | `modules/nono.nix` lines 23-30 |
-| SBX-044 | `signal_mode = "isolated"` — process signal isolation | `modules/nono.nix` line 32 |
-| SBX-045 | `capability_elevation = false` | `modules/nono.nix` line 33 |
-| SBX-046 | `network.block = false` — nono is NOT the egress boundary; nftables is | `modules/nono.nix` line 79 |
+| SBX-041 | Base `tsurf` profile allows `~/.gitconfig` plus agent-specific overlays; Claude adds `~/.claude`, `~/.config/claude`, `~/.claude.json`, and `~/.claude.json.lock` via per-agent `nonoProfile` overrides | `modules/nono.nix`, `modules/agent-sandbox.nix` |
+| SBX-042 | Base profile allows NixOS system paths: `/nix/var/nix/profiles`, `/run/current-system`, `/etc/profiles/per-user`, `/etc/ssl`, `/etc/nix`, `/etc/static` | `modules/nono.nix` |
+| SBX-043 | Base profile security groups stay generic: `nix_runtime`, `node_runtime`, `rust_runtime`, `python_runtime`, `user_caches_linux`, `unlink_protection` | `modules/nono.nix` |
+| SBX-044 | `signal_mode = "isolated"` — process signal isolation | `modules/nono.nix` |
+| SBX-045 | `capability_elevation = false` | `modules/nono.nix` |
+| SBX-046 | `network.block = false` — nono is NOT the egress boundary; nftables is | `modules/nono.nix` |
 
 ## Claude-Level Defense-in-Depth
 

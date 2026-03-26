@@ -6,7 +6,8 @@
 #   environment.persistence."/persist".files = [ "/var/lib/myservice/config.json" ];
 # See networking.nix (SSH host keys), users.nix (root home), and agent-launcher.nix
 # (agent state) for real examples.
-{ ... }: {
+{ ... }:
+{
   # @decision IMP-05: Fix /etc permissions for sshd StrictModes.
   # OpenSSH StrictModes (enabled by default, confirmed in srvos) requires /etc, /etc/ssh,
   # and /etc/ssh/authorized_keys.d to be owned by root with no group/world write (mode 755
@@ -33,16 +34,15 @@
     hideMounts = true;
 
     directories = [
-      "/var/lib/nixos"                     # UID/GID maps, declarative-users/groups state
-      "/var/lib/systemd/timers"            # Timer stamps for Persistent=true timers
-      "/var/lib/systemd/timesync"          # NTP clock file
-      "/var/lib/systemd/linger"            # User linger state
-      "/var/lib/private"                   # DynamicUser services
+      "/var/lib/nixos" # UID/GID maps, declarative-users/groups state
+      "/var/lib/systemd/timers" # Timer stamps for Persistent=true timers
+      "/var/lib/systemd/timesync" # NTP clock file
+      "/var/lib/private" # DynamicUser services
     ];
 
     files = [
-      "/etc/machine-id"                    # Journal continuity across reboots
-      "/var/lib/systemd/random-seed"       # Kernel entropy pool seed
+      "/etc/machine-id" # Journal continuity across reboots
+      "/var/lib/systemd/random-seed" # Kernel entropy pool seed
     ];
   };
 }

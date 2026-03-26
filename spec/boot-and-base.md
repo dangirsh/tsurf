@@ -54,5 +54,6 @@ Source: `modules/boot.nix`, `modules/base.nix`, `hosts/hardware.nix`, `hosts/dis
 | BAS-018 | home-manager pinned to `release-25.11` with nixpkgs follows | `flake.nix` lines 4-7 |
 | BAS-019 | All inputs follow nixpkgs where applicable (sops-nix, disko, llm-agents, deploy-rs, srvos, nixos-anywhere) | `flake.nix` lines 8-35 |
 | BAS-020 | Common modules applied to all hosts: srvos, disko, impermanence, sops-nix, home-manager | `flake.nix` lines 60-78 |
-| BAS-021 | tsurf overlay provides `nono` and `zmx` packages | `flake.nix` lines 55-58 |
+| BAS-021 | tsurf overlay provides the pinned `nono` package | `flake.nix` |
 | BAS-022 | llm-agents overlay provides `claude-code`, `codex`, etc. | `flake.nix` line 68 |
+| BAS-023 | Coredumps are disabled at both the systemd and kernel layers (`systemd.coredump.enable = false`, `kernel.core_pattern = "|/bin/false"`) | `modules/base.nix` |

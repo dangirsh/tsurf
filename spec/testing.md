@@ -23,14 +23,15 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 | TST-006 | All nixosConfigurations prefixed with `eval-` | `fixture-output-names` |
 | TST-007 | No `deploy.nodes` exported | `public-deploy-empty` |
 | TST-008 | Eval fixtures have `allowUnsafePlaceholders = true` | `fixture-mode-services`, `fixture-mode-dev` |
-| TST-009 | Host source files do not set `allowUnsafePlaceholders` | `secure-host-services`, `secure-host-dev` |
-| TST-010 | Both `eval-services` and `eval-dev` configs evaluate successfully | `eval-services`, `eval-dev`, `eval-dev-alt-agent` |
+| TST-009 | Eval fixtures also set `users.allowNoPasswordLogin = true` to bypass the root-login lockout assertion | `fixture-root-login-bypass` |
+| TST-010 | Host source files do not set `allowUnsafePlaceholders` | `secure-host-services`, `secure-host-dev` |
+| TST-011 | Both `eval-services` and `eval-dev` configs evaluate successfully | `eval-services`, `eval-dev`, `eval-dev-alt-agent` |
 
 ### Firewall and Network
 | ID | Claim | Checks |
 |----|-------|--------|
-| TST-011 | Firewall ports match nginx state | `firewall-ports-services`, `firewall-ports-dev` |
-| TST-012 | `tailscale0` not in trustedInterfaces | `no-trusted-tailscale0-services`, `no-trusted-tailscale0-dev` |
+| TST-012 | Firewall ports match nginx state | `firewall-ports-services`, `firewall-ports-dev` |
+| TST-013 | `trustedInterfaces` resolves to loopback only on both host fixtures | `trusted-interfaces-loopback-only-services`, `trusted-interfaces-loopback-only-dev` |
 | TST-014 | Metadata block nftables table defined | `metadata-block` |
 | TST-015 | Agent egress table defined with UID scoping and private range blocking | `agent-egress-table`, `agent-egress-policy` |
 | TST-016 | SSH ed25519 host key only | `ssh-ed25519-only` |
@@ -75,29 +76,29 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 ### Nix Daemon
 | ID | Claim | Checks |
 |----|-------|--------|
-| TST-041 | `allowed-users` restricted to root + @wheel | `nix-allowed-users-services` |
+| TST-041 | `allowed-users` restricted to root + agent user | `nix-allowed-users-services` |
 | TST-042 | `trusted-users` is root-only | `nix-trusted-users-services` |
 
 ### Services
 | ID | Claim | Checks |
 |----|-------|--------|
-| TST-049 | dev-agent not active in public config | `dev-agent-not-in-template` |
+| TST-049 | CASS timer imported by default in public host fixtures | `cass-indexer-enabled` |
 | TST-050 | Restic backup opt-in only | `restic-opt-in` |
 | TST-052 | Cost tracker uses DynamicUser | `cost-tracker-dynamic-user` |
 | TST-053 | Cost tracker has correct capability config | `cost-tracker-secret-capability` |
 
-### Dev-Agent
+### CASS
 | ID | Claim | Checks |
 |----|-------|--------|
-| TST-054 | Dev-agent defaults to dedicated workspace | `dev-agent-not-in-template` |
-| TST-055 | Dev-agent is supervised service | `dev-agent-supervised` |
-| TST-056 | Dev-agent task is parameterized | `dev-agent-parameterized-task` |
+| TST-054 | CASS uses a system timer instead of user linger | `cass-indexer-resource-limits`, `no-linger-persistence` |
+| TST-055 | CASS resource limits stay in place | `cass-indexer-resource-limits` |
 
 ### Hardening Baseline
 | ID | Claim | Checks |
 |----|-------|--------|
 | TST-057 | All services have SystemCallArchitectures=native | `systemd-hardening-baseline` |
 | TST-058 | Provider API keys owned by root | `agent-api-key-ownership-dev` |
+| TST-065 | Eval fixtures disable coredumps at both the systemd and kernel layers | `coredumps-disabled`, `core-pattern-disabled` |
 
 ### Stale Content
 | ID | Claim | Checks |
@@ -119,10 +120,10 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 |------|--------------|
 | `tests/live/security.bats` | SSH hardening, kernel sysctls, metadata blocking, firewall |
 | `tests/live/secrets.bats` | `/run/secrets` presence, root ownership, permissions |
-| `tests/live/networking.bats` | Tailscale state, metadata-block rule, agent egress table |
+| `tests/live/networking.bats` | DNS reachability, metadata-block rule, agent egress table |
 | `tests/live/sandbox-behavioral.bats` | Sandbox deny/allow paths |
 | `tests/live/agent-sandbox.bats` | Wrapper structure, nono invocation, journald logging |
-| `tests/live/service-health.bats` | systemd unit health, Tailscale backend state |
+| `tests/live/service-health.bats` | systemd unit health |
 | `tests/live/impermanence.bats` | /persist mount, BTRFS type, critical persist dirs, machine-id |
 
 ## Phase 147: New Eval Checks

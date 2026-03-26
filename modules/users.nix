@@ -1,18 +1,20 @@
 # modules/users.nix
-# @decision SEC-152-01: Two-user model: root + agent. Agent in wheel for sudo to immutable launchers only.
-# @decision SEC-106-01: allowUnsafePlaceholders gates insecure template defaults for eval only.
-{ config, lib, pkgs, ... }:
+# Root owns the machine and the dedicated agent user owns sandboxed workspaces.
+# Real root SSH keys are expected from a private overlay or `tsurf-init`; the public repo only bypasses that in eval fixtures.
+# @decision SEC-152-01: Two-user model: root + agent. Launcher sudo access comes from explicit sudoers rules, not wheel membership.
+# @decision SEC-106-01: allowUnsafePlaceholders exists only so eval fixtures can build without private root SSH material or the root-login lockout assertion.
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.tsurf.template;
   agentCfg = config.tsurf.agent;
-
-  # Placeholder key material — assertions detect these exact strings
-  bootstrapKeyComment = "bootstrap-key";
-  breakGlassPlaceholder = "AAAAC3NzaC1lZDI1NTE5AAAAIIb2ZbEP4YS7INuRcu/myeiajC/KD34yjfSssCnbggAJ";
 in
 {
-  options.tsurf.template.allowUnsafePlaceholders = lib.mkEnableOption
-    "unsafe public-template placeholders (NEVER enable for real deployments)";
+  options.tsurf.template.allowUnsafePlaceholders = lib.mkEnableOption "unsafe public-template placeholders (NEVER enable for real deployments)";
 
   options.tsurf.agent = {
     user = lib.mkOption {
@@ -45,61 +47,54 @@ in
   config = {
     users.mutableUsers = false;
 
-    # Agent user — runs sandboxed agent tools, no wheel, no docker
+    # Agent user — runs sandboxed agent tools and owns agent workspaces.
     users.users.${agentCfg.user} = {
       isNormalUser = true;
       uid = agentCfg.uid;
       group = agentCfg.user;
       home = agentCfg.home;
-      extraGroups = [ "users" "wheel" ];
-      subUidRanges = [{ startUid = 200000; count = 65536; }];
-      subGidRanges = [{ startGid = 200000; count = 65536; }];
-      shell = pkgs.bashInteractive;
-      openssh.authorizedKeys.keys = [
-        # Replace with your SSH public key in private overlay
+      extraGroups = [ "users" ];
+      subUidRanges = [
+        {
+          startUid = 200000;
+          count = 65536;
+        }
       ];
+      subGidRanges = [
+        {
+          startGid = 200000;
+          count = 65536;
+        }
+      ];
+      shell = pkgs.bashInteractive;
+      openssh.authorizedKeys.keys = [ ];
     };
 
     users.groups.${agentCfg.user} = {
       gid = agentCfg.gid;
     };
 
-    users.users.root = {
-      openssh.authorizedKeys.keys = [
-        # Bootstrap key — private overlay replaces this entire file with real users
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIac0b7Yb2yCJrPiWf+KJQJ1c7gwH7SgHTiadSSUH0tM bootstrap-key"
-      ];
-    };
+    users.users.root.openssh.authorizedKeys.keys = lib.mkDefault [ ];
+    users.allowNoPasswordLogin = lib.mkDefault cfg.allowUnsafePlaceholders;
 
-    # Insecure defaults gated by allowUnsafePlaceholders
-    users.allowNoPasswordLogin = cfg.allowUnsafePlaceholders;
-    security.sudo.wheelNeedsPassword = !cfg.allowUnsafePlaceholders;
+    # Agent launchers use explicit sudoers rules, so non-wheel callers must be allowed.
     security.sudo.execWheelOnly = lib.mkForce false;
 
-    # Agent user security invariants (unconditional — always enforced)
+    # Agent user security invariants (unconditional — always enforced).
     assertions = [
       {
         assertion = !(builtins.elem "docker" config.users.users.${agentCfg.user}.extraGroups);
         message = "SECURITY: agent user '${agentCfg.user}' must not be in docker group.";
       }
-    ] ++ lib.optionals (!cfg.allowUnsafePlaceholders) [
+    ]
+    ++ lib.optionals (!cfg.allowUnsafePlaceholders) [
       {
-        assertion = !builtins.any (k: lib.hasInfix bootstrapKeyComment k)
-          config.users.users.root.openssh.authorizedKeys.keys;
+        assertion = config.users.users.root.openssh.authorizedKeys.keys != [ ];
         message = ''
-          Root SSH authorized_keys contains the placeholder bootstrap-key.
-          Run `nix run .#tsurf-init` to generate a real key, then replace the
-          placeholder in your private overlay's users.nix.
-          For template evaluation only, set tsurf.template.allowUnsafePlaceholders = true.
-        '';
-      }
-      {
-        assertion = !builtins.any (k: lib.hasInfix breakGlassPlaceholder k)
-          config.users.users.root.openssh.authorizedKeys.keys;
-        message = ''
-          Root SSH authorized_keys contains the placeholder break-glass key.
-          Run `nix run .#tsurf-init` to generate a real key, then replace the
-          placeholder in your private overlay's break-glass-ssh.nix.
+          Root SSH authorized_keys is empty.
+          Run `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay`
+          to generate a root key and materialize modules/root-ssh.nix, or set
+          users.users.root.openssh.authorizedKeys.keys in your private overlay.
           For template evaluation only, set tsurf.template.allowUnsafePlaceholders = true.
         '';
       }

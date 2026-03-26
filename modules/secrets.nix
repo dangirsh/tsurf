@@ -2,23 +2,32 @@
 #   reads them before entering the sandbox and exposes only per-session loopback
 #   tokens to the agent child. Operator-side credentials are owned by the agent user.
 #   Private overlay may override via lib.mkForce in its own secrets.nix.
-{ config, lib, ... }: {
+{ config, lib, ... }:
+{
   sops = {
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
-    secrets."tailscale-authkey" = {
-      restartUnits = [ "tailscaled.service" ];
+    secrets."b2-account-id" = { };
+    secrets."b2-account-key" = { };
+    secrets."restic-password" = { };
+    secrets."anthropic-api-key" = {
+      owner = "root";
     };
-
-    secrets."b2-account-id" = {};
-    secrets."b2-account-key" = {};
-    secrets."restic-password" = {};
-    secrets."anthropic-api-key" = { owner = "root"; };
-    secrets."openai-api-key" = { owner = "root"; };
-    secrets."google-api-key" = { owner = config.tsurf.agent.user; };
-    secrets."xai-api-key" = { owner = config.tsurf.agent.user; };
-    secrets."openrouter-api-key" = { owner = config.tsurf.agent.user; };
-    secrets."github-pat" = { owner = config.tsurf.agent.user; };
+    secrets."openai-api-key" = {
+      owner = "root";
+    };
+    secrets."google-api-key" = {
+      owner = config.tsurf.agent.user;
+    };
+    secrets."xai-api-key" = {
+      owner = config.tsurf.agent.user;
+    };
+    secrets."openrouter-api-key" = {
+      owner = config.tsurf.agent.user;
+    };
+    secrets."github-pat" = {
+      owner = config.tsurf.agent.user;
+    };
 
     # Private overlay: add service-specific secrets in your own secrets module.
     # Example:

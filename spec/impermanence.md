@@ -25,7 +25,7 @@ Source: `modules/impermanence.nix`, `modules/boot.nix`, `scripts/btrfs-rollback.
 | IMP-007 | `/var/lib/nixos` persisted (UID/GID maps, declarative users/groups) | `modules/impermanence.nix` line 36 |
 | IMP-009 | `/var/lib/systemd/timers` persisted (Persistent=true timer stamps) | `modules/impermanence.nix` line 37 |
 | IMP-010 | `/var/lib/systemd/timesync` persisted (NTP clock file) | `modules/impermanence.nix` line 38 |
-| IMP-011 | `/var/lib/systemd/linger` persisted (user linger state) | `modules/impermanence.nix` line 39 |
+| IMP-011 | `/var/lib/systemd/linger` not persisted — user linger is not part of the public model | `modules/impermanence.nix`, `tests/eval/config-checks.nix:no-linger-persistence` |
 | IMP-012 | `/var/lib/private` persisted (DynamicUser services) | `modules/impermanence.nix` line 40 |
 | IMP-013 | `/etc/machine-id` persisted (journal continuity) | `modules/impermanence.nix` line 30 |
 | IMP-014 | `/var/lib/systemd/random-seed` persisted (kernel entropy) | `modules/impermanence.nix` line 31 |

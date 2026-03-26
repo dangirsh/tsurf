@@ -6,14 +6,6 @@ load "../lib/common"
 bats_load_library bats-support
 bats_load_library bats-assert
 
-# Validates NET-023: Tailscale enabled (private overlay)
-@test "${HOST}: tailscaled.service is active (if present)" {
-  if ! remote systemctl list-unit-files tailscaled.service --no-legend | grep -q tailscaled; then
-    skip "tailscaled not installed on this host"
-  fi
-  assert_unit_active "tailscaled.service"
-}
-
 # Validates NET-028: sshd must be enabled
 @test "${HOST}: sshd.service is active" {
   assert_unit_active "sshd.service"
@@ -22,14 +14,6 @@ bats_load_library bats-assert
 # Validates BAS-008: weekly garbage collection
 @test "${HOST}: nix-gc.timer is enabled" {
   run remote systemctl is-enabled nix-gc.timer
-  assert_success
-}
-
-@test "${HOST}: tailscaled.service is enabled (if present)" {
-  if ! remote systemctl list-unit-files tailscaled.service --no-legend | grep -q tailscaled; then
-    skip "tailscaled not installed on this host"
-  fi
-  run remote systemctl is-enabled tailscaled.service
   assert_success
 }
 
@@ -49,53 +33,6 @@ bats_load_library bats-assert
     echo "FAIL: failed systemd units detected"
     echo "DEBUG: $failed"
     echo "DEBUG: ssh ${SSH_USER}@${HOST} systemctl --failed --no-pager"
-    return 1
-  fi
-}
-
-# Validates NET-023: Tailscale backend running (private overlay)
-@test "${HOST}: tailscale backend state is Running (if present)" {
-  if ! remote systemctl list-unit-files tailscaled.service --no-legend | grep -q tailscaled; then
-    skip "tailscaled not installed on this host"
-  fi
-  local status_json
-  status_json="$(remote tailscale status --json 2>&1)" || {
-    echo "FAIL: tailscale status --json failed"
-    echo "DEBUG: ssh ${SSH_USER}@${HOST} tailscale status --json"
-    return 1
-  }
-
-  local backend_state
-  backend_state="$(echo "$status_json" | jq -r ".BackendState" 2>/dev/null)" || {
-    echo "FAIL: could not parse tailscale status JSON"
-    echo "DEBUG: $status_json"
-    return 1
-  }
-  if [[ "$backend_state" != "Running" ]]; then
-    echo "FAIL: BackendState='$backend_state', expected 'Running'"
-    echo "DEBUG: ssh ${SSH_USER}@${HOST} tailscale status"
-    return 1
-  fi
-}
-
-@test "${HOST}: tailscale hostname matches expected prefix (if present)" {
-  if ! remote systemctl list-unit-files tailscaled.service --no-legend | grep -q tailscaled; then
-    skip "tailscaled not installed on this host"
-  fi
-  local status_json
-  status_json="$(remote tailscale status --json 2>&1)" || {
-    echo "FAIL: tailscale status --json failed"
-    return 1
-  }
-
-  local ts_hostname
-  ts_hostname="$(echo "$status_json" | jq -r ".Self.HostName" 2>/dev/null)" || {
-    echo "FAIL: could not parse tailscale hostname"
-    return 1
-  }
-
-  if [[ "$ts_hostname" != "${HOST}"* ]]; then
-    echo "FAIL: tailscale hostname='$ts_hostname', expected prefix='${HOST}'"
     return 1
   fi
 }

@@ -37,12 +37,11 @@ require_impermanence() {
   fi
 }
 
-# Validates IMP-016, IMP-017, IMP-018, IMP-025: network, SSH, user, project persistence
+# Validates IMP-016, IMP-017, IMP-018, IMP-025: SSH, user, project, and agent-state persistence
 @test "${HOST}: critical persist directories are present" {
   require_impermanence
 
   local required_dirs=(
-    "/persist/var/lib/tailscale"
     "/persist/etc/ssh"
     "/persist/home/agent"
     "/persist/data"

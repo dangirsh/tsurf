@@ -146,7 +146,8 @@ if (( route_count > 0 )); then
 fi
 
 # Scope sandbox read access to the current git repository root.
-# Fail closed: refuse to run outside a git worktree (no silent fallback to $cwd).
+# The public repo does not try to classify "safe" infrastructure repos; operators
+# keep agents out of security-boundary repos by policy.
 git_root="$(git -c safe.directory='*' -C "$cwd" rev-parse --show-toplevel 2>/dev/null)" || {
   echo "ERROR: $AGENT_NAME must run inside a git worktree beneath $AGENT_PROJECT_ROOT" >&2
   exit 1
@@ -154,11 +155,6 @@ git_root="$(git -c safe.directory='*' -C "$cwd" rev-parse --show-toplevel 2>/dev
 git_root="$(readlink -f "$git_root")"
 if [[ "$git_root" == "$AGENT_PROJECT_ROOT" ]]; then
   echo "ERROR: refusing to grant read access to the entire project root ($AGENT_PROJECT_ROOT)" >&2
-  exit 1
-fi
-control_plane_marker=".tsurf-control-plane"
-if [[ -e "$git_root/$control_plane_marker" ]]; then
-  echo "ERROR: refusing to run in protected control-plane repo ($git_root) due to marker $control_plane_marker" >&2
   exit 1
 fi
 repo_scope="git-worktree"

@@ -36,7 +36,7 @@ remote_curl() {
 }
 
 # Retry helper for transient network/service startup races.
-# Usage: retry 3 2 remote systemctl is-active tailscaled.service
+# Usage: retry 3 2 remote systemctl is-active sshd.service
 retry() {
   local max_attempts="$1"
   local delay_seconds="$2"

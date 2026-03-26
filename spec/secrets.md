@@ -20,11 +20,10 @@ Source: `modules/secrets.nix`, `scripts/agent-wrapper.sh`, `scripts/credential-p
 |----|-------|--------|
 | SCR-005 | `anthropic-api-key` owned by `root` | `SECURITY.md`, `tests/eval/config-checks.nix:agent-api-key-ownership-dev` |
 | SCR-006 | `openai-api-key` owned by `root` | `SECURITY.md`, `tests/eval/config-checks.nix:agent-api-key-ownership-dev` |
-| SCR-007 | `google-api-key` owned by `dev` | `SECURITY.md` |
-| SCR-008 | `xai-api-key` owned by `dev` | `SECURITY.md` |
-| SCR-009 | `openrouter-api-key` owned by `dev` | `SECURITY.md` |
-| SCR-010 | `github-pat` owned by `dev` | `SECURITY.md` |
-| SCR-011 | `tailscale-authkey` owned by root/default | `SECURITY.md` |
+| SCR-007 | `google-api-key` owned by the dedicated agent user | `modules/secrets.nix` |
+| SCR-008 | `xai-api-key` owned by the dedicated agent user | `modules/secrets.nix` |
+| SCR-009 | `openrouter-api-key` owned by the dedicated agent user | `modules/secrets.nix` |
+| SCR-010 | `github-pat` owned by the dedicated agent user | `modules/secrets.nix` |
 | SCR-012 | Backup secrets (`b2-account-id`, `b2-account-key`, `restic-password`) owned by root/default | `SECURITY.md` |
 
 ## Credential Proxy (Broker Model)

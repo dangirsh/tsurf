@@ -17,16 +17,12 @@ There is no separate `dev` operator user. Root handles all administrative tasks 
 
 1. Copy this directory into a new private repository.
 2. Edit `flake.nix`: replace `github:your-org/tsurf` and `REPLACE` placeholders.
-3. **Add your SSH public key to root's authorized keys** in your host config:
-   ```nix
-   users.users.root.openssh.authorizedKeys.keys = [
-     "ssh-ed25519 AAAA... your-key"
-   ];
-   ```
-   This replaces the bootstrap placeholder key from `modules/users.nix`.
+3. Run `nix run .#tsurf-init -- --overlay-dir .` to generate the root SSH key and
+   create `modules/root-ssh.nix`.
 4. Replace placeholder recipients in `.sops.yaml` with real age public keys.
 5. Replace hardware references in `hosts/example/default.nix` with your host's config.
-6. After host-specific setup, import `networking.nix` and `secrets.nix` (requires Tailscale, persisted SSH host keys, and an encrypted sops file).
+6. After host-specific setup, import `networking.nix` and `secrets.nix` (requires
+   persisted SSH host keys and an encrypted sops file).
 7. Run `nix flake lock` in this private repo to generate `flake.lock`.
 8. Create `secrets/example.yaml`, encrypt it with sops, and set `sops.defaultSopsFile` when enabling `secrets.nix`.
 9. Deploy: `./scripts/deploy.sh --node example --first-deploy`
@@ -38,7 +34,6 @@ There is no separate `dev` operator user. Root handles all administrative tasks 
 Public tsurf core provides two first-class agent paths running as the `agent` user under [nono](https://github.com/always-further/nono) sandboxing:
 
 - **Interactive `claude`** -- sandboxed wrapper for interactive use
-- **Unattended `services.devAgent`** -- supervised Claude agent service
 - **Generic launcher** -- `services.agentLauncher.agents.<name>` for custom agents
 
 Additional wrappers such as `codex` are opt-in public extras. Workflow-specific agents and orchestration belong in your private overlay.
@@ -51,8 +46,7 @@ Hosts running agent workloads should import these agent infrastructure modules:
 - `modules/agent-launcher.nix` -- generic sandboxed agent launcher infrastructure
 - `modules/agent-sandbox.nix` -- core `claude` wrapper declaration on top of the generic launcher
 - `modules/nono.nix` -- nono binary and tsurf Landlock profile
-
-For unattended Claude work, also import `extras/dev-agent.nix`.
+- `extras/cass.nix` -- low-priority CASS indexer timer for the dedicated agent user
 
 The private overlay template `flake.nix` already imports all of these. Enable `services.agentCompute.enable = true` for any host that runs agent workloads.
 
@@ -66,8 +60,8 @@ The generic launcher (`services.agentLauncher.agents.<name>`) lets you define ag
 |----------|--------|---------------|
 | Current working directory | Read + write | `workdir.access` in nono profile |
 | Current git repo root | Read only | `agent-wrapper.sh` `--read` flag |
-| Agent config dirs (`~/.claude`, etc.) | Read + write | `filesystem.allow` in nono profile |
-| Nix store, SSL certs, `/etc` basics | Read only | Inherited from `extends = "claude-code"` |
+| Agent-specific config dirs (for example `~/.claude`) | Read + write | Per-agent `nonoProfile.extraAllow` / `extraAllowFile` |
+| Nix store, SSL certs, `/etc` basics | Read only | Base `tsurf` nono profile |
 | Paths in `filesystem.allow` | Read + write | Your nono profile |
 | Outbound network (API calls, git) | Allowlisted | Host nftables policy for the dedicated agent UID |
 
@@ -80,30 +74,18 @@ The generic launcher (`services.agentLauncher.agents.<name>`) lets you define ag
 | Docker daemon | No access | Agent user has no `docker` group (build-time assertion) |
 | CPU / memory beyond limits | Killed | `tsurf-agents.slice` cgroup limits |
 
-### First-class unattended workflow (`dev-agent`)
+### Reattachable Interactive Sessions
 
-Use the shipped `dev-agent` module for the standard unattended Claude path:
+If you want an interactive agent session to survive SSH or mosh disconnects, run
+the wrapper inside `tmux`:
 
-```nix
-{ config, inputs, ... }:
-{
-  imports = [ "${inputs.tsurf}/extras/dev-agent.nix" ];
-
-  services.devAgent = {
-    enable = true;
-    workingDirectory = "/data/projects/my-workspace";
-    prompt = ''
-      Review the repository in the current working directory, continue the
-      highest-value concrete task you can verify locally, and leave a short
-      progress note in ./DEV-AGENT-STATUS.md.
-    '';
-    permissionMode = "bypassPermissions";
-    model = "claude-opus-4-6";
-  };
-}
+```bash
+tmux new -As claude-main
+cd /data/projects/my-repo
+claude
 ```
 
-The service keeps a named `zmx` session alive, initializes the workspace as a Git repo if needed, and restarts cleanly under systemd supervision.
+This keeps the public core simple while still giving you an easy reattach path.
 
 ### Adding a custom agent via the generic launcher
 
@@ -146,7 +128,7 @@ claude   # wrapper broker-launches as agent user and runs in nono sandbox
 
 The wrapper handles credential injection from `/run/secrets/`, enforces the git-worktree requirement, and logs launches to journald (`journalctl -t agent-launch`).
 
-See `SECURITY.md` in the tsurf repo for the full access control model, credential flow architecture, and tailnet segmentation guidance.
+See `SECURITY.md` in the tsurf repo for the full access control model and credential flow architecture.
 
 ### Adding File Sync
 

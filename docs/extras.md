@@ -1,17 +1,17 @@
 # Extras
 
-Everything in `extras/` is opt-in. Public core stays focused on the base system,
-the generic launcher, and the interactive `claude` path.
+`extras/` holds reusable modules built on top of the public core. The host
+fixtures import `extras/cass.nix` by default; the other extras stay opt-in.
 
 ## Shipped Extras
 
 | Path | Enable / import | What it adds | Notes |
 |------|-----------------|--------------|-------|
-| `extras/dev-agent.nix` | `services.devAgent.enable = true` | Supervised unattended Claude service in a named `zmx` session | Requires `agentCompute`, `agentSandbox`, and `nonoSandbox`; set exactly one of `prompt` or `command` |
+| `extras/cass.nix` | Imported by default in the public host fixtures | Low-priority system timer that refreshes the CASS session index | Runs as the dedicated agent user with CPU/memory throttling |
 | `extras/codex.nix` | `services.codexAgent.enable = true` | Optional sandboxed `codex` wrapper | Requires `agentLauncher` and `nonoSandbox`; defaults to the `openai-api-key` secret |
 | `extras/cost-tracker.nix` | `services.costTracker.enable = true` | Timer-driven Anthropic/OpenAI cost fetcher | Providers are declared under `services.costTracker.providers` |
 | `extras/restic.nix` | `services.resticStarter.enable = true` | Restic backups to a Backblaze B2 S3 endpoint | Expects the secrets/template wiring from `modules/secrets.nix` |
-| `extras/home/` | `home-manager.users.<name> = import ../../extras/home;` | Home-manager profile for the agent user | Installs git, gh, ssh, direnv, and the CASS session indexer |
+| `extras/home/` | `home-manager.users.<name> = import ../../extras/home;` | Home-manager profile for the agent user | Installs git, gh, ssh, and direnv defaults |
 
 ## Home Profile
 
@@ -22,7 +22,7 @@ host fixtures. It provides:
 - GitHub CLI with auth left to runtime credentials
 - SSH client defaults with multiplexing enabled
 - `direnv` + `nix-direnv`
-- `cass` session indexing
+- a clean place for private overlays to layer `agentic-dev-base` and project-specific config
 
 ## Custom Agents
 

@@ -18,12 +18,11 @@ modules/                 # Core — security/infrastructure essentials only
   agent-sandbox.nix    # Claude agent declaration on top of the generic launcher
   base.nix             # Nix settings, system packages, nix-mineral kernel hardening
   boot.nix             # GRUB bootloader + BTRFS root rollback
-  break-glass-ssh.nix  # Emergency SSH key (last-resort recovery)
   impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
   networking.nix       # nftables, SSH (hardened), firewall assertions
   nono.nix             # nono base profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
-  users.nix            # Root + agent user model, tsurf.agent.* options, SSH keys
+  users.nix            # Root + agent user model, tsurf.agent.* options, root SSH assertion
 scripts/                 # Core scripts (sandbox, rollback, deploy, test runner)
   agent-wrapper.sh     # root-owned launch bridge — credential proxy, sandbox, privilege drop
   btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
@@ -35,17 +34,15 @@ scripts/                 # Core scripts (sandbox, rollback, deploy, test runner)
   tsurf-init.sh        # Bootstrap wizard: generate SSH keys, validate setup
   tsurf-status.sh      # Check systemd service status on tsurf hosts
 extras/                  # Optional batteries — import what you need
+  cass.nix             # Low-priority CASS indexer timer for the dedicated agent user
   codex.nix            # Codex agent wrapper (OpenAI, opt-in, uses generic launcher)
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
-  dev-agent.nix        # First-class unattended Claude agent (supervised zmx + systemd)
   restic.nix           # Restic backup to B2
   home/
-    default.nix        # home-manager: git/ssh/direnv/CASS inlined
-    cass.nix           # CASS session indexer timer (enabled by default in home config)
+    default.nix        # home-manager: git/ssh/direnv defaults for the agent user
   scripts/             # Scripts for extras modules
     clone-repos.sh     # Idempotent repo cloning activation script
     cost-tracker.py    # Cost tracker HTTP server (Python)
-    dev-agent.sh       # Dev-agent session launcher script
 examples/
   private-overlay/     # Forkable starting point for a private overlay
 secrets/               # sops-encrypted secrets (age keys, gitignored)
@@ -65,12 +62,12 @@ tests/
 - **Flakes + home-manager**: Reproducible, lockfile-pinned (nixos-25.11)
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API, opt-in extra)
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
-- **Agent tooling**: Public core ships two first-class agent paths: sandboxed interactive `claude` and the unattended `dev-agent` service. `codex` is an opt-in extra; workflow-specific wrappers still belong in private overlays. All agents use the generic launcher (`modules/agent-launcher.nix`).
+- **Agent tooling**: Public core ships the sandboxed interactive `claude` path plus the generic launcher. `codex` is an opt-in extra; workflow-specific wrappers belong in private overlays. Long-lived sessions should use `tmux`, and unattended jobs should schedule the generated wrappers directly.
 - **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo. A root-owned loopback credential proxy keeps real keys out of the agent principal and gives the child only per-session tokens.
 - **Agent egress**: Host nftables allowlists outbound agent traffic by UID. Defaults allow DNS plus TCP `22/80/443` and block private/link-local ranges.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults)
 - **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale belongs in the private overlay.
-- **Privilege model**: Two-user model: `root` (operator/deploy/admin) and `agent` (sandboxed tools, SSH access). Agent is in `wheel` for sudo to immutable launchers only. Parameterized via `tsurf.agent.{user, home, projectRoot}`. Build-time assertions enforce agent user security invariants.
+- **Privilege model**: Two-user model: `root` (operator/deploy/admin) and `agent` (sandboxed tools, SSH access). Agent is not in `wheel`; immutable-launcher sudo access is granted explicitly. Parameterized via `tsurf.agent.{user, home, projectRoot}`.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
 
 ## Module Conventions & Patterns
@@ -137,7 +134,7 @@ Sandbox testing has three tiers:
 
 ### Test conventions
 
-- One assertion per test, host-prefixed names (`tsurf: tailscaled.service is active`).
+- One assertion per test, host-prefixed names (`tsurf: sshd.service is active`).
 - Tests are idempotent and read-only.
 - Helpers in `tests/lib/common.bash`.
 
@@ -153,7 +150,6 @@ See `SECURITY.md` for the complete security model, accepted risks, and verificat
 - **Never** weaken nono sandbox defaults in `nono.nix`.
 - **Never** add a public `--no-sandbox` path; unsandboxed execution belongs in a private overlay only.
 - **Never** add packages imperatively (`nix-env`, `nix profile install`) or re-enable `nix.channel.enable` / `nix.nixPath`.
-- **Never** remove `modules/break-glass-ssh.nix` from either host config.
 - **Never** omit `@decision` annotations for security-relevant module choices.
 - **Never** commit `.planning/` — it is local-only agent state (gitignored, blocked by `.githooks/pre-commit`).
 
@@ -165,9 +161,9 @@ Run before every module or service commit:
 2. **Secrets** — New secret? Add to `secrets.nix` with minimal `owner`/permissions. Use `sops.templates` for env files. NEVER embed credentials in URLs, CLI args, or committed files.
 3. **New service** — Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts`.
 4. **Sandbox impact** — Modifying `agent-compute.nix` or `nono.nix`? Verify `/run/secrets` and `~/.ssh` remain in the deny list. NEVER weaken nono sandbox defaults.
-5. **Agent execution** — Public core `claude` and `dev-agent` must stay sandboxed. Launch agents from workspace repos, not infrastructure repos (operational policy).
+5. **Agent execution** — Public core `claude` and any generated wrappers must stay sandboxed. Launch agents from workspace repos, not security-boundary repos (operational policy).
 7. **Package management** — NEVER use `nix-env`, `nix profile install`, or re-enable `nix.channel.enable` / `nix.nixPath`.
-8. **Break-glass key** — NEVER remove `modules/break-glass-ssh.nix` from either host config.
+8. **Root SSH access** — Keep a real root SSH key configured in the private overlay. The public repo no longer ships placeholder recovery keys.
 9. **Validation** — `nix flake check` passes.
 
 ## Sandbox Awareness
@@ -184,7 +180,7 @@ Run before every module or service commit:
 ## Recovery
 
 If SSH is lost, use provider console/rescue mode to rollback (`nixos-rebuild switch --rollback`) or repair persisted `authorized_keys`, then redeploy from the private overlay.
-Keep `modules/break-glass-ssh.nix` in both host configs and follow `SECURITY.md` recovery invariants.
+Keep the private overlay's root SSH key material in sync with `SECURITY.md` recovery invariants.
 
 ## Private Overlay
 

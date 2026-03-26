@@ -9,48 +9,55 @@
 #
 # Run: nix build .#vm-test-sandbox
 # Requires: KVM (not available on GitHub Actions ubuntu-latest)
-{ pkgs, lib, impermanenceModule, ... }:
+{
+  pkgs,
+  lib,
+  impermanenceModule,
+  ...
+}:
 pkgs.testers.nixosTest {
   name = "sandbox-behavioral";
 
-  nodes.machine = { config, pkgs, ... }: {
-    imports = [
-      impermanenceModule
-      ../../modules/users.nix
-    ];
+  nodes.machine =
+    { config, pkgs, ... }:
+    {
+      imports = [
+        impermanenceModule
+        ../../modules/users.nix
+      ];
 
-    # Gate insecure template defaults (passwordless login for eval)
-    tsurf.template.allowUnsafePlaceholders = true;
+      # Gate insecure template defaults (passwordless login for eval)
+      tsurf.template.allowUnsafePlaceholders = true;
 
-    # Create fake secret files via activation script.
-    # sops-nix cannot be used in VM tests (no age key, no encrypted secrets
-    # file). Model both ownership classes explicitly:
-    # - anthropic-api-key: wrapper-consumed API secret, root-owned
-    # - root-only-example: operator-only secret, unreadable to the agent user
-    system.activationScripts.test-secrets = ''
-      mkdir -p /run/secrets
-      echo "test-key-value" > /run/secrets/anthropic-api-key
-      chmod 400 /run/secrets/anthropic-api-key
-      chown root:root /run/secrets/anthropic-api-key
+      # Create fake secret files via activation script.
+      # sops-nix cannot be used in VM tests (no age key, no encrypted secrets
+      # file). Model both ownership classes explicitly:
+      # - anthropic-api-key: wrapper-consumed API secret, root-owned
+      # - root-only-example: operator-only secret, unreadable to the agent user
+      system.activationScripts.test-secrets = ''
+        mkdir -p /run/secrets
+        echo "test-key-value" > /run/secrets/anthropic-api-key
+        chmod 400 /run/secrets/anthropic-api-key
+        chown root:root /run/secrets/anthropic-api-key
 
-      echo "root-only-value" > /run/secrets/root-only-example
-      chmod 600 /run/secrets/root-only-example
-      chown root:root /run/secrets/root-only-example
-    '';
+        echo "root-only-value" > /run/secrets/root-only-example
+        chmod 600 /run/secrets/root-only-example
+        chown root:root /run/secrets/root-only-example
+      '';
 
-    # Create a test git repo for the read-access check
-    system.activationScripts.test-repo = ''
-      mkdir -p /data/projects/test-repo
-      cd /data/projects/test-repo
-      if [ ! -d .git ]; then
-        ${pkgs.git}/bin/git init
-        echo "test content" > test-file.txt
-        ${pkgs.git}/bin/git add .
-        ${pkgs.git}/bin/git -c user.email=test@test -c user.name=test commit -m "init"
-      fi
-      chown -R ${config.tsurf.agent.user}:${config.tsurf.agent.user} /data/projects/test-repo
-    '';
-  };
+      # Create a test git repo for the read-access check
+      system.activationScripts.test-repo = ''
+        mkdir -p /data/projects/test-repo
+        cd /data/projects/test-repo
+        if [ ! -d .git ]; then
+          ${pkgs.git}/bin/git init
+          echo "test content" > test-file.txt
+          ${pkgs.git}/bin/git add .
+          ${pkgs.git}/bin/git -c user.email=test@test -c user.name=test commit -m "init"
+        fi
+        chown -R ${config.tsurf.agent.user}:${config.tsurf.agent.user} /data/projects/test-repo
+      '';
+    };
 
   testScript = ''
     machine.wait_for_unit("multi-user.target")
@@ -65,7 +72,7 @@ pkgs.testers.nixosTest {
     assert result == agent_user, f"Expected '{agent_user}', got '{result}'"
 
     result = machine.succeed(f"sudo -u {agent_user} id")
-    assert "wheel" in result, f"Agent not in wheel group (needed for sudo to launchers): {result}"
+    assert "wheel" not in result, f"Agent unexpectedly in wheel group: {result}"
     assert "docker" not in result, f"Agent in docker group: {result}"
 
     # Verify agent is not root

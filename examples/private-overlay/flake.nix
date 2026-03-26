@@ -20,18 +20,19 @@
     srvos.follows = "tsurf/srvos";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    home-manager,
-    sops-nix,
-    disko,
-    llm-agents,
-    deploy-rs,
-    impermanence,
-    srvos,
-    ...
-  } @ inputs:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      home-manager,
+      sops-nix,
+      disko,
+      llm-agents,
+      deploy-rs,
+      impermanence,
+      srvos,
+      ...
+    }@inputs:
     let
       system = "x86_64-linux"; # REPLACE if needed.
 
@@ -53,8 +54,8 @@
         "${inputs.tsurf}/modules/base.nix"
         "${inputs.tsurf}/modules/boot.nix"
         "${inputs.tsurf}/modules/users.nix"
+        ./modules/root-ssh.nix
         "${inputs.tsurf}/modules/impermanence.nix"
-        "${inputs.tsurf}/modules/break-glass-ssh.nix"
         # agent-compute.nix: tsurf-agents.slice cgroup limits and /data/projects persistence
         "${inputs.tsurf}/modules/agent-compute.nix"
         { services.agentCompute.enable = true; }
@@ -66,16 +67,14 @@
         # agent-sandbox.nix: core claude wrapper
         "${inputs.tsurf}/modules/agent-sandbox.nix"
         { services.agentSandbox.enable = true; }
-        # dev-agent.nix: first-class unattended Claude service (enable per host as needed)
-        "${inputs.tsurf}/extras/dev-agent.nix"
-        # Example opt-in extra wrapper:
-        "${inputs.tsurf}/extras/codex.nix"
-        { services.codexAgent.enable = true; }
+        # cass.nix: low-priority CASS indexer timer for the dedicated agent user
+        "${inputs.tsurf}/extras/cass.nix"
 
         # Import networking.nix after configuring Tailscale, SSH host keys, and impermanence.
         # Import secrets.nix after creating your encrypted secrets file, or write your own secrets module.
       ];
-    in {
+    in
+    {
       nixosConfigurations.example = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = { inherit inputs; };
