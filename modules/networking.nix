@@ -49,11 +49,11 @@ in
     blockedIPv4Cidrs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
-        "10.0.0.0/8"
-        "172.16.0.0/12"
-        "192.168.0.0/16"
-        "100.64.0.0/10"
-        "169.254.0.0/16"
+        "10.0.0.0/8"       # RFC1918 private
+        "172.16.0.0/12"    # RFC1918 private
+        "192.168.0.0/16"   # RFC1918 private
+        "100.64.0.0/10"    # RFC6598 CGNAT (includes Tailscale)
+        "169.254.0.0/16"   # RFC3927 link-local (includes cloud metadata)
       ];
       description = "IPv4 CIDRs blocked for the agent user when blockPrivateRanges is enabled.";
     };
@@ -61,8 +61,8 @@ in
     blockedIPv6Cidrs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
-        "fc00::/7"
-        "fe80::/10"
+        "fc00::/7"   # RFC4193 unique local address (ULA)
+        "fe80::/10"  # RFC4291 link-local
       ];
       description = "IPv6 CIDRs blocked for the agent user when blockPrivateRanges is enabled.";
     };
@@ -150,10 +150,10 @@ in
       ];
       settings = {
         PermitRootLogin = "prohibit-password";
-        MaxAuthTries = 3;
-        LoginGraceTime = 30;
-        ClientAliveInterval = 300;
-        ClientAliveCountMax = 3;
+        MaxAuthTries = 3;             # Limit brute-force attempts per connection
+        LoginGraceTime = 30;          # Seconds before unauthenticated connection is dropped
+        ClientAliveInterval = 300;    # 5-min keepalive; detect dead sessions
+        ClientAliveCountMax = 3;      # 3 missed keepalives = disconnect (~15 min total)
       };
       # @decision NET-14: Check .ssh/authorized_keys BEFORE /etc/ssh/authorized_keys.d/%u.
       # Impermanence fallback: if activation fails, persisted /root/.ssh/ keys still work.

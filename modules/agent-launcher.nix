@@ -71,6 +71,10 @@ let
             stdio_flag="--pipe"
           fi
 
+          # Per-invocation resource limits. These are tighter than the parent
+          # tsurf-agents.slice (MemoryMax=8G, CPUQuota=300%, TasksMax=1024 in
+          # agent-compute.nix) so each agent session is individually bounded while
+          # the slice caps the aggregate across all concurrent sessions.
           exec systemd-run \
             "$stdio_flag" --same-dir --collect \
             --unit="agent-${name}-$$" \

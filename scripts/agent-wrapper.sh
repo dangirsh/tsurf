@@ -25,6 +25,12 @@
 
 set -euo pipefail
 
+# --- Constants ---
+SESSION_TOKEN_BYTES=32        # Entropy for per-session credential tokens
+PROXY_POLL_ATTEMPTS=50        # Max attempts to wait for proxy port file
+PROXY_POLL_INTERVAL=0.1       # Seconds between proxy port checks (total: 5s)
+NPM_MIN_RELEASE_AGE_DAYS=1440 # ~4 years; supply chain hardening (Trail of Bits)
+
 : "${AGENT_NAME:?must be set}"
 : "${AGENT_REAL_BINARY:?must be set}"
 : "${AGENT_PROJECT_ROOT:?must be set}"
@@ -69,7 +75,7 @@ journal_log() {
 }
 
 generate_session_token() {
-  od -An -tx1 -N 32 /dev/urandom | tr -d ' \n'
+  od -An -tx1 -N "$SESSION_TOKEN_BYTES" /dev/urandom | tr -d ' \n'
 }
 
 # Enforce PWD inside project root
@@ -82,8 +88,12 @@ case "$cwd" in
     ;;
 esac
 
-# Load provider keys as root, start a root-owned loopback proxy, and expose only
-# per-session tokens/base URLs to the sandboxed child.
+# Credential flow:
+#   1. Read real API keys from root-owned /run/secrets/ files
+#   2. Generate a random per-session token for each provider
+#   3. Start a root-owned loopback proxy that maps session tokens → real keys
+#   4. Expose only the session token + loopback base URL to the sandboxed child
+#   5. PORT_PLACEHOLDER in child_env is replaced with the proxy's actual listen port
 declare -a child_env
 declare -a proxy_env
 declare -a proxy_open_ports
@@ -126,11 +136,12 @@ if (( route_count > 0 )); then
     python3 "$AGENT_CREDENTIAL_PROXY" --port-file "$proxy_port_file" &
   proxy_pid="$!"
 
-  for _ in $(seq 1 50); do
+  # Poll until the proxy writes its listen port (total timeout: PROXY_POLL_ATTEMPTS * PROXY_POLL_INTERVAL)
+  for _ in $(seq 1 "$PROXY_POLL_ATTEMPTS"); do
     if [[ -s "$proxy_port_file" ]]; then
       break
     fi
-    sleep 0.1
+    sleep "$PROXY_POLL_INTERVAL"
   done
 
   if [[ ! -s "$proxy_port_file" ]]; then
@@ -194,7 +205,7 @@ fi
 child_args+=("NPM_CONFIG_IGNORE_SCRIPTS=true")
 child_args+=("NPM_CONFIG_AUDIT=true")
 child_args+=("NPM_CONFIG_SAVE_EXACT=true")
-child_args+=("NPM_CONFIG_MINIMUM_RELEASE_AGE=1440")
+child_args+=("NPM_CONFIG_MINIMUM_RELEASE_AGE=${NPM_MIN_RELEASE_AGE_DAYS}")
 child_args+=("PYTHONDONTWRITEBYTECODE=1")
 # Telemetry suppression (ecosystem review: Trail of Bits config pattern)
 child_args+=("DISABLE_TELEMETRY=1")

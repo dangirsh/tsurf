@@ -12,6 +12,14 @@
 # Environment: NixOS traditional (non-systemd) initrd via boot.initrd.postResumeCommands.
 # Requires: bash, mount, btrfs, stat, date, find, mkdir, mv (all available in NixOS initrd).
 
+cleanup() {
+  if mountpoint -q /btrfs_tmp 2>/dev/null; then
+    umount /btrfs_tmp 2>/dev/null || true
+  fi
+  rmdir /btrfs_tmp 2>/dev/null || true
+}
+trap cleanup EXIT
+
 mkdir /btrfs_tmp || { echo "btrfs-rollback: failed to create /btrfs_tmp"; exit 1; }
 mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp || { echo "btrfs-rollback: failed to mount root"; exit 1; }
 if [[ -e /btrfs_tmp/root ]]; then
@@ -21,10 +29,12 @@ if [[ -e /btrfs_tmp/root ]]; then
 fi
 
 delete_subvolume_recursively() {
+  local saved_IFS="$IFS"
   IFS=$'\n'
   for i in $(btrfs subvolume list -o "$1" | cut -f 9- -d ' '); do
     delete_subvolume_recursively "/btrfs_tmp/$i"
   done
+  IFS="$saved_IFS"
   btrfs subvolume delete "$1"
 }
 
@@ -34,3 +44,4 @@ done
 
 btrfs subvolume create /btrfs_tmp/root
 umount /btrfs_tmp
+trap - EXIT

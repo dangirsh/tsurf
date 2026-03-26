@@ -25,10 +25,11 @@ PERIODS = [
 
 
 def fetch_anthropic_period(key, days):
+    """Fetch Anthropic costs for a given number of days back."""
     now = datetime.now(timezone.utc)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     start = today - timedelta(days=days)
-    # Anthropic max 31 buckets per request; paginate if needed
+    # Anthropic allows max 31 buckets per request; paginate in 31-day chunks
     total_cost = 0.0
     cursor = start
     while cursor < today:
@@ -51,40 +52,17 @@ def fetch_anthropic_period(key, days):
         cursor = chunk_end
         if cursor < today:
             time.sleep(1)  # rate limit courtesy
-    # Anthropic returns cents
+    # Anthropic returns cents; convert to dollars
     return round(total_cost / 100, 2)
 
 
-def fetch_anthropic_730d(key):
-    # 730 days back; covers most account histories
-    return fetch_anthropic_period(key, 730)
-
-
-def fetch_anthropic(key, extra):
-    usage = {}
-    for period_key, days in PERIODS:
-        try:
-            usage[period_key] = fetch_anthropic_period(key, days)
-        except Exception as exc:
-            usage[period_key] = 0
-            usage["error_" + period_key] = str(exc)
-        time.sleep(2)
-    try:
-        usage["cost_730d"] = fetch_anthropic_730d(key)
-    except Exception as exc:
-        usage["cost_730d"] = 0
-        usage["error_730d"] = str(exc)
-    usage["total_cost"] = usage.get("cost_730d", 0)
-    return usage
-
-
 def openai_cost_query(key, start_ts, extra):
+    """Fetch OpenAI costs from a given start timestamp."""
     params = {
         "start_time": str(start_ts),
         "bucket_width": "1d",
         "limit": "100",
     }
-    # Filter by project IDs if configured
     proj_ids = extra.get("project_ids", "")
     url = "https://api.openai.com/v1/organization/costs?" + urllib.parse.urlencode(params)
     if proj_ids:
@@ -101,31 +79,29 @@ def openai_cost_query(key, start_ts, extra):
                 amt = result.get("amount", {})
                 total += float(amt.get("value", 0))
         if data.get("has_more") and data.get("next_page"):
-            base = url.split("&page=")[0].split("?page=")[0]
-            url = base + "&page=" + data["next_page"]
+            parsed = urllib.parse.urlparse(url)
+            base_params = urllib.parse.parse_qs(parsed.query)
+            base_params.pop("page", None)
+            new_query = urllib.parse.urlencode(base_params, doseq=True)
+            url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+            url += "&page=" + data["next_page"]
         else:
             url = None
     return round(total, 2)
 
 
-def fetch_openai(key, extra):
-    now = datetime.now(timezone.utc)
+def fetch_all_periods(period_fetcher, extra):
+    """Generic period fetcher — calls period_fetcher(days, extra) for each period + 730d total."""
     usage = {}
     for period_key, days in PERIODS:
         try:
-            since = now - timedelta(days=days)
-            usage[period_key] = openai_cost_query(
-                key, int(since.timestamp()), extra
-            )
+            usage[period_key] = period_fetcher(days, extra)
         except Exception as exc:
             usage[period_key] = 0
             usage["error_" + period_key] = str(exc)
+        time.sleep(2)
     try:
-        # 730 days back; covers most account histories
-        since_730d = now - timedelta(days=730)
-        usage["cost_730d"] = openai_cost_query(
-            key, int(since_730d.timestamp()), extra
-        )
+        usage["cost_730d"] = period_fetcher(730, extra)
     except Exception as exc:
         usage["cost_730d"] = 0
         usage["error_730d"] = str(exc)
@@ -133,14 +109,21 @@ def fetch_openai(key, extra):
     return usage
 
 
+def fetch_anthropic(key, extra):
+    return fetch_all_periods(lambda days, _: fetch_anthropic_period(key, days), extra)
+
+
+def fetch_openai(key, extra):
+    now = datetime.now(timezone.utc)
+    return fetch_all_periods(
+        lambda days, ex: openai_cost_query(key, int((now - timedelta(days=days)).timestamp()), ex),
+        extra,
+    )
+
+
 FETCHERS = {
     "anthropic": fetch_anthropic,
     "openai": fetch_openai,
-}
-
-LABELS = {
-    "anthropic": "Anthropic",
-    "openai": "OpenAI",
 }
 
 

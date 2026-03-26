@@ -14,39 +14,37 @@ set -euo pipefail
 
 check="${1:?Usage: sandbox-probe.sh <check>}"
 
+# --- Data-driven denied-path checks ---
+# Each entry: "check-name|command|path|description"
+# command is "cat" (file) or "ls" (directory).
+denied_checks=(
+  "denied-secrets|cat|/run/secrets/anthropic-api-key|/run/secrets/anthropic-api-key"
+  "denied-ssh|ls|$HOME/.ssh/|~/.ssh/"
+  "denied-gnupg|ls|$HOME/.gnupg/|~/.gnupg/"
+  "denied-bash-history|cat|$HOME/.bash_history|~/.bash_history"
+  "denied-aws|ls|$HOME/.aws/|~/.aws/"
+  "denied-kube|ls|$HOME/.kube/|~/.kube/"
+  "denied-docker|ls|$HOME/.docker/|~/.docker/"
+  "denied-npmrc|cat|$HOME/.npmrc|~/.npmrc"
+  "denied-git-credentials|cat|$HOME/.git-credentials|~/.git-credentials"
+  "denied-etc-nono|ls|/etc/nono/|/etc/nono/"
+)
+
+# Try the data-driven denied checks first
+for entry in "${denied_checks[@]}"; do
+  IFS='|' read -r name cmd path desc <<< "$entry"
+  if [[ "$check" == "$name" ]]; then
+    if $cmd "$path" >/dev/null 2>&1; then
+      echo "FAIL: agent can access $desc" >&2
+      exit 1
+    fi
+    echo "PASS: $check"
+    exit 0
+  fi
+done
+
+# --- Checks with custom logic ---
 case "$check" in
-  denied-secrets)
-    # /run/secrets must be inaccessible to the sandboxed agent.
-    if cat /run/secrets/anthropic-api-key >/dev/null 2>&1; then
-      echo "FAIL: agent can read /run/secrets/anthropic-api-key" >&2
-      exit 1
-    fi
-    ;;
-
-  denied-ssh)
-    # ~/.ssh must be inaccessible inside the sandbox.
-    if ls ~/.ssh/ >/dev/null 2>&1; then
-      echo "FAIL: agent can list ~/.ssh/" >&2
-      exit 1
-    fi
-    ;;
-
-  denied-gnupg)
-    # ~/.gnupg must be inaccessible inside the sandbox.
-    if ls ~/.gnupg/ >/dev/null 2>&1; then
-      echo "FAIL: agent can list ~/.gnupg/" >&2
-      exit 1
-    fi
-    ;;
-
-  denied-bash-history)
-    # ~/.bash_history must be inaccessible inside the sandbox.
-    if cat ~/.bash_history >/dev/null 2>&1; then
-      echo "FAIL: agent can read ~/.bash_history" >&2
-      exit 1
-    fi
-    ;;
-
   allowed-repo-read)
     # Agent must be able to read files in the current git repo.
     if ! cat README.md >/dev/null 2>&1; then
@@ -79,57 +77,10 @@ case "$check" in
     fi
     ;;
 
-  denied-aws)
-    # ~/.aws must be inaccessible inside the sandbox.
-    if ls ~/.aws/ >/dev/null 2>&1; then
-      echo "FAIL: agent can list ~/.aws/" >&2
-      exit 1
-    fi
-    ;;
-
-  denied-kube)
-    # ~/.kube must be inaccessible inside the sandbox.
-    if ls ~/.kube/ >/dev/null 2>&1; then
-      echo "FAIL: agent can list ~/.kube/" >&2
-      exit 1
-    fi
-    ;;
-
-  denied-docker)
-    # ~/.docker must be inaccessible inside the sandbox.
-    if ls ~/.docker/ >/dev/null 2>&1; then
-      echo "FAIL: agent can list ~/.docker/" >&2
-      exit 1
-    fi
-    ;;
-
-  denied-npmrc)
-    # ~/.npmrc must be inaccessible inside the sandbox.
-    if cat ~/.npmrc >/dev/null 2>&1; then
-      echo "FAIL: agent can read ~/.npmrc" >&2
-      exit 1
-    fi
-    ;;
-
-  denied-git-credentials)
-    # ~/.git-credentials must be inaccessible inside the sandbox.
-    if cat ~/.git-credentials >/dev/null 2>&1; then
-      echo "FAIL: agent can read ~/.git-credentials" >&2
-      exit 1
-    fi
-    ;;
-
-  denied-etc-nono)
-    # /etc/nono must be inaccessible inside the sandbox.
-    if ls /etc/nono/ >/dev/null 2>&1; then
-      echo "FAIL: agent can list /etc/nono/" >&2
-      exit 1
-    fi
-    ;;
-
   *)
     echo "Unknown check: $check" >&2
-    echo "Available: denied-secrets denied-ssh denied-gnupg denied-bash-history denied-aws denied-kube denied-docker denied-npmrc denied-git-credentials denied-etc-nono allowed-repo-read allowed-workdir-write check-identity" >&2
+    available="$(printf '%s\n' "${denied_checks[@]}" | cut -d'|' -f1 | tr '\n' ' ')"
+    echo "Available: ${available}allowed-repo-read allowed-workdir-write check-identity" >&2
     exit 2
     ;;
 esac
