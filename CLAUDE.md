@@ -152,6 +152,7 @@ See `SECURITY.md` for the complete security model, accepted risks, and verificat
 - **Never** add packages imperatively (`nix-env`, `nix profile install`) or re-enable `nix.channel.enable` / `nix.nixPath`.
 - **Never** omit `@decision` annotations for security-relevant module choices.
 - **Never** commit `.planning/` — it is local-only agent state (gitignored, blocked by `.githooks/pre-commit`).
+- **Never** remove or rewrite the opening section of `README.md` (the description, personal note, and blockquotes before `## Design Principles`) or the `## Design Principles` section itself. These are human-authored and must not be touched by agents.
 
 ### Pre-flight checklist
 

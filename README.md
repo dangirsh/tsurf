@@ -1,12 +1,26 @@
 # tsurf
 
-`tsurf` is a NixOS base for running untrusted agent workloads on remote machines.
-The public repo is a reference template and test fixture set. Real deployments
-live in a private overlay that imports these modules and adds host-specific
-networking, secrets, and services.
+A suite of tools for agentic computing, implemented as a [NixOS](https://nixos.org/) configuration. See [example use cases](#example-use-cases).
 
-> Status: useful, but still evolving. Treat the public repo as a base to adapt,
-> not a stable product.
+I use tsurf to manage coding/assistant agents across several remote servers. It enables me to rapidly experiment with new tools and approaches in agentic computing, without feeling like [this](https://www.youtube.com/watch?v=ipWuz6eZSl4).
+
+> This public repo is the base configuration. Real deployments come from a [private overlay](#private-overlay).
+
+> **Warning:** This project is not yet stable. Use it as a reference only.
+
+## Design Principles
+
+The core assumptions behind tsurf are:
+
+1. Agents are now **capable** enough to be the primary interface for most computing tasks.
+2. Agents are becoming **cheap** enough to be used heavily and ubiquitously.
+3. Agents are **untrusted**, capricious, and hijackable.
+
+These lead to the following design goals:
+
+1. **Optimize the operating system for use by agents**. Human use is always expected to be agent-mediated.
+2. Support the effective management of **many agents across several machines**. The bottleneck should be compute/token costs, not management complexity.
+3. Always deploy agents with **[least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege)** and **[defense-in-depth](https://www.cyberark.com/what-is/defense-in-depth/)** to mitigate the risks of compromised/misaligned agents.
 
 ## Core Features
 
@@ -19,8 +33,8 @@ networking, secrets, and services.
 - Two public host roles. `hosts/dev` is the agent-execution fixture;
   `hosts/services` is the service-host fixture. The public flake exports
   `eval-*` configurations only, not deploy targets.
-- Declarative, recovery-oriented base. `srvos`, `nix-mineral`, BTRFS rollback,
-  impermanence, lockout-prevention assertions, and private-overlay deploy
+- Declarative, recovery-oriented base. [srvos](https://github.com/nix-community/srvos), [nix-mineral](https://github.com/cynicsketch/nix-mineral), [BTRFS](https://btrfs.readthedocs.io/) rollback,
+  [impermanence](https://github.com/nix-community/impermanence), lockout-prevention assertions, and private-overlay deploy
   tooling are built in.
 - Minimal extras with reusable building blocks. Public extras include the
   low-priority CASS indexer, optional `codex`, `cost-tracker`, `restic`, and a
