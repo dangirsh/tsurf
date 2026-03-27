@@ -20,6 +20,7 @@ modules/                 # Core: security/infrastructure essentials only
   boot.nix             # GRUB bootloader + BTRFS root rollback
   impermanence.nix     # /persist manifest, BTRFS subvolume rollback on boot
   networking.nix       # nftables, SSH (hardened), firewall assertions
+  headscale.nix        # Self-hosted Tailscale control plane (headscale, opt-in)
   nono.nix             # nono base profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
   users.nix            # Root + agent user model, tsurf.agent.* options, root SSH assertion
