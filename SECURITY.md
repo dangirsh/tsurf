@@ -249,7 +249,7 @@ SSH defaults:
   - TCP `22`, `80`, and `443`
 - Default denied outbound traffic for sandboxed agents includes:
   - RFC1918 IPv4 ranges
-  - Tailscale CGNAT range `100.64.0.0/10`
+  - Tailscale/headscale CGNAT range `100.64.0.0/10`
   - link-local IPv4 `169.254.0.0/16`
   - IPv6 ULA `fc00::/7`
   - IPv6 link-local `fe80::/10`

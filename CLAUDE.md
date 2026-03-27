@@ -66,7 +66,7 @@ tests/
 - **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo. A root-owned loopback credential proxy keeps real keys out of the agent principal and gives the child only per-session tokens.
 - **Agent egress**: Host nftables allowlists outbound agent traffic by UID. Defaults allow DNS plus TCP `22/80/443` and block private/link-local ranges.
 - **SSH hardened**: Port 22 on public firewall (key-only, srvos defaults)
-- **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale belongs in the private overlay.
+- **Network model**: Only port 22 is on the public firewall by default. Ports 80/443 are conditional on nginx. Internal services bind `127.0.0.1` and register their localhost ports in `modules/networking.nix`. Tailscale client config belongs in the private overlay; headscale server is in modules/headscale.nix (opt-in).
 - **Privilege model**: Two-user model: `root` (operator/deploy/admin) and `agent` (sandboxed tools, SSH access). Agent is not in `wheel`; immutable-launcher sudo access is granted explicitly. Parameterized via `tsurf.agent.{user, home, projectRoot}`.
 - **Per-host explicit imports**: Each host/default.nix lists all imports directly
 

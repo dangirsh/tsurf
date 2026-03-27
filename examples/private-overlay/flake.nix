@@ -70,7 +70,7 @@
         # cass.nix: low-priority CASS indexer timer for the dedicated agent user
         "${inputs.tsurf}/extras/cass.nix"
 
-        # Import networking.nix after configuring Tailscale, SSH host keys, and impermanence.
+        # Import networking.nix after configuring Tailscale/headscale, SSH host keys, and impermanence.
         # Import secrets.nix after creating your encrypted secrets file, or write your own secrets module.
       ];
     in

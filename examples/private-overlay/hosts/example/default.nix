@@ -12,7 +12,7 @@
     # Optional private-only modules belong here.
     # Example: a custom agent using the generic launcher (see modules/code-review.nix)
 
-    # After configuring Tailscale and SSH host keys, import:
+    # After configuring Tailscale/headscale and SSH host keys, import:
     # "${inputs.tsurf}/modules/networking.nix"
     # "${inputs.tsurf}/modules/secrets.nix"  # after creating encrypted secrets file
   ];
@@ -26,6 +26,11 @@
   networking.nat.externalInterface = "eth0"; # REPLACE
 
   # Optional extras:
+  # tsurf.headscale.enable = true;       # Self-hosted Tailscale control plane (services host)
+  # tsurf.headscale.domain = "hs.example.com";
+  # tsurf.headscale.baseDomain = "ts.net";  # MagicDNS suffix for machine names
+  # tsurf.headscale.publicIPv4 = "YOUR_PUBLIC_IP";
+  # tsurf.headscale.acmeEmail = "admin@example.com";
   # services.codexAgent.enable = true;
   # services.cassIndexer.enable = true;
 

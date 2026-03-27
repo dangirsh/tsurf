@@ -81,7 +81,7 @@ Hosts are independent -- deploy only what changed.
 2. **Remote lock** -- Prevents concurrent deploys via remote directory lock
 3. **Nix build** -- Builds the full NixOS system closure (remote by default, local if `--mode local`)
 4. **deploy-rs switch** -- Atomically switches the server to the new config
-5. **Service verification** -- Checks tailscaled and sshd are running
+5. **Service verification** -- Checks tailscaled/headscale and sshd are running
 6. **SSH connectivity** -- Verifies fresh SSH connection (non-multiplexed)
 
 ## Troubleshooting
