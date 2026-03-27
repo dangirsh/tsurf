@@ -1,13 +1,13 @@
 # Extras
 
-`extras/` holds reusable modules built on top of the public core. The host
-fixtures import `extras/cass.nix` by default; the other extras stay opt-in.
+`extras/` holds reusable modules built on top of the public core. All extras
+are opt-in: import the module in your host config and set the enable option.
 
 ## Shipped Extras
 
 | Path | Enable / import | What it adds | Notes |
 |------|-----------------|--------------|-------|
-| `extras/cass.nix` | Imported by default in the public host fixtures | Low-priority system timer that refreshes the CASS session index | Runs as the dedicated agent user with CPU/memory throttling |
+| `extras/cass.nix` | Import + `services.cassIndexer.enable = true` | Low-priority system timer that refreshes the CASS session index | Runs as the dedicated agent user with CPU/memory throttling |
 | `extras/codex.nix` | `services.codexAgent.enable = true` | Optional sandboxed `codex` wrapper | Requires `agentLauncher` and `nonoSandbox`; defaults to the `openai-api-key` secret |
 | `extras/cost-tracker.nix` | `services.costTracker.enable = true` | Timer-driven Anthropic/OpenAI cost fetcher | Providers are declared under `services.costTracker.providers` |
 | `extras/restic.nix` | `services.resticStarter.enable = true` | Restic backups to a Backblaze B2 S3 endpoint | Expects the secrets/template wiring from `modules/secrets.nix` |
@@ -15,8 +15,8 @@ fixtures import `extras/cass.nix` by default; the other extras stay opt-in.
 
 ## Home Profile
 
-`extras/home/default.nix` is the default home-manager profile used by the public
-host fixtures. It provides:
+`extras/home/default.nix` is a default home-manager profile available for
+private overlays to import. It provides:
 
 - git with placeholder identity that private overlays should replace
 - GitHub CLI with auth left to runtime credentials
@@ -24,10 +24,12 @@ host fixtures. It provides:
 - `direnv` + `nix-direnv`
 - a clean place for private overlays to layer `agentic-dev-base` and project-specific config
 
-## Custom Agents
+## Extending tsurf: Custom Agents
 
-Public extras are not the only extension point. The normal way to add more
-wrappers is `services.agentLauncher.agents.<name>`.
+Public extras are not the only extension point. The advanced extension API is
+`services.agentLauncher.agents.<name>`, which powers custom wrappers on top of
+the generic launcher path. `extras/codex.nix` is a real-world example built on
+this same API.
 
 Each definition can specify:
 
