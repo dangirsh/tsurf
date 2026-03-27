@@ -46,9 +46,13 @@ Hosts running agent workloads should import these agent infrastructure modules:
 - `modules/agent-launcher.nix` -- generic sandboxed agent launcher infrastructure
 - `modules/agent-sandbox.nix` -- core `claude` wrapper declaration on top of the generic launcher
 - `modules/nono.nix` -- nono binary and tsurf Landlock profile
-- `extras/cass.nix` -- low-priority CASS indexer timer for the dedicated agent user
 
-The private overlay template `flake.nix` already imports all of these. Enable `services.agentCompute.enable = true` for any host that runs agent workloads.
+Optional extras:
+
+- `extras/cass.nix` -- low-priority CASS indexer timer for the dedicated agent user
+- Home Manager profile -- `home-manager.users.agent = import "${inputs.tsurf}/extras/home";`
+
+The private overlay template `flake.nix` already imports the required modules above and includes `extras/cass.nix` as an optional example import. Enable `services.agentCompute.enable = true` for any host that runs agent workloads.
 
 ### Defining custom agents with the generic launcher
 
