@@ -232,6 +232,51 @@ in
       "restic backup active in public template — services.resticStarter.enable should be false"
       (!servicesCfg.services.resticStarter.enable);
 
+  headscale-opt-in =
+    mkCheck "headscale-opt-in" "headscale not active in public services config (opt-in works)"
+      "headscale active in public template — tsurf.headscale.enable should be false"
+      (!servicesCfg.tsurf.headscale.enable);
+
+  headscale-port-internal =
+    let
+      source = builtins.readFile ../../modules/networking.nix;
+    in
+    mkCheck "headscale-port-internal" "headscale port 8080 registered in internalOnlyPorts"
+      "modules/networking.nix missing headscale in internalOnlyPorts"
+      (lib.hasInfix "\"8080\" = \"headscale\"" source);
+
+  headscale-localhost-bind =
+    let
+      source = builtins.readFile ../../modules/headscale.nix;
+    in
+    mkCheck "headscale-localhost-bind" "headscale binds to localhost only"
+      "modules/headscale.nix missing 127.0.0.1 bind address"
+      (lib.hasInfix "address = \"127.0.0.1\"" source);
+
+  headscale-dns-nameservers =
+    let
+      source = builtins.readFile ../../modules/headscale.nix;
+    in
+    mkCheck "headscale-dns-nameservers" "headscale sets dns.nameservers.global (25.11 compat)"
+      "modules/headscale.nix missing dns.nameservers.global — headscale 0.26+ requires explicit nameservers"
+      (lib.hasInfix "dns.nameservers.global" source);
+
+  headscale-persistence =
+    let
+      source = builtins.readFile ../../modules/headscale.nix;
+    in
+    mkCheck "headscale-persistence" "headscale state persisted under impermanence"
+      "modules/headscale.nix missing /var/lib/headscale persistence declaration"
+      (lib.hasInfix "/var/lib/headscale" source && lib.hasInfix "persistence" source);
+
+  headscale-websockets =
+    let
+      source = builtins.readFile ../../modules/headscale.nix;
+    in
+    mkCheck "headscale-websockets" "headscale nginx proxy enables WebSocket support"
+      "modules/headscale.nix missing proxyWebsockets — Tailscale control protocol requires WebSocket"
+      (lib.hasInfix "proxyWebsockets = true" source);
+
   # Stale-phrase check: banned phrases must not appear in key docs.
   stale-phrases-claude-md =
     let
