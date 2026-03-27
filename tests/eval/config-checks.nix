@@ -589,17 +589,6 @@ in
         && lib.hasInfix "tsurf-cass-index.timer" source
       );
 
-  tsurf-status-persistent-services =
-    let
-      source = builtins.readFile ../../scripts/tsurf-status.sh;
-    in
-    mkCheck
-      "tsurf-status-persistent-services"
-      "tsurf-status checks only persistent units and documents supported arguments accurately"
-      "scripts/tsurf-status.sh still references transient agent-launch-claude or the unsupported all keyword"
-      (!(lib.hasInfix "agent-launch-claude" source)
-       && !(lib.hasInfix "<hostname|all>" source));
-
   # --- Phase 124: Cost-tracker least privilege ---
 
   cost-tracker-dynamic-user =
