@@ -10,8 +10,8 @@ flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-
 hosts/
   hardware.nix         # Shared QEMU VPS hardware config (both hosts)
   disko-config.nix     # Shared disko partition layout (both hosts)
-  services/            # Example service host
-  dev/                 # Example agent/dev host
+  services/            # Example service host fixture (core modules + restic opt-in pattern)
+  dev/                 # Example agent/dev host fixture (core modules only)
 modules/                 # Core: security/infrastructure essentials only
   agent-compute.nix    # Agent runtime support (resource controls + shared tooling)
   agent-launcher.nix   # Generic sandboxed agent launcher (wrapper, systemd-run, nono, credentials)
@@ -19,7 +19,6 @@ modules/                 # Core: security/infrastructure essentials only
   base.nix             # Nix settings, system packages, nix-mineral kernel hardening
   boot.nix             # GRUB bootloader + BTRFS root rollback
   impermanence.nix     # /persist manifest, BTRFS subvolume rollback on boot
-  headscale.nix        # Self-hosted Tailscale control plane (headscale, opt-in)
   networking.nix       # nftables, SSH (hardened), firewall assertions
   nono.nix             # nono base profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
@@ -60,6 +59,7 @@ tests/
 
 - **Flakes + home-manager**: Reproducible, lockfile-pinned (nixos-25.11)
 - **Restic to B2**: Automated daily backups to Backblaze B2 (S3 API, opt-in extra)
+- **Extras model**: All extras (`cass`, `restic`, `cost-tracker`, `codex`, Home Manager profile) are opt-in. Public default host fixtures import only core modules, plus `extras/restic.nix` on `services` as a pattern example.
 - **sops-nix secrets**: All credentials encrypted, decrypted at activation via age keys
 - **Agent tooling**: Public core ships the sandboxed interactive `claude` path plus the generic launcher. `codex` is an opt-in extra; workflow-specific wrappers belong in private overlays. Long-lived sessions should use `tmux`, and unattended jobs should schedule the generated wrappers directly.
 - **Agent sandbox**: Landlock deny-by-default filesystem, PWD restricted to project root, read access scoped to current git repo. A root-owned loopback credential proxy keeps real keys out of the agent principal and gives the child only per-session tokens.
