@@ -3,15 +3,15 @@
 Last updated: 2026-03-27
 
 ## Current Position
-- Phase: 159 — Cut Public Repo to Minimal Core — Plan 02 COMPLETE (2026-03-27)
-- Plan: 2/3 plans complete
-- Status: Maintainer-only `spec/` removed from the public tree, new `QUICKSTART.md` added as the newcomer path (public template + private overlay bootstrap), and Phase 159 state advanced for final doc-consistency pass.
+- Phase: 159 — Cut Public Repo to Minimal Core — Plan 03 COMPLETE (2026-03-27)
+- Plan: 3/3 plans complete
+- Status: Documentation is now aligned with the minimal-core model across README, architecture/extras/security docs, CLAUDE.md, and private overlay examples; extras are consistently documented as opt-in, `spec/` references are removed from public docs, and `QUICKSTART.md` is the newcomer entry point.
 
 ## Phase 159 Status
-- Phase 159: Cut Public Repo to Minimal Core — 3 plans, in progress
+- Phase 159: Cut Public Repo to Minimal Core — 3 plans, complete (2026-03-27)
   - 159-01: complete — Removed default fixture imports for `cass`, `cost-tracker`, and `headscale`; removed fixture `home-manager.users` wiring; removed HM overrides from `eval-dev-alt-agent`; changed CASS eval check to source-based `cass-default-disabled`; handled missing `tsurf.headscale` option path in opt-in check; validated with `nix flake check`.
   - 159-02: complete — Deleted public `spec/` directory and created root `QUICKSTART.md` covering prerequisites, public template validation, private overlay bootstrap (`tsurf-init`), secrets setup, first deploy, extras opt-in pattern, and links to architecture/security docs.
-  - 159-03: pending
+  - 159-03: complete — Updated public docs and private overlay examples to the minimal-core baseline: README points newcomers to `QUICKSTART.md`, docs consistently frame extras as opt-in, the generic launcher is documented as an advanced extension API, and stale `spec/` references were removed. Final validation passed with `nix flake check`.
 
 ## Phase 162 Status
 - Phase 162: Migrate to headscale — 1 plan, complete (2026-03-27)
@@ -85,7 +85,7 @@ Key merges to avoid thrashing:
 - Phase 147 added: Bolster test cases to validate implementation meets spec — tie each test to a spec claim ID in comments.
 - Phase 157 added: Codebase complexity audit — find and prioritize cleanup targets
 - Phase 158 added: Evaluate self-hosted Tailscale alternatives (headscale, wg-easy) — research report with exec summary, pros/cons, and migration difficulty estimates. No code changes.
-- Phase 159 in progress: Cut Public Repo to Minimal Core — Plans 01 and 02 complete. Public fixtures load only core modules by default, maintainer-only `spec/` was removed from public tree, and `QUICKSTART.md` now defines the newcomer path for public validation plus private overlay bootstrap.
+- Phase 159 completed: Cut Public Repo to Minimal Core — public fixtures now model minimal core behavior, maintainer-only `spec/` content is removed from the public tree, `QUICKSTART.md` is the newcomer path, and all public docs/examples consistently describe extras as opt-in.
 - Phase 162 completed: Migrate to headscale — opt-in `modules/headscale.nix` with tsurf.headscale.enable toggle, localhost:8080 with nginx TLS proxy, embedded DERP/STUN, SQLite persisted under impermanence, ACL policy via environment.etc, 6 eval checks, Tailscale doc/comment updates.
 - Phase 163 added: tsurf-status CLI — tree-based host/service/cost overview replacing tsurf-status.sh. Parallel SSH queries, agent+service tree with status/uptime/type/sandbox, system metadata footer (version, last deploy, backup status, disk, 24h/7d API costs). Consolidates old phases 163-166 into single unified status command.
 
@@ -102,3 +102,4 @@ Key merges to avoid thrashing:
 - [144-01]: DEVAGENT-144 — The public repo should keep `dev-agent` as a core supported path. Remediation must harden and operationalize that path rather than hiding or de-scoping it.
 - [159-01]: COREMIN-159 — Public default fixtures should demonstrate minimal core modules only; extras and Home Manager user overlays are opt-in, and CASS must default disabled unless explicitly enabled.
 - [159-02]: COREMIN-159 — Maintainer-oriented claim-level spec documents should not live in the public newcomer surface; onboarding should begin at `QUICKSTART.md` and route advanced implementation details through architecture/security docs and private overlay docs.
+- [159-03]: COREMIN-159 — Documentation and examples must match the shipped minimal-core behavior end-to-end: README newcomer path starts at `QUICKSTART.md`, extras are opt-in everywhere, and the generic launcher is positioned as the advanced extension API.
