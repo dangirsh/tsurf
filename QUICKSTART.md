@@ -18,11 +18,14 @@ cd tsurf
 ./tsurf init root@your-server
 ./tsurf deploy
 ./tsurf status
+./tsurf ssh
 ```
 
 This path generates an ignored local overlay under `.tsurf/overlay/` plus a
-saved config in `.tsurf/config`. It is meant for quickly testing tsurf against a
-vanilla NixOS box that already allows root SSH access.
+saved config in `.tsurf/config`. `tsurf init` SSH-probes the target host first,
+verifies it is NixOS, and reuses the host's current hostname and release as the
+defaults. It is meant for quickly testing tsurf against a vanilla NixOS box
+that already allows root SSH access.
 
 Useful variations:
 
@@ -30,6 +33,7 @@ Useful variations:
 ./tsurf init root@your-server --name lab
 ./tsurf deploy --fast
 ./tsurf config
+./tsurf ssh journalctl -u sshd -n 50
 ```
 
 ## 2) Validate The Public Template

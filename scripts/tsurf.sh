@@ -111,12 +111,14 @@ Usage:
   tsurf init <root@host|host> [options]
   tsurf deploy [options]
   tsurf status [node|host|all ...]
+  tsurf ssh [command]
   tsurf config
 
 Commands:
   init       Generate a local quickstart overlay in .tsurf/ and a root SSH key
   deploy     Deploy the generated overlay using the saved defaults
   status     Check persistent unit status for the saved node (or explicit targets)
+  ssh        Open an SSH session to the saved target or run a remote command
   config     Print the saved quickstart configuration
 
 Init options:
@@ -126,6 +128,7 @@ Init options:
   --state-version VERSION     NixOS stateVersion (default: 25.11)
   --overlay-dir DIR           Overlay output directory (default: .tsurf/overlay)
   --key-path PATH             Root SSH key path (default: .tsurf/keys/tsurf-root)
+  --skip-probe                Skip SSH probing and use local defaults only
   --force                     Replace an existing generated overlay/config
 
 Deploy options:
@@ -217,11 +220,44 @@ copy_helper_scripts() {
   install -m 755 "${SCRIPT_SOURCE_DIR}/tsurf-status.sh" "${OVERLAY_DIR}/scripts/tsurf-status.sh"
 }
 
+probe_target() {
+  local probe_cmd=""
+  local probe_out=""
+
+  read -r -d '' probe_cmd <<'EOF' || true
+set -euo pipefail
+. /etc/os-release
+printf 'id=%s\n' "${ID:-}"
+printf 'version=%s\n' "${VERSION_ID:-}"
+hostnamectl --static 2>/dev/null || hostname -s
+EOF
+
+  if ! probe_out="$(ssh -o BatchMode=yes -o ConnectTimeout=5 "root@${TARGET_HOST}" "bash -lc $(printf '%q' "${probe_cmd}")" 2>/dev/null)"; then
+    echo "ERROR: could not SSH to root@${TARGET_HOST}. Confirm root SSH access before running tsurf init." >&2
+    exit 1
+  fi
+
+  REMOTE_OS_ID="$(printf '%s\n' "${probe_out}" | sed -n 's/^id=//p' | head -n1)"
+  REMOTE_VERSION_ID="$(printf '%s\n' "${probe_out}" | sed -n 's/^version=//p' | head -n1)"
+  REMOTE_HOSTNAME="$(printf '%s\n' "${probe_out}" | tail -n1)"
+
+  if [[ "${REMOTE_OS_ID}" != "nixos" ]]; then
+    echo "ERROR: ${TARGET_HOST} does not look like NixOS (ID=${REMOTE_OS_ID:-unknown})." >&2
+    exit 1
+  fi
+
+  if [[ -z "${REMOTE_HOSTNAME}" ]]; then
+    echo "ERROR: failed to determine the remote hostname for ${TARGET_HOST}." >&2
+    exit 1
+  fi
+}
+
 init_command() {
   local target_arg=""
   local force=false
   local overlay_dir_input=""
   local key_path_input=""
+  local skip_probe=false
 
   NODE="quickstart"
   HOSTNAME_VALUE=""
@@ -255,6 +291,10 @@ init_command() {
         key_path_input="$2"
         shift 2
         ;;
+      --skip-probe)
+        skip_probe=true
+        shift
+        ;;
       --force)
         force=true
         shift
@@ -285,8 +325,20 @@ init_command() {
 
   parse_target "$target_arg"
   TARGET="root@${TARGET_HOST}"
+  REMOTE_HOSTNAME=""
+  REMOTE_VERSION_ID=""
+  if [[ "${skip_probe}" != true ]]; then
+    probe_target
+  fi
   if [[ -z "${HOSTNAME_VALUE}" ]]; then
-    HOSTNAME_VALUE="${NODE}"
+    if [[ -n "${REMOTE_HOSTNAME}" ]]; then
+      HOSTNAME_VALUE="${REMOTE_HOSTNAME}"
+    else
+      HOSTNAME_VALUE="${NODE}"
+    fi
+  fi
+  if [[ "${STATE_VERSION}" == "25.11" && -n "${REMOTE_VERSION_ID}" ]]; then
+    STATE_VERSION="${REMOTE_VERSION_ID}"
   fi
 
   OVERLAY_DIR="${overlay_dir_input:-${REPO_DIR}/.tsurf/overlay}"
@@ -397,6 +449,16 @@ status_command() {
   exec bash "${TSURF_OVERLAY_DIR}/scripts/tsurf-status.sh" "$@"
 }
 
+ssh_command() {
+  load_config
+
+  if [[ $# -eq 0 ]]; then
+    exec ssh "${TSURF_TARGET}"
+  fi
+
+  exec ssh "${TSURF_TARGET}" "$@"
+}
+
 config_command() {
   load_config
 
@@ -432,6 +494,10 @@ case "$1" in
   status)
     shift
     status_command "$@"
+    ;;
+  ssh)
+    shift
+    ssh_command "$@"
     ;;
   config)
     shift

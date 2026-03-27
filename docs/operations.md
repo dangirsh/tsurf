@@ -13,10 +13,13 @@ After cloning the repo:
    `./tsurf deploy`
 3. Check status:
    `./tsurf status`
-4. For repo validation and contributions, also enable hooks and run:
+4. Open an SSH session or run a remote command with the saved target:
+   `./tsurf ssh`
+   `./tsurf ssh journalctl -u sshd -n 50`
+5. For repo validation and contributions, also enable hooks and run:
    `git config core.hooksPath .githooks`
    `nix flake check`
-5. If you add new tracked files before running Nix evaluation again, stage them
+6. If you add new tracked files before running Nix evaluation again, stage them
    first. Flake evaluation only sees tracked paths.
 
 ## Private Overlay Workflow
@@ -46,6 +49,7 @@ intended explicit workflow is still:
 | `./tsurf init root@host` | Generate a local quickstart overlay, root SSH key, and saved config |
 | `./tsurf deploy` | Deploy the generated quickstart overlay with the saved defaults |
 | `./tsurf status` | Check persistent fleet status for the saved node |
+| `./tsurf ssh [command]` | SSH to the saved target or run a one-off remote command |
 | `./tsurf config` | Print the saved quickstart defaults |
 | `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay` | Generate the root SSH key for a private overlay and optionally derive an age key with `--age` |
 | `nix run .#tsurf-status -- <node\|host\|all>` | Check persistent fleet status over SSH |

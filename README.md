@@ -52,11 +52,14 @@ These lead to the following design goals:
    `./tsurf deploy`
 4. Check the host:
    `./tsurf status`
+5. Jump back onto the box when you need it:
+   `./tsurf ssh`
 
 `tsurf init` creates an ignored local overlay under `.tsurf/overlay/`, saves the
-defaults in `.tsurf/config`, and generates a root key under `.tsurf/keys/`. That
-gives you a short path for trying tsurf against a vanilla NixOS server without
-assembling a private overlay first.
+defaults in `.tsurf/config`, generates a root key under `.tsurf/keys/`, and
+probes the target host to pick up its hostname and NixOS release automatically.
+That gives you a short path for trying tsurf against a vanilla NixOS server
+without assembling a private overlay first.
 
 When you move past evaluation and want the full production/private-overlay
 workflow, start from [`QUICKSTART.md`](QUICKSTART.md) and

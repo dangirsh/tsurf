@@ -21,6 +21,31 @@ printf 'UTC\n'
 EOF
 chmod 700 "${FAKE_BIN}/timedatectl"
 
+cat > "${FAKE_BIN}/ssh" <<EOF
+#!${BASH}
+set -euo pipefail
+target=""
+for arg in "\$@"; do
+  if [[ "\$arg" == root@test.example ]]; then
+    target="\$arg"
+    break
+  fi
+done
+
+if [[ -z "\$target" ]]; then
+  echo "unexpected ssh args: \$*" >&2
+  exit 1
+fi
+
+if [[ "\$*" == *"bash -lc"* ]]; then
+  printf 'id=nixos\nversion=24.11\nlabbox\n'
+  exit 0
+fi
+
+printf '%s\n' "\$*" > "${WORKDIR}/ssh-command.log"
+EOF
+chmod 700 "${FAKE_BIN}/ssh"
+
 export TSURF_REPO_DIR="${ROOT_DIR}"
 export TSURF_CONFIG="${CONFIG_PATH}"
 export PATH="${FAKE_BIN}:$PATH"
@@ -51,6 +76,14 @@ grep -q "path:${ROOT_DIR}" "${OVERLAY_DIR}/flake.nix" || {
   echo "FAIL: generated overlay did not point back at the local tsurf checkout"
   exit 1
 }
+grep -q 'networking.hostName = "labbox";' "${OVERLAY_DIR}/hosts/lab/default.nix" || {
+  echo "FAIL: generated host config did not adopt the probed hostname"
+  exit 1
+}
+grep -q 'system.stateVersion = "24.11";' "${OVERLAY_DIR}/hosts/lab/default.nix" || {
+  echo "FAIL: generated host config did not adopt the probed release"
+  exit 1
+}
 grep -q 'hostname = "test.example";' "${OVERLAY_DIR}/flake.nix" || {
   echo "FAIL: generated overlay did not store the target host"
   exit 1
@@ -76,6 +109,7 @@ chmod 700 "${OVERLAY_DIR}/scripts/tsurf-status.sh"
 
 bash "${ROOT_DIR}/scripts/tsurf.sh" deploy --fast
 bash "${ROOT_DIR}/scripts/tsurf.sh" status
+bash "${ROOT_DIR}/scripts/tsurf.sh" ssh uname -a
 
 [[ "$(cat "${DEPLOY_LOG}")" == *"--fast"* ]] || {
   echo "FAIL: tsurf deploy did not forward --fast"
@@ -87,6 +121,10 @@ bash "${ROOT_DIR}/scripts/tsurf.sh" status
 }
 [[ "$(cat "${STATUS_LOG}")" == "lab" ]] || {
   echo "FAIL: tsurf status did not default to the saved node"
+  exit 1
+}
+[[ "$(cat "${WORKDIR}/ssh-command.log")" == *"root@test.example uname -a"* ]] || {
+  echo "FAIL: tsurf ssh did not forward the saved target"
   exit 1
 }
 
