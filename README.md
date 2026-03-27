@@ -42,7 +42,22 @@ These lead to the following design goals:
   foundation. Real credentials, host-specific services, and personal config
   live in a separate private repo that imports what it needs.
 
+## Available Extras
+
+| Extra | Enable |
+|------|--------|
+| `extras/cass.nix` | Import + `services.cassIndexer.enable = true` |
+| `extras/codex.nix` | Import + `services.codexAgent.enable = true` |
+| `extras/cost-tracker.nix` | Import + `services.costTracker.enable = true` |
+| `extras/restic.nix` | Import + `services.resticStarter.enable = true` |
+| `extras/home/` | `home-manager.users.<name> = import ./extras/home;` |
+
+tsurf supports custom agents via the generic launcher; see
+[`docs/extras.md`](docs/extras.md#extending-tsurf-custom-agents) for the extension API.
+
 ## Quick Start
+
+See [`QUICKSTART.md`](QUICKSTART.md) for setup and private overlay creation, or continue below for a summary.
 
 1. Enable the project hooks once after cloning:
    `git config core.hooksPath .githooks`
@@ -59,14 +74,13 @@ These lead to the following design goals:
 
 ## Documentation
 
+- Quickstart (newcomer path): [`QUICKSTART.md`](QUICKSTART.md)
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Operations and commands: [`docs/operations.md`](docs/operations.md)
 - Optional modules and home profile: [`docs/extras.md`](docs/extras.md)
 - Security model: [`SECURITY.md`](SECURITY.md)
-- Claim-level technical spec: [`spec/README.md`](spec/README.md)
 - Private overlay template:
   [`examples/private-overlay/README.md`](examples/private-overlay/README.md)
-- Repo-specific agent guidance: [`CLAUDE.md`](CLAUDE.md)
 
 ## License
 
