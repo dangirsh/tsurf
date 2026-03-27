@@ -20,14 +20,10 @@
     ../../modules/networking.nix
     ../../modules/secrets.nix
     ../../modules/impermanence.nix
-    ../../modules/headscale.nix
-    ../../extras/cass.nix
+    # Example extra (opt-in; enable with services.resticStarter.enable = true)
     ../../extras/restic.nix
-    ../../extras/cost-tracker.nix
     # Private overlay: add personal service modules (nginx, etc.) here
   ];
-
-  home-manager.users.${config.tsurf.agent.user} = import ../../extras/home;
 
   networking.hostName = "services"; # REPLACE in private overlay
   time.timeZone = "UTC"; # REPLACE

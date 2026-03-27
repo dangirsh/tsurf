@@ -219,13 +219,13 @@ in
       "public flake still exports deploy.nodes.* — deploy targets must live in a private overlay"
       (!(self ? deploy) || (self.deploy.nodes or { }) == { });
 
-  cass-indexer-enabled =
-    mkCheck "cass-indexer-enabled" "public host fixtures include the CASS indexer timer by default"
-      "tsurf-cass-index timer missing from the public host fixtures"
-      (
-        builtins.hasAttr "tsurf-cass-index" devCfg.systemd.timers
-        && builtins.hasAttr "tsurf-cass-index" servicesCfg.systemd.timers
-      );
+  cass-default-disabled =
+    let
+      source = builtins.readFile ../../extras/cass.nix;
+    in
+    mkCheck "cass-default-disabled" "CASS indexer defaults to disabled when imported"
+      "extras/cass.nix still has default = true — CASS must be opt-in"
+      (!(lib.hasInfix "default = true" source));
 
   restic-opt-in =
     mkCheck "restic-opt-in" "restic backup not active in public services config (opt-in works)"
