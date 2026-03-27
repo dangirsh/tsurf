@@ -9,6 +9,7 @@ let
   egressCfg = config.tsurf.agentEgress;
   # @decision NET-07: Build-time assertion prevents accidental public exposure of internal services.
   internalOnlyPorts = {
+    "8080" = "headscale";
   };
   exposed = lib.filter (
     p: builtins.hasAttr (toString p) internalOnlyPorts
@@ -52,7 +53,7 @@ in
         "10.0.0.0/8"       # RFC1918 private
         "172.16.0.0/12"    # RFC1918 private
         "192.168.0.0/16"   # RFC1918 private
-        "100.64.0.0/10"    # RFC6598 CGNAT (includes Tailscale)
+        "100.64.0.0/10"    # RFC6598 CGNAT (includes Tailscale/headscale mesh)
         "169.254.0.0/16"   # RFC3927 link-local (includes cloud metadata)
       ];
       description = "IPv4 CIDRs blocked for the agent user when blockPrivateRanges is enabled.";

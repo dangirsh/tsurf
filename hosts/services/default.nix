@@ -20,6 +20,7 @@
     ../../modules/networking.nix
     ../../modules/secrets.nix
     ../../modules/impermanence.nix
+    ../../modules/headscale.nix
     ../../extras/cass.nix
     ../../extras/restic.nix
     ../../extras/cost-tracker.nix
