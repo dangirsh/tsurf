@@ -26,6 +26,11 @@
   networking.nat.externalInterface = "eth0"; # REPLACE
 
   # Optional extras:
+  # tsurf.headscale.enable = true;       # Self-hosted Tailscale control plane (services host)
+  # tsurf.headscale.domain = "hs.example.com";
+  # tsurf.headscale.baseDomain = "ts.net";  # MagicDNS suffix for machine names
+  # tsurf.headscale.publicIPv4 = "YOUR_PUBLIC_IP";
+  # tsurf.headscale.acmeEmail = "admin@example.com";
   # services.codexAgent.enable = true;
   # services.cassIndexer.enable = true;
   # tsurf.headscale.enable = true;       # Self-hosted Tailscale control plane (services host)

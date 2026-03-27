@@ -20,6 +20,7 @@
     ../../modules/networking.nix
     ../../modules/secrets.nix
     ../../modules/impermanence.nix
+    ../../modules/headscale.nix
     # Example extra (opt-in; enable with services.resticStarter.enable = true)
     ../../extras/restic.nix
     # Private overlay: add personal service modules (nginx, etc.) here
