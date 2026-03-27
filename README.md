@@ -24,21 +24,23 @@ These lead to the following design goals:
 
 ## Core Features
 
-- Sandbox-first agent execution. Public core ships a brokered `claude` wrapper
-  built from `modules/agent-sandbox.nix`, `modules/agent-launcher.nix`,
-  `modules/nono.nix`, and `scripts/agent-wrapper.sh`.
-- Generic agent launcher. `services.agentLauncher.agents.<name>` turns a small
-  Nix attrset into a wrapper, launcher, nono profile, sudo rule, and
-  persistence entries.
-- Two public host roles. `hosts/dev` is the agent-execution fixture;
-  `hosts/services` is the service-host fixture. The public flake exports
-  `eval-*` configurations only, not deploy targets.
-- Declarative, recovery-oriented base. [srvos](https://github.com/nix-community/srvos), [nix-mineral](https://github.com/cynicsketch/nix-mineral), [BTRFS](https://btrfs.readthedocs.io/) rollback,
-  [impermanence](https://github.com/nix-community/impermanence), lockout-prevention assertions, and private-overlay deploy
-  tooling are built in.
-- Minimal extras with reusable building blocks. Public extras include the
-  low-priority CASS indexer, optional `codex`, `cost-tracker`, `restic`, and a
-  home-manager profile for the agent user.
+- **Sandboxed agent execution.** Agents run inside a deny-by-default
+  [Landlock](https://landlock.io/) sandbox with restricted filesystem and
+  network access. Real credentials never enter the agent process — a separate
+  broker supplies short-lived, per-session tokens.
+- **Declarative agent launcher.** Define a new agent in a few lines of config
+  and get a sandboxed wrapper, credential brokering, resource controls, and
+  persistent storage automatically.
+- **Hardened, stateless base.** Kernel hardening, encrypted secrets ([sops](https://github.com/getsops/sops)),
+  strict firewall rules, and a root filesystem that rolls back to a clean
+  snapshot on every boot — so a misbehaving agent (or operator) can't
+  permanently corrupt the system.
+- **Deploy safety.** Lockout-prevention assertions catch misconfigurations
+  (e.g., missing SSH keys, exposed ports) before they reach a live machine.
+  Deploys are locked, health-checked, and rollback-aware.
+- **Public base / private overlay model.** This repo is the reusable
+  foundation. Real credentials, host-specific services, and personal config
+  live in a separate private repo that imports what it needs.
 
 ## Quick Start
 
