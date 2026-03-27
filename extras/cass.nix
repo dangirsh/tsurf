@@ -44,9 +44,7 @@ let
   '';
 in
 {
-  options.services.cassIndexer.enable = lib.mkEnableOption "CASS session indexer timer" // {
-    default = true;
-  };
+  options.services.cassIndexer.enable = lib.mkEnableOption "CASS session indexer timer";
 
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ cass ];
