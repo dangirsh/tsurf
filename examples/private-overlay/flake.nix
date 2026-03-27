@@ -67,8 +67,13 @@
         # agent-sandbox.nix: core claude wrapper
         "${inputs.tsurf}/modules/agent-sandbox.nix"
         { services.agentSandbox.enable = true; }
+        # Optional extras (import here, then enable in host config as needed):
         # cass.nix: low-priority CASS indexer timer for the dedicated agent user
         "${inputs.tsurf}/extras/cass.nix"
+        # "${inputs.tsurf}/extras/restic.nix"
+        # "${inputs.tsurf}/extras/cost-tracker.nix"
+        # Home Manager profile opt-in pattern (per host):
+        # { home-manager.users.agent = import "${inputs.tsurf}/extras/home"; }
 
         # Import networking.nix after configuring Tailscale/headscale, SSH host keys, and impermanence.
         # Import secrets.nix after creating your encrypted secrets file, or write your own secrets module.

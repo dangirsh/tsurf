@@ -12,9 +12,9 @@ in a private flake.
 - `hosts/dev` is the agent-execution fixture. It imports the sandbox modules and
   enables `agentCompute`, `agentSandbox`, and `nonoSandbox`.
 - `hosts/services` is the service-host fixture. It omits the sandbox modules by
-  default and imports the `restic` and `cost-tracker` extras as opt-in modules.
-- Both public host fixtures import `extras/cass.nix`, which runs the session
-  indexer as a low-priority system timer for the dedicated agent user.
+  default and imports `extras/restic.nix` as an example opt-in extra.
+- All extras are opt-in and are not imported by default host fixtures, except
+  for the `extras/restic.nix` example on `hosts/services`.
 - `scripts/deploy.sh` refuses to deploy from the public repo. Real deploys must
   come from a private overlay that has a `tsurf.url` input.
 
@@ -30,7 +30,6 @@ in a private flake.
 | `modules/nono.nix` | Base `nono` profile and sandbox profile installation |
 | `modules/agent-launcher.nix` | Generic launcher that emits wrappers, launchers, sudo rules, and persistence |
 | `modules/agent-sandbox.nix` | Public core `claude` wrapper definition on top of the generic launcher |
-| `extras/cass.nix` | Low-priority system timer that keeps the CASS index fresh for the agent user |
 
 ## Agent Launch Model
 
@@ -86,11 +85,10 @@ user is kept out of `docker`, and raw provider secrets remain root-owned by defa
 - `tmux` is the simplest recommended way to keep an interactive agent session
   reattachable across SSH disconnects.
 - `extras/codex.nix` is an opt-in extra built on the same launcher path.
-- `extras/cass.nix` keeps agent session history searchable without any user
-  linger or per-user timers.
+- `extras/cass.nix` is an opt-in extra that keeps agent session history
+  searchable without any user linger or per-user timers.
 - Additional wrappers and service-specific agent workflows belong in a private
   overlay. See [`examples/private-overlay/modules/code-review.nix`](../examples/private-overlay/modules/code-review.nix)
   for a concrete pattern.
 
-For the full security model and claim-level verification references, use
-[`SECURITY.md`](../SECURITY.md) and [`spec/README.md`](../spec/README.md).
+For the full security model, use [`SECURITY.md`](../SECURITY.md).
