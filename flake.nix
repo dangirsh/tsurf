@@ -357,7 +357,7 @@
                 src = ./.;
               }
               ''
-                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh "$src"/scripts/complexity-metric.sh "$src"/.githooks/post-commit
+                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh
                 # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
                 # SC2317: BATS @test blocks appear unreachable to shellcheck
                 shellcheck --exclude=SC2317 "$src"/tests/live/*.bats

@@ -235,7 +235,7 @@ in
   headscale-opt-in =
     mkCheck "headscale-opt-in" "headscale not active in public services config (opt-in works)"
       "headscale active in public template — tsurf.headscale.enable should be false"
-      (!servicesCfg.tsurf.headscale.enable);
+      (!(lib.attrByPath [ "tsurf" "headscale" "enable" ] false servicesCfg));
 
   headscale-port-internal =
     let

@@ -28,7 +28,6 @@ scripts/                 # Core scripts (sandbox, rollback, deploy, test runner)
   agent-wrapper.sh     # root-owned launch bridge: credential proxy, sandbox, privilege drop
   btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
   credential-proxy.py  # Root-owned per-session credential proxy for agent launches
-  complexity-metric.sh # Effective LOC counter for complexity tracking
   deploy.sh            # deploy-rs wrapper (locking, health check, safety guard)
   run-tests.sh         # Live BATS test runner (SSH-based)
   sandbox-probe.sh     # Sandbox boundary probe for live tests
@@ -55,7 +54,6 @@ tests/
   lib/common.bash          # Shared helpers for BATS live tests
 .githooks/
   pre-commit             # Blocks .planning/ and README.md from autonomous commits
-  post-commit            # Complexity metric warning on LOC growth
 ```
 
 ## Key Decisions
