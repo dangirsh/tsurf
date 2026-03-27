@@ -26,14 +26,14 @@ These lead to the following design goals:
 
 - **Sandboxed agent execution.** Agents run inside a deny-by-default
   [Landlock](https://landlock.io/) sandbox with restricted filesystem and
-  network access. Real credentials never enter the agent process — a separate
+  network access. Real credentials never enter the agent process; a separate
   broker supplies short-lived, per-session tokens.
-- **Declarative agent launcher.** Define a new agent in a few lines of config
+- **Declarative agent launcher.** Define a new agent type in a few lines of config
   and get a sandboxed wrapper, credential brokering, resource controls, and
   persistent storage automatically.
 - **Hardened, stateless base.** Kernel hardening, encrypted secrets ([sops](https://github.com/getsops/sops)),
   strict firewall rules, and a root filesystem that rolls back to a clean
-  snapshot on every boot — so a misbehaving agent (or operator) can't
+  snapshot on every boot, so a misbehaving agent (or operator) can't
   permanently corrupt the system.
 - **Deploy safety.** Lockout-prevention assertions catch misconfigurations
   (e.g., missing SSH keys, exposed ports) before they reach a live machine.
