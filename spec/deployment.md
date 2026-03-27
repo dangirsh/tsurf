@@ -10,7 +10,7 @@ Source: `scripts/deploy.sh`, `flake.nix`
 | ID | Claim | Source |
 |----|-------|--------|
 | DEP-001 | Public flake exports no `deploy.nodes` | `flake.nix`, `tests/eval/config-checks.nix:public-deploy-empty` |
-| DEP-002 | `deploy.sh` refuses to deploy from public repo — detects absence of `tsurf.url` flake input | `scripts/deploy.sh` safety guard, `@decision DEPLOY-02` |
+| DEP-002 | `deploy.sh` refuses to deploy from public repo; detects absence of `tsurf.url` flake input | `scripts/deploy.sh` safety guard, `@decision DEPLOY-02` |
 | DEP-003 | Deploy script lives in `scripts/` as a core feature | `CLAUDE.md` project structure |
 
 ## Deploy Modes
@@ -35,7 +35,7 @@ Source: `scripts/deploy.sh`, `flake.nix`
 |----|-------|--------|
 | DEP-015 | Service health check: verifies `sshd` and `nftables` after deploy | `scripts/deploy.sh` |
 | DEP-016 | SSH connectivity verified via non-multiplexed fresh connection (tests real path, not cached) | `scripts/deploy.sh`, `@decision DEPLOY-04` |
-| DEP-017 | No separate public-IP probe path — deploy verification stays minimal and SSH-based | `scripts/deploy.sh` |
+| DEP-017 | No separate public-IP probe path; deploy verification stays minimal and SSH-based | `scripts/deploy.sh` |
 
 ## Post-Deploy Hooks
 

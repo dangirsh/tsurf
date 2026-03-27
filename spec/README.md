@@ -42,7 +42,7 @@ Each claim has a unique ID for cross-referencing with test cases.
 1. **Derive test cases**: Each claim (e.g., `SBX-027: /run/secrets denied`) maps to a testable behavior.
 2. **Cross-reference**: Test comments should cite the claim ID they validate (e.g., `# Validates SBX-027`).
 3. **Coverage gaps**: See `testing.md` coverage map for claims without test coverage.
-4. **Maintenance**: When modules change, update the corresponding spec file. Claim IDs are stable — add new IDs, don't renumber.
+4. **Maintenance**: When modules change, update the corresponding spec file. Claim IDs are stable; add new IDs, don't renumber.
 
 ## Source of Truth
 

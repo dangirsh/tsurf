@@ -1,4 +1,4 @@
-# modules/code-review.nix — Example: a scheduled code review agent
+# modules/code-review.nix - Example: a scheduled code review agent
 #
 # Shows how to use the generic agent launcher to define a custom agent
 # in ~20 lines. This agent reviews open PRs daily and posts summaries.

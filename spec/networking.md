@@ -29,9 +29,9 @@ Source: `modules/networking.nix`, `SECURITY.md`
 | ID | Claim | Source |
 |----|-------|--------|
 | NET-012 | SSH enabled, `openFirewall = false` (port 22 added explicitly to allowedTCPPorts) | `modules/networking.nix` lines 168-170 |
-| NET-013 | `PasswordAuthentication = false` — key-only auth | `modules/networking.nix` line 175 |
+| NET-013 | `PasswordAuthentication = false`; key-only auth | `modules/networking.nix` line 175 |
 | NET-014 | `KbdInteractiveAuthentication = false` | `modules/networking.nix` line 176 |
-| NET-015 | `PermitRootLogin = "prohibit-password"` — key-only root for deploy pipeline | `modules/networking.nix` line 177 |
+| NET-015 | `PermitRootLogin = "prohibit-password"`; key-only root for deploy pipeline | `modules/networking.nix` line 177 |
 | NET-016 | `X11Forwarding = false` | `modules/networking.nix` line 178 |
 | NET-017 | `MaxAuthTries = 3` | `modules/networking.nix` line 179 |
 | NET-018 | `LoginGraceTime = 30` | `modules/networking.nix` line 180 |

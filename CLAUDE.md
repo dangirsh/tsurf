@@ -1,30 +1,30 @@
-# CLAUDE.md — tsurf
+# CLAUDE.md - tsurf
 
 NixOS configuration template for declarative server management with flakes + home-manager. Example hosts: `services` and `dev` (replaced by real hosts in a private overlay).
 
 ## Project Structure
 
 ```
-flake.nix              # Entrypoint — inputs, outputs, eval fixtures `.#eval-services` + `.#eval-dev`
+flake.nix              # Entrypoint: inputs, outputs, eval fixtures `.#eval-services` + `.#eval-dev`
 flake.lock             # Pinned dependencies (nixpkgs 25.11, home-manager, sops-nix, disko, etc.)
 hosts/
   hardware.nix         # Shared QEMU VPS hardware config (both hosts)
   disko-config.nix     # Shared disko partition layout (both hosts)
   services/            # Example service host
   dev/                 # Example agent/dev host
-modules/                 # Core — security/infrastructure essentials only
+modules/                 # Core: security/infrastructure essentials only
   agent-compute.nix    # Agent runtime support (resource controls + shared tooling)
   agent-launcher.nix   # Generic sandboxed agent launcher (wrapper, systemd-run, nono, credentials)
   agent-sandbox.nix    # Claude agent declaration on top of the generic launcher
   base.nix             # Nix settings, system packages, nix-mineral kernel hardening
   boot.nix             # GRUB bootloader + BTRFS root rollback
-  impermanence.nix     # /persist manifest — BTRFS subvolume rollback on boot
+  impermanence.nix     # /persist manifest, BTRFS subvolume rollback on boot
   networking.nix       # nftables, SSH (hardened), firewall assertions
   nono.nix             # nono base profile for the filesystem/network sandbox
   secrets.nix          # sops-nix secret declarations
   users.nix            # Root + agent user model, tsurf.agent.* options, root SSH assertion
 scripts/                 # Core scripts (sandbox, rollback, deploy, test runner)
-  agent-wrapper.sh     # root-owned launch bridge — credential proxy, sandbox, privilege drop
+  agent-wrapper.sh     # root-owned launch bridge: credential proxy, sandbox, privilege drop
   btrfs-rollback.sh    # BTRFS root subvolume rollback on boot
   credential-proxy.py  # Root-owned per-session credential proxy for agent launches
   complexity-metric.sh # Effective LOC counter for complexity tracking
@@ -33,7 +33,7 @@ scripts/                 # Core scripts (sandbox, rollback, deploy, test runner)
   sandbox-probe.sh     # Sandbox boundary probe for live tests
   tsurf-init.sh        # Bootstrap wizard: generate SSH keys, validate setup
   tsurf-status.sh      # Check systemd service status on tsurf hosts
-extras/                  # Optional batteries — import what you need
+extras/                  # Optional batteries (import what you need)
   cass.nix             # Low-priority CASS indexer timer for the dedicated agent user
   codex.nix            # Codex agent wrapper (OpenAI, opt-in, uses generic launcher)
   cost-tracker.nix     # API cost tracking (Anthropic, OpenAI)
@@ -75,7 +75,7 @@ tests/
 - One module per concern. Prefer adding to existing modules over new ones for <20 lines.
 - Each host `default.nix` lists imports explicitly (no module hub).
 - Secrets managed via sops-nix (age key derived from SSH host key).
-- All service configs are declarative — no imperative setup steps.
+- All service configs are declarative; no imperative setup steps.
 - Infrastructure repos cloned via activation scripts (clone-only, never pull).
 - Internal services bind `127.0.0.1` (localhost-only).
 - `@decision` annotations on security-relevant choices in module headers.
@@ -128,7 +128,7 @@ nix flake check 2>&1 && echo "pass|0|$(date +%s)" > .test-status
 | Live sandbox behavioral | `nix run .#test-live -- --host <sandbox-host> tests/live/sandbox-behavioral.bats` | After deploy (sandbox host only) |
 
 Sandbox testing has three tiers:
-- **Eval checks**: Source-text regression guards (fast, every commit) — catch structural regressions
+- **Eval checks**: Source-text regression guards (fast, every commit) that catch structural regressions
 - **Live behavioral**: Runtime probes as agent user inside nono sandbox (after deploy, sandbox host only)
 - **VM test**: Reproducible user privilege separation smoke test (requires KVM, not in CI)
 
@@ -151,21 +151,21 @@ See `SECURITY.md` for the complete security model, accepted risks, and verificat
 - **Never** add a public `--no-sandbox` path; unsandboxed execution belongs in a private overlay only.
 - **Never** add packages imperatively (`nix-env`, `nix profile install`) or re-enable `nix.channel.enable` / `nix.nixPath`.
 - **Never** omit `@decision` annotations for security-relevant module choices.
-- **Never** commit `.planning/` — it is local-only agent state (gitignored, blocked by `.githooks/pre-commit`).
+- **Never** commit `.planning/`; it is local-only agent state (gitignored, blocked by `.githooks/pre-commit`).
 - **Never** remove or rewrite the opening section of `README.md` (the description, personal note, and blockquotes before `## Design Principles`) or the `## Design Principles` section itself. These are human-authored and must not be touched by agents.
 
 ### Pre-flight checklist
 
 Run before every module or service commit:
 
-1. **Port exposure** — New port? Add to `internalOnlyPorts` in `modules/networking.nix`. NEVER add to `networking.firewall.allowedTCPPorts`.
-2. **Secrets** — New secret? Add to `secrets.nix` with minimal `owner`/permissions. Use `sops.templates` for env files. NEVER embed credentials in URLs, CLI args, or committed files.
-3. **New service** — Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts`.
-4. **Sandbox impact** — Modifying `agent-compute.nix` or `nono.nix`? Verify `/run/secrets` and `~/.ssh` remain in the deny list. NEVER weaken nono sandbox defaults.
-5. **Agent execution** — Public core `claude` and any generated wrappers must stay sandboxed. Launch agents from workspace repos, not security-boundary repos (operational policy).
-7. **Package management** — NEVER use `nix-env`, `nix profile install`, or re-enable `nix.channel.enable` / `nix.nixPath`.
-8. **Root SSH access** — Keep a real root SSH key configured in the private overlay. The public repo no longer ships placeholder recovery keys.
-9. **Validation** — `nix flake check` passes.
+1. **Port exposure**: New port? Add to `internalOnlyPorts` in `modules/networking.nix`. NEVER add to `networking.firewall.allowedTCPPorts`.
+2. **Secrets**: New secret? Add to `secrets.nix` with minimal `owner`/permissions. Use `sops.templates` for env files. NEVER embed credentials in URLs, CLI args, or committed files.
+3. **New service**: Set `openFirewall = false`. Add `@decision` annotation. Add port to `internalOnlyPorts`.
+4. **Sandbox impact**: Modifying `agent-compute.nix` or `nono.nix`? Verify `/run/secrets` and `~/.ssh` remain in the deny list. NEVER weaken nono sandbox defaults.
+5. **Agent execution**: Public core `claude` and any generated wrappers must stay sandboxed. Launch agents from workspace repos, not security-boundary repos (operational policy).
+7. **Package management**: NEVER use `nix-env`, `nix profile install`, or re-enable `nix.channel.enable` / `nix.nixPath`.
+8. **Root SSH access**: Keep a real root SSH key configured in the private overlay. The public repo no longer ships placeholder recovery keys.
+9. **Validation**: `nix flake check` passes.
 
 ## Sandbox Awareness
 
@@ -191,11 +191,11 @@ and can replace modules entirely or import and extend them.
 
 ## Simplicity Conventions
 
-- Every new module must justify its existence — prefer adding to existing modules over creating new ones for <20 lines
-- No dead code — unused options, packages, or features must be removed immediately
-- YAGNI — do not add features "for later" unless they are in an active phase plan
-- One source of truth — packages declared in exactly one module (no duplicates across modules)
+- Every new module must justify its existence; prefer adding to existing modules over creating new ones for <20 lines
+- No dead code; unused options, packages, or features must be removed immediately
+- YAGNI; do not add features "for later" unless they are in an active phase plan
+- One source of truth; packages declared in exactly one module (no duplicates across modules)
 - Prefer inline over separate files for small configs (<10 lines); extract larger bash/python to separate files
 - Let bindings for values used more than once
-- `tmp/` in project root for temporary files (never `/tmp/`) — convention from global CLAUDE.md
+- `tmp/` in project root for temporary files (never `/tmp/`), per global CLAUDE.md
 - `disabledModules` for private overlay: only justified when the public module references non-existent users/resources in private config (e.g., `users.nix`, `agent-compute.nix`), or when the entire module content differs and you are replacing that concern wholesale in the overlay.

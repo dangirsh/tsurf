@@ -9,7 +9,7 @@ Source: `tests/eval/config-checks.nix`, `tests/live/*.bats`, `tests/vm/sandbox-b
 
 | ID | Claim | Source |
 |----|-------|--------|
-| TST-001 | Eval checks: 50+ Nix eval-time assertions via `nix flake check` — fast, every commit | `tests/eval/config-checks.nix`, `flake.nix` lines 253-281 |
+| TST-001 | Eval checks: 50+ Nix eval-time assertions via `nix flake check`; fast, every commit | `tests/eval/config-checks.nix`, `flake.nix` lines 253-281 |
 | TST-002 | Live tests: BATS tests over SSH against deployed hosts via `nix run .#test-live -- --host <hostname>` | `flake.nix` lines 122-193 |
 | TST-003 | VM sandbox test: NixOS VM user privilege separation smoke test (requires KVM) via `nix build .#vm-test-sandbox` | `flake.nix` lines 117-120 |
 | TST-004 | ShellCheck: all shell scripts validated | `flake.nix` lines 261-269 |
@@ -175,7 +175,7 @@ Claims with no test coverage (candidates for future tests):
 | Spec File | Uncovered Claims |
 |-----------|-----------------|
 | `secrets.md` | SCR-015 (session token randomness), SCR-020 (proxy port timeout) |
-| `sandbox.md` | SBX-010 through SBX-018 (systemd-run resource properties — live runtime only) |
-| `deployment.md` | DEP-007 through DEP-011 (watchdog — requires deploy target) |
-| `backup.md` | BAK-008 (retention policy — requires deployed restic) |
-| `impermanence.md` | IMP-002 through IMP-005 (rollback script — requires reboot) |
+| `sandbox.md` | SBX-010 through SBX-018 (systemd-run resource properties; live runtime only) |
+| `deployment.md` | DEP-007 through DEP-011 (watchdog; requires deploy target) |
+| `backup.md` | BAK-008 (retention policy; requires deployed restic) |
+| `impermanence.md` | IMP-002 through IMP-005 (rollback script; requires reboot) |

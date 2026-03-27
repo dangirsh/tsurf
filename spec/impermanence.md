@@ -9,7 +9,7 @@ Source: `modules/impermanence.nix`, `modules/boot.nix`, `scripts/btrfs-rollback.
 
 | ID | Claim | Source |
 |----|-------|--------|
-| IMP-001 | Root filesystem uses BTRFS subvolume rollback (not tmpfs) — server workloads need disk-backed root | `modules/impermanence.nix`, `@decision IMP-01` |
+| IMP-001 | Root filesystem uses BTRFS subvolume rollback (not tmpfs); server workloads need disk-backed root | `modules/impermanence.nix`, `@decision IMP-01` |
 | IMP-002 | Rollback script runs in initrd via `boot.initrd.postResumeCommands` | `modules/boot.nix` lines 9-10 |
 | IMP-003 | On each boot: current `root` subvolume moved to `old_roots/<timestamp>` | `scripts/btrfs-rollback.sh` lines 17-20 |
 | IMP-004 | Old root snapshots older than 30 days are recursively deleted | `scripts/btrfs-rollback.sh` lines 31-33 |
@@ -25,7 +25,7 @@ Source: `modules/impermanence.nix`, `modules/boot.nix`, `scripts/btrfs-rollback.
 | IMP-007 | `/var/lib/nixos` persisted (UID/GID maps, declarative users/groups) | `modules/impermanence.nix` line 36 |
 | IMP-009 | `/var/lib/systemd/timers` persisted (Persistent=true timer stamps) | `modules/impermanence.nix` line 37 |
 | IMP-010 | `/var/lib/systemd/timesync` persisted (NTP clock file) | `modules/impermanence.nix` line 38 |
-| IMP-011 | `/var/lib/systemd/linger` not persisted — user linger is not part of the public model | `modules/impermanence.nix`, `tests/eval/config-checks.nix:no-linger-persistence` |
+| IMP-011 | `/var/lib/systemd/linger` not persisted; user linger is not part of the public model | `modules/impermanence.nix`, `tests/eval/config-checks.nix:no-linger-persistence` |
 | IMP-012 | `/var/lib/private` persisted (DynamicUser services) | `modules/impermanence.nix` line 40 |
 | IMP-013 | `/etc/machine-id` persisted (journal continuity) | `modules/impermanence.nix` line 30 |
 | IMP-014 | `/var/lib/systemd/random-seed` persisted (kernel entropy) | `modules/impermanence.nix` line 31 |
@@ -62,5 +62,5 @@ Source: `modules/impermanence.nix`, `modules/boot.nix`, `scripts/btrfs-rollback.
 
 | ID | Claim | Source |
 |----|-------|--------|
-| IMP-026 | `setupSecrets` depends on `persist-files` — sops-nix reads persisted SSH host key before decrypting secrets | `modules/impermanence.nix` lines 12-14, `@decision IMP-06` |
+| IMP-026 | `setupSecrets` depends on `persist-files`; sops-nix reads persisted SSH host key before decrypting secrets | `modules/impermanence.nix` lines 12-14, `@decision IMP-06` |
 | IMP-027 | `/etc` permissions fixed after `etc` activation for sshd strict mode | `modules/impermanence.nix` lines 5-9, `@decision IMP-05` |

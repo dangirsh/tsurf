@@ -10,7 +10,7 @@ Source: `SECURITY.md`, `modules/users.nix`, `modules/networking.nix`, `modules/a
 
 The system assumes:
 - Root is the operator, trusted with full administrative access (deploy, maintenance, SSH).
-- The agent user is untrusted — it runs LLM-directed code that may be adversarial.
+- The agent user is untrusted; it runs LLM-directed code that may be adversarial.
 - The host network is partially hostile (public internet on eth0).
 - Secrets are high-value targets (API keys, SSH keys).
 
@@ -39,8 +39,8 @@ The system assumes:
 |----|-------|--------|
 | SEC-010 | Two-user model: `root` (operator) and `agent` (sandboxed tools) | `modules/users.nix`, `@decision SEC-152-01` |
 | SEC-011 | Agent user is not in `wheel`; launcher sudo access comes from explicit sudoers rules only | `modules/users.nix`, `modules/agent-launcher.nix` |
-| SEC-012 | Agent user is NOT in `docker` group — enforced by build-time assertion | `modules/users.nix` line 86 |
-| SEC-014 | `users.mutableUsers = false` — no runtime user modification | `modules/users.nix` line 59 |
+| SEC-012 | Agent user is NOT in `docker` group; enforced by build-time assertion | `modules/users.nix` line 86 |
+| SEC-014 | `users.mutableUsers = false`; no runtime user modification | `modules/users.nix` line 59 |
 | SEC-015 | Agent user identity is parameterized via `tsurf.agent.{user, uid, gid, home, projectRoot}` | `modules/users.nix` lines 30-56 |
 | SEC-016 | Non-default agent identity propagates correctly through users and sandbox modules | `tests/eval/config-checks.nix:alt-agent-parameterization` |
 
@@ -49,7 +49,7 @@ The system assumes:
 | ID | Claim | Source |
 |----|-------|--------|
 | SEC-017 | `nix.settings.allowed-users = [ "root" "<agent-user>" ]` | `modules/base.nix`, `@decision SEC-124-01` |
-| SEC-018 | `nix.settings.trusted-users = [ "root" ]` — root-only | `modules/base.nix` |
+| SEC-018 | `nix.settings.trusted-users = [ "root" ]`; root-only | `modules/base.nix` |
 | SEC-019 | Nix channels disabled, nixPath cleared, defaultPackages emptied | `modules/base.nix` lines 11-13, `@decision SYS-02` |
 
 ## Kernel Hardening
@@ -81,7 +81,7 @@ The system assumes:
 | ID | Risk | Source |
 |----|------|--------|
 | SEC-AR-001 | Service-host role does not include agent sandbox | `SECURITY.md` |
-| SEC-AR-002 | Sandbox does not make current workspace immutable — writable by design | `SECURITY.md` |
+| SEC-AR-002 | Sandbox does not make current workspace immutable; writable by design | `SECURITY.md` |
 | SEC-AR-003 | Agent egress allowlist is coarse (UID-scoped, not per-wrapper or per-destination) | `SECURITY.md` |
 | SEC-AR-004 | No signature verification for prebuilt binaries | `SECURITY.md` |
 | SEC-AR-005 | Operators must keep agents away from repos that define their own security boundaries; the public wrapper does not classify repos automatically | `SECURITY.md` |

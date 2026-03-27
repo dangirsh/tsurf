@@ -19,7 +19,7 @@ Source: `modules/users.nix`, `modules/agent-launcher.nix`
 
 | ID | Claim | Source |
 |----|-------|--------|
-| USR-007 | `security.sudo.execWheelOnly = false` — allows the non-wheel agent user to invoke explicit sudo rules | `modules/users.nix` |
+| USR-007 | `security.sudo.execWheelOnly = false`; allows the non-wheel agent user to invoke explicit sudo rules | `modules/users.nix` |
 | USR-008 | Agent sudo rules grant `NOPASSWD` access only to immutable per-agent launchers | `modules/agent-launcher.nix` |
 | USR-009 | Launcher sudo rules do not grant `SETENV` or general root access | `tests/eval/config-checks.nix:brokered-launch-sudoers` |
 

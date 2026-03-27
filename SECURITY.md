@@ -212,8 +212,8 @@ What the child process does **not** get:
 Credential scoping is least-privilege by wrapper. Core default: `claude`
 (Anthropic only). Optional extras when enabled:
 
-- `claude` — Anthropic only
-- `codex` — OpenAI only
+- `claude`: Anthropic only
+- `codex`: OpenAI only
 - extra agents must opt into credentials explicitly via the generic launcher
 
 ## Network Model
