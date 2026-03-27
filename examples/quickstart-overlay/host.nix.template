@@ -1,0 +1,15 @@
+# hosts/__TSURF_NODE__/default.nix
+# Generated host defaults for the quickstart overlay.
+{ lib, ... }:
+{
+  networking.hostName = "__TSURF_HOSTNAME__";
+  networking.useDHCP = lib.mkDefault true;
+
+  time.timeZone = "__TSURF_TIMEZONE__";
+  i18n.defaultLocale = "C.UTF-8";
+
+  # Keep SSH reachable during first contact with a stock NixOS host.
+  services.openssh.openFirewall = lib.mkForce true;
+
+  system.stateVersion = "__TSURF_STATE_VERSION__";
+}

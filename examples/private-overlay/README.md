@@ -15,6 +15,18 @@ There is no separate `dev` operator user. Root handles all administrative tasks 
 
 ## Quick Start
 
+If you just want to try tsurf on an existing NixOS server first, use the
+repo-root quickstart path instead:
+
+```bash
+./tsurf init root@your-server
+./tsurf deploy
+./tsurf status
+```
+
+Use the private overlay flow below when you want the full long-lived setup with
+your own repo, secrets, and host-specific modules.
+
 1. Copy this directory into a new private repository.
 2. Edit `flake.nix`: replace `github:your-org/tsurf` and `REPLACE` placeholders.
 3. Run `nix run .#tsurf-init -- --overlay-dir .` to generate the root SSH key and

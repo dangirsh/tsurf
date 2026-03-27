@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# tsurf — Convenience launcher for the flake-packaged tsurf CLI.
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+export TSURF_REPO_DIR="${REPO_DIR}"
+
+exec nix run "${REPO_DIR}#tsurf" -- "$@"

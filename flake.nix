@@ -148,6 +148,23 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
+        tsurf = pkgs.writeShellApplication {
+          name = "tsurf";
+          runtimeInputs = with pkgs; [
+            coreutils
+            gnused
+            openssh
+            nix
+            systemd
+          ];
+          text = ''
+            export TSURF_BUNDLED_FLAKE_TEMPLATE=${./examples/quickstart-overlay/flake.nix.template}
+            export TSURF_BUNDLED_HOST_TEMPLATE=${./examples/quickstart-overlay/host.nix.template}
+            export TSURF_BUNDLED_OVERLAY_README=${./examples/quickstart-overlay/README.md}
+            export TSURF_BUNDLED_SCRIPT_DIR=${./scripts}
+            ${builtins.readFile ./scripts/tsurf.sh}
+          '';
+        };
 
         # NixOS VM test for sandbox user privilege separation (requires KVM).
         # Run: nix build .#vm-test-sandbox
@@ -316,6 +333,12 @@
             meta.description = "Check systemd service status on tsurf hosts";
           };
 
+        tsurf = {
+          type = "app";
+          program = "${self.packages.${system}.tsurf}/bin/tsurf";
+          meta.description = "Quickstart wrapper for tsurf init/deploy/status";
+        };
+
         # @decision BOOT-06: Pinned nixos-anywhere via flake.lock (supply-chain safety).
         nixos-anywhere = {
           type = "app";
@@ -355,7 +378,7 @@
                 src = ./.;
               }
               ''
-                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh
+                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh "$src"/scripts/tsurf.sh "$src"/tsurf
                 # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
                 # SC2317: BATS @test blocks appear unreachable to shellcheck
                 shellcheck --exclude=SC2317 "$src"/tests/live/*.bats
@@ -366,6 +389,7 @@
               {
                 nativeBuildInputs = [
                   pkgs.bash
+                  pkgs.openssh
                   pkgs.python3
                 ];
                 src = ./.;

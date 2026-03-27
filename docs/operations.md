@@ -7,16 +7,23 @@ the checks that should pass before you trust a change.
 
 After cloning the repo:
 
-1. Enable the project hooks:
+1. For the shortest path onto an existing NixOS host:
+   `./tsurf init root@your-server`
+2. Deploy:
+   `./tsurf deploy`
+3. Check status:
+   `./tsurf status`
+4. For repo validation and contributions, also enable hooks and run:
    `git config core.hooksPath .githooks`
-2. Run the public eval checks:
    `nix flake check`
-3. If you add new tracked files before running Nix evaluation again, stage them
+5. If you add new tracked files before running Nix evaluation again, stage them
    first. Flake evaluation only sees tracked paths.
 
 ## Private Overlay Workflow
 
-The public repo is not deployable by design. The intended workflow is:
+The quickstart wrapper hides the private-overlay details by generating a local
+overlay under `.tsurf/overlay/`. For long-lived/production deployments, the
+intended explicit workflow is still:
 
 1. Copy [`examples/private-overlay/`](../examples/private-overlay/) into a
    private repository.
@@ -36,6 +43,10 @@ The public repo is not deployable by design. The intended workflow is:
 
 | Command | Purpose |
 |---------|---------|
+| `./tsurf init root@host` | Generate a local quickstart overlay, root SSH key, and saved config |
+| `./tsurf deploy` | Deploy the generated quickstart overlay with the saved defaults |
+| `./tsurf status` | Check persistent fleet status for the saved node |
+| `./tsurf config` | Print the saved quickstart defaults |
 | `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay` | Generate the root SSH key for a private overlay and optionally derive an age key with `--age` |
 | `nix run .#tsurf-status -- <node\|host\|all>` | Check persistent fleet status over SSH |
 | `nix run .#test-live -- --host <host>` | Run live BATS checks against a deployed host |
@@ -63,6 +74,8 @@ produce it is `./scripts/run-tests.sh`.
 
 ## Deploy Safety
 
+- `./tsurf deploy` always deploys from the generated local overlay, not directly
+  from the public repo root.
 - `scripts/deploy.sh` blocks deploys from the public repo by checking for a
   private-overlay `tsurf.url` input.
 - The script adds a remote lock, runs `deploy-rs`, and performs post-deploy SSH

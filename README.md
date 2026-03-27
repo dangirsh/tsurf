@@ -44,18 +44,23 @@ These lead to the following design goals:
 
 ## Quick Start
 
-1. Enable the project hooks once after cloning:
-   `git config core.hooksPath .githooks`
-2. Validate the public fixtures:
-   `nix flake check`
-3. Copy [`examples/private-overlay/`](examples/private-overlay/) into a private
-   repository and replace the placeholders.
-4. Generate a real root SSH key for the private overlay:
-   `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay`
-5. If you run `tsurf-init` on the target host, add `--age` to derive the sops
-   age identity from the persisted SSH host key.
-6. Deploy from the private overlay only. The public repo intentionally blocks
-   real deploys in [`scripts/deploy.sh`](scripts/deploy.sh).
+1. Clone the repo and enter it:
+   `git clone <your-fork-or-upstream-url> tsurf && cd tsurf`
+2. Point tsurf at an existing NixOS host with root SSH access:
+   `./tsurf init root@your-server`
+3. Deploy the generated quickstart overlay:
+   `./tsurf deploy`
+4. Check the host:
+   `./tsurf status`
+
+`tsurf init` creates an ignored local overlay under `.tsurf/overlay/`, saves the
+defaults in `.tsurf/config`, and generates a root key under `.tsurf/keys/`. That
+gives you a short path for trying tsurf against a vanilla NixOS server without
+assembling a private overlay first.
+
+When you move past evaluation and want the full production/private-overlay
+workflow, start from [`QUICKSTART.md`](QUICKSTART.md) and
+[`examples/private-overlay/`](examples/private-overlay/).
 
 ## Documentation
 
