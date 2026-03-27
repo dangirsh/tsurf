@@ -42,7 +42,7 @@
   sops.age.sshKeyPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
 
   # @decision DEV-01: Port 22 open on public interface for bootstrap and deploy access.
-  # Template hosts may not have Tailscale up on first boot, so SSH stays public initially.
+  # Template hosts may not have Tailscale/headscale up on first boot, so SSH stays public initially.
   # Key-only auth enforced by networking.nix. fail2ban is disabled (SEC83-01).
   services.openssh.openFirewall = lib.mkForce true;
 
