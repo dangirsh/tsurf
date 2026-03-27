@@ -18,13 +18,15 @@ strengthen or weaken these properties, so host-specific statements are called ou
 - [`hosts/services/default.nix`](hosts/services/default.nix)
   is the service-host role. It does **not** import
   [`modules/agent-sandbox.nix`](modules/agent-sandbox.nix)
-  or [`modules/nono.nix`](modules/nono.nix).
+  or [`modules/nono.nix`](modules/nono.nix), and imports
+  [`extras/restic.nix`](extras/restic.nix) as an example opt-in extra.
 - [`hosts/dev/default.nix`](hosts/dev/default.nix) is the
   agent-execution role. It imports both sandbox modules and enables:
   - `services.agentCompute.enable = true`
   - `services.agentSandbox.enable = true`
   - `services.nonoSandbox.enable = true`
-  - `extras/cass.nix` is imported so CASS indexing runs as a low-priority system timer
+- Extras are opt-in and are not imported by default in public fixtures, except
+  for the `extras/restic.nix` example on `hosts/services`.
 
 ## Core Security Invariants
 
