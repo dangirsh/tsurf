@@ -179,8 +179,9 @@ Agent egress:
 ## Supply Chain
 
 - Nix inputs are pinned by `flake.lock`.
-- Prebuilt binaries are SHA256-pinned, including `nono`. `cass` is an opt-in
-  extra (`extras/cass.nix`), not in the default trust path.
+- `nono` is built from pinned source (`rustPlatform.buildRustPackage`).
+  Remaining prebuilt binaries are SHA256-pinned. `cass` is an opt-in extra
+  (`extras/cass.nix`), not in the default trust path.
 - Critical kernel and network hardening (kexec, BPF, sysrq, reverse-path
   filtering, source routing) is set explicitly in `modules/base.nix`.
   `nix-mineral` provides additional depth (~80 settings) but the core claims
@@ -192,7 +193,8 @@ Agent egress:
   `services.resolved.settings` for nixos-25.11. This shim is annotated with
   `@decision SEC-160-04` in `flake.nix`.
 - `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
-- The repo does not add signature verification for these prebuilt binaries.
+- The repo does not add signature verification for these remaining prebuilt
+  binaries.
 
 ## Verification
 
