@@ -46,9 +46,21 @@
 
   systemd.coredump.enable = false;
   boot.kernel.sysctl."kernel.core_pattern" = lib.mkForce "|/bin/false";
+  # @decision SEC-160-03: Critical kernel hardening set explicitly — self-backing,
+  #   not dependent on nix-mineral staying enabled or keeping current defaults.
+  boot.kernel.sysctl = {
+    "kernel.kexec_load_disabled" = 1; # Prevent runtime kernel replacement
+    "kernel.unprivileged_bpf_disabled" = 1; # Restrict BPF to root
+    "kernel.io_uring_disabled" = 2; # Disable io_uring kernel-wide (sandbox escape vector)
+    "kernel.sysrq" = 4; # Only sync (safe subset)
+    "net.ipv4.conf.all.accept_source_route" = false;
+    "net.ipv4.conf.default.accept_source_route" = false;
+    "net.ipv4.conf.all.rp_filter" = 1; # Strict reverse-path filtering
+    "net.ipv4.conf.default.rp_filter" = 1;
+  };
 
   # @decision SEC-145-05: nix-mineral provides kernel/mount/entropy/debug hardening (~80 settings).
-  #   Compatibility preset with agent-workload overrides. Replaces manual sysctl hardening.
+  #   Compatibility preset with agent-workload overrides beyond explicit critical sysctls above.
   nix-mineral.enable = true;
   nix-mineral.preset = "compatibility";
 

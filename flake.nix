@@ -72,10 +72,10 @@
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
         nix-mineral.nixosModules.nix-mineral
-        # Compat shim: nix-mineral targets nixpkgs-unstable which has
-        # services.resolved.settings (INI-based); nixos-25.11 still uses
-        # per-option services.resolved.{dnssec,llmnr,...}. Stub the option
-        # so nix-mineral's dnssec module definition has somewhere to land.
+        # @decision SEC-160-04: Compat shim — nix-mineral targets nixpkgs-unstable which
+        #   has services.resolved.settings (INI-based); nixos-25.11 still uses per-option
+        #   services.resolved.{dnssec,llmnr,...}. Stub the option so nix-mineral's dnssec
+        #   module definition has somewhere to land. Re-evaluate when upgrading nixpkgs.
         {
           options.services.resolved.settings = lib.mkOption {
             type = lib.types.anything;
