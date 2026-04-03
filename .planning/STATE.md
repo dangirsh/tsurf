@@ -3,13 +3,14 @@
 Last updated: 2026-04-03
 
 ## Current Position
-- Phase: 160 — Harden Core Dependency Trust Boundary (March 27 Review Finding #3) — Plan 01 COMPLETE (2026-04-03)
-- Plan: 1/1 plans complete
-- Status: Core security claims are now self-backing in tsurf-owned modules: firewall/SSH defaults are explicit in `modules/networking.nix`, critical kernel/network sysctls are explicit in `modules/base.nix`, the nix-mineral compat shim is annotated in `flake.nix`, and SECURITY.md now distinguishes explicit trust anchors from inherited hardening depth.
+- Phase: 160 — Harden Core Dependency Trust Boundary (March 27 Review Finding #3) — Plan 02 COMPLETE (2026-04-03)
+- Plan: 2/2 plans complete
+- Status: Core security trust anchors are now self-backing in tsurf-owned modules and the sandbox enforcer supply chain is hardened: firewall/SSH defaults and critical sysctls are explicit in repo modules, SECURITY.md distinguishes explicit anchors from inherited depth, and `nono` now builds from pinned Rust source in `packages/nono.nix` instead of an unverified prebuilt release binary.
 
 ## Phase 160 Status
-- Phase 160: Harden Core Dependency Trust Boundary (March 27 review finding #3) — 1 plan, complete (2026-04-03)
+- Phase 160: Harden Core Dependency Trust Boundary (March 27 review finding #3) — 2 plans, complete (2026-04-03)
   - 160-01: complete — Added explicit `networking.firewall.enable = true`; explicit SSH `PasswordAuthentication = false`, `KbdInteractiveAuthentication = false`, and `X11Forwarding = false` with `SEC-160-01/02` annotations in `modules/networking.nix`. Added explicit critical sysctls for kexec/BPF/io_uring/sysrq/source-route/rp_filter with `SEC-160-03` in `modules/base.nix`. Added `SEC-160-04` annotation on the nix-mineral compat shim in `flake.nix`. Updated `SECURITY.md` to separate self-backing defaults from transitive inheritance. Validated with `nix flake check`.
+  - 160-02: complete — Replaced `packages/nono.nix` prebuilt GitHub release tarball with a `rustPlatform.buildRustPackage` source build pinned to `always-further/nono` `v0.22.0`, resolved source and cargo hashes, constrained build to `nono-cli`, added `@decision SEC-160-05`, and validated via `nix` build + `result/bin/nono --help`.
 
 ## Phase 159 Status
 - Phase 159: Cut Public Repo to Minimal Core — 3 plans, complete (2026-03-27)
@@ -90,7 +91,7 @@ Key merges to avoid thrashing:
 - Phase 157 added: Codebase complexity audit — find and prioritize cleanup targets
 - Phase 158 added: Evaluate self-hosted Tailscale alternatives (headscale, wg-easy) — research report with exec summary, pros/cons, and migration difficulty estimates. No code changes.
 - Phase 159 completed: Cut Public Repo to Minimal Core — public fixtures now model minimal core behavior, maintainer-only `spec/` content is removed from the public tree, `QUICKSTART.md` is the newcomer path, and all public docs/examples consistently describe extras as opt-in.
-- Phase 160 completed: Harden Core Dependency Trust Boundary (review finding #3) — explicit firewall/SSH and critical sysctl trust anchors now live in tsurf modules; SECURITY.md now documents inherited modules (`srvos`, `nix-mineral`) as defense-in-depth rather than sole source of core claims.
+- Phase 160 completed: Harden Core Dependency Trust Boundary (review finding #3) — explicit firewall/SSH and critical sysctl trust anchors now live in tsurf modules, SECURITY.md documents inherited modules (`srvos`, `nix-mineral`) as defense-in-depth, and `nono` now builds from pinned upstream source rather than an unverified prebuilt binary.
 - Phase 162 completed: Migrate to headscale — opt-in `modules/headscale.nix` with tsurf.headscale.enable toggle, localhost:8080 with nginx TLS proxy, embedded DERP/STUN, SQLite persisted under impermanence, ACL policy via environment.etc, 6 eval checks, Tailscale doc/comment updates.
 - Phase 163 added: tsurf-status CLI — tree-based host/service/cost overview replacing tsurf-status.sh. Parallel SSH queries, agent+service tree with status/uptime/type/sandbox, system metadata footer (version, last deploy, backup status, disk, 24h/7d API costs). Consolidates old phases 163-166 into single unified status command.
 
@@ -109,3 +110,4 @@ Key merges to avoid thrashing:
 - [159-02]: COREMIN-159 — Maintainer-oriented claim-level spec documents should not live in the public newcomer surface; onboarding should begin at `QUICKSTART.md` and route advanced implementation details through architecture/security docs and private overlay docs.
 - [159-03]: COREMIN-159 — Documentation and examples must match the shipped minimal-core behavior end-to-end: README newcomer path starts at `QUICKSTART.md`, extras are opt-in everywhere, and the generic launcher is positioned as the advanced extension API.
 - [160-01]: SEC-160 — Core security claims must be self-backing in tsurf-owned modules. `srvos` and `nix-mineral` defaults are treated as defense-in-depth and documented transparently, not as unspoken trust anchors.
+- [160-02]: SEC-160-05 — The `nono` sandbox enforcer in the launch path is built from pinned Rust source (`buildRustPackage`) instead of consuming a prebuilt release artifact.
