@@ -16,13 +16,10 @@ in
       description = "Codex package to expose through the sandboxed wrapper.";
     };
 
-    credentials = lib.mkOption {
+    credentialServices = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "openai:OPENAI_API_KEY:openai-api-key" ];
-      description = ''
-        Credential triples for the root-owned credential broker (SERVICE:ENV_VAR:secret-file-name).
-        Only triples whose secrets exist in /run/secrets/ are activated at runtime.
-      '';
+      default = [ "openai" ];
+      description = "Credential service names for nono's built-in reverse proxy (e.g., openai).";
     };
   };
 
@@ -42,7 +39,7 @@ in
       command = "codex";
       package = cfg.package;
       wrapperName = "codex";
-      credentials = cfg.credentials;
+      credentialServices = cfg.credentialServices;
       nonoProfile.extraAllow = [ "${agentHome}/.codex" ];
       persistence.directories = [ ".codex" ];
     };

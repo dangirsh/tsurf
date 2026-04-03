@@ -3,6 +3,9 @@
 # @decision LAUNCHER-152-01: Generic agent launcher — each agent produces a wrapper,
 #   systemd-run launcher, nono profile, and sudo rule. Raw keys never reach the agent.
 # @decision LAUNCHER-152-02: Agents must not deploy changes to their own security boundaries.
+# @decision SEC-159-01: Credentials brokered through nono's built-in reverse proxy
+#   (--credential + custom_credentials with env:// URIs). The custom Python credential
+#   proxy is eliminated; nono manages phantom tokens natively.
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.agentLauncher;
@@ -13,18 +16,55 @@ let
     pkgs.coreutils
     pkgs.git
     pkgs.nono
-    pkgs.python3
     pkgs.util-linux
   ];
+
+  # Well-known credential service defaults. Maps service name to upstream/header/format
+  # and the conventional env var + sops secret name.
+  credentialServiceDefaults = {
+    anthropic = {
+      upstream = "https://api.anthropic.com";
+      injectHeader = "x-api-key";
+      credentialFormat = "{}";
+      envVar = "ANTHROPIC_API_KEY";
+      secretName = "anthropic-api-key";
+    };
+    openai = {
+      upstream = "https://api.openai.com";
+      injectHeader = "authorization";
+      credentialFormat = "Bearer {}";
+      envVar = "OPENAI_API_KEY";
+      secretName = "openai-api-key";
+    };
+  };
 
   # Build launcher + wrapper for a single agent definition
   mkAgentPair = name: agentDef:
     let
       launcherName = "tsurf-launch-${name}";
-      credentialString = lib.concatStringsSep " " agentDef.credentials;
+      credentialServicesStr = lib.concatStringsSep " " agentDef.credentialServices;
+
+      # Build nono custom_credentials for env:// URI-based credential proxy
+      credentialDefs = lib.listToAttrs (map (svc:
+        let defaults = credentialServiceDefaults.${svc}; in
+        lib.nameValuePair svc {
+          upstream = defaults.upstream;
+          credential_key = "env://${defaults.envVar}";
+          inject_mode = "header";
+          inject_header = defaults.injectHeader;
+          credential_format = defaults.credentialFormat;
+        }
+      ) agentDef.credentialServices);
+
+      # Build secret-loading instructions: "envVar:secretName" pairs
+      credentialSecrets = lib.concatStringsSep " " (map (svc:
+        let defaults = credentialServiceDefaults.${svc}; in
+        "${defaults.envVar}:${defaults.secretName}"
+      ) agentDef.credentialServices);
 
       # Merge nono profile: extend base tsurf profile with agent-specific overrides
       nonoProfileName = "tsurf-${name}";
+      hasCredentials = agentDef.credentialServices != [];
       nonoProfile = pkgs.writeText "${nonoProfileName}-profile.json" (builtins.toJSON ({
         extends = "tsurf";
         meta = {
@@ -48,6 +88,11 @@ let
           // lib.optionalAttrs (agentDef.nonoProfile.extraDeny != []) {
             deny = agentDef.nonoProfile.extraDeny;
           };
+      } // lib.optionalAttrs hasCredentials {
+        network = {
+          credentials = agentDef.credentialServices;
+          custom_credentials = credentialDefs;
+        };
       }));
 
       nonoProfilePath = "/etc/nono/profiles/${nonoProfileName}.json";
@@ -62,8 +107,7 @@ let
           export AGENT_REAL_BINARY="${agentDef.package}/bin/${agentDef.command}"
           export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
           export AGENT_NONO_PROFILE="${nonoProfilePath}"
-          export AGENT_CREDENTIAL_PROXY="${../scripts/credential-proxy.py}"
-          export AGENT_CREDENTIALS="${credentialString}"
+          export AGENT_CREDENTIAL_SECRETS="${credentialSecrets}"
 
           if [[ -t 0 && -t 1 ]]; then
             stdio_flag="--pty"
@@ -97,8 +141,7 @@ let
             --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
             --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
             --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
-            --setenv=AGENT_CREDENTIAL_PROXY="$AGENT_CREDENTIAL_PROXY" \
-            --setenv=AGENT_CREDENTIALS="$AGENT_CREDENTIALS" \
+            --setenv=AGENT_CREDENTIAL_SECRETS="$AGENT_CREDENTIAL_SECRETS" \
             --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
             --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
             --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \
@@ -180,12 +223,13 @@ in
             description = "Per-agent nono profile overrides (merged on top of the base tsurf profile).";
           };
 
-          credentials = lib.mkOption {
+          credentialServices = lib.mkOption {
             type = lib.types.listOf lib.types.str;
             default = [];
             description = ''
-              Credential triples for the root-owned credential broker (SERVICE:ENV_VAR:secret-file-name).
-              Only triples whose secrets exist in /run/secrets/ are activated at runtime.
+              Credential service names for nono's built-in reverse proxy (e.g., "anthropic", "openai").
+              Each service maps to a well-known upstream, inject header, env var, and sops secret.
+              Credentials are brokered through nono's phantom token proxy; the child never sees real keys.
             '';
           };
 

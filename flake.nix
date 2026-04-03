@@ -390,7 +390,6 @@
                 nativeBuildInputs = [
                   pkgs.bash
                   pkgs.openssh
-                  pkgs.python3
                 ];
                 src = ./.;
               }
@@ -400,7 +399,6 @@
                 for test in "$src"/tests/unit/*.bash; do
                   bash "$test"
                 done
-                python3 -m unittest discover -s "$src"/tests/unit -p 'test_*.py'
                 touch "$out"
               '';
         };

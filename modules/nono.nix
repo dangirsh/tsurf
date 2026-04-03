@@ -1,5 +1,7 @@
 # modules/nono.nix
-# @decision NONO-145-01: Raw provider credentials stay outside nono — brokered in root-owned launcher.
+# @decision NONO-159-01: Credentials brokered through nono's built-in reverse proxy
+#   (custom_credentials with env:// URIs). Raw keys loaded by the root-owned wrapper;
+#   nono manages the phantom token proxy internally.
 # @decision NONO-145-03: Extended deny list covers registry tokens and cloud credential directories.
 {
   config,

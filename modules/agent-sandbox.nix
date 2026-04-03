@@ -35,7 +35,7 @@ in
       command = "claude";
       package = pkgs.claude-code;
       wrapperName = "claude";
-      credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
+      credentialServices = [ "anthropic" ];
       nonoProfile = {
         extraAllow = [
           "${agentCfg.home}/.claude"

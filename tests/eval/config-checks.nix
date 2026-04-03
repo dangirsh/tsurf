@@ -294,26 +294,46 @@ in
       "README.md contains stale phrase (sibling repos readable)"
       (!(lib.hasInfix "sibling repos readable" source));
 
-  # Phase 145: root-owned credential broker
+  # Phase 159: nono built-in credential proxy
   proxy-credential-wrapper =
     mkCheck "proxy-credential-wrapper"
-      "agent wrapper starts the root-owned credential proxy and drops the child with setpriv"
-      "agent-wrapper.sh missing credential-proxy.py or setpriv — raw keys may reach the agent principal"
+      "agent wrapper loads secrets for nono credential proxy and drops the child with setpriv"
+      "agent-wrapper.sh missing AGENT_CREDENTIAL_SECRETS or setpriv — credential proxy flow broken"
       (
         let
           src = builtins.readFile ../../scripts/agent-wrapper.sh;
         in
-        lib.hasInfix "credential-proxy.py" src && lib.hasInfix "setpriv" src
+        lib.hasInfix "AGENT_CREDENTIAL_SECRETS" src && lib.hasInfix "setpriv" src
       );
 
   proxy-credential-profile =
-    mkCheck "proxy-credential-profile" "nono profile contains no raw credential sourcing"
-      "nono.nix still contains custom_credentials/env:// raw credential wiring"
+    let
+      profile = builtins.fromJSON (
+        builtins.readFile devCfg.environment.etc."nono/profiles/tsurf.json".source
+      );
+    in
+    mkCheck "proxy-credential-profile" "base nono profile has no credential wiring (credentials live in per-agent profiles)"
+      "base tsurf.json nono profile should not contain network.custom_credentials — those belong in per-agent profiles"
       (
-        let
-          src = builtins.readFile ../../modules/nono.nix;
-        in
-        !lib.hasInfix "custom_credentials" src && !lib.hasInfix "env://" src
+        !(builtins.hasAttr "custom_credentials" (profile.network or {}))
+        && !(builtins.hasAttr "credentials" (profile.network or {}))
+      );
+
+  claude-profile-credential-proxy =
+    let
+      profile = builtins.fromJSON (
+        builtins.readFile devCfg.environment.etc."nono/profiles/tsurf-claude.json".source
+      );
+      creds = profile.network.credentials or [];
+      customCreds = profile.network.custom_credentials or {};
+    in
+    mkCheck "claude-profile-credential-proxy"
+      "generated Claude nono profile wires credential proxy with env:// URI"
+      "tsurf-claude nono profile missing network.credentials or custom_credentials with env:// credential_key"
+      (
+        builtins.elem "anthropic" creds
+        && builtins.hasAttr "anthropic" customCreds
+        && lib.hasPrefix "env://" customCreds.anthropic.credential_key
       );
 
   nono-profile-denies-run-secrets =
@@ -496,6 +516,20 @@ in
       "agent-launcher.nix keeps the launcher root-brokered and only short-circuits for root"
       "agent-launcher.nix still has an agent-user direct exec path that bypasses the root credential broker"
       (lib.hasInfix "id -u" source && lib.hasInfix "\"0\"" source && !lib.hasInfix "id -un" source);
+
+  launcher-credential-proxy =
+    let
+      source = builtins.readFile ../../modules/agent-launcher.nix;
+    in
+    mkCheck "launcher-credential-proxy"
+      "agent-launcher.nix generates nono custom_credentials with env:// URIs for credential proxy"
+      "agent-launcher.nix missing custom_credentials or env:// wiring — credential proxy not configured"
+      (
+        lib.hasInfix "custom_credentials" source
+        && lib.hasInfix "env://" source
+        && lib.hasInfix "credentialServices" source
+        && !lib.hasInfix "credential-proxy.py" source
+      );
 
   launcher-extra-deny =
     let
@@ -769,12 +803,12 @@ in
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
     mkCheck "wrapper-credential-proxy-flow"
-      "agent-wrapper.sh starts credential proxy and generates per-session tokens"
-      "agent-wrapper.sh missing credential proxy flow (generate_session_token, proxy_port_file)"
+      "agent-wrapper.sh loads secrets into env vars for nono's built-in credential proxy"
+      "agent-wrapper.sh missing credential loading flow (AGENT_CREDENTIAL_SECRETS, /run/secrets)"
       (
-        lib.hasInfix "generate_session_token" source
-        && lib.hasInfix "proxy_port_file" source
-        && lib.hasInfix "TSURF_PROXY_ROUTE" source
+        lib.hasInfix "AGENT_CREDENTIAL_SECRETS" source
+        && lib.hasInfix "/run/secrets/" source
+        && lib.hasInfix "env://" source
       );
 
   wrapper-supply-chain-hardening =

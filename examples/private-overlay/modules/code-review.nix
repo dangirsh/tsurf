@@ -14,9 +14,7 @@
     command = "claude";
     package = pkgs.claude-code;
     wrapperName = "code-review";
-    credentials = [
-      "anthropic:ANTHROPIC_API_KEY:anthropic-api-key"
-    ];
+    credentialServices = [ "anthropic" ];
     defaultArgs = [
       "-p"
       "Review the git log for the last 24 hours. Summarize changes, flag potential issues, and write a brief report to ./REVIEW.md."
@@ -34,7 +32,7 @@
     serviceConfig = {
       Type = "oneshot";
       # Use the generated wrapper so the scheduled run stays on the brokered
-      # launcher path with the nono sandbox and root-owned credential proxy.
+      # launcher path with the nono sandbox and built-in credential proxy.
       ExecStart = "/run/current-system/sw/bin/code-review";
       WorkingDirectory = "/data/projects/my-project";
       User = config.tsurf.agent.user;

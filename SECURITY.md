@@ -47,9 +47,9 @@ caller
   -> wrapper
     -> sudo tsurf-launch-<agent>
       -> systemd-run transient unit
-        -> scripts/agent-wrapper.sh
-          -> credential-proxy.py
-          -> nono run --profile /etc/nono/profiles/tsurf-<name>.json
+        -> scripts/agent-wrapper.sh (loads /run/secrets/* into env vars)
+          -> nono run --credential <service> --profile /etc/nono/profiles/tsurf-<name>.json
+            -> nono's built-in reverse proxy (reads env:// URIs, issues phantom tokens)
             -> setpriv drop to the configured agent user
               -> real agent binary
 ```
@@ -59,7 +59,7 @@ Security properties of that path:
 - `security.sudo.extraRules` exposes only immutable launchers. There is no
   generic root helper.
 - The launcher bakes in the real binary path, the nono profile path, and the
-  credential allowlist.
+  credential secret pairs.
 - The launcher rejects any real binary outside `/nix/store`.
 - Launch events go to journald only (`journalctl -t agent-launch`).
 - The public path has no `--no-sandbox` or `AGENT_ALLOW_NOSANDBOX` escape hatch.
@@ -106,16 +106,18 @@ Storage:
 
 Injection model:
 
-- Each wrapper carries an `AGENT_CREDENTIALS` allowlist of
-  `SERVICE:ENV_VAR:secret-file-name` triples.
+- Each wrapper carries an `AGENT_CREDENTIAL_SECRETS` allowlist of
+  `ENV_VAR:secret-file-name` pairs.
 - [`scripts/agent-wrapper.sh`](scripts/agent-wrapper.sh) reads only those named
-  secret files from `/run/secrets`.
-- The wrapper starts a root-owned loopback credential proxy, generates
-  per-session tokens, and launches the child as the `agent` user.
+  secret files from `/run/secrets` and exports them as environment variables.
+- nono's per-agent profile defines `custom_credentials` with `env://` URIs.
+  nono reads the real keys from the parent env before applying the sandbox,
+  starts its built-in reverse proxy with 256-bit phantom tokens, and strips
+  real keys from the child environment.
 
 What the child gets:
 
-- a per-session token such as `ANTHROPIC_API_KEY=<token>`
+- a per-session phantom token via `NONO_PROXY_TOKEN`
 - a localhost base URL such as `ANTHROPIC_BASE_URL=http://127.0.0.1:<port>/anthropic`
 
 What the child does not get:

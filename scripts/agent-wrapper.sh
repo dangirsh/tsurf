@@ -10,32 +10,27 @@
 #   AGENT_RUN_AS_GID        — target Unix gid for the actual agent binary
 #   AGENT_RUN_AS_HOME       — target HOME for the actual agent binary
 #   AGENT_CHILD_PATH        — PATH injected into the agent child after privilege drop
-#   AGENT_CREDENTIALS       — space-separated "SERVICE:ENV_VAR:secret-file-name" triples
-#                             SERVICE = provider key understood by credential-proxy.py
-#                             ENV_VAR = env var exposed to the child as a session token
-#                             secret-file-name = filename under /run/secrets/
+#   AGENT_CREDENTIAL_SECRETS — space-separated "ENV_VAR:secret-file-name" pairs
+#                              ENV_VAR = env var exported for nono's env:// credential proxy
+#                              secret-file-name = filename under /run/secrets/
 #
 # Launch logging:
 #   Single sink: journald via logger -t agent-launch (root-owned, append-only).
 #   Only structured metadata is logged — no raw arguments, prompts, or file paths.
 #
 # @decision AUDIT-117-01: Single-sink journald launch logging. File-based audit log removed.
-# @decision SEC-145-01: Raw provider keys stay on the root-owned side of the broker.
-#   The child gets only per-session loopback tokens and base URLs.
+# @decision SEC-159-01: Raw provider keys brokered through nono's built-in credential proxy.
+#   The wrapper exports real keys as env vars (env:// URIs); nono reads them before sandboxing
+#   and starts its reverse proxy with phantom tokens. The child never sees real keys.
 
 set -euo pipefail
 
-# --- Constants ---
-SESSION_TOKEN_BYTES=32        # Entropy for per-session credential tokens
-PROXY_POLL_ATTEMPTS=50        # Max attempts to wait for proxy port file
-PROXY_POLL_INTERVAL=0.1       # Seconds between proxy port checks (total: 5s)
 NPM_MIN_RELEASE_AGE_DAYS=1440 # ~4 years; supply chain hardening (Trail of Bits)
 
 : "${AGENT_NAME:?must be set}"
 : "${AGENT_REAL_BINARY:?must be set}"
 : "${AGENT_PROJECT_ROOT:?must be set}"
 : "${AGENT_NONO_PROFILE:?must be set}"
-: "${AGENT_CREDENTIAL_PROXY:?must be set}"
 : "${AGENT_RUN_AS_USER:?must be set}"
 : "${AGENT_RUN_AS_UID:?must be set}"
 : "${AGENT_RUN_AS_GID:?must be set}"
@@ -50,32 +45,11 @@ case "$AGENT_REAL_BINARY" in
     ;;
 esac
 
-proxy_dir=""
-proxy_pid=""
-
-cleanup() {
-  local rc=$?
-  trap - EXIT INT TERM
-  if [[ -n "$proxy_pid" ]]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  if [[ -n "$proxy_dir" && -d "$proxy_dir" ]]; then
-    rm -rf "$proxy_dir"
-  fi
-  exit "$rc"
-}
-trap cleanup EXIT INT TERM
-
 journal_log() {
   local mode="$1"
   logger -t "agent-launch" --id=$$ \
     "mode=$mode agent=$AGENT_NAME user=$(whoami) uid=$(id -u) repo_scope=${repo_scope:-unknown}" \
     2>/dev/null || true
-}
-
-generate_session_token() {
-  od -An -tx1 -N "$SESSION_TOKEN_BYTES" /dev/urandom | tr -d ' \n'
 }
 
 # Enforce PWD inside project root
@@ -88,73 +62,24 @@ case "$cwd" in
     ;;
 esac
 
-# Credential flow:
-#   1. Read real API keys from root-owned /run/secrets/ files
-#   2. Generate a random per-session token for each provider
-#   3. Start a root-owned loopback proxy that maps session tokens → real keys
-#   4. Expose only the session token + loopback base URL to the sandboxed child
-#   5. PORT_PLACEHOLDER in child_env is replaced with the proxy's actual listen port
-declare -a child_env
-declare -a proxy_env
-declare -a proxy_open_ports
-IFS=' ' read -ra cred_triples <<< "${AGENT_CREDENTIALS:-}"
-route_count=0
-for triple in "${cred_triples[@]}"; do
-  [[ -n "$triple" ]] || continue
-  IFS=: read -r service env_var secret_name <<< "$triple"
+# Load real API keys from sops-managed /run/secrets/ into env vars.
+# nono's credential proxy reads these via env:// URIs in the profile's
+# custom_credentials, then exposes only phantom tokens to the child.
+IFS=' ' read -ra cred_pairs <<< "${AGENT_CREDENTIAL_SECRETS:-}"
+for pair in "${cred_pairs[@]}"; do
+  [[ -n "$pair" ]] || continue
+  IFS=: read -r env_var secret_name <<< "$pair"
   secret_file="/run/secrets/$secret_name"
   if [[ ! -f "$secret_file" ]]; then
     echo "WARNING: $env_var not loaded — $secret_file not found" >&2
     continue
   fi
-
   secret_value="$(cat "$secret_file")"
   if [[ -z "$secret_value" || "$secret_value" == PLACEHOLDER* ]]; then
     continue
   fi
-
-  session_token="$(generate_session_token)"
-  base_var="${env_var%_API_KEY}_BASE_URL"
-  child_env+=(
-    "${env_var}=${session_token}"
-    "${base_var}=http://127.0.0.1:PORT_PLACEHOLDER/${service}"
-  )
-  proxy_env+=(
-    "TSURF_PROXY_ROUTE_${route_count}_SERVICE=${service}"
-    "TSURF_PROXY_ROUTE_${route_count}_SESSION_TOKEN=${session_token}"
-    "TSURF_PROXY_ROUTE_${route_count}_REAL_KEY=${secret_value}"
-  )
-  route_count=$((route_count + 1))
+  export "${env_var}=${secret_value}"
 done
-
-if (( route_count > 0 )); then
-  proxy_dir="$(mktemp -d /run/tsurf-credential-proxy.XXXXXX)"
-  proxy_port_file="$proxy_dir/port"
-  env \
-    "TSURF_PROXY_ROUTE_COUNT=$route_count" \
-    "${proxy_env[@]}" \
-    python3 "$AGENT_CREDENTIAL_PROXY" --port-file "$proxy_port_file" &
-  proxy_pid="$!"
-
-  # Poll until the proxy writes its listen port (total timeout: PROXY_POLL_ATTEMPTS * PROXY_POLL_INTERVAL)
-  for _ in $(seq 1 "$PROXY_POLL_ATTEMPTS"); do
-    if [[ -s "$proxy_port_file" ]]; then
-      break
-    fi
-    sleep "$PROXY_POLL_INTERVAL"
-  done
-
-  if [[ ! -s "$proxy_port_file" ]]; then
-    echo "ERROR: credential proxy failed to publish its listen port" >&2
-    exit 1
-  fi
-
-  proxy_port="$(cat "$proxy_port_file")"
-  proxy_open_ports+=("$proxy_port")
-  for idx in "${!child_env[@]}"; do
-    child_env[idx]="${child_env[idx]//PORT_PLACEHOLDER/${proxy_port}}"
-  done
-fi
 
 # Scope sandbox read access to the current git repository root.
 # The public repo does not try to classify "safe" infrastructure repos; operators
@@ -170,12 +95,10 @@ if [[ "$git_root" == "$AGENT_PROJECT_ROOT" ]]; then
 fi
 repo_scope="git-worktree"
 
-# Build nono arguments. Raw provider keys stay in the root-owned proxy process;
-# the child receives only per-session loopback tokens/base URLs.
+# Build nono arguments. Credential proxy is configured in the nono profile
+# (custom_credentials with env:// URIs); nono starts the reverse proxy and
+# injects phantom tokens into the child environment automatically.
 nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --read "$git_root")
-for port in "${proxy_open_ports[@]}"; do
-  nono_args+=(--open-port "$port")
-done
 
 setpriv_bin="$(command -v setpriv)"
 env_bin="$(command -v env)"
@@ -212,7 +135,7 @@ child_args+=("DISABLE_TELEMETRY=1")
 child_args+=("DISABLE_ERROR_REPORTING=1")
 child_args+=("CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1")
 
-child_args+=("${child_env[@]}" "$AGENT_REAL_BINARY" "$@")
+child_args+=("$AGENT_REAL_BINARY" "$@")
 
 nono_args+=(-- "${child_args[@]}")
 journal_log "sandboxed"
