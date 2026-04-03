@@ -3,14 +3,15 @@
 Last updated: 2026-04-03
 
 ## Current Position
-- Phase: 160 — Harden Core Dependency Trust Boundary (March 27 Review Finding #3) — Plan 02 COMPLETE (2026-04-03)
-- Plan: 2/2 plans complete
-- Status: Core security trust anchors are now self-backing in tsurf-owned modules and the sandbox enforcer supply chain is hardened: firewall/SSH defaults and critical sysctls are explicit in repo modules, SECURITY.md distinguishes explicit anchors from inherited depth, and `nono` now builds from pinned Rust source in `packages/nono.nix` instead of an unverified prebuilt release binary.
+- Phase: 160 — Harden Core Dependency Trust Boundary (March 27 Review Finding #3) — Plan 03 COMPLETE (2026-04-03)
+- Plan: 3/3 plans complete
+- Status: Integration verification is complete for the hardened trust boundary: CASS remains out of the default trust path, explicit firewall/SSH/sysctl settings are guarded by eval checks, `SECURITY.md` reflects source-built `nono`, and full `nix flake check` passes.
 
 ## Phase 160 Status
-- Phase 160: Harden Core Dependency Trust Boundary (March 27 review finding #3) — 2 plans, complete (2026-04-03)
+- Phase 160: Harden Core Dependency Trust Boundary (March 27 review finding #3) — 3 plans, complete (2026-04-03)
   - 160-01: complete — Added explicit `networking.firewall.enable = true`; explicit SSH `PasswordAuthentication = false`, `KbdInteractiveAuthentication = false`, and `X11Forwarding = false` with `SEC-160-01/02` annotations in `modules/networking.nix`. Added explicit critical sysctls for kexec/BPF/io_uring/sysrq/source-route/rp_filter with `SEC-160-03` in `modules/base.nix`. Added `SEC-160-04` annotation on the nix-mineral compat shim in `flake.nix`. Updated `SECURITY.md` to separate self-backing defaults from transitive inheritance. Validated with `nix flake check`.
   - 160-02: complete — Replaced `packages/nono.nix` prebuilt GitHub release tarball with a `rustPlatform.buildRustPackage` source build pinned to `always-further/nono` `v0.22.0`, resolved source and cargo hashes, constrained build to `nono-cli`, added `@decision SEC-160-05`, and validated via `nix` build + `result/bin/nono --help`.
+  - 160-03: complete — Verified Phase 159 CASS trust-path removal remains intact (`extras/cass.nix` is opt-in/default-off and host fixtures do not import it), added seven explicit security regression guards in `tests/eval/config-checks.nix` (firewall, SSH auth, X11, and kexec/BPF/io_uring), corrected sysctl checks to compare normalized string values, aligned `SECURITY.md` with source-built `nono`, and validated with full `nix flake check` pass.
 
 ## Phase 159 Status
 - Phase 159: Cut Public Repo to Minimal Core — 3 plans, complete (2026-03-27)
@@ -111,3 +112,4 @@ Key merges to avoid thrashing:
 - [159-03]: COREMIN-159 — Documentation and examples must match the shipped minimal-core behavior end-to-end: README newcomer path starts at `QUICKSTART.md`, extras are opt-in everywhere, and the generic launcher is positioned as the advanced extension API.
 - [160-01]: SEC-160 — Core security claims must be self-backing in tsurf-owned modules. `srvos` and `nix-mineral` defaults are treated as defense-in-depth and documented transparently, not as unspoken trust anchors.
 - [160-02]: SEC-160-05 — The `nono` sandbox enforcer in the launch path is built from pinned Rust source (`buildRustPackage`) instead of consuming a prebuilt release artifact.
+- [160-03]: SEC-160 — Integration verification must enforce explicit trust anchors at eval time; added `explicit-*` checks in `tests/eval/config-checks.nix` and finalized `SECURITY.md` wording to match source-built `nono` and opt-in CASS.
