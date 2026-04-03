@@ -143,6 +143,10 @@ SSH defaults:
 - `MaxAuthTries = 3`
 - `fail2ban` disabled
 
+These SSH and firewall defaults are set explicitly in `modules/networking.nix`.
+`srvos` also sets them; the explicit declarations ensure the security model is
+self-backing.
+
 Agent egress:
 
 - `nono` is not the network allowlist boundary here; `network.block = false`.
@@ -175,7 +179,18 @@ Agent egress:
 ## Supply Chain
 
 - Nix inputs are pinned by `flake.lock`.
-- Prebuilt binaries are SHA256-pinned, including `nono` and `cass`.
+- Prebuilt binaries are SHA256-pinned, including `nono`. `cass` is an opt-in
+  extra (`extras/cass.nix`), not in the default trust path.
+- Critical kernel and network hardening (kexec, BPF, sysrq, reverse-path
+  filtering, source routing) is set explicitly in `modules/base.nix`.
+  `nix-mineral` provides additional depth (~80 settings) but the core claims
+  in this document do not depend on it staying enabled.
+- Firewall, SSH password auth, keyboard-interactive auth, and X11 forwarding
+  defaults are set explicitly in `modules/networking.nix`. `srvos` also sets
+  them; the explicit declarations are the trust anchor.
+- `nix-mineral` targets nixpkgs-unstable. A compatibility shim stubs
+  `services.resolved.settings` for nixos-25.11. This shim is annotated with
+  `@decision SEC-160-04` in `flake.nix`.
 - `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
 - The repo does not add signature verification for these prebuilt binaries.
 
