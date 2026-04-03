@@ -63,6 +63,44 @@ in
       "SECURITY: dev host does not have nix-mineral enabled"
       devCfg.nix-mineral.enable;
 
+  # Phase 160: Explicit security settings — self-backing, not inherited from srvos/nix-mineral.
+  # Note: openssh.settings values are booleans in the evaluated config (confirmed via nix eval).
+  # Sysctl values are strings in the evaluated config (NixOS coerces int/bool to strings).
+  explicit-firewall-enabled =
+    mkCheck "explicit-firewall-enabled" "firewall explicitly enabled in networking module"
+      "networking.firewall.enable is false — must be explicitly set in modules/networking.nix"
+      devCfg.networking.firewall.enable;
+
+  explicit-ssh-password-auth =
+    mkCheck "explicit-ssh-password-auth" "SSH PasswordAuthentication explicitly disabled"
+      "SSH PasswordAuthentication is not false — must be explicitly set in modules/networking.nix"
+      (devCfg.services.openssh.settings.PasswordAuthentication == false);
+
+  explicit-ssh-kbd-auth =
+    mkCheck "explicit-ssh-kbd-auth" "SSH KbdInteractiveAuthentication explicitly disabled"
+      "SSH KbdInteractiveAuthentication is not false — must be explicitly set in modules/networking.nix"
+      (devCfg.services.openssh.settings.KbdInteractiveAuthentication == false);
+
+  explicit-ssh-x11 =
+    mkCheck "explicit-ssh-x11" "SSH X11Forwarding explicitly disabled"
+      "SSH X11Forwarding is not false — must be explicitly set in modules/networking.nix"
+      (devCfg.services.openssh.settings.X11Forwarding == false);
+
+  explicit-kexec-disabled =
+    mkCheck "explicit-kexec-disabled" "kexec_load_disabled sysctl is set"
+      "boot.kernel.sysctl.kernel.kexec_load_disabled is not \"1\" — must be set in modules/base.nix"
+      (toString devCfg.boot.kernel.sysctl."kernel.kexec_load_disabled" == "1");
+
+  explicit-bpf-restricted =
+    mkCheck "explicit-bpf-restricted" "unprivileged_bpf_disabled sysctl is set"
+      "boot.kernel.sysctl.kernel.unprivileged_bpf_disabled is not \"1\" — must be set in modules/base.nix"
+      (toString devCfg.boot.kernel.sysctl."kernel.unprivileged_bpf_disabled" == "1");
+
+  explicit-io-uring-disabled =
+    mkCheck "explicit-io-uring-disabled" "io_uring_disabled sysctl is set to 2 (kernel-wide disable)"
+      "boot.kernel.sysctl.kernel.io_uring_disabled is not \"2\" — must be set in modules/base.nix"
+      (toString devCfg.boot.kernel.sysctl."kernel.io_uring_disabled" == "2");
+
   # Ports are conditional: 80/443 on nginx.enable.
   # Public template has no nginx by default.
   firewall-ports-services =
