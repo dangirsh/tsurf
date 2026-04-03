@@ -127,8 +127,10 @@ in
     };
 
     # --- Firewall ---
-    # srvos sets enable=true and allowPing=true; we only add our port policy.
+    # @decision SEC-160-01: Explicit firewall enable — self-backing, not inherited from srvos.
+    # srvos also sets these; we declare them explicitly so SECURITY.md claims are self-backing.
     networking.firewall = {
+      enable = true;
       allowedTCPPorts = [
         22
       ]
@@ -139,8 +141,8 @@ in
     };
 
     # --- SSH hardening ---
-    # srvos sets: enable, PasswordAuthentication=false, KbdInteractiveAuthentication=false,
-    # X11Forwarding=false. We add: host key restriction, session limits, root login policy.
+    # @decision SEC-160-02: Explicit SSH auth/forwarding defaults — self-backing, not inherited from srvos.
+    # srvos also sets these; we declare them explicitly so SECURITY.md claims are self-backing.
     services.openssh = {
       openFirewall = false;
       hostKeys = [
@@ -150,6 +152,9 @@ in
         }
       ];
       settings = {
+        PasswordAuthentication = false;
+        KbdInteractiveAuthentication = false;
+        X11Forwarding = false;
         PermitRootLogin = "prohibit-password";
         MaxAuthTries = 3;             # Limit brute-force attempts per connection
         LoginGraceTime = 30;          # Seconds before unauthenticated connection is dropped
