@@ -42,6 +42,20 @@ These lead to the following design goals:
   foundation. Real credentials, host-specific services, and personal config
   live in a separate private repo that imports what it needs.
 
+## Example Use Cases
+
+- Run a hardened Claude coding-agent path on a NixOS host.
+- Run a supervised dev agent against a dedicated workspace repo on a remote host.
+- Host personal assistant agents (e.g. [OpenClaw](https://openclaw.org/)).
+- Self-host autonomous agent experiments (e.g. [Conway Automata](https://conway.tech/))
+- Run [MCP](https://modelcontextprotocol.io/) servers for agents (e.g. access to Google services, DMs, X API)
+
+These are on top of more standard use cases (which can be built/maintained by the agents), including:
+
+- Web services / static sites: agents field change requests, implement, and redeploy.
+- Personal Knowledge Management (PKM): agents help with querying, maintaining, and syncing your knowledge graph(s).
+- [Home Assistant](https://www.home-assistant.io/): agents manage the config directly, no UI needed.
+
 ## Quick Start
 
 1. Clone the repo and enter it:
