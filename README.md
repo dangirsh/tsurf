@@ -44,8 +44,7 @@ These lead to the following design goals:
 
 ## Example Use Cases
 
-- Run a hardened Claude coding-agent path on a NixOS host.
-- Run a supervised dev agent against a dedicated workspace repo on a remote host.
+- Run hardened, supervised coding agents against dedicated workspace repos on remote NixOS hosts.
 - Host personal assistant agents (e.g. [OpenClaw](https://openclaw.org/)).
 - Self-host autonomous agent experiments (e.g. [Conway Automata](https://conway.tech/))
 - Run [MCP](https://modelcontextprotocol.io/) servers for agents (e.g. access to Google services, DMs, X API)
