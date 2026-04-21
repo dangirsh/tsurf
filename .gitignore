@@ -7,6 +7,7 @@ tmp/
 !.claude/skills/
 !.claude/CLAUDE.md
 .worktrees/
+.codex-*
 result
 *.png
 Screenshot*
