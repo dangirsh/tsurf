@@ -33,7 +33,7 @@ resolve_flake_dir() {
   return 1
 }
 
-FLAKE_DIR="$(resolve_flake_dir "${BASH_SOURCE[0]}")"
+FLAKE_DIR="${TSURF_DEPLOY_FLAKE_DIR:-$(resolve_flake_dir "${BASH_SOURCE[0]}")}"
 NODE=""
 TARGET=""
 TARGET_SET=false
