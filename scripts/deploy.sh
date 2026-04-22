@@ -152,7 +152,9 @@ if [[ "$TARGET_SET" == false ]]; then
 fi
 
 # --- Remote lock ---
-REMOTE_LOCK_DIR="/var/lock/deploy-${NODE}.lock"
+LOCK_KEY="${TARGET#*@}"
+LOCK_KEY="${LOCK_KEY//[^A-Za-z0-9._-]/-}"
+REMOTE_LOCK_DIR="/var/lock/deploy-${LOCK_KEY}.lock"
 GIT_SHA=$(git -C "$FLAKE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LOCK_INFO="holder=$(whoami)@$(hostname)
 pid=$$
