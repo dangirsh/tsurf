@@ -77,20 +77,21 @@ Enforced behavior:
 
 - `$PWD` must be inside `services.agentLauncher.projectRoot`
   (default `/data/projects`).
-- `$PWD` must be inside a Git worktree.
-- The wrapper resolves the Git toplevel with `git rev-parse --show-toplevel`
-  and grants read access to that repo root.
-- The wrapper refuses to run if the Git toplevel is exactly the project root.
-  This prevents blanket read access to all repos under `/data/projects`.
+- The wrapper derives the sandbox read scope as the first path component beneath
+  that project root, so `/data/projects/foo/subdir` is scoped to
+  `/data/projects/foo`.
+- The wrapper refuses to run if `$PWD` is exactly the project root. This
+  prevents blanket read access to all workspaces under `/data/projects`.
 - The base nono profile denies `/run/secrets`, `~/.ssh`, `~/.bash_history`,
   `~/.gnupg`, `~/.aws`, `~/.kube`, `~/.docker`, `~/.npmrc`, `~/.pypirc`,
   `~/.gem`, `~/.config/gh`, `~/.git-credentials`, and `/etc/nono`.
 
 Important nuance:
 
-- The current worktree is still writable. `workdir.access = "readwrite"` is a
+- The current workspace is still writable. `workdir.access = "readwrite"` is a
   deliberate design choice.
-- What is blocked is broad cross-repo access, not writes inside the current repo.
+- What is blocked is broad cross-workspace access, not writes inside the current
+  workspace.
 - Avoid pointing agents at infrastructure repos. That is still an operational
   rule, not a technical control.
 

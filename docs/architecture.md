@@ -49,8 +49,8 @@ caller
 
 Important behavior from the shipped implementation:
 
-- Launches must start inside `tsurf.agent.projectRoot` and inside a Git
-  worktree below that root.
+- Launches must start inside `tsurf.agent.projectRoot`, and the first path
+  component below that root becomes the sandbox read scope.
 - The wrapper refuses to grant blanket read access to the entire project root.
 - Raw provider keys stay on the root-owned side of the launch path. The child
   gets only loopback base URLs plus per-session tokens.

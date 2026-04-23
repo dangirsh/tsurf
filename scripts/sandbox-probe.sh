@@ -46,9 +46,9 @@ done
 # --- Checks with custom logic ---
 case "$check" in
   allowed-repo-read)
-    # Agent must be able to read files in the current git repo.
+    # Agent must be able to read files in the current workspace.
     if ! cat README.md >/dev/null 2>&1; then
-      echo "FAIL: agent cannot read README.md in current repo" >&2
+      echo "FAIL: agent cannot read README.md in current workspace" >&2
       exit 1
     fi
     ;;

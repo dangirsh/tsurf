@@ -732,14 +732,19 @@ in
 
   # --- Sandbox read-scope regression guards ---
 
-  sandbox-git-root-fail-closed =
+  sandbox-workspace-root-fail-closed =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
-    mkCheck "sandbox-git-root-fail-closed"
-      "agent-wrapper.sh has fail-closed git-root validation (no silent fallback)"
-      "agent-wrapper.sh missing fail-closed git-root check — agents may run outside git worktrees"
-      (lib.hasInfix "rev-parse --show-toplevel" source && lib.hasInfix "exit 1" source);
+    mkCheck "sandbox-workspace-root-fail-closed"
+      "agent-wrapper.sh has fail-closed top-level workspace validation"
+      "agent-wrapper.sh missing top-level workspace scoping — agents may read across workspaces"
+      (
+        lib.hasInfix "workspace_root=" source
+        && lib.hasInfix "top-level workspace beneath" source
+        && lib.hasInfix "exit 1" source
+        && !(lib.hasInfix "rev-parse --show-toplevel" source)
+      );
 
   sandbox-refuses-project-root-read =
     let

@@ -3,7 +3,8 @@
 # Configuration is passed via environment variables set by the Nix launcher:
 #   AGENT_NAME              — wrapper name (for messages and launch log)
 #   AGENT_REAL_BINARY       — full path to the real agent binary
-#   AGENT_PROJECT_ROOT      — sandboxed agents must run inside this directory
+#   AGENT_PROJECT_ROOT      — sandboxed agents must run inside this directory;
+#                              the first child under this path becomes the read scope
 #   AGENT_NONO_PROFILE      — full path to nono profile JSON
 #   AGENT_RUN_AS_USER       — target Unix user for the actual agent binary
 #   AGENT_RUN_AS_UID        — target Unix uid for the actual agent binary
@@ -53,14 +54,32 @@ journal_log() {
 }
 
 # Enforce PWD inside project root
+project_root="$(readlink -f "$AGENT_PROJECT_ROOT")"
 cwd="$(readlink -f "$PWD")"
 case "$cwd" in
-  "$AGENT_PROJECT_ROOT"/*|"$AGENT_PROJECT_ROOT") ;;
+  "$project_root"/*|"$project_root") ;;
   *)
-    echo "ERROR: $AGENT_NAME must run inside $AGENT_PROJECT_ROOT (current: $cwd)" >&2
+    echo "ERROR: $AGENT_NAME must run inside $project_root (current: $cwd)" >&2
     exit 1
     ;;
 esac
+
+# Scope sandbox read access to the current top-level workspace directory.
+# A workspace is the first path component beneath AGENT_PROJECT_ROOT, for
+# example /data/projects/my-repo from /data/projects/my-repo/subdir.
+if [[ "$cwd" == "$project_root" ]]; then
+  echo "ERROR: refusing to grant read access to the entire project root ($project_root)" >&2
+  exit 1
+fi
+
+workspace_rel="${cwd#"$project_root"/}"
+workspace_name="${workspace_rel%%/*}"
+workspace_root="${project_root}/${workspace_name}"
+if [[ ! -d "$workspace_root" ]]; then
+  echo "ERROR: could not resolve top-level workspace beneath $project_root (current: $cwd)" >&2
+  exit 1
+fi
+repo_scope="top-level-workspace"
 
 # Load real API keys from sops-managed /run/secrets/ into env vars.
 # nono's credential proxy reads these via env:// URIs in the profile's
@@ -81,24 +100,10 @@ for pair in "${cred_pairs[@]}"; do
   export "${env_var}=${secret_value}"
 done
 
-# Scope sandbox read access to the current git repository root.
-# The public repo does not try to classify "safe" infrastructure repos; operators
-# keep agents out of security-boundary repos by policy.
-git_root="$(git -c safe.directory='*' -C "$cwd" rev-parse --show-toplevel 2>/dev/null)" || {
-  echo "ERROR: $AGENT_NAME must run inside a git worktree beneath $AGENT_PROJECT_ROOT" >&2
-  exit 1
-}
-git_root="$(readlink -f "$git_root")"
-if [[ "$git_root" == "$AGENT_PROJECT_ROOT" ]]; then
-  echo "ERROR: refusing to grant read access to the entire project root ($AGENT_PROJECT_ROOT)" >&2
-  exit 1
-fi
-repo_scope="git-worktree"
-
 # Build nono arguments. Credential proxy is configured in the nono profile
 # (custom_credentials with env:// URIs); nono starts the reverse proxy and
 # injects phantom tokens into the child environment automatically.
-nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --read "$git_root")
+nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --read "$workspace_root")
 
 setpriv_bin="$(command -v setpriv)"
 env_bin="$(command -v env)"

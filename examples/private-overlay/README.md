@@ -75,7 +75,7 @@ The generic launcher (`services.agentLauncher.agents.<name>`) lets you define ag
 | Resource | Access | Controlled by |
 |----------|--------|---------------|
 | Current working directory | Read + write | `workdir.access` in nono profile |
-| Current git repo root | Read only | `agent-wrapper.sh` `--read` flag |
+| Current top-level workspace dir | Read only | `agent-wrapper.sh` `--read` flag |
 | Agent-specific config dirs (for example `~/.claude`) | Read + write | Per-agent `nonoProfile.extraAllow` / `extraAllowFile` |
 | Nix store, SSL certs, `/etc` basics | Read only | Base `tsurf` nono profile |
 | Paths in `filesystem.allow` | Read + write | Your nono profile |
@@ -85,7 +85,7 @@ The generic launcher (`services.agentLauncher.agents.<name>`) lets you define ag
 |----------|--------|---------------|
 | `/run/secrets/` (API keys on disk) | Blocked | Landlock deny (nono profile inherits this) |
 | `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.docker` | Blocked | `filesystem.deny` in nono profile |
-| Other git repos (sibling projects) | Blocked | `agent-wrapper.sh` scopes read to current repo only |
+| Other top-level workspaces (sibling projects) | Blocked | `agent-wrapper.sh` scopes read to current workspace only |
 | `sudo` | Limited | Agent user has sudo only for immutable launchers (no general root access) |
 | Docker daemon | No access | Agent user has no `docker` group (build-time assertion) |
 | CPU / memory beyond limits | Killed | `tsurf-agents.slice` cgroup limits |
@@ -142,7 +142,7 @@ cd /data/projects/my-repo
 claude   # wrapper broker-launches as agent user and runs in nono sandbox
 ```
 
-The wrapper handles credential injection from `/run/secrets/`, enforces the git-worktree requirement, and logs launches to journald (`journalctl -t agent-launch`).
+The wrapper handles credential injection from `/run/secrets/`, scopes reads to the current top-level workspace beneath `/data/projects`, and logs launches to journald (`journalctl -t agent-launch`).
 
 See `SECURITY.md` in the tsurf repo for the full access control model and credential flow architecture.
 

@@ -21,12 +21,11 @@ setup_file() {
     rm -rf ${SANDBOX_WORKSPACE}
     install -d -m 0755 -o ${AGENT_USER} -g ${AGENT_USER} ${SANDBOX_WORKSPACE}
     install -d -m 0755 -o ${AGENT_USER} -g ${AGENT_USER} ${SANDBOX_WORKSPACE}/scripts
-    git -C ${SANDBOX_WORKSPACE} init -q
     printf \"# sandbox fixture\n\" > ${SANDBOX_WORKSPACE}/README.md
     chown -R ${AGENT_USER}:${AGENT_USER} ${SANDBOX_WORKSPACE}
   '"
 
-  # Upload probe script to a workspace repo the agent user can access inside the sandbox.
+  # Upload probe script to a workspace the agent user can access inside the sandbox.
   local probe_src
   probe_src="$(cd "$(dirname "${BATS_TEST_FILENAME}")"/../../scripts && pwd)/sandbox-probe.sh"
   scp "${SSH_OPTS[@]}" "$probe_src" "root@${HOST}:${SANDBOX_WORKSPACE}/scripts/sandbox-probe.sh"
@@ -40,7 +39,7 @@ teardown_file() {
 }
 
 # Helper: run a probe check inside the nono sandbox as the agent user.
-# The probe script lives in a dedicated workspace fixture repo.
+# The probe script lives in a dedicated workspace fixture.
 run_sandbox_probe() {
   local check="$1"
   remote "sudo -u ${AGENT_USER} bash -lc 'cd ${SANDBOX_WORKSPACE} && EXPECTED_AGENT_USER=${AGENT_USER} nono run --profile tsurf --read ${SANDBOX_WORKSPACE} -- bash scripts/sandbox-probe.sh ${check}'"
@@ -87,8 +86,8 @@ run_sandbox_probe() {
   assert_output --partial "PASS: denied-bash-history"
 }
 
-# Validates SBX-022, SBX-026: scoped read access to git repo, workdir readwrite
-@test "${HOST}: sandbox allows reading files in current git repo" {
+# Validates SBX-022, SBX-026: scoped read access to current workspace, workdir readwrite
+@test "${HOST}: sandbox allows reading files in current workspace" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
   run run_sandbox_probe allowed-repo-read
   assert_success
