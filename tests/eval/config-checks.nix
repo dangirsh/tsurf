@@ -315,6 +315,18 @@ in
       "modules/headscale.nix missing proxyWebsockets — Tailscale control protocol requires WebSocket"
       (lib.hasInfix "proxyWebsockets = true" source);
 
+  headscale-default-deny =
+    let
+      source = builtins.readFile ../../modules/headscale.nix;
+    in
+    mkCheck "headscale-default-deny" "headscale default ACL fails closed"
+      "modules/headscale.nix still ships an allow-all default ACL"
+      (
+        lib.hasInfix "aclPolicy" source
+        && lib.hasInfix "acls = [ ]" source
+        && !(lib.hasInfix "dst = [ \"*:*\" ]" source)
+      );
+
   # Stale-phrase check: banned phrases must not appear in key docs.
   stale-phrases-claude-md =
     let
@@ -344,17 +356,31 @@ in
         lib.hasInfix "AGENT_CREDENTIAL_SECRETS" src && lib.hasInfix "setpriv" src
       );
 
+  nono-package-has-checks =
+    let
+      source = builtins.readFile ../../packages/nono.nix;
+    in
+    mkCheck "nono-package-has-checks" "nono source build has a bounded install smoke check"
+      "packages/nono.nix must keep a post-install CLI smoke check when upstream cargo tests are disabled"
+      (
+        lib.hasInfix "Upstream cargo tests are not a practical gate" source
+        && lib.hasInfix "doCheck = false" source
+        && lib.hasInfix "doInstallCheck = true" source
+        && lib.hasInfix "--help" source
+      );
+
   proxy-credential-profile =
     let
       profile = builtins.fromJSON (
         builtins.readFile devCfg.environment.etc."nono/profiles/tsurf.json".source
       );
     in
-    mkCheck "proxy-credential-profile" "base nono profile has no credential wiring (credentials live in per-agent profiles)"
+    mkCheck "proxy-credential-profile"
+      "base nono profile has no credential wiring (credentials live in per-agent profiles)"
       "base tsurf.json nono profile should not contain network.custom_credentials — those belong in per-agent profiles"
       (
-        !(builtins.hasAttr "custom_credentials" (profile.network or {}))
-        && !(builtins.hasAttr "credentials" (profile.network or {}))
+        !(builtins.hasAttr "custom_credentials" (profile.network or { }))
+        && !(builtins.hasAttr "credentials" (profile.network or { }))
       );
 
   claude-profile-credential-proxy =
@@ -362,8 +388,8 @@ in
       profile = builtins.fromJSON (
         builtins.readFile devCfg.environment.etc."nono/profiles/tsurf-claude.json".source
       );
-      creds = profile.network.credentials or [];
-      customCreds = profile.network.custom_credentials or {};
+      creds = profile.network.credentials or [ ];
+      customCreds = profile.network.custom_credentials or { };
     in
     mkCheck "claude-profile-credential-proxy"
       "generated Claude nono profile wires credential proxy with env:// URI"
@@ -661,16 +687,6 @@ in
         && lib.hasInfix "tsurf-cass-index.timer" source
       );
 
-  # --- Phase 124: Cost-tracker least privilege ---
-
-  cost-tracker-dynamic-user =
-    let
-      source = builtins.readFile ../../extras/cost-tracker.nix;
-    in
-    mkCheck "cost-tracker-dynamic-user" "cost-tracker uses DynamicUser for least privilege"
-      "cost-tracker.nix missing DynamicUser = true — service runs as root"
-      (lib.hasInfix "DynamicUser = true" source);
-
   example-code-review-uses-wrapper =
     let
       source = builtins.readFile ../../examples/private-overlay/modules/code-review.nix;
@@ -687,15 +703,12 @@ in
 
   systemd-hardening-baseline =
     let
-      costTrackerSource = builtins.readFile ../../extras/cost-tracker.nix;
       cassSource = builtins.readFile ../../extras/cass.nix;
     in
-    mkCheck "systemd-hardening-baseline" "All project services have SystemCallArchitectures=native"
-      "SECURITY: one or more services missing SystemCallArchitectures=native"
-      (
-        lib.hasInfix "SystemCallArchitectures = \"native\"" costTrackerSource
-        && lib.hasInfix "SystemCallArchitectures = \"native\"" cassSource
-      );
+    mkCheck "systemd-hardening-baseline"
+      "Project background services have SystemCallArchitectures=native"
+      "SECURITY: CASS service missing SystemCallArchitectures=native"
+      (lib.hasInfix "SystemCallArchitectures = \"native\"" cassSource);
 
   cass-indexer-resource-limits =
     let
@@ -709,26 +722,6 @@ in
         && lib.hasInfix "IOSchedulingClass = \"idle\"" source
         && lib.hasInfix "systemd.timers.tsurf-cass-index" source
       );
-
-  cost-tracker-secret-capability =
-    let
-      source = builtins.readFile ../../extras/cost-tracker.nix;
-    in
-    mkCheck "cost-tracker-secret-capability"
-      "cost-tracker explicitly grants CAP_DAC_READ_SEARCH ambiently for secret reads"
-      "cost-tracker.nix bounds CAP_DAC_READ_SEARCH without AmbientCapabilities — DynamicUser service cannot read configured secret files"
-      (
-        lib.hasInfix "AmbientCapabilities = [ \"CAP_DAC_READ_SEARCH\" ]" source
-        && lib.hasInfix "CapabilityBoundingSet = [ \"CAP_DAC_READ_SEARCH\" ]" source
-      );
-
-  cost-tracker-provider-label =
-    let
-      source = builtins.readFile ../../extras/cost-tracker.nix;
-    in
-    mkCheck "cost-tracker-provider-label" "cost-tracker exposes and serializes optional provider labels"
-      "extras/cost-tracker.nix drops provider labels even though cost-tracker.py reads them"
-      (lib.hasInfix "label = lib.mkOption" source && lib.hasInfix "label = p.label;" source);
 
   # --- Sandbox read-scope regression guards ---
 

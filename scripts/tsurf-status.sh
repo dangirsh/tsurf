@@ -10,7 +10,6 @@ UNITS=(
   sops-install-secrets.service
   tsurf-cass-index.timer
   restic-backups-b2.timer
-  tsurf-cost-tracker.timer
 )
 
 resolve_flake_dir() {

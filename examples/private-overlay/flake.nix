@@ -71,7 +71,6 @@
         # cass.nix: low-priority CASS indexer timer for the dedicated agent user
         "${inputs.tsurf}/extras/cass.nix"
         # "${inputs.tsurf}/extras/restic.nix"
-        # "${inputs.tsurf}/extras/cost-tracker.nix"
         # Home Manager profile opt-in pattern (per host):
         # { home-manager.users.agent = import "${inputs.tsurf}/extras/home"; }
 

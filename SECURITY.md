@@ -234,6 +234,3 @@ Runtime checks:
 - The public repo deliberately avoids a separate unattended-agent supervisor.
 - The host-level egress allowlist is coarse by design. It is scoped by UID, not
   by individual wrapper or destination hostname.
-- Optional extras can widen access. Notably,
-  `services.costTracker.enable` grants a DynamicUser service read-only
-  `/run/secrets` access plus `CAP_DAC_READ_SEARCH`.

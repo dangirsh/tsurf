@@ -5,7 +5,13 @@
 # @decision HS-02: nginx reverse proxy for TLS termination (standard tsurf pattern). WebSocket support required for TS2021 control protocol.
 # @decision HS-03: Embedded DERP enabled with STUN on UDP 3478. Default Tailscale DERP servers disabled for full self-hosting.
 # @decision HS-04: SQLite database (default). Suitable for small fleet; /var/lib/headscale persisted under impermanence.
-{ config, lib, pkgs, ... }:
+# @decision HS-05: Default ACL fails closed. Private overlays must declare mesh policy explicitly.
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.tsurf.headscale;
 in
@@ -32,6 +38,14 @@ in
       default = "admin@example.com"; # REPLACE in private overlay
       description = "Email address for ACME certificate registration.";
     };
+    aclPolicy = lib.mkOption {
+      type = lib.types.attrs;
+      default = {
+        acls = [ ];
+        ssh = [ ];
+      };
+      description = "Headscale policy written to /etc/headscale/acl.json. Defaults to deny-all.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -56,11 +70,14 @@ in
           ipv4 = cfg.publicIPv4;
           verify_clients = true;
         };
-        derp.urls = [];
+        derp.urls = [ ];
         derp.auto_update_enabled = false;
         dns.magic_dns = true;
         dns.base_domain = cfg.baseDomain; # MagicDNS suffix -- distinct from server FQDN
-        dns.nameservers.global = [ "1.1.1.1" "9.9.9.9" ];
+        dns.nameservers.global = [
+          "1.1.1.1"
+          "9.9.9.9"
+        ];
         dns.override_local_dns = true;
         policy.mode = "file";
         policy.path = "/etc/headscale/acl.json";
@@ -94,18 +111,10 @@ in
     # STUN port for embedded DERP server
     networking.firewall.allowedUDPPorts = [ 3478 ];
 
-    # ACL policy via environment.etc with default allow-all
-    # Private overlays should tighten this policy to restrict inter-node access.
+    # ACL policy via environment.etc with deny-all default.
+    # Private overlays should set tsurf.headscale.aclPolicy or force this file.
     environment.etc."headscale/acl.json" = {
-      text = builtins.toJSON {
-        acls = [
-          {
-            action = "accept";
-            src = [ "*" ];
-            dst = [ "*:*" ];
-          }
-        ];
-      };
+      text = builtins.toJSON cfg.aclPolicy;
       mode = "0644";
     };
 

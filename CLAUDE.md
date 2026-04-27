@@ -20,8 +20,7 @@ Important current truths:
 - Public outputs are `eval-*` only. There are no public `deploy.nodes`.
 - `hosts/dev` is the sandboxed agent fixture.
 - `hosts/services` is the unsandboxed service-host fixture.
-- No public fixture enables CASS, Codex, cost tracking, or a home-manager
-  profile by default.
+- No public fixture enables CASS, Codex, or a home-manager profile by default.
 - The example private overlay imports `extras/cass.nix`, but still leaves it disabled.
 
 ## Editing Rules

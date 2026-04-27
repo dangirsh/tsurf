@@ -33,13 +33,8 @@ EXPECTED_UNITS="$(printf '%s\n' \
   restic-backups-b2.timer \
   sops-install-secrets.service \
   sshd.service \
-  tsurf-cass-index.timer \
-  tsurf-cost-tracker.timer | sort)"
+  tsurf-cass-index.timer | sort)"
 
-[[ "$SSH_TRACE" == *"systemctl is-enabled 'tsurf-cost-tracker.timer'"* ]] || {
-  echo "FAIL: expected tsurf-status.sh to query tsurf-cost-tracker.timer"
-  exit 1
-}
 [[ "$SSH_TRACE" == *"systemctl is-enabled 'restic-backups-b2.timer'"* ]] || {
   echo "FAIL: expected tsurf-status.sh to query restic-backups-b2.timer"
   exit 1
@@ -62,6 +57,10 @@ EXPECTED_UNITS="$(printf '%s\n' \
 }
 [[ "$SSH_TRACE" != *"cost-tracker.service"* ]] || {
   echo "FAIL: tsurf-status.sh still queries the wrong cost-tracker unit name"
+  exit 1
+}
+[[ "$SSH_TRACE" != *"tsurf-cost-tracker.timer"* ]] || {
+  echo "FAIL: tsurf-status.sh still queries removed cost-tracker timer"
   exit 1
 }
 
