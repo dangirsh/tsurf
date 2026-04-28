@@ -255,6 +255,10 @@
         };
       };
 
+      packages.aarch64-darwin = {
+        deploy-rs = deploy-rs.packages.aarch64-darwin.default;
+      };
+
       apps.${system} = {
         test-live = {
           type = "app";

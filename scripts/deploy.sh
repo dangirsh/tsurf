@@ -46,7 +46,8 @@ DEPRECATED_FLAGS=()
 SECONDS=0
 
 # SSH multiplexing: reuse a single connection for locking/health-check calls.
-SSH_CTL="$FLAKE_DIR/tmp/deploy-ssh-%r@%h:%p"
+# Keep the socket path short enough for macOS' Unix socket limit.
+SSH_CTL="/tmp/tsurf-deploy-%C"
 SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$SSH_CTL" -o "ControlPersist=60s")
 
 # Remote deploy lock (prevents concurrent deploys from any machine).
