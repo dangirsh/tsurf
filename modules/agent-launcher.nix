@@ -81,44 +81,42 @@ let
       # Merge nono profile: extend base tsurf profile with agent-specific overrides
       nonoProfileName = "tsurf-${name}";
       hasCredentials = agentDef.credentialServices != [ ];
-      nonoProfile = pkgs.writeText "${nonoProfileName}-profile.json" (
-        builtins.toJSON (
-          {
-            extends = "tsurf";
-            meta = {
-              inherit name;
-              version = "1.0.0";
-              description = "tsurf ${name} sandbox profile";
-              author = "tsurf";
-            };
-          }
-          //
-            lib.optionalAttrs
-              (
-                agentDef.nonoProfile.extraAllow != [ ]
-                || agentDef.nonoProfile.extraAllowFile != [ ]
-                || agentDef.nonoProfile.extraDeny != [ ]
-              )
-              {
-                filesystem =
-                  { }
-                  // lib.optionalAttrs (agentDef.nonoProfile.extraAllow != [ ]) {
-                    allow = agentDef.nonoProfile.extraAllow;
-                  }
-                  // lib.optionalAttrs (agentDef.nonoProfile.extraAllowFile != [ ]) {
-                    allow_file = agentDef.nonoProfile.extraAllowFile;
-                  }
-                  // lib.optionalAttrs (agentDef.nonoProfile.extraDeny != [ ]) {
-                    deny = agentDef.nonoProfile.extraDeny;
-                  };
-              }
-          // lib.optionalAttrs hasCredentials {
-            network = {
-              credentials = agentDef.credentialServices;
-              custom_credentials = credentialDefs;
-            };
-          }
-        )
+      nonoProfile = builtins.toJSON (
+        {
+          extends = "tsurf";
+          meta = {
+            inherit name;
+            version = "1.0.0";
+            description = "tsurf ${name} sandbox profile";
+            author = "tsurf";
+          };
+        }
+        //
+          lib.optionalAttrs
+            (
+              agentDef.nonoProfile.extraAllow != [ ]
+              || agentDef.nonoProfile.extraAllowFile != [ ]
+              || agentDef.nonoProfile.extraDeny != [ ]
+            )
+            {
+              filesystem =
+                { }
+                // lib.optionalAttrs (agentDef.nonoProfile.extraAllow != [ ]) {
+                  allow = agentDef.nonoProfile.extraAllow;
+                }
+                // lib.optionalAttrs (agentDef.nonoProfile.extraAllowFile != [ ]) {
+                  allow_file = agentDef.nonoProfile.extraAllowFile;
+                }
+                // lib.optionalAttrs (agentDef.nonoProfile.extraDeny != [ ]) {
+                  deny = agentDef.nonoProfile.extraDeny;
+                };
+            }
+        // lib.optionalAttrs hasCredentials {
+          network = {
+            credentials = agentDef.credentialServices;
+            custom_credentials = credentialDefs;
+          };
+        }
       );
 
       nonoProfilePath = "/etc/nono/profiles/${nonoProfileName}.json";
@@ -371,7 +369,7 @@ in
     # Install per-agent nono profiles and managed settings files
     environment.etc = lib.mkMerge (
       (lib.mapAttrsToList (name: pair: {
-        "nono/profiles/tsurf-${name}.json".source = pair.nonoProfile;
+        "nono/profiles/tsurf-${name}.json".text = pair.nonoProfile;
       }) agentPairs)
       ++ (lib.mapAttrsToList (
         name: agentDef:

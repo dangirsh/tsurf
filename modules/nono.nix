@@ -78,7 +78,7 @@ let
     interactive = true;
   };
 
-  profileFile = pkgs.writeText "tsurf-nono-profile.json" (builtins.toJSON tsurfProfile);
+  profileText = builtins.toJSON tsurfProfile;
 in
 {
   options.services.nonoSandbox = {
@@ -111,7 +111,7 @@ in
 
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ pkgs.nono ];
-    environment.etc."nono/profiles/tsurf.json".source = profileFile;
+    environment.etc."nono/profiles/tsurf.json".text = profileText;
     environment.variables.NONO_PROFILE_PATH = "/etc/nono/profiles";
   };
 }

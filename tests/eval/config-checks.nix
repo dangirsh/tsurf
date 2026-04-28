@@ -371,9 +371,7 @@ in
 
   proxy-credential-profile =
     let
-      profile = builtins.fromJSON (
-        builtins.readFile devCfg.environment.etc."nono/profiles/tsurf.json".source
-      );
+      profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
     in
     mkCheck "proxy-credential-profile"
       "base nono profile has no credential wiring (credentials live in per-agent profiles)"
@@ -385,9 +383,7 @@ in
 
   claude-profile-credential-proxy =
     let
-      profile = builtins.fromJSON (
-        builtins.readFile devCfg.environment.etc."nono/profiles/tsurf-claude.json".source
-      );
+      profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
       creds = profile.network.credentials or [ ];
       customCreds = profile.network.custom_credentials or { };
     in
@@ -405,18 +401,14 @@ in
       "nono profile deny list is missing /run/secrets"
       (
         let
-          profile = builtins.fromJSON (
-            builtins.readFile devCfg.environment.etc."nono/profiles/tsurf.json".source
-          );
+          profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
         in
         builtins.elem "/run/secrets" profile.filesystem.deny
       );
 
   nono-base-profile-generic =
     let
-      profile = builtins.fromJSON (
-        builtins.readFile devCfg.environment.etc."nono/profiles/tsurf.json".source
-      );
+      profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
       allow = profile.filesystem.allow or [ ];
       allowFile = profile.filesystem.allow_file or [ ];
       groups = profile.security.groups or [ ];
@@ -436,9 +428,7 @@ in
 
   claude-profile-adds-claude-state =
     let
-      profile = builtins.fromJSON (
-        builtins.readFile devCfg.environment.etc."nono/profiles/tsurf-claude.json".source
-      );
+      profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
       allow = profile.filesystem.allow or [ ];
       allowFile = profile.filesystem.allow_file or [ ];
       home = devCfg.tsurf.agent.home;
@@ -933,9 +923,9 @@ in
 
   launcher-extra-deny-propagates =
     let
-      profile = builtins.fromJSON (
-        builtins.readFile extraDenyCfg.environment.etc."nono/profiles/tsurf-review-check.json".source
-      );
+      profile =
+        builtins.fromJSON
+          extraDenyCfg.environment.etc."nono/profiles/tsurf-review-check.json".text;
     in
     mkCheck "launcher-extra-deny-propagates"
       "agent-launcher propagates per-agent extraDeny rules into generated nono profiles"
