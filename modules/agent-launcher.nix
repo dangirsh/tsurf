@@ -6,7 +6,12 @@
 # @decision SEC-159-01: Credentials brokered through nono's built-in reverse proxy
 #   (--credential + custom_credentials with env:// URIs). The custom Python credential
 #   proxy is eliminated; nono manages phantom tokens natively.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.agentLauncher;
   agentCfg = config.tsurf.agent;
@@ -39,75 +44,104 @@ let
   };
 
   # Build launcher + wrapper for a single agent definition
-  mkAgentPair = name: agentDef:
+  mkAgentPair =
+    name: agentDef:
     let
       launcherName = "tsurf-launch-${name}";
       credentialServicesStr = lib.concatStringsSep " " agentDef.credentialServices;
 
       # Build nono custom_credentials for env:// URI-based credential proxy
-      credentialDefs = lib.listToAttrs (map (svc:
-        let defaults = credentialServiceDefaults.${svc}; in
-        lib.nameValuePair svc {
-          upstream = defaults.upstream;
-          credential_key = "env://${defaults.envVar}";
-          inject_mode = "header";
-          inject_header = defaults.injectHeader;
-          credential_format = defaults.credentialFormat;
-        }
-      ) agentDef.credentialServices);
+      credentialDefs = lib.listToAttrs (
+        map (
+          svc:
+          let
+            defaults = credentialServiceDefaults.${svc};
+          in
+          lib.nameValuePair svc {
+            upstream = defaults.upstream;
+            credential_key = "env://${defaults.envVar}";
+            inject_mode = "header";
+            inject_header = defaults.injectHeader;
+            credential_format = defaults.credentialFormat;
+          }
+        ) agentDef.credentialServices
+      );
 
       # Build secret-loading instructions: "envVar:secretName" pairs
-      credentialSecrets = lib.concatStringsSep " " (map (svc:
-        let defaults = credentialServiceDefaults.${svc}; in
-        "${defaults.envVar}:${defaults.secretName}"
-      ) agentDef.credentialServices);
+      credentialSecrets = lib.concatStringsSep " " (
+        map (
+          svc:
+          let
+            defaults = credentialServiceDefaults.${svc};
+          in
+          "${defaults.envVar}:${defaults.secretName}"
+        ) agentDef.credentialServices
+      );
 
       # Merge nono profile: extend base tsurf profile with agent-specific overrides
       nonoProfileName = "tsurf-${name}";
-      hasCredentials = agentDef.credentialServices != [];
-      nonoProfile = pkgs.writeText "${nonoProfileName}-profile.json" (builtins.toJSON ({
-        extends = "tsurf";
-        meta = {
-          inherit name;
-          version = "1.0.0";
-          description = "tsurf ${name} sandbox profile";
-          author = "tsurf";
-        };
-      } // lib.optionalAttrs (
-        agentDef.nonoProfile.extraAllow != []
-        || agentDef.nonoProfile.extraAllowFile != []
-        || agentDef.nonoProfile.extraDeny != []
-      ) {
-        filesystem = {}
-          // lib.optionalAttrs (agentDef.nonoProfile.extraAllow != []) {
-            allow = agentDef.nonoProfile.extraAllow;
+      hasCredentials = agentDef.credentialServices != [ ];
+      nonoProfile = pkgs.writeText "${nonoProfileName}-profile.json" (
+        builtins.toJSON (
+          {
+            extends = "tsurf";
+            meta = {
+              inherit name;
+              version = "1.0.0";
+              description = "tsurf ${name} sandbox profile";
+              author = "tsurf";
+            };
           }
-          // lib.optionalAttrs (agentDef.nonoProfile.extraAllowFile != []) {
-            allow_file = agentDef.nonoProfile.extraAllowFile;
+          //
+            lib.optionalAttrs
+              (
+                agentDef.nonoProfile.extraAllow != [ ]
+                || agentDef.nonoProfile.extraAllowFile != [ ]
+                || agentDef.nonoProfile.extraDeny != [ ]
+              )
+              {
+                filesystem =
+                  { }
+                  // lib.optionalAttrs (agentDef.nonoProfile.extraAllow != [ ]) {
+                    allow = agentDef.nonoProfile.extraAllow;
+                  }
+                  // lib.optionalAttrs (agentDef.nonoProfile.extraAllowFile != [ ]) {
+                    allow_file = agentDef.nonoProfile.extraAllowFile;
+                  }
+                  // lib.optionalAttrs (agentDef.nonoProfile.extraDeny != [ ]) {
+                    deny = agentDef.nonoProfile.extraDeny;
+                  };
+              }
+          // lib.optionalAttrs hasCredentials {
+            network = {
+              credentials = agentDef.credentialServices;
+              custom_credentials = credentialDefs;
+            };
           }
-          // lib.optionalAttrs (agentDef.nonoProfile.extraDeny != []) {
-            deny = agentDef.nonoProfile.extraDeny;
-          };
-      } // lib.optionalAttrs hasCredentials {
-        network = {
-          credentials = agentDef.credentialServices;
-          custom_credentials = credentialDefs;
-        };
-      }));
+        )
+      );
 
       nonoProfilePath = "/etc/nono/profiles/${nonoProfileName}.json";
 
       defaultArgStr = lib.concatMapStringsSep " " lib.escapeShellArg agentDef.defaultArgs;
+      extraReadPathsStr = lib.concatMapStringsSep " " lib.escapeShellArg cfg.extraReadPaths;
+      extraAllowPathsStr = lib.concatMapStringsSep " " lib.escapeShellArg cfg.extraAllowPaths;
 
       launcher = pkgs.writeShellApplication {
         name = launcherName;
-        runtimeInputs = [ pkgs.systemd pkgs.coreutils ];
+        runtimeInputs = [
+          pkgs.systemd
+          pkgs.coreutils
+        ];
         text = ''
           export AGENT_NAME="${name}"
           export AGENT_REAL_BINARY="${agentDef.package}/bin/${agentDef.command}"
           export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
           export AGENT_NONO_PROFILE="${nonoProfilePath}"
           export AGENT_CREDENTIAL_SECRETS="${credentialSecrets}"
+          export AGENT_SCOPE_ACCESS="${cfg.scopeAccess}"
+          export AGENT_EXTRA_READ_PATHS="${extraReadPathsStr}"
+          export AGENT_EXTRA_ALLOW_PATHS="${extraAllowPathsStr}"
 
           if [[ -t 0 && -t 1 ]]; then
             stdio_flag="--pty"
@@ -142,6 +176,9 @@ let
             --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
             --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
             --setenv=AGENT_CREDENTIAL_SECRETS="$AGENT_CREDENTIAL_SECRETS" \
+            --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
+            --setenv=AGENT_EXTRA_READ_PATHS="$AGENT_EXTRA_READ_PATHS" \
+            --setenv=AGENT_EXTRA_ALLOW_PATHS="$AGENT_EXTRA_ALLOW_PATHS" \
             --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
             --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
             --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \
@@ -151,20 +188,39 @@ let
       };
 
       wrapperName = agentDef.wrapperName;
-      wrapper = (pkgs.writeShellApplication {
-        name = wrapperName;
-        runtimeInputs = [ pkgs.nono pkgs.git pkgs.coreutils pkgs.util-linux ];
-        text = ''
-          if [[ "$(id -u)" == "0" ]]; then
-            exec ${launcher}/bin/${launcherName} "$@"
-          fi
+      wrapper =
+        (pkgs.writeShellApplication {
+          name = wrapperName;
+          runtimeInputs = [
+            pkgs.nono
+            pkgs.git
+            pkgs.coreutils
+            pkgs.util-linux
+          ];
+          text = ''
+            if [[ "$(id -u)" == "0" ]]; then
+              exec ${launcher}/bin/${launcherName} "$@"
+            fi
 
-          exec /run/wrappers/bin/sudo ${launcher}/bin/${launcherName} "$@"
-        '';
-      }).overrideAttrs (old: { meta = (old.meta or {}) // { priority = 4; }; });
+            exec /run/wrappers/bin/sudo ${launcher}/bin/${launcherName} "$@"
+          '';
+        }).overrideAttrs
+          (old: {
+            meta = (old.meta or { }) // {
+              priority = 4;
+            };
+          });
 
-    in {
-      inherit launcher launcherName wrapper wrapperName nonoProfile nonoProfilePath;
+    in
+    {
+      inherit
+        launcher
+        launcherName
+        wrapper
+        wrapperName
+        nonoProfile
+        nonoProfilePath
+        ;
     };
 
   # Build all agent pairs
@@ -182,91 +238,130 @@ in
     };
 
     agents = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule {
-        options = {
-          command = lib.mkOption {
-            type = lib.types.str;
-            description = "Binary name inside the package (e.g., 'claude' for pkgs.claude-code).";
-          };
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            command = lib.mkOption {
+              type = lib.types.str;
+              description = "Binary name inside the package (e.g., 'claude' for pkgs.claude-code).";
+            };
 
-          package = lib.mkOption {
-            type = lib.types.package;
-            description = "Package providing the agent binary.";
-          };
+            package = lib.mkOption {
+              type = lib.types.package;
+              description = "Package providing the agent binary.";
+            };
 
-          wrapperName = lib.mkOption {
-            type = lib.types.str;
-            description = "Name of the wrapper script installed in PATH.";
-          };
+            wrapperName = lib.mkOption {
+              type = lib.types.str;
+              description = "Name of the wrapper script installed in PATH.";
+            };
 
-          nonoProfile = lib.mkOption {
-            type = lib.types.submodule {
-              options = {
-                extraAllow = lib.mkOption {
-                  type = lib.types.listOf lib.types.str;
-                  default = [];
-                  description = "Additional filesystem.allow directory paths for this agent's nono profile.";
-                };
-                extraAllowFile = lib.mkOption {
-                  type = lib.types.listOf lib.types.str;
-                  default = [];
-                  description = "Additional filesystem.allow_file paths for this agent's nono profile.";
-                };
-                extraDeny = lib.mkOption {
-                  type = lib.types.listOf lib.types.str;
-                  default = [];
-                  description = "Additional filesystem.deny paths for this agent's nono profile.";
+            nonoProfile = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  extraAllow = lib.mkOption {
+                    type = lib.types.listOf lib.types.str;
+                    default = [ ];
+                    description = "Additional filesystem.allow directory paths for this agent's nono profile.";
+                  };
+                  extraAllowFile = lib.mkOption {
+                    type = lib.types.listOf lib.types.str;
+                    default = [ ];
+                    description = "Additional filesystem.allow_file paths for this agent's nono profile.";
+                  };
+                  extraDeny = lib.mkOption {
+                    type = lib.types.listOf lib.types.str;
+                    default = [ ];
+                    description = "Additional filesystem.deny paths for this agent's nono profile.";
+                  };
                 };
               };
+              default = { };
+              description = "Per-agent nono profile overrides (merged on top of the base tsurf profile).";
             };
-            default = {};
-            description = "Per-agent nono profile overrides (merged on top of the base tsurf profile).";
-          };
 
-          credentialServices = lib.mkOption {
-            type = lib.types.listOf lib.types.str;
-            default = [];
-            description = ''
-              Credential service names for nono's built-in reverse proxy (e.g., "anthropic", "openai").
-              Each service maps to a well-known upstream, inject header, env var, and sops secret.
-              Credentials are brokered through nono's phantom token proxy; the child never sees real keys.
-            '';
-          };
+            credentialServices = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = ''
+                Credential service names for nono's built-in reverse proxy (e.g., "anthropic", "openai").
+                Each service maps to a well-known upstream, inject header, env var, and sops secret.
+                Credentials are brokered through nono's phantom token proxy; the child never sees real keys.
+              '';
+            };
 
-          defaultArgs = lib.mkOption {
-            type = lib.types.listOf lib.types.str;
-            default = [];
-            description = "Default CLI arguments prepended to every invocation.";
-          };
+            defaultArgs = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Default CLI arguments prepended to every invocation.";
+            };
 
-          managedSettings = lib.mkOption {
-            type = lib.types.nullOr lib.types.attrs;
-            default = null;
-            description = "Optional managed settings JSON written to /etc/<name>-agent-settings.json.";
-          };
+            managedSettings = lib.mkOption {
+              type = lib.types.nullOr lib.types.attrs;
+              default = null;
+              description = "Optional managed settings JSON written to /etc/<name>-agent-settings.json.";
+            };
 
-          persistence = lib.mkOption {
-            type = lib.types.submodule {
-              options = {
-                directories = lib.mkOption {
-                  type = lib.types.listOf lib.types.str;
-                  default = [];
-                  description = "Relative paths under agent home to persist (directories).";
-                };
-                files = lib.mkOption {
-                  type = lib.types.listOf lib.types.str;
-                  default = [];
-                  description = "Relative paths under agent home to persist (files).";
+            persistence = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  directories = lib.mkOption {
+                    type = lib.types.listOf lib.types.str;
+                    default = [ ];
+                    description = "Relative paths under agent home to persist (directories).";
+                  };
+                  files = lib.mkOption {
+                    type = lib.types.listOf lib.types.str;
+                    default = [ ];
+                    description = "Relative paths under agent home to persist (files).";
+                  };
                 };
               };
+              default = { };
+              description = "Agent-specific persistence paths under the agent home directory.";
             };
-            default = {};
-            description = "Agent-specific persistence paths under the agent home directory.";
           };
-        };
-      });
-      default = {};
+        }
+      );
+      default = { };
       description = "Per-agent sandbox definitions. Each produces a wrapper, launcher, nono profile, and sudo rule.";
+    };
+
+    scopeAccess = lib.mkOption {
+      type = lib.types.enum [
+        "read"
+        "allow"
+      ];
+      default = "read";
+      description = ''
+        How the wrapper grants nono access to the current top-level workspace.
+        "read" is the public default; private overlays may use "allow" when agents
+        are expected to edit the whole current workspace from subdirectories.
+      '';
+    };
+
+    extraReadPaths = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional paths passed to nono with --read for every generated launcher.";
+    };
+
+    extraAllowPaths = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional paths passed to nono with --allow for every generated launcher.";
+    };
+
+    sudoUsers = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ agentCfg.user ];
+      description = "Users allowed to invoke generated immutable launchers through sudo.";
+    };
+
+    sudoGroups = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Groups allowed to invoke generated immutable launchers through sudo.";
     };
   };
 
@@ -278,32 +373,47 @@ in
       (lib.mapAttrsToList (name: pair: {
         "nono/profiles/tsurf-${name}.json".source = pair.nonoProfile;
       }) agentPairs)
-      ++ (lib.mapAttrsToList (name: agentDef:
+      ++ (lib.mapAttrsToList (
+        name: agentDef:
         lib.optionalAttrs (agentDef.managedSettings != null) {
           "${name}-agent-settings.json".text = builtins.toJSON agentDef.managedSettings;
         }
       ) cfg.agents)
     );
 
-    # Sudo rules: allow agent user to invoke each immutable launcher
-    security.sudo.extraRules = lib.mapAttrsToList (_: pair: {
-      users = [ agentCfg.user ];
-      commands = [{
-        command = "${pair.launcher}/bin/${pair.launcherName}";
-        options = [ "NOPASSWD" ];
-      }];
-    }) agentPairs;
+    # Sudo rules: allow configured callers to invoke each immutable launcher.
+    security.sudo.extraRules =
+      lib.mapAttrsToList (_: pair: {
+        users = cfg.sudoUsers;
+        commands = [
+          {
+            command = "${pair.launcher}/bin/${pair.launcherName}";
+            options = [ "NOPASSWD" ];
+          }
+        ];
+      }) agentPairs
+      ++ lib.optionals (cfg.sudoGroups != [ ]) (
+        lib.mapAttrsToList (_: pair: {
+          groups = cfg.sudoGroups;
+          commands = [
+            {
+              command = "${pair.launcher}/bin/${pair.launcherName}";
+              options = [ "NOPASSWD" ];
+            }
+          ];
+        }) agentPairs
+      );
 
     # Per-agent persistence
     environment.persistence."/persist".directories = lib.concatLists (
-      lib.mapAttrsToList (_: agentDef:
-        map (path: "${agentCfg.home}/${path}") agentDef.persistence.directories
+      lib.mapAttrsToList (
+        _: agentDef: map (path: "${agentCfg.home}/${path}") agentDef.persistence.directories
       ) cfg.agents
     );
 
     environment.persistence."/persist".files = lib.concatLists (
-      lib.mapAttrsToList (_: agentDef:
-        map (path: "${agentCfg.home}/${path}") agentDef.persistence.files
+      lib.mapAttrsToList (
+        _: agentDef: map (path: "${agentCfg.home}/${path}") agentDef.persistence.files
       ) cfg.agents
     );
   };

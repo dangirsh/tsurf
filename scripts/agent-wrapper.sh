@@ -14,6 +14,9 @@
 #   AGENT_CREDENTIAL_SECRETS — space-separated "ENV_VAR:secret-file-name" pairs
 #                              ENV_VAR = env var exported for nono's env:// credential proxy
 #                              secret-file-name = filename under /run/secrets/
+#   AGENT_SCOPE_ACCESS       — "read" (default) or "allow" access to the current top-level workspace
+#   AGENT_EXTRA_READ_PATHS   — optional space-separated paths passed to nono with --read
+#   AGENT_EXTRA_ALLOW_PATHS  — optional space-separated paths passed to nono with --allow
 #
 # Launch logging:
 #   Single sink: journald via logger -t agent-launch (root-owned, append-only).
@@ -103,7 +106,30 @@ done
 # Build nono arguments. Credential proxy is configured in the nono profile
 # (custom_credentials with env:// URIs); nono starts the reverse proxy and
 # injects phantom tokens into the child environment automatically.
-nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --read "$workspace_root")
+case "${AGENT_SCOPE_ACCESS:-read}" in
+  read)
+    nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --read "$workspace_root")
+    ;;
+  allow)
+    nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --allow "$workspace_root")
+    ;;
+  *)
+    echo "ERROR: AGENT_SCOPE_ACCESS must be 'read' or 'allow'" >&2
+    exit 1
+    ;;
+esac
+
+IFS=' ' read -ra extra_read_paths <<< "${AGENT_EXTRA_READ_PATHS:-}"
+for path in "${extra_read_paths[@]}"; do
+  [[ -n "$path" ]] || continue
+  nono_args+=(--read "$path")
+done
+
+IFS=' ' read -ra extra_allow_paths <<< "${AGENT_EXTRA_ALLOW_PATHS:-}"
+for path in "${extra_allow_paths[@]}"; do
+  [[ -n "$path" ]] || continue
+  nono_args+=(--allow "$path")
+done
 
 setpriv_bin="$(command -v setpriv)"
 env_bin="$(command -v env)"
