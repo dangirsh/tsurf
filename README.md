@@ -1,6 +1,6 @@
 # tsurf
 
-A security-first, minimal NixOS base for agent-centric personal computing. See [example use cases](#example-use-cases).
+A security-first, minimal [NixOS](https://nixos.org/) base for agent-centric personal computing. See [example use cases](#example-use-cases).
 
 I use tsurf to manage coding/assistant agents across several remote servers. It enables me to rapidly experiment with new tools and approaches in agentic computing, without feeling like [this](https://youtu.be/GFiWEjCedzY?si=BhtI8varawf4qMh-&t=30).
 
@@ -24,20 +24,25 @@ These lead to the following design goals:
 
 ## Core Features
 
-- **Sandboxed agent execution.** Agents run inside a deny-by-default
-  [Landlock](https://landlock.io/) sandbox with restricted filesystem and
+- **Sandboxed agent execution.** Agents run through
+  [nono](https://github.com/always-further/nono), using
+  [Landlock](https://landlock.io/)-backed filesystem rules with restricted
   network access. Real credentials never enter the agent process; a separate
   broker supplies short-lived, per-session tokens.
 - **Declarative agent launcher.** Define a new agent type in a few lines of config
   and get a sandboxed wrapper, credential brokering, resource controls, and
   persistent storage automatically.
-- **Hardened, stateless base.** Kernel hardening, encrypted secrets ([sops](https://github.com/getsops/sops)),
-  strict firewall rules, and a root filesystem that rolls back to a clean
-  snapshot on every boot, so a misbehaving agent (or operator) can't
-  permanently corrupt the system.
+- **Hardened, stateless base.** Kernel hardening with
+  [nix-mineral](https://github.com/cynicsketch/nix-mineral) and
+  [srvos](https://github.com/nix-community/srvos), encrypted secrets via
+  [sops-nix](https://github.com/Mic92/sops-nix) / [sops](https://github.com/getsops/sops),
+  strict firewall rules, and an
+  [impermanence](https://github.com/nix-community/impermanence)-style root
+  filesystem that rolls back to a clean snapshot on every boot.
 - **Deploy safety.** Lockout-prevention assertions catch misconfigurations
   (e.g., missing SSH keys, exposed ports) before they reach a live machine.
-  Deploys are locked, health-checked, and rollback-aware.
+  [deploy-rs](https://github.com/serokell/deploy-rs)-based deploys are locked,
+  health-checked, and rollback-aware.
 - **Public base / private overlay model.** This repo is the reusable
   foundation. Real credentials, host-specific services, and personal config
   live in a separate private repo that imports what it needs.
