@@ -115,7 +115,7 @@ The preferred way to add agents is through the generic launcher. Each agent gets
     command = "claude";
     package = pkgs.claude-code;
     wrapperName = "my-agent";
-    credentials = [ "anthropic:ANTHROPIC_API_KEY:anthropic-api-key" ];
+    credentialServices = [ "anthropic" ];
     defaultArgs = [ "-p" "Your default prompt here" ];
     nonoProfile.extraAllow = [ "/data/projects/my-workspace" ];
   };

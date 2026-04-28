@@ -39,8 +39,8 @@ intended explicit workflow is still:
 5. Import `modules/networking.nix` and `modules/secrets.nix` only after the host
    has the networking and persisted SSH-host-key setup those modules expect.
 6. Deploy from the private overlay with `./scripts/deploy.sh --node <host>`.
-   Use `--first-deploy` for initial migration when you need magic rollback
-   disabled.
+   Magic rollback is enabled by default; use `--first-deploy` for initial
+   migration when rollback cannot be used safely.
 
 ## Public Commands
 

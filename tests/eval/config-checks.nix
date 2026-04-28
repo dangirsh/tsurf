@@ -460,6 +460,14 @@ in
       "deploy.sh sources repo-controlled scripts — remove source calls for deploy-post.sh or similar"
       (!(lib.hasInfix "source \"$FLAKE_DIR" deploySrc));
 
+  deploy-magic-rollback-default =
+    let
+      deploySrc = builtins.readFile ../../scripts/deploy.sh;
+    in
+    mkCheck "deploy-magic-rollback-default" "deploy.sh enables deploy-rs magic rollback by default"
+      "deploy.sh defaulted MAGIC_ROLLBACK away from true"
+      (lib.hasInfix "MAGIC_ROLLBACK=true" deploySrc && lib.hasInfix "--confirm-timeout 300" deploySrc);
+
   # --- Phase 115/152: agent user split ---
 
   agent-user-exists-dev =

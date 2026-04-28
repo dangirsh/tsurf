@@ -135,7 +135,8 @@ Deploy options:
   --fast                      Local build, single evaluation
   --mode local|remote         Override deploy mode
   --first-deploy              Disable magic rollback for initial adoption
-  --magic-rollback            Enable deploy-rs magic rollback
+  --magic-rollback            Enable deploy-rs magic rollback (default)
+  --no-magic-rollback         Disable deploy-rs magic rollback
   --target USER@HOST          Override SSH target for checks/locking
   --node NAME                 Override saved deploy node
 USAGE
@@ -406,7 +407,7 @@ deploy_command() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --fast|--first-deploy|--magic-rollback)
+      --fast|--first-deploy|--magic-rollback|--no-magic-rollback)
         args+=("$1")
         shift
         ;;

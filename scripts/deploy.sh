@@ -10,7 +10,8 @@
 #   --node NAME         Flake node to deploy (required)
 #   --target USER@HOST  Override SSH target for lock/status checks (default: root@<node>)
 #   --first-deploy      Disable magic rollback for initial migration
-#   --magic-rollback    Enable deploy-rs magic rollback with 300s confirm timeout
+#   --magic-rollback    Enable deploy-rs magic rollback with 300s confirm timeout (default)
+#   --no-magic-rollback Disable deploy-rs magic rollback for this deploy
 #   --help              Print usage
 #
 # @decision DEPLOY-114-01: Keep deploy.sh intentionally small: no repo-controlled hooks or alternate reachability probes.
@@ -40,7 +41,7 @@ TARGET_SET=false
 MODE="remote"
 FAST_MODE=false
 FIRST_DEPLOY=false
-MAGIC_ROLLBACK=false
+MAGIC_ROLLBACK=true
 DEPRECATED_FLAGS=()
 SECONDS=0
 
@@ -75,7 +76,8 @@ Options:
   --target U@H          Override SSH target (default: root@<node>)
   --first-deploy        Disable magic rollback for one-time migration
   --fast                Local build, single evaluation (no --remote-build)
-  --magic-rollback      Enable deploy-rs magic rollback (300s confirm timeout)
+  --magic-rollback      Enable deploy-rs magic rollback (default, 300s confirm timeout)
+  --no-magic-rollback   Disable deploy-rs magic rollback for this deploy
   --update-inputs       Deprecated; update flake inputs explicitly before deploy
   --help                Show this help
 
@@ -102,7 +104,7 @@ while [[ $# -gt 0 ]]; do
     --fast)        FAST_MODE=true;    shift ;;
     --first-deploy) FIRST_DEPLOY=true; shift ;;
     --magic-rollback) MAGIC_ROLLBACK=true; shift ;;
-    --no-magic-rollback) shift ;;  # deprecated no-op
+    --no-magic-rollback) MAGIC_ROLLBACK=false; shift ;;
     --update-inputs) DEPRECATED_FLAGS+=("$1"); shift ;;
     --skip-update) DEPRECATED_FLAGS+=("$1"); shift ;;
     --help)        usage; exit 0 ;;

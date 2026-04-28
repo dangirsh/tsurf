@@ -41,7 +41,7 @@ caller
     -> sudo immutable launcher
       -> systemd-run transient unit
         -> scripts/agent-wrapper.sh
-          -> root-owned credential proxy
+          -> nono's built-in credential proxy
           -> nono sandbox
           -> setpriv drop to the configured agent user
           -> real agent binary
