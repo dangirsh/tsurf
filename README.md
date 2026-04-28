@@ -18,7 +18,7 @@ The core assumptions behind tsurf are:
 
 These lead to the following design goals:
 
-1. **Optimize the operating system for use by agents**. Human use is always expected to be agent-mediated.
+1. **Optimize the operating system for use by agents**. Human-use is always expected to be agent-mediated.
 2. Support the effective management of **many agents across several machines**. The bottleneck should be compute/token costs, not management complexity.
 3. Always deploy agents with **[least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege)** and **[defense-in-depth](https://www.cyberark.com/what-is/defense-in-depth/)** to mitigate the risks of compromised/misaligned agents.
 
