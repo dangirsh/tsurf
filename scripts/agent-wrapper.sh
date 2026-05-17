@@ -41,6 +41,10 @@ NPM_MIN_RELEASE_AGE_DAYS=1440 # ~4 years; supply chain hardening (Trail of Bits)
 : "${AGENT_RUN_AS_HOME:?must be set}"
 : "${AGENT_CHILD_PATH:?must be set}"
 
+export HOME="$AGENT_RUN_AS_HOME"
+export USER="$AGENT_RUN_AS_USER"
+export LOGNAME="$AGENT_RUN_AS_USER"
+
 case "$AGENT_REAL_BINARY" in
   /nix/store/*) ;;
   *)

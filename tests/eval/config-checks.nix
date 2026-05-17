@@ -850,6 +850,19 @@ in
       "agent-wrapper.sh missing /nix/store guard for AGENT_REAL_BINARY"
       (lib.hasInfix "/nix/store" source && lib.hasInfix "AGENT_REAL_BINARY must be in /nix/store" source);
 
+  wrapper-sets-agent-env-for-nono =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck "wrapper-sets-agent-env-for-nono"
+      "agent-wrapper.sh exports agent HOME before invoking nono"
+      "agent-wrapper.sh leaves HOME unset for nono profile validation"
+      (
+        lib.hasInfix ''export HOME="$AGENT_RUN_AS_HOME"'' source
+        && lib.hasInfix ''export USER="$AGENT_RUN_AS_USER"'' source
+        && lib.hasInfix ''export LOGNAME="$AGENT_RUN_AS_USER"'' source
+      );
+
   wrapper-credential-proxy-flow =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
