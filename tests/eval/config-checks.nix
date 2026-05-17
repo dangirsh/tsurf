@@ -942,6 +942,15 @@ in
         && lib.hasInfix "AGENT_EXTRA_READ_PATHS" wrapperSource
       );
 
+  launcher-nono-profile-path =
+    let
+      source = builtins.readFile ../../modules/agent-launcher.nix;
+    in
+    mkCheck "launcher-nono-profile-path"
+      "agent launcher passes NONO_PROFILE_PATH into transient systemd units"
+      "agent launcher does not pass NONO_PROFILE_PATH, so per-agent profiles cannot extend the base tsurf profile"
+      (lib.hasInfix ''--setenv=NONO_PROFILE_PATH="/etc/nono/profiles"'' source);
+
   launcher-extra-deny-propagates =
     let
       profile =

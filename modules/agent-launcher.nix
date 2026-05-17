@@ -177,6 +177,7 @@ let
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
             --setenv=AGENT_EXTRA_READ_PATHS="$AGENT_EXTRA_READ_PATHS" \
             --setenv=AGENT_EXTRA_ALLOW_PATHS="$AGENT_EXTRA_ALLOW_PATHS" \
+            --setenv=NONO_PROFILE_PATH="/etc/nono/profiles" \
             --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
             --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
             --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \
