@@ -151,7 +151,7 @@ let
             --property=CPUQuota=200% \
             --property=TasksMax=256 \
             --property=NoNewPrivileges=true \
-            --property=CapabilityBoundingSet=CAP_SETUID CAP_SETGID \
+            "--property=CapabilityBoundingSet=CAP_SETUID CAP_SETGID" \
             --property=OOMScoreAdjust=500 \
             --property=LimitNOFILE=512 \
             --property=LimitFSIZE=2G \

@@ -981,7 +981,7 @@ in
     mkCheck "launcher-can-drop-agent-uid"
       "agent launcher keeps only CAP_SETUID/CAP_SETGID so wrappers can drop to the agent UID"
       "agent launcher strips the capabilities needed for setpriv to drop to the agent UID"
-      (lib.hasInfix "--property=CapabilityBoundingSet=CAP_SETUID CAP_SETGID" source);
+      (lib.hasInfix ''"--property=CapabilityBoundingSet=CAP_SETUID CAP_SETGID"'' source);
 
   launcher-persistence-dedupes =
     let
