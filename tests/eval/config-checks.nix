@@ -468,6 +468,19 @@ in
       "deploy.sh defaulted MAGIC_ROLLBACK away from true"
       (lib.hasInfix "MAGIC_ROLLBACK=true" deploySrc && lib.hasInfix "--confirm-timeout 300" deploySrc);
 
+  deploy-remote-detached-mode =
+    let
+      deploySrc = builtins.readFile ../../scripts/deploy.sh;
+    in
+    mkCheck "deploy-remote-detached-mode" "deploy.sh has a detached remote activation mode"
+      "deploy.sh is missing remote-detached mode for hosts with unreliable long SSH sessions"
+      (
+        lib.hasInfix "remote-detached" deploySrc
+        && lib.hasInfix "systemd-run --unit=" deploySrc
+        && lib.hasInfix "deploy-rs-activate" deploySrc
+        && lib.hasInfix "rollback_old_system" deploySrc
+      );
+
   # --- Phase 115/152: agent user split ---
 
   agent-user-exists-dev =

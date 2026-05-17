@@ -133,7 +133,8 @@ Init options:
 
 Deploy options:
   --fast                      Local build, single evaluation
-  --mode local|remote         Override deploy mode
+  --mode local|remote|remote-detached
+                              Override deploy mode
   --first-deploy              Disable magic rollback for initial adoption
   --magic-rollback            Enable deploy-rs magic rollback (default)
   --no-magic-rollback         Disable deploy-rs magic rollback

@@ -84,6 +84,11 @@ produce it is `./scripts/run-tests.sh`.
   private-overlay `tsurf.url` input.
 - The script adds a remote lock, runs `deploy-rs`, and performs post-deploy SSH
   and service checks.
+- For flaky public SSH paths, use `--mode remote-detached`. It copies the
+  deploy-rs activation derivation to the target, starts the build and activation
+  under `systemd-run`, and polls a host-side log. The remote unit owns lock
+  cleanup and rolls back to the previous system if configured service checks
+  fail after activation.
 - Normal deploys should use the private-overlay script, not
   `nixos-rebuild switch`.
 
