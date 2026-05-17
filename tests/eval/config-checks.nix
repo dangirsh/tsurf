@@ -401,9 +401,11 @@ in
       "nono profile deny list is missing /run/secrets"
       (
         let
-          profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
+          baseProfile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
+          claudeProfile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
         in
-        builtins.elem "/run/secrets" profile.filesystem.deny
+        builtins.elem "/run/secrets" baseProfile.filesystem.deny
+        && builtins.elem "/run/secrets" claudeProfile.filesystem.deny
       );
 
   nono-base-profile-generic =
@@ -437,7 +439,10 @@ in
       "Claude wrapper adds only the Claude-specific state paths on top of the base profile"
       "generated tsurf-claude nono profile is missing Claude state paths after the base-profile simplification"
       (
-        builtins.elem "${home}/.claude" allow
+        !(builtins.hasAttr "extends" profile)
+        && builtins.elem "/etc/ssl" allow
+        && builtins.elem "/run/secrets" profile.filesystem.deny
+        && builtins.elem "${home}/.claude" allow
         && builtins.elem "${home}/.config/claude" allow
         && builtins.elem "${home}/.claude.json" allowFile
         && builtins.elem "${home}/.claude.json.lock" allowFile
@@ -941,15 +946,6 @@ in
         && lib.hasInfix "AGENT_SCOPE_ACCESS" wrapperSource
         && lib.hasInfix "AGENT_EXTRA_READ_PATHS" wrapperSource
       );
-
-  launcher-nono-profile-path =
-    let
-      source = builtins.readFile ../../modules/agent-launcher.nix;
-    in
-    mkCheck "launcher-nono-profile-path"
-      "agent launcher passes NONO_PROFILE_PATH into transient systemd units"
-      "agent launcher does not pass NONO_PROFILE_PATH, so per-agent profiles cannot extend the base tsurf profile"
-      (lib.hasInfix ''--setenv=NONO_PROFILE_PATH="/etc/nono/profiles"'' source);
 
   launcher-persistence-dedupes =
     let

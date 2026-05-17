@@ -78,44 +78,36 @@ let
         ) agentDef.credentialServices
       );
 
-      # Merge nono profile: extend base tsurf profile with agent-specific overrides
+      # Merge the base tsurf profile into each generated profile. nono 0.22
+      # resolves "extends" through its user profile registry, not by sibling file
+      # lookup, so NixOS-installed agent profiles must be self-contained.
       nonoProfileName = "tsurf-${name}";
       hasCredentials = agentDef.credentialServices != [ ];
+      baseNonoProfile = builtins.fromJSON config.environment.etc."nono/profiles/tsurf.json".text;
+      baseFilesystem = baseNonoProfile.filesystem or { };
+      baseNetwork = baseNonoProfile.network or { };
       nonoProfile = builtins.toJSON (
-        {
-          extends = "tsurf";
+        baseNonoProfile
+        // {
           meta = {
             inherit name;
             version = "1.0.0";
             description = "tsurf ${name} sandbox profile";
             author = "tsurf";
           };
-        }
-        //
-          lib.optionalAttrs
-            (
-              agentDef.nonoProfile.extraAllow != [ ]
-              || agentDef.nonoProfile.extraAllowFile != [ ]
-              || agentDef.nonoProfile.extraDeny != [ ]
-            )
-            {
-              filesystem =
-                { }
-                // lib.optionalAttrs (agentDef.nonoProfile.extraAllow != [ ]) {
-                  allow = agentDef.nonoProfile.extraAllow;
-                }
-                // lib.optionalAttrs (agentDef.nonoProfile.extraAllowFile != [ ]) {
-                  allow_file = agentDef.nonoProfile.extraAllowFile;
-                }
-                // lib.optionalAttrs (agentDef.nonoProfile.extraDeny != [ ]) {
-                  deny = agentDef.nonoProfile.extraDeny;
-                };
-            }
-        // lib.optionalAttrs hasCredentials {
-          network = {
-            credentials = agentDef.credentialServices;
-            custom_credentials = credentialDefs;
+          filesystem = baseFilesystem // {
+            allow = lib.unique ((baseFilesystem.allow or [ ]) ++ agentDef.nonoProfile.extraAllow);
+            allow_file = lib.unique (
+              (baseFilesystem.allow_file or [ ]) ++ agentDef.nonoProfile.extraAllowFile
+            );
+            deny = lib.unique ((baseFilesystem.deny or [ ]) ++ agentDef.nonoProfile.extraDeny);
           };
+          network =
+            baseNetwork
+            // lib.optionalAttrs hasCredentials {
+              credentials = agentDef.credentialServices;
+              custom_credentials = credentialDefs;
+            };
         }
       );
 
@@ -177,7 +169,6 @@ let
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
             --setenv=AGENT_EXTRA_READ_PATHS="$AGENT_EXTRA_READ_PATHS" \
             --setenv=AGENT_EXTRA_ALLOW_PATHS="$AGENT_EXTRA_ALLOW_PATHS" \
-            --setenv=NONO_PROFILE_PATH="/etc/nono/profiles" \
             --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
             --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
             --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \
