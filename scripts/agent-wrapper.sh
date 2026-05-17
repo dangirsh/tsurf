@@ -137,6 +137,46 @@ done
 
 setpriv_bin="$(command -v setpriv)"
 env_bin="$(command -v env)"
+nono_bin="$(command -v nono)"
+agent_env=(
+  "HOME=$AGENT_RUN_AS_HOME"
+  "USER=$AGENT_RUN_AS_USER"
+  "LOGNAME=$AGENT_RUN_AS_USER"
+  "PATH=$AGENT_CHILD_PATH"
+)
+if [[ -n "${TERM:-}" ]]; then
+  agent_env+=("TERM=$TERM")
+fi
+if [[ -n "${LANG:-}" ]]; then
+  agent_env+=("LANG=$LANG")
+fi
+# Agent managed settings: defense-in-depth deny rules
+if [[ -f "/etc/${AGENT_NAME}-agent-settings.json" ]]; then
+  agent_env+=("CLAUDE_CODE_MANAGED_SETTINGS_FILE=/etc/${AGENT_NAME}-agent-settings.json")
+fi
+# Supply chain hardening (ecosystem review: Trail of Bits devcontainer pattern)
+agent_env+=("NPM_CONFIG_IGNORE_SCRIPTS=true")
+agent_env+=("NPM_CONFIG_AUDIT=true")
+agent_env+=("NPM_CONFIG_SAVE_EXACT=true")
+agent_env+=("NPM_CONFIG_MINIMUM_RELEASE_AGE=${NPM_MIN_RELEASE_AGE_DAYS}")
+agent_env+=("PYTHONDONTWRITEBYTECODE=1")
+# Telemetry suppression (ecosystem review: Trail of Bits config pattern)
+agent_env+=("DISABLE_TELEMETRY=1")
+agent_env+=("DISABLE_ERROR_REPORTING=1")
+agent_env+=("CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1")
+
+if ((${#cred_pairs[@]} == 0)); then
+  nono_args+=(-- "$AGENT_REAL_BINARY" "$@")
+  journal_log "sandboxed"
+  exec "$setpriv_bin" \
+    --reuid "$AGENT_RUN_AS_UID" \
+    --regid "$AGENT_RUN_AS_GID" \
+    --init-groups \
+    --reset-env \
+    "$env_bin" "${agent_env[@]}" \
+    "$nono_bin" "${nono_args[@]}"
+fi
+
 child_args=(
   "$setpriv_bin"
   --reuid "$AGENT_RUN_AS_UID"
@@ -144,34 +184,11 @@ child_args=(
   --init-groups
   --reset-env
   "$env_bin"
-  "HOME=$AGENT_RUN_AS_HOME"
-  "USER=$AGENT_RUN_AS_USER"
-  "LOGNAME=$AGENT_RUN_AS_USER"
-  "PATH=$AGENT_CHILD_PATH"
+  "${agent_env[@]}"
+  "$AGENT_REAL_BINARY"
+  "$@"
 )
-if [[ -n "${TERM:-}" ]]; then
-  child_args+=("TERM=$TERM")
-fi
-if [[ -n "${LANG:-}" ]]; then
-  child_args+=("LANG=$LANG")
-fi
-# Agent managed settings: defense-in-depth deny rules
-if [[ -f "/etc/${AGENT_NAME}-agent-settings.json" ]]; then
-  child_args+=("CLAUDE_CODE_MANAGED_SETTINGS_FILE=/etc/${AGENT_NAME}-agent-settings.json")
-fi
-# Supply chain hardening (ecosystem review: Trail of Bits devcontainer pattern)
-child_args+=("NPM_CONFIG_IGNORE_SCRIPTS=true")
-child_args+=("NPM_CONFIG_AUDIT=true")
-child_args+=("NPM_CONFIG_SAVE_EXACT=true")
-child_args+=("NPM_CONFIG_MINIMUM_RELEASE_AGE=${NPM_MIN_RELEASE_AGE_DAYS}")
-child_args+=("PYTHONDONTWRITEBYTECODE=1")
-# Telemetry suppression (ecosystem review: Trail of Bits config pattern)
-child_args+=("DISABLE_TELEMETRY=1")
-child_args+=("DISABLE_ERROR_REPORTING=1")
-child_args+=("CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1")
-
-child_args+=("$AGENT_REAL_BINARY" "$@")
 
 nono_args+=(-- "${child_args[@]}")
 journal_log "sandboxed"
-nono "${nono_args[@]}"
+exec "$nono_bin" "${nono_args[@]}"

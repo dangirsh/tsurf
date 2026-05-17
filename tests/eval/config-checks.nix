@@ -863,6 +863,20 @@ in
         && lib.hasInfix ''export LOGNAME="$AGENT_RUN_AS_USER"'' source
       );
 
+  wrapper-no-credential-drop-before-nono =
+    let
+      source = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck "wrapper-no-credential-drop-before-nono"
+      "agent-wrapper.sh drops to the agent UID before nono when no root-brokered credentials are needed"
+      "agent-wrapper.sh applies nono before setpriv even for no-credential subscription-auth agents"
+      (
+        lib.hasInfix "cred_pairs[@]" source
+        && lib.hasInfix "== 0" source
+        && lib.hasInfix "nono_args[@]" source
+        && lib.hasInfix ''--reuid "$AGENT_RUN_AS_UID"'' source
+      );
+
   wrapper-credential-proxy-flow =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
