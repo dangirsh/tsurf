@@ -49,6 +49,11 @@ SECONDS=0
 # Keep the socket path short enough for macOS' Unix socket limit.
 SSH_CTL="/tmp/tsurf-deploy-%C"
 SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$SSH_CTL" -o "ControlPersist=60s")
+SSH_EXTRA_OPTS=()
+if [[ -n "${TSURF_DEPLOY_SSH_OPTS:-}" ]]; then
+  read -r -a SSH_EXTRA_OPTS <<<"${TSURF_DEPLOY_SSH_OPTS}"
+  SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
+fi
 
 # Remote deploy lock (prevents concurrent deploys from any machine).
 REMOTE_LOCK_DIR=""
@@ -188,6 +193,9 @@ DEPLOY_ARGS=(
   --skip-checks
   --fast-connection true
 )
+if (( ${#SSH_EXTRA_OPTS[@]} > 0 )); then
+  DEPLOY_ARGS+=(--ssh-opts "${TSURF_DEPLOY_SSH_OPTS}")
+fi
 if [[ "$MAGIC_ROLLBACK" == true && "$FIRST_DEPLOY" != true ]]; then
   DEPLOY_ARGS+=(--confirm-timeout 300)
   echo "==> Magic rollback enabled (300s confirm timeout)."
@@ -219,6 +227,9 @@ fi
 
 # --- Service verification ---
 SYSTEMD_SERVICES=("sshd" "nftables")
+if [[ -n "${TSURF_DEPLOY_VERIFY_SERVICES:-}" ]]; then
+  read -r -a SYSTEMD_SERVICES <<<"${TSURF_DEPLOY_VERIFY_SERVICES}"
+fi
 echo "==> Verifying services..."
 FAILED=0
 for s in "${SYSTEMD_SERVICES[@]}"; do
@@ -232,7 +243,13 @@ done
 # --- SSH connectivity check ---
 # @decision DEPLOY-04: Use non-multiplexed connections to test real SSH paths.
 echo "==> Verifying remote access..."
-if ssh -o ConnectTimeout=15 -o BatchMode=yes -o ControlPath=none "$TARGET" \
+REMOTE_ACCESS_SSH_OPTS=(-o BatchMode=yes -o ControlPath=none)
+if (( ${#SSH_EXTRA_OPTS[@]} == 0 )); then
+  REMOTE_ACCESS_SSH_OPTS+=(-o ConnectTimeout=15)
+else
+  REMOTE_ACCESS_SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
+fi
+if ssh "${REMOTE_ACCESS_SSH_OPTS[@]}" "$TARGET" \
     "systemctl is-active --quiet sshd.service" 2>/dev/null; then
   echo "  Deploy target ($TARGET): SSH OK"
 else
