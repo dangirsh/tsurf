@@ -404,16 +404,16 @@ in
       );
 
     # Per-agent persistence
-    environment.persistence."/persist".directories = lib.concatLists (
+    environment.persistence."/persist".directories = lib.unique (lib.concatLists (
       lib.mapAttrsToList (
         _: agentDef: map (path: "${agentCfg.home}/${path}") agentDef.persistence.directories
       ) cfg.agents
-    );
+    ));
 
-    environment.persistence."/persist".files = lib.concatLists (
+    environment.persistence."/persist".files = lib.unique (lib.concatLists (
       lib.mapAttrsToList (
         _: agentDef: map (path: "${agentCfg.home}/${path}") agentDef.persistence.files
       ) cfg.agents
-    );
+    ));
   };
 }

@@ -951,6 +951,18 @@ in
       "agent launcher does not pass NONO_PROFILE_PATH, so per-agent profiles cannot extend the base tsurf profile"
       (lib.hasInfix ''--setenv=NONO_PROFILE_PATH="/etc/nono/profiles"'' source);
 
+  launcher-persistence-dedupes =
+    let
+      source = builtins.readFile ../../modules/agent-launcher.nix;
+    in
+    mkCheck "launcher-persistence-dedupes"
+      "agent launcher deduplicates shared persistence paths across wrappers"
+      "agent launcher can emit duplicate environment.persistence paths when two wrappers share auth state"
+      (
+        lib.hasInfix ''environment.persistence."/persist".directories = lib.unique'' source
+        && lib.hasInfix ''environment.persistence."/persist".files = lib.unique'' source
+      );
+
   launcher-extra-deny-propagates =
     let
       profile =
