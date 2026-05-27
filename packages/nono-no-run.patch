@@ -1,0 +1,7 @@
+diff --git a/crates/nono-cli/data/policy.json b/crates/nono-cli/data/policy.json
+index 590b76b..e241a4b 100644
+--- a/crates/nono-cli/data/policy.json
++++ b/crates/nono-cli/data/policy.json
+@@ -250,2 +249,0 @@
+-          "/run",
+-          "/var/run",

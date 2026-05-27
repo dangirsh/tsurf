@@ -369,6 +369,22 @@ in
         && lib.hasInfix "--help" source
       );
 
+  nono-package-has-tsurf-patches =
+    let
+      source = builtins.readFile ../../packages/nono.nix;
+      envPatch = builtins.readFile ../../packages/nono-env-uri.patch;
+      runPatch = builtins.readFile ../../packages/nono-no-run.patch;
+    in
+    mkCheck "nono-package-has-tsurf-patches" "nono source build carries tsurf credential and /run policy patches"
+      "packages/nono.nix must keep env:// custom_credentials validation and remove upstream /run read grants"
+      (
+        lib.hasInfix "./nono-env-uri.patch" source
+        && lib.hasInfix "./nono-no-run.patch" source
+        && lib.hasInfix "nono::keystore::is_env_uri" envPatch
+        && lib.hasInfix ''-          "/run",'' runPatch
+        && lib.hasInfix ''-          "/var/run",'' runPatch
+      );
+
   proxy-credential-profile =
     let
       profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
@@ -455,7 +471,11 @@ in
     mkCheck "agent-launcher-extra-deny-wired"
       "agent-launcher wires per-agent extraDeny entries into generated nono profiles"
       "modules/agent-launcher.nix defines extraDeny but does not merge it into filesystem.deny"
-      (lib.hasInfix "deny = agentDef.nonoProfile.extraDeny;" source);
+      (
+        lib.hasInfix "agentDef.nonoProfile.extraDeny" source
+        && lib.hasInfix "baseFilesystem.deny" source
+        && lib.hasInfix "lib.unique" source
+      );
 
   deploy-no-repo-source =
     let
@@ -617,7 +637,11 @@ in
     in
     mkCheck "launcher-extra-deny" "agent-launcher.nix merges per-agent nonoProfile.extraDeny rules"
       "agent-launcher.nix defines extraDeny but does not write deny rules into generated profiles"
-      (lib.hasInfix "extraDeny" source && lib.hasInfix "deny = agentDef.nonoProfile.extraDeny;" source);
+      (
+        lib.hasInfix "agentDef.nonoProfile.extraDeny" source
+        && lib.hasInfix "baseFilesystem.deny" source
+        && lib.hasInfix "lib.unique" source
+      );
 
   # --- Phase 120: agent API key ownership (SEC-04) ---
 
@@ -936,8 +960,9 @@ in
       "agent-launcher.nix propagates per-agent nonoProfile.extraDeny into generated profiles"
       "agent-launcher.nix declares extraDeny but does not render filesystem.deny overrides"
       (
-        lib.hasInfix "agentDef.nonoProfile.extraDeny != []" source
-        && lib.hasInfix "deny = agentDef.nonoProfile.extraDeny;" source
+        lib.hasInfix "agentDef.nonoProfile.extraDeny" source
+        && lib.hasInfix "baseFilesystem.deny" source
+        && lib.hasInfix "lib.unique" source
       );
 
   no-systemd-initrd =

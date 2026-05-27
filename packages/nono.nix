@@ -3,16 +3,24 @@
 #   The nono-cli crate produces the nono binary, keeping the sandbox enforcer in the
 #   launch path reproducible from pinned source.
 { pkgs }:
+let
+  upstreamVersion = "0.22.0";
+in
 pkgs.rustPlatform.buildRustPackage rec {
   pname = "nono";
-  version = "0.22.0";
+  version = "${upstreamVersion}-tsurf.1";
 
   src = pkgs.fetchFromGitHub {
     owner = "always-further";
     repo = "nono";
-    rev = "v${version}";
+    rev = "v${upstreamVersion}";
     hash = "sha256-O+zUbJja5SLeikYfIHp17zkAoyCSMnV4tm0U3oi0NfI=";
   };
+
+  patches = [
+    ./nono-env-uri.patch
+    ./nono-no-run.patch
+  ];
 
   cargoHash = "sha256-QnopMhmWHn5aFqlk3xWr79jVPjz1keI5B7t1rxfdXpE=";
   cargoBuildFlags = [
