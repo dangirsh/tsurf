@@ -60,6 +60,7 @@ let
           lib.nameValuePair svc {
             upstream = defaults.upstream;
             credential_key = "env://${defaults.envVar}";
+            env_var = defaults.envVar;
             inject_mode = "header";
             inject_header = defaults.injectHeader;
             credential_format = defaults.credentialFormat;

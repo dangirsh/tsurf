@@ -410,6 +410,7 @@ in
         builtins.elem "anthropic" creds
         && builtins.hasAttr "anthropic" customCreds
         && lib.hasPrefix "env://" customCreds.anthropic.credential_key
+        && customCreds.anthropic.env_var == "ANTHROPIC_API_KEY"
       );
 
   nono-profile-denies-run-secrets =
@@ -623,10 +624,11 @@ in
     in
     mkCheck "launcher-credential-proxy"
       "agent-launcher.nix generates nono custom_credentials with env:// URIs for credential proxy"
-      "agent-launcher.nix missing custom_credentials or env:// wiring — credential proxy not configured"
+      "agent-launcher.nix missing custom_credentials, env://, or env_var wiring — credential proxy not configured"
       (
         lib.hasInfix "custom_credentials" source
         && lib.hasInfix "env://" source
+        && lib.hasInfix "env_var" source
         && lib.hasInfix "credentialServices" source
         && !lib.hasInfix "credential-proxy.py" source
       );
