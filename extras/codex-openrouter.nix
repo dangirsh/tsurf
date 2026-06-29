@@ -190,6 +190,7 @@ let
               -c "model_provider=\"$provider_id\"" \
               -c "model_providers.$provider_id.name=\"$provider_name\"" \
               -c "model_providers.$provider_id.base_url=\"$OPENROUTER_BASE_URL\"" \
+              -c "model_providers.$provider_id.wire_api=\"responses\"" \
               -c "model_providers.$provider_id.env_key=\"NONO_PROXY_TOKEN\"" \
               "$@"
       '

@@ -449,6 +449,7 @@ in
         && openrouter.env_var == "OPENROUTER_API_KEY"
         && openRouterCfg.sops.secrets."openrouter-api-key".owner == "root"
         && lib.hasInfix "NONO_PROXY_TOKEN" source
+        && lib.hasInfix "wire_api=\\\"responses\\\"" source
         && lib.hasInfix "--credential openrouter" source
       );
 
