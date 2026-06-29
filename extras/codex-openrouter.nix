@@ -135,8 +135,10 @@ let
       export OPENROUTER_API_KEY="$secret_value"
 
       codex_home="${codexHome}"
-      install -d -m 700 "$codex_home"
-      chown "$AGENT_RUN_AS_UID:$AGENT_RUN_AS_GID" "$codex_home"
+      if [[ ! -d "$codex_home" ]]; then
+        echo "ERROR: missing OpenRouter Codex state directory: $codex_home" >&2
+        exit 1
+      fi
 
       case "''${AGENT_SCOPE_ACCESS:-read}" in
         read)
@@ -373,6 +375,7 @@ in
 
     environment.systemPackages = [ wrapper ];
     environment.etc."nono/profiles/${profileName}.json".text = nonoProfile;
+    systemd.tmpfiles.rules = [ "d ${codexHome} 0700 ${agentCfg.user} ${agentCfg.user} -" ];
 
     security.sudo.extraRules = [
       {
