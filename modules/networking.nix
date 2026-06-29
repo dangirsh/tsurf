@@ -16,6 +16,7 @@ let
   ) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;
   allowedAgentTcpPorts = lib.concatStringsSep ", " (map toString egressCfg.allowedTCPPorts);
+  blockedAgentLoopbackTcpPorts = lib.concatStringsSep ", " (map toString egressCfg.blockedLoopbackTCPPorts);
   blockedAgentIpv4Cidrs = lib.concatStringsSep ", " egressCfg.blockedIPv4Cidrs;
   blockedAgentIpv6Cidrs = lib.concatStringsSep ", " egressCfg.blockedIPv6Cidrs;
 in
@@ -39,6 +40,12 @@ in
       type = lib.types.bool;
       default = true;
       description = "Allow outbound DNS (TCP/UDP 53) for the agent user.";
+    };
+
+    blockedLoopbackTCPPorts = lib.mkOption {
+      type = lib.types.listOf lib.types.port;
+      default = [ 8384 ];
+      description = "Loopback TCP destination ports agents may not reach. Defaults to Syncthing's GUI/API port.";
     };
 
     blockPrivateRanges = lib.mkOption {
@@ -107,9 +114,18 @@ in
             type inet_service;
             elements = { ${allowedAgentTcpPorts} }
           }
+        ${lib.optionalString (egressCfg.blockedLoopbackTCPPorts != [ ]) ''
+          set tsurf_agent_blocked_loopback_tcp_ports {
+            type inet_service;
+            elements = { ${blockedAgentLoopbackTcpPorts} }
+          }
+        ''}
 
           chain output {
             type filter hook output priority 0; policy accept;
+          ${lib.optionalString (egressCfg.blockedLoopbackTCPPorts != [ ]) ''
+            meta skuid ${toString agentCfg.uid} oifname "lo" tcp dport @tsurf_agent_blocked_loopback_tcp_ports drop
+          ''}
             meta skuid ${toString agentCfg.uid} oifname "lo" accept
           ${lib.optionalString egressCfg.allowDns ''
             meta skuid ${toString agentCfg.uid} udp dport 53 accept
