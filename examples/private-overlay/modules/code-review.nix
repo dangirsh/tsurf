@@ -6,9 +6,14 @@
 # Prerequisites:
 #   - Import agent-launcher.nix, agent-compute.nix, nono.nix in your host config
 #   - sops secret "anthropic-api-key" configured
-#   - A git repo at /data/projects/my-project
+#   - Run from a git repo under config.tsurf.agent.projectRoot
 { config, pkgs, ... }:
 {
+  # The wrapper grants write access only to the current top-level workspace,
+  # derived from WorkingDirectory. Avoid static extraAllow paths that remain
+  # writable when the wrapper is launched from a different repo.
+  services.agentLauncher.scopeAccess = "allow";
+
   # Register a custom agent via the generic launcher
   services.agentLauncher.agents.code-review = {
     command = "claude";
@@ -18,9 +23,6 @@
     defaultArgs = [
       "-p"
       "Review the git log for the last 24 hours. Summarize changes, flag potential issues, and write a brief report to ./REVIEW.md."
-    ];
-    nonoProfile.extraAllow = [
-      "/data/projects/my-project"
     ];
   };
 

@@ -59,6 +59,8 @@
         # agent-compute.nix: tsurf-agents.slice cgroup limits and /data/projects persistence
         "${inputs.tsurf}/modules/agent-compute.nix"
         { services.agentCompute.enable = true; }
+        # networking.nix: host-level firewall and dedicated-agent egress policy
+        "${inputs.tsurf}/modules/networking.nix"
         # nono.nix: nono binary, tsurf base profile, NONO_PROFILE_PATH
         "${inputs.tsurf}/modules/nono.nix"
         { services.nonoSandbox.enable = true; }
@@ -73,8 +75,6 @@
         # "${inputs.tsurf}/extras/restic.nix"
         # Home Manager profile opt-in pattern (per host):
         # { home-manager.users.agent = import "${inputs.tsurf}/extras/home"; }
-
-        # Import networking.nix after configuring Tailscale/headscale, SSH host keys, and impermanence.
         # Import secrets.nix after creating your encrypted secrets file, or write your own secrets module.
       ];
     in

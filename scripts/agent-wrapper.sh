@@ -14,6 +14,7 @@
 #   AGENT_CREDENTIAL_SECRETS — space-separated "ENV_VAR:secret-file-name" pairs
 #                              ENV_VAR = env var exported for nono's env:// credential proxy
 #                              secret-file-name = filename under /run/secrets/
+#   AGENT_CREDENTIAL_SERVICES — space-separated nono credential names to enable
 #   AGENT_SCOPE_ACCESS       — "read" (default) or "allow" access to the current top-level workspace
 #   AGENT_EXTRA_READ_PATHS   — optional space-separated paths passed to nono with --read
 #   AGENT_EXTRA_ALLOW_PATHS  — optional space-separated paths passed to nono with --allow
@@ -110,12 +111,19 @@ done
 # Build nono arguments. Credential proxy is configured in the nono profile
 # (custom_credentials with env:// URIs); nono starts the reverse proxy and
 # injects phantom tokens into the child environment automatically.
+nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback)
+IFS=' ' read -ra credential_services <<< "${AGENT_CREDENTIAL_SERVICES:-}"
+for service in "${credential_services[@]}"; do
+  [[ -n "$service" ]] || continue
+  nono_args+=(--credential "$service")
+done
+
 case "${AGENT_SCOPE_ACCESS:-read}" in
   read)
-    nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --read "$workspace_root")
+    nono_args+=(--read "$workspace_root")
     ;;
   allow)
-    nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --allow "$workspace_root")
+    nono_args+=(--allow "$workspace_root")
     ;;
   *)
     echo "ERROR: AGENT_SCOPE_ACCESS must be 'read' or 'allow'" >&2
@@ -138,6 +146,7 @@ done
 setpriv_bin="$(command -v setpriv)"
 env_bin="$(command -v env)"
 nono_bin="$(command -v nono)"
+bash_bin="$(command -v bash)"
 agent_env=(
   "HOME=$AGENT_RUN_AS_HOME"
   "USER=$AGENT_RUN_AS_USER"
@@ -177,18 +186,70 @@ if ((${#cred_pairs[@]} == 0)); then
     "$nono_bin" "${nono_args[@]}"
 fi
 
-child_args=(
+credential_env_names=()
+for pair in "${cred_pairs[@]}"; do
+  [[ -n "$pair" ]] || continue
+  IFS=: read -r env_var _secret_name <<< "$pair"
+  [[ -n "$env_var" ]] || continue
+  credential_env_names+=("$env_var")
+  if [[ "$env_var" == *_API_KEY ]]; then
+    credential_env_names+=("${env_var%_API_KEY}_BASE_URL")
+  fi
+done
+credential_env_names_str="${credential_env_names[*]}"
+
+child_script='
+  set -euo pipefail
+
+  setpriv_bin="$1"
+  env_bin="$2"
+  real_binary="$3"
+  run_uid="$4"
+  run_gid="$5"
+  credential_env_names="$6"
+  shift 6
+
+  agent_env=()
+  while [[ "$#" -gt 0 && "$1" != "--" ]]; do
+    agent_env+=("$1")
+    shift
+  done
+  if [[ "$#" -gt 0 && "$1" == "--" ]]; then
+    shift
+  fi
+
+  proxy_env=()
+  for name in NONO_PROXY_TOKEN HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY; do
+    if [[ -n "${!name:-}" ]]; then
+      proxy_env+=("$name=${!name}")
+    fi
+  done
+  for name in $credential_env_names; do
+    if [[ -n "${!name:-}" ]]; then
+      proxy_env+=("$name=${!name}")
+    fi
+  done
+
+  exec "$setpriv_bin" \
+    --reuid "$run_uid" \
+    --regid "$run_gid" \
+    --init-groups \
+    --reset-env \
+    "$env_bin" "${agent_env[@]}" "${proxy_env[@]}" \
+    "$real_binary" "$@"
+'
+
+nono_args+=(
+  -- "$bash_bin" -c "$child_script" bash
   "$setpriv_bin"
-  --reuid "$AGENT_RUN_AS_UID"
-  --regid "$AGENT_RUN_AS_GID"
-  --init-groups
-  --reset-env
   "$env_bin"
-  "${agent_env[@]}"
   "$AGENT_REAL_BINARY"
+  "$AGENT_RUN_AS_UID"
+  "$AGENT_RUN_AS_GID"
+  "$credential_env_names_str"
+  "${agent_env[@]}"
+  --
   "$@"
 )
-
-nono_args+=(-- "${child_args[@]}")
 journal_log "sandboxed"
 exec "$nono_bin" "${nono_args[@]}"

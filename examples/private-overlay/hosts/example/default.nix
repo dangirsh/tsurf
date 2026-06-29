@@ -12,9 +12,8 @@
     # Optional private-only modules belong here.
     # Example: a custom agent using the generic launcher (see modules/code-review.nix)
 
-    # After configuring Tailscale/headscale and SSH host keys, import:
-    # "${inputs.tsurf}/modules/networking.nix"
-    # "${inputs.tsurf}/modules/secrets.nix"  # after creating encrypted secrets file
+    # After creating encrypted secrets, import:
+    # "${inputs.tsurf}/modules/secrets.nix"
   ];
 
   networking.hostName = "example-REPLACE";

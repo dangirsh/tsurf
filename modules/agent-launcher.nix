@@ -134,6 +134,7 @@ let
           export AGENT_REAL_BINARY="${agentDef.package}/bin/${agentDef.command}"
           export AGENT_PROJECT_ROOT="${cfg.projectRoot}"
           export AGENT_NONO_PROFILE="${nonoProfilePath}"
+          export AGENT_CREDENTIAL_SERVICES="${credentialServicesStr}"
           export AGENT_CREDENTIAL_SECRETS="${credentialSecrets}"
           export AGENT_SCOPE_ACCESS="${cfg.scopeAccess}"
           export AGENT_EXTRA_READ_PATHS="${extraReadPathsStr}"
@@ -171,6 +172,7 @@ let
             --setenv=AGENT_REAL_BINARY="$AGENT_REAL_BINARY" \
             --setenv=AGENT_PROJECT_ROOT="$AGENT_PROJECT_ROOT" \
             --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
+            --setenv=AGENT_CREDENTIAL_SERVICES="$AGENT_CREDENTIAL_SERVICES" \
             --setenv=AGENT_CREDENTIAL_SECRETS="$AGENT_CREDENTIAL_SECRETS" \
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
             --setenv=AGENT_EXTRA_READ_PATHS="$AGENT_EXTRA_READ_PATHS" \
@@ -362,6 +364,13 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = config.tsurf.agentEgress.enable or false;
+        message = "services.agentLauncher requires modules/networking.nix so the dedicated agent UID has host-level egress filtering.";
+      }
+    ];
+
     environment.systemPackages = lib.mapAttrsToList (_: pair: pair.wrapper) agentPairs;
 
     # Install per-agent nono profiles and managed settings files
