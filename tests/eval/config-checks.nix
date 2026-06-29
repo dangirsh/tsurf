@@ -448,7 +448,10 @@ in
         && openrouter.credential_key == "env://OPENROUTER_API_KEY"
         && openrouter.env_var == "OPENROUTER_API_KEY"
         && openRouterCfg.sops.secrets."openrouter-api-key".owner == "root"
+        && builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex-openrouter" (profile.filesystem.allow or [ ])
+        && !(builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex" (profile.filesystem.allow or [ ]))
         && lib.hasInfix "NONO_PROXY_TOKEN" source
+        && lib.hasInfix "CODEX_HOME" source
         && lib.hasInfix "wire_api=\\\"responses\\\"" source
         && lib.hasInfix "--credential openrouter" source
       );

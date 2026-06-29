@@ -23,6 +23,7 @@ let
   profileName = "tsurf-${cfg.wrapperName}";
   profilePath = "/etc/nono/profiles/${profileName}.json";
   launcherName = "tsurf-launch-${cfg.wrapperName}";
+  codexHome = "${agentCfg.home}/.codex-openrouter";
 
   baseNonoProfile = builtins.fromJSON config.environment.etc."nono/profiles/tsurf.json".text;
   baseFilesystem = baseNonoProfile.filesystem or { };
@@ -37,7 +38,7 @@ let
         author = "tsurf";
       };
       filesystem = baseFilesystem // {
-        allow = lib.unique ((baseFilesystem.allow or [ ]) ++ [ "${agentCfg.home}/.codex" ]);
+        allow = lib.unique ((baseFilesystem.allow or [ ]) ++ [ codexHome ]);
         allow_file = lib.unique (
           (baseFilesystem.allow_file or [ ])
           ++ [
@@ -133,6 +134,10 @@ let
       fi
       export OPENROUTER_API_KEY="$secret_value"
 
+      codex_home="${codexHome}"
+      install -d -m 700 "$codex_home"
+      chown "$AGENT_RUN_AS_UID:$AGENT_RUN_AS_GID" "$codex_home"
+
       case "''${AGENT_SCOPE_ACCESS:-read}" in
         read)
           nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback --credential openrouter --read "$workspace_root")
@@ -169,7 +174,8 @@ let
         run_gid="$7"
         run_user="$8"
         run_home="$9"
-        shift 9
+        codex_home="''${10}"
+        shift 10
 
         : "''${NONO_PROXY_TOKEN:?missing nono proxy token}"
         : "''${OPENROUTER_BASE_URL:?missing OpenRouter proxy base URL}"
@@ -182,6 +188,7 @@ let
             HOME="$run_home" \
             USER="$run_user" \
             LOGNAME="$run_user" \
+            CODEX_HOME="$codex_home" \
             PATH="$child_path" \
             NONO_PROXY_TOKEN="$NONO_PROXY_TOKEN" \
             OPENROUTER_BASE_URL="$OPENROUTER_BASE_URL" \
@@ -210,6 +217,7 @@ let
         "$AGENT_RUN_AS_GID"
         "$AGENT_RUN_AS_USER"
         "$AGENT_RUN_AS_HOME"
+        "$codex_home"
         "$@"
       )
 

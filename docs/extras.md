@@ -22,6 +22,9 @@ raw OpenRouter key remains in the root-owned `openrouter-api-key` secret.
 Current Codex releases use the Responses API provider wire format here, so the
 wrapper explicitly targets OpenRouter's `/api/v1/responses` endpoint rather
 than the deprecated Chat Completions provider mode.
+The wrapper also runs Codex with `CODEX_HOME` set to
+`/home/agent/.codex-openrouter`, keeping OpenRouter runs isolated from any
+normal `/home/agent/.codex` ChatGPT subscription state.
 
 ```nix
 {
