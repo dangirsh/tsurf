@@ -9,8 +9,27 @@ are opt-in: import the module in your host config and set the enable option.
 |------|-----------------|--------------|-------|
 | `extras/cass.nix` | Import + `services.cassIndexer.enable = true` | Low-priority system timer that refreshes the CASS session index | Runs as the dedicated agent user with CPU/memory throttling |
 | `extras/codex.nix` | `services.codexAgent.enable = true` | Optional sandboxed `codex` wrapper | Requires `agentLauncher` and `nonoSandbox`; defaults to the `openai-api-key` secret |
+| `extras/codex-openrouter.nix` | `services.codexOpenRouterAgent.enable = true` | Optional OpenRouter-backed `codex-openrouter` wrapper | Defaults to `z-ai/glm-5.2` through the `openrouter-api-key` secret |
 | `extras/restic.nix` | `services.resticStarter.enable = true` | Restic backups to a Backblaze B2 S3 endpoint | Expects the secrets/template wiring from `modules/secrets.nix` |
 | `extras/home/` | `home-manager.users.<name> = import ../../extras/home;` | Home-manager profile for the agent user | Installs git, gh, ssh, and direnv defaults |
+
+## OpenRouter Codex
+
+Import `extras/codex-openrouter.nix` on an agent host to expose a sandboxed
+`codex-openrouter` wrapper. The wrapper uses nono's credential proxy, so Codex
+receives only `NONO_PROXY_TOKEN` and a local `OPENROUTER_BASE_URL`, while the
+raw OpenRouter key remains in the root-owned `openrouter-api-key` secret.
+
+```nix
+{
+  imports = [ ./extras/codex-openrouter.nix ];
+
+  services.codexOpenRouterAgent = {
+    enable = true;
+    model = "z-ai/glm-5.2";
+  };
+}
+```
 
 ## Home Profile
 

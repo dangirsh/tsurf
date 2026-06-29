@@ -10,6 +10,7 @@ let
   devCfg = self.nixosConfigurations."eval-dev".config;
   altAgentCfg = self.nixosConfigurations."eval-dev-alt-agent".config;
   extraDenyCfg = self.nixosConfigurations."eval-dev-extra-deny".config;
+  openRouterCfg = self.nixosConfigurations."eval-dev-openrouter".config;
   devAgentUser = devCfg.tsurf.agent.user;
   altAgentUser = altAgentCfg.tsurf.agent.user;
   altAgentHome = altAgentCfg.tsurf.agent.home;
@@ -48,6 +49,13 @@ in
   eval-dev-alt-agent = pkgs.runCommand "eval-dev-alt-agent" { } ''
     echo "eval-dev-alt-agent config evaluates: ${
       self.nixosConfigurations."eval-dev-alt-agent".config.system.build.toplevel
+    }"
+    touch "$out"
+  '';
+
+  eval-dev-openrouter = pkgs.runCommand "eval-dev-openrouter" { } ''
+    echo "eval-dev-openrouter config evaluates: ${
+      self.nixosConfigurations."eval-dev-openrouter".config.system.build.toplevel
     }"
     touch "$out"
   '';
@@ -375,7 +383,8 @@ in
       envPatch = builtins.readFile ../../packages/nono-env-uri.patch;
       runPatch = builtins.readFile ../../packages/nono-no-run.patch;
     in
-    mkCheck "nono-package-has-tsurf-patches" "nono source build carries tsurf credential and /run policy patches"
+    mkCheck "nono-package-has-tsurf-patches"
+      "nono source build carries tsurf credential and /run policy patches"
       "packages/nono.nix must keep env:// custom_credentials validation and remove upstream /run read grants"
       (
         lib.hasInfix "./nono-env-uri.patch" source
@@ -411,6 +420,36 @@ in
         && builtins.hasAttr "anthropic" customCreds
         && lib.hasPrefix "env://" customCreds.anthropic.credential_key
         && customCreds.anthropic.env_var == "ANTHROPIC_API_KEY"
+      );
+
+  codex-openrouter-extra =
+    let
+      profile =
+        builtins.fromJSON
+          openRouterCfg.environment.etc."nono/profiles/tsurf-codex-openrouter.json".text;
+      creds = profile.network.credentials or [ ];
+      customCreds = profile.network.custom_credentials or { };
+      openrouter = customCreds.openrouter or { };
+      source = builtins.readFile ../../extras/codex-openrouter.nix;
+    in
+    mkCheck "codex-openrouter-extra"
+      "OpenRouter Codex extra exposes codex-openrouter with GLM 5.2 through the credential proxy"
+      "OpenRouter Codex extra missing wrapper, GLM 5.2 default, or credential proxy wiring"
+      (
+        openRouterCfg.services.codexOpenRouterAgent.enable
+        && openRouterCfg.services.codexOpenRouterAgent.wrapperName == "codex-openrouter"
+        && openRouterCfg.services.codexOpenRouterAgent.model == "z-ai/glm-5.2"
+        && builtins.elem "codex-openrouter" (
+          map (pkg: pkg.meta.mainProgram or pkg.pname or pkg.name) openRouterCfg.environment.systemPackages
+        )
+        && builtins.elem "openrouter" creds
+        && builtins.hasAttr "openrouter" customCreds
+        && openrouter.upstream == "https://openrouter.ai/api/v1"
+        && openrouter.credential_key == "env://OPENROUTER_API_KEY"
+        && openrouter.env_var == "OPENROUTER_API_KEY"
+        && openRouterCfg.sops.secrets."openrouter-api-key".owner == "root"
+        && lib.hasInfix "NONO_PROXY_TOKEN" source
+        && lib.hasInfix "--credential openrouter" source
       );
 
   nono-profile-denies-run-secrets =
@@ -649,11 +688,12 @@ in
 
   agent-api-key-ownership-dev =
     mkCheck "agent-api-key-ownership-dev"
-      "anthropic-api-key and openai-api-key owned by root on dev host"
-      "SECURITY: anthropic-api-key or openai-api-key not owned by root — agent principal can read raw provider keys"
+      "anthropic-api-key, openai-api-key, and openrouter-api-key owned by root on dev host"
+      "SECURITY: anthropic-api-key, openai-api-key, or openrouter-api-key not owned by root — agent principal can read raw provider keys"
       (
         devCfg.sops.secrets."anthropic-api-key".owner == "root"
         && devCfg.sops.secrets."openai-api-key".owner == "root"
+        && devCfg.sops.secrets."openrouter-api-key".owner == "root"
       );
 
   # --- Phase 124: Nix daemon user restrictions ---
@@ -880,8 +920,7 @@ in
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
-    mkCheck "wrapper-sets-agent-env-for-nono"
-      "agent-wrapper.sh exports agent HOME before invoking nono"
+    mkCheck "wrapper-sets-agent-env-for-nono" "agent-wrapper.sh exports agent HOME before invoking nono"
       "agent-wrapper.sh leaves HOME unset for nono profile validation"
       (
         lib.hasInfix ''export HOME="$AGENT_RUN_AS_HOME"'' source

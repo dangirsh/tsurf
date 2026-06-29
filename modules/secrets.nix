@@ -23,7 +23,7 @@
       owner = config.tsurf.agent.user;
     };
     secrets."openrouter-api-key" = {
-      owner = config.tsurf.agent.user;
+      owner = "root";
     };
     secrets."github-pat" = {
       owner = config.tsurf.agent.user;

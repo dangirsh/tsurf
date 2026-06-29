@@ -41,6 +41,13 @@ let
       envVar = "OPENAI_API_KEY";
       secretName = "openai-api-key";
     };
+    openrouter = {
+      upstream = "https://openrouter.ai/api/v1";
+      injectHeader = "authorization";
+      credentialFormat = "Bearer {}";
+      envVar = "OPENROUTER_API_KEY";
+      secretName = "openrouter-api-key";
+    };
   };
 
   # Build launcher + wrapper for a single agent definition
@@ -98,9 +105,7 @@ let
           };
           filesystem = baseFilesystem // {
             allow = lib.unique ((baseFilesystem.allow or [ ]) ++ agentDef.nonoProfile.extraAllow);
-            allow_file = lib.unique (
-              (baseFilesystem.allow_file or [ ]) ++ agentDef.nonoProfile.extraAllowFile
-            );
+            allow_file = lib.unique ((baseFilesystem.allow_file or [ ]) ++ agentDef.nonoProfile.extraAllowFile);
             deny = lib.unique ((baseFilesystem.deny or [ ]) ++ agentDef.nonoProfile.extraDeny);
           };
           network =
@@ -396,16 +401,20 @@ in
       );
 
     # Per-agent persistence
-    environment.persistence."/persist".directories = lib.unique (lib.concatLists (
-      lib.mapAttrsToList (
-        _: agentDef: map (path: "${agentCfg.home}/${path}") agentDef.persistence.directories
-      ) cfg.agents
-    ));
+    environment.persistence."/persist".directories = lib.unique (
+      lib.concatLists (
+        lib.mapAttrsToList (
+          _: agentDef: map (path: "${agentCfg.home}/${path}") agentDef.persistence.directories
+        ) cfg.agents
+      )
+    );
 
-    environment.persistence."/persist".files = lib.unique (lib.concatLists (
-      lib.mapAttrsToList (
-        _: agentDef: map (path: "${agentCfg.home}/${path}") agentDef.persistence.files
-      ) cfg.agents
-    ));
+    environment.persistence."/persist".files = lib.unique (
+      lib.concatLists (
+        lib.mapAttrsToList (
+          _: agentDef: map (path: "${agentCfg.home}/${path}") agentDef.persistence.files
+        ) cfg.agents
+      )
+    );
   };
 }

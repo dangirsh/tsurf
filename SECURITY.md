@@ -101,9 +101,9 @@ Storage:
 
 - `sops-nix` derives its age identity from the host SSH ed25519 key.
 - Secrets are decrypted to `/run/secrets`.
-- Public defaults keep `anthropic-api-key` and `openai-api-key` root-owned.
-- `github-pat`, `google-api-key`, `xai-api-key`, and `openrouter-api-key`
-  default to the agent user.
+- Public defaults keep `anthropic-api-key`, `openai-api-key`, and
+  `openrouter-api-key` root-owned.
+- `github-pat`, `google-api-key`, and `xai-api-key` default to the agent user.
 
 Injection model:
 

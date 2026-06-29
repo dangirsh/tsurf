@@ -145,6 +145,12 @@
           };
         }
       ];
+      nixosConfigurations."eval-dev-openrouter" = mkEvalFixture ./hosts/dev [
+        ./extras/codex-openrouter.nix
+        {
+          services.codexOpenRouterAgent.enable = true;
+        }
+      ];
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
