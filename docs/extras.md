@@ -8,7 +8,7 @@ are opt-in: import the module in your host config and set the enable option.
 | Path | Enable / import | What it adds | Notes |
 |------|-----------------|--------------|-------|
 | `extras/cass.nix` | Import + `services.cassIndexer.enable = true` | Low-priority system timer that refreshes the CASS session index | Runs as the dedicated agent user with CPU/memory throttling |
-| `extras/codex.nix` | `services.codexAgent.enable = true` | Optional sandboxed `codex` wrapper | Requires `agentLauncher` and `nonoSandbox`; defaults to the `openai-api-key` secret |
+| `extras/codex.nix` | `services.codexAgent.enable = true` | Optional sandboxed `codex` wrapper | Requires `agentLauncher` and `nonoSandbox`; defaults to the `openai-api-key` secret and isolated `/home/agent/.codex-openai` state |
 | `extras/codex-openrouter.nix` | `services.codexOpenRouterAgent.enable = true` | Optional OpenRouter-backed `codex-openrouter` wrapper | Defaults to `z-ai/glm-5.2` through the `openrouter-api-key` secret |
 | `extras/restic.nix` | `services.resticStarter.enable = true` | Restic backups to a Backblaze B2 S3 endpoint | Expects the secrets/template wiring from `modules/secrets.nix` |
 | `extras/home/` | `home-manager.users.<name> = import ../../extras/home;` | Home-manager profile for the agent user | Installs git, gh, ssh, and direnv defaults |
@@ -34,6 +34,22 @@ normal `/home/agent/.codex` ChatGPT subscription state.
     enable = true;
     model = "z-ai/glm-5.2";
   };
+}
+```
+
+## OpenAI Codex
+
+Import `extras/codex.nix` to expose a sandboxed `codex` wrapper backed by the
+brokered `openai-api-key` secret. The wrapper sets `CODEX_HOME` to
+`/home/agent/.codex-openai`; the default `/home/agent/.codex` ChatGPT
+subscription cache remains denied by the base nono profile and should not be
+mounted into prompt-controlled runs.
+
+```nix
+{
+  imports = [ ./extras/codex.nix ];
+
+  services.codexAgent.enable = true;
 }
 ```
 

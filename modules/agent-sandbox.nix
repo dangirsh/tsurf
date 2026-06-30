@@ -6,6 +6,8 @@
 #   Enforced by operational policy, not technical controls.
 # @decision SEC-145-04: Claude-level deny rules provide defense-in-depth atop Landlock.
 #   enableAllProjectMcpServers=false prevents malicious repos from injecting MCP servers.
+# @decision SEC-AGENT-AUTH-02: Do not grant Claude's raw auth/session cache
+#   under ~/.claude, ~/.config/claude, or ~/.claude.json to prompt-controlled runs.
 {
   config,
   lib,
@@ -36,22 +38,16 @@ in
       package = pkgs.claude-code;
       wrapperName = "claude";
       credentialServices = [ "anthropic" ];
-      nonoProfile = {
-        extraAllow = [
-          "${agentCfg.home}/.claude"
-          "${agentCfg.home}/.config/claude"
-        ];
-        extraAllowFile = [
-          "${agentCfg.home}/.claude.json"
-          "${agentCfg.home}/.claude.json.lock"
-        ];
-      };
 
       managedSettings = {
         permissions = {
           deny = [
             "Read(/run/secrets/**)"
             "Read(${agentCfg.home}/.ssh/**)"
+            "Read(${agentCfg.home}/.claude/**)"
+            "Read(${agentCfg.home}/.config/claude/**)"
+            "Read(${agentCfg.home}/.claude.json)"
+            "Read(${agentCfg.home}/.claude.json.lock)"
             "Read(/etc/nono/**)"
             "Read(.env)"
             "Read(.envrc)"
@@ -66,14 +62,11 @@ in
       };
 
       persistence.directories = [
-        ".claude"
-        ".config/claude"
         ".config/git"
         ".local/share/direnv"
       ];
       persistence.files = [
         ".gitconfig"
-        ".bash_history"
       ];
     };
   };

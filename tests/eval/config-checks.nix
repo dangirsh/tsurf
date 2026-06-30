@@ -422,6 +422,21 @@ in
         && customCreds.anthropic.env_var == "ANTHROPIC_API_KEY"
       );
 
+  agent-launcher-child-environment =
+    let
+      source = builtins.readFile ../../modules/agent-launcher.nix;
+      wrapper = builtins.readFile ../../scripts/agent-wrapper.sh;
+    in
+    mkCheck "agent-launcher-child-environment"
+      "agent-launcher supports non-secret child environment injection"
+      "agent-launcher is missing childEnvironment support for isolated agent state dirs"
+      (
+        lib.hasInfix "childEnvironment" source
+        && lib.hasInfix "AGENT_CHILD_ENVIRONMENT_FILE" source
+        && lib.hasInfix "AGENT_CHILD_ENVIRONMENT_FILE" wrapper
+        && lib.hasInfix "/nix/store/*" wrapper
+      );
+
   codex-openrouter-extra =
     let
       profile =
@@ -474,6 +489,7 @@ in
       profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
       allow = profile.filesystem.allow or [ ];
       allowFile = profile.filesystem.allow_file or [ ];
+      deny = profile.filesystem.deny or [ ];
       groups = profile.security.groups or [ ];
       home = devCfg.tsurf.agent.home;
     in
@@ -485,28 +501,39 @@ in
         && !(builtins.elem "${home}/.config/claude" allow)
         && !(builtins.elem "${home}/.claude.json" allowFile)
         && !(builtins.elem "${home}/.claude.json.lock" allowFile)
+        && builtins.elem "${home}/.claude" deny
+        && builtins.elem "${home}/.config/claude" deny
+        && builtins.elem "${home}/.claude.json" deny
+        && builtins.elem "${home}/.claude.json.lock" deny
+        && builtins.elem "${home}/.codex" deny
+        && builtins.elem "${home}/.agents" deny
         && !(builtins.elem "claude_code_linux" groups)
         && !(builtins.elem "claude_cache_linux" groups)
       );
 
-  claude-profile-adds-claude-state =
+  claude-profile-denies-raw-agent-auth-state =
     let
       profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
       allow = profile.filesystem.allow or [ ];
       allowFile = profile.filesystem.allow_file or [ ];
+      deny = profile.filesystem.deny or [ ];
       home = devCfg.tsurf.agent.home;
     in
-    mkCheck "claude-profile-adds-claude-state"
-      "Claude wrapper adds only the Claude-specific state paths on top of the base profile"
-      "generated tsurf-claude nono profile is missing Claude state paths after the base-profile simplification"
+    mkCheck "claude-profile-denies-raw-agent-auth-state"
+      "Claude wrapper uses brokered API credentials without exposing raw Claude auth state"
+      "generated tsurf-claude nono profile still allows raw Claude auth/session state"
       (
         !(builtins.hasAttr "extends" profile)
         && builtins.elem "/etc/ssl" allow
         && builtins.elem "/run/secrets" profile.filesystem.deny
-        && builtins.elem "${home}/.claude" allow
-        && builtins.elem "${home}/.config/claude" allow
-        && builtins.elem "${home}/.claude.json" allowFile
-        && builtins.elem "${home}/.claude.json.lock" allowFile
+        && !(builtins.elem "${home}/.claude" allow)
+        && !(builtins.elem "${home}/.config/claude" allow)
+        && !(builtins.elem "${home}/.claude.json" allowFile)
+        && !(builtins.elem "${home}/.claude.json.lock" allowFile)
+        && builtins.elem "${home}/.claude" deny
+        && builtins.elem "${home}/.config/claude" deny
+        && builtins.elem "${home}/.claude.json" deny
+        && builtins.elem "${home}/.claude.json.lock" deny
       );
 
   agent-launcher-extra-deny-wired =
@@ -580,12 +607,9 @@ in
     let
       source = builtins.readFile ../../modules/agent-sandbox.nix;
       expectedSuffixes = [
-        ".claude"
-        ".config/claude"
         ".config/git"
         ".local/share/direnv"
         ".gitconfig"
-        ".bash_history"
       ];
       missingSuffixes = builtins.filter (path: !(lib.hasInfix "\"${path}\"" source)) expectedSuffixes;
     in

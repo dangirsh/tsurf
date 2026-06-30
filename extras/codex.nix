@@ -4,7 +4,8 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.codexAgent;
-  agentHome = config.tsurf.agent.home;
+  agentCfg = config.tsurf.agent;
+  codexHome = "${agentCfg.home}/.codex-openai";
 in
 {
   options.services.codexAgent = {
@@ -40,8 +41,13 @@ in
       package = cfg.package;
       wrapperName = "codex";
       credentialServices = cfg.credentialServices;
-      nonoProfile.extraAllow = [ "${agentHome}/.codex" ];
-      persistence.directories = [ ".codex" ];
+      childEnvironment.CODEX_HOME = codexHome;
+      nonoProfile.extraAllow = [ codexHome ];
+      persistence.directories = [ ".codex-openai" ];
     };
+
+    systemd.tmpfiles.rules = [
+      "d ${codexHome} 0700 ${agentCfg.user} ${agentCfg.user} -"
+    ];
   };
 }

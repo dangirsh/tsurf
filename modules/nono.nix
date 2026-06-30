@@ -55,6 +55,9 @@ let
       ++ cfg.extraReadFile;
       # @decision NONO-84-01: Deny sensitive home paths from sandboxed agents.
       # Extended by ecosystem review (Trail of Bits credential path list).
+      # @decision SEC-AGENT-AUTH-01: Agent auth/session caches are denied by
+      # default. API-backed wrappers must use brokered credentials plus an
+      # isolated non-secret state dir instead of raw login state.
       deny = [
         "/run/secrets"
         "${cfg.homeDir}/.ssh"
@@ -68,6 +71,13 @@ let
         "${cfg.homeDir}/.gem"
         "${cfg.homeDir}/.config/gh"
         "${cfg.homeDir}/.git-credentials"
+        "${cfg.homeDir}/.claude"
+        "${cfg.homeDir}/.config/claude"
+        "${cfg.homeDir}/.claude.json"
+        "${cfg.homeDir}/.claude.json.lock"
+        "${cfg.homeDir}/.codex"
+        "${cfg.homeDir}/.config/codex"
+        "${cfg.homeDir}/.agents"
         "/etc/nono"
       ];
     };

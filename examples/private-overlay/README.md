@@ -76,7 +76,7 @@ The generic launcher (`services.agentLauncher.agents.<name>`) lets you define ag
 |----------|--------|---------------|
 | Current working directory | Read + write | `workdir.access` in nono profile |
 | Current top-level workspace dir | Read only | `agent-wrapper.sh` `--read` flag |
-| Agent-specific config dirs (for example `~/.claude`) | Read + write | Per-agent `nonoProfile.extraAllow` / `extraAllowFile` |
+| Agent-specific non-secret state dirs | Read + write | Per-agent `nonoProfile.extraAllow` / `extraAllowFile`; raw auth/session caches such as `~/.claude` and `~/.codex` stay denied |
 | Nix store, SSL certs, `/etc` basics | Read only | Base `tsurf` nono profile |
 | Paths in `filesystem.allow` | Read + write | Your nono profile |
 | Outbound network (API calls, git) | Allowlisted | Host nftables policy for the dedicated agent UID |
@@ -85,6 +85,7 @@ The generic launcher (`services.agentLauncher.agents.<name>`) lets you define ag
 |----------|--------|---------------|
 | `/run/secrets/` (API keys on disk) | Blocked | Landlock deny (nono profile inherits this) |
 | `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.docker` | Blocked | `filesystem.deny` in nono profile |
+| Raw agent auth/session caches (`~/.claude`, `~/.config/claude`, `~/.codex`) | Blocked | `filesystem.deny`; use brokered credentials plus isolated non-secret state dirs |
 | Other top-level workspaces (sibling projects) | Blocked | `agent-wrapper.sh` scopes read to current workspace only |
 | `sudo` | Limited | Agent user has sudo only for immutable launchers (no general root access) |
 | Docker daemon | No access | Agent user has no `docker` group (build-time assertion) |

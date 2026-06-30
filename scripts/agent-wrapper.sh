@@ -18,6 +18,7 @@
 #   AGENT_SCOPE_ACCESS       — "read" (default) or "allow" access to the current top-level workspace
 #   AGENT_EXTRA_READ_PATHS   — optional space-separated paths passed to nono with --read
 #   AGENT_EXTRA_ALLOW_PATHS  — optional space-separated paths passed to nono with --allow
+#   AGENT_CHILD_ENVIRONMENT_FILE — optional /nix/store file of non-secret NAME=value env entries
 #
 # Launch logging:
 #   Single sink: journald via logger -t agent-launch (root-owned, append-only).
@@ -153,6 +154,26 @@ agent_env=(
   "LOGNAME=$AGENT_RUN_AS_USER"
   "PATH=$AGENT_CHILD_PATH"
 )
+if [[ -n "${AGENT_CHILD_ENVIRONMENT_FILE:-}" ]]; then
+  case "$AGENT_CHILD_ENVIRONMENT_FILE" in
+    /nix/store/*) ;;
+    *)
+      echo "ERROR: AGENT_CHILD_ENVIRONMENT_FILE must be in /nix/store" >&2
+      exit 1
+      ;;
+  esac
+  if [[ -f "$AGENT_CHILD_ENVIRONMENT_FILE" ]]; then
+    while IFS= read -r assignment || [[ -n "$assignment" ]]; do
+      [[ -n "$assignment" ]] || continue
+      name="${assignment%%=*}"
+      if [[ ! "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || "$assignment" != *=* ]]; then
+        echo "ERROR: invalid child environment entry for $AGENT_NAME" >&2
+        exit 1
+      fi
+      agent_env+=("$assignment")
+    done < "$AGENT_CHILD_ENVIRONMENT_FILE"
+  fi
+fi
 if [[ -n "${TERM:-}" ]]; then
   agent_env+=("TERM=$TERM")
 fi

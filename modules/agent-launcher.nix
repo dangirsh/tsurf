@@ -122,6 +122,9 @@ let
       defaultArgStr = lib.concatMapStringsSep " " lib.escapeShellArg agentDef.defaultArgs;
       extraReadPathsStr = lib.concatMapStringsSep " " lib.escapeShellArg cfg.extraReadPaths;
       extraAllowPathsStr = lib.concatMapStringsSep " " lib.escapeShellArg cfg.extraAllowPaths;
+      childEnvironmentFile = pkgs.writeText "${name}-agent-child-environment" (
+        lib.concatStringsSep "\n" (lib.mapAttrsToList (envName: value: "${envName}=${value}") agentDef.childEnvironment)
+      );
 
       launcher = pkgs.writeShellApplication {
         name = launcherName;
@@ -139,6 +142,7 @@ let
           export AGENT_SCOPE_ACCESS="${cfg.scopeAccess}"
           export AGENT_EXTRA_READ_PATHS="${extraReadPathsStr}"
           export AGENT_EXTRA_ALLOW_PATHS="${extraAllowPathsStr}"
+          export AGENT_CHILD_ENVIRONMENT_FILE="${childEnvironmentFile}"
 
           if [[ -t 0 && -t 1 ]]; then
             stdio_flag="--pty"
@@ -177,6 +181,7 @@ let
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
             --setenv=AGENT_EXTRA_READ_PATHS="$AGENT_EXTRA_READ_PATHS" \
             --setenv=AGENT_EXTRA_ALLOW_PATHS="$AGENT_EXTRA_ALLOW_PATHS" \
+            --setenv=AGENT_CHILD_ENVIRONMENT_FILE="$AGENT_CHILD_ENVIRONMENT_FILE" \
             --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
             --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
             --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \
@@ -298,6 +303,16 @@ in
               type = lib.types.nullOr lib.types.attrs;
               default = null;
               description = "Optional managed settings JSON written to /etc/<name>-agent-settings.json.";
+            };
+
+            childEnvironment = lib.mkOption {
+              type = lib.types.attrsOf lib.types.str;
+              default = { };
+              description = ''
+                Non-secret environment variables injected into the final agent child
+                after privilege drop. Values are written into the Nix store; do not
+                use this for credentials.
+              '';
             };
 
             persistence = lib.mkOption {
