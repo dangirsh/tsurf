@@ -164,18 +164,10 @@
           };
       };
 
-      mkHost =
-        hostDir:
-        nixpkgs.lib.nixosSystem {
-          inherit system;
-          specialArgs = { inherit inputs; };
-          modules = commonModules ++ [ hostDir ];
-        };
-
       # Eval fixtures: inject allowUnsafePlaceholders so the public template evaluates
       # without real credentials. Host source files are secure by default (flag not set).
       # These are exported only as clearly named eval-only outputs, never as deploy
-      # targets. Private overlay uses mkHost directly and never sets this flag.
+      # targets.
       mkEvalFixture =
         hostDir: extraModules:
         nixpkgs.lib.nixosSystem {
@@ -438,7 +430,7 @@
                 src = ./.;
               }
               ''
-                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh
+                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/scripts/deploy-detached.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh
                 # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
                 # SC2317: BATS @test blocks appear unreachable to shellcheck
                 shellcheck --exclude=SC2317 "$src"/tests/live/*.bats

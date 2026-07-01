@@ -22,7 +22,7 @@ This is the preferred path when the host may differ from the public examples.
 
 ```bash
 git config core.hooksPath .githooks
-nix flake check
+./scripts/run-tests.sh
 ```
 
 ## 3) Private Overlay

@@ -1,8 +1,8 @@
 # tests/vm/credential-proxy.nix — E2E proof for nono brokered credentials.
 #
 # This test runs through the real wrapper path:
-#   codex-openrouter -> sudo launcher -> systemd-run -> nono credential proxy
-#     -> setpriv drop -> fake codex child
+#   credential-probe -> sudo launcher -> systemd-run -> nono credential proxy
+#     -> setpriv drop -> fake child
 #
 # It proves the child receives only phantom credentials while a fake upstream
 # receives the real root-owned secret injected by nono.
@@ -13,8 +13,8 @@
   ...
 }:
 let
-  fakeCodex = pkgs.writeShellApplication {
-    name = "codex";
+  fakeProbe = pkgs.writeShellApplication {
+    name = "credential-probe";
     runtimeInputs = with pkgs; [
       coreutils
       curl
@@ -32,12 +32,22 @@ let
       [ -z "''${OPENROUTER_API_KEY:-}" ] || fail "raw OpenRouter key leaked into child env"
       [ -n "''${NONO_PROXY_TOKEN:-}" ] || fail "missing NONO_PROXY_TOKEN"
       [ -n "''${OPENROUTER_BASE_URL:-}" ] || fail "missing OPENROUTER_BASE_URL"
+      [ -z "''${HTTP_PROXY:-}" ] || fail "HTTP_PROXY leaked into child env"
+      [ -z "''${HTTPS_PROXY:-}" ] || fail "HTTPS_PROXY leaked into child env"
+      [ -z "''${ALL_PROXY:-}" ] || fail "ALL_PROXY leaked into child env"
+      [ -z "''${NO_PROXY:-}" ] || fail "NO_PROXY leaked into child env"
       case "$OPENROUTER_BASE_URL" in
         http://127.0.0.1:*|http://localhost:*) ;;
         *) fail "proxy base URL is not loopback: $OPENROUTER_BASE_URL" ;;
       esac
+      proxy_authority="''${OPENROUTER_BASE_URL#http://}"
+      proxy_authority="''${proxy_authority%%/*}"
       if [ -r /run/secrets/openrouter-api-key ]; then
         fail "raw secret file is readable from child"
+      fi
+
+      if curl -fsS -x "http://$proxy_authority" http://127.0.0.1:18080/health >/tmp/generic-proxy-response 2>&1; then
+        fail "nono credential proxy allowed generic HTTP proxy traffic"
       fi
 
       http_code="$(
@@ -73,7 +83,6 @@ pkgs.testers.nixosTest {
         ../../modules/agent-compute.nix
         ../../modules/nono.nix
         ../../modules/agent-launcher.nix
-        ../../extras/codex-openrouter.nix
       ];
 
       options.sops.secrets = lib.mkOption {
@@ -91,11 +100,12 @@ pkgs.testers.nixosTest {
         services.agentLauncher.scopeAccess = "allow";
         services.nonoSandbox.enable = true;
 
-        services.codexOpenRouterAgent = {
-          enable = true;
-          package = fakeCodex;
-          baseUrl = "http://127.0.0.1:18080/v1";
-          model = "test-model";
+        services.agentLauncher.agents.credential-probe = {
+          command = "credential-probe";
+          package = fakeProbe;
+          wrapperName = "credential-probe";
+          credentialServices = [ "openrouter" ];
+          credentialOverrides.openrouter.upstream = "http://127.0.0.1:18080/v1";
         };
 
         sops.secrets."openrouter-api-key" = {
@@ -116,7 +126,6 @@ pkgs.testers.nixosTest {
           chown ${config.tsurf.agent.user}:${config.tsurf.agent.user} /data/projects/credential-probe/README.md
 
           install -d -m 0755 -o ${config.tsurf.agent.user} -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}
-          install -d -m 0700 -o ${config.tsurf.agent.user} -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.codex-openrouter
           install -d -m 0700 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono
           install -d -m 0700 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono/rollbacks
 
@@ -182,7 +191,7 @@ pkgs.testers.nixosTest {
     machine.wait_until_succeeds("curl -fsS http://127.0.0.1:18080/health")
 
     machine.succeed(
-        "sudo -u agent bash -lc 'cd /data/projects/credential-probe && codex-openrouter exec probe'"
+        "sudo -u agent bash -lc 'cd /data/projects/credential-probe && credential-probe exec probe'"
     )
 
     result = machine.succeed("cat /data/projects/credential-probe/credential-proxy-result.env")

@@ -67,10 +67,8 @@ Security properties of that path:
 Verification status:
 
 - Eval checks verify the wrapper, profile, and `env://` credential wiring.
-- The repo does not yet include an end-to-end runtime proof that a provider key
-  is absent from the child environment while the broker injects it upstream.
-  Treat that as a required validation gap before extending the claim to new
-  agent types or custom private-overlay launchers.
+- The repo includes a VM fake-provider test that exercises the brokered
+  request path and proves the child does not receive the real provider key.
 
 Resource limits:
 
@@ -158,8 +156,11 @@ self-backing.
 
 Agent egress:
 
-- `nono` is not the network allowlist boundary here; `network.block = false`.
-- Agent egress is enforced in nftables by `meta skuid`.
+- The base `nono` profile sets `network.block = true`. Credential-backed
+  wrappers still get nono reverse-proxy routes for configured providers, but
+  arbitrary CONNECT traffic through nono's root-side proxy is strict-filtered.
+- Host egress for direct agent-UID traffic is enforced in nftables by
+  `meta skuid`.
 - Default allowed traffic for the agent UID is:
   - loopback
   - DNS on TCP/UDP `53`
@@ -171,9 +172,11 @@ Agent egress:
   - `fc00::/7`
   - `fe80::/10`
 
-This is a coarse UID/port allowlist. It blocks private and link-local ranges but
-does not prevent prompt-injected exfiltration to arbitrary public HTTPS
-destinations. Strong egress mediation is tracked as deferred design work.
+This is still not full destination-level mediation. It blocks direct private and
+link-local traffic from the agent UID and prevents the credential proxy from
+becoming an allow-all CONNECT proxy by default, but private overlays that enable
+`services.nonoSandbox.allowDirectNetwork` or add direct egress paths must treat that as
+an explicit risk. Strong egress mediation is tracked as deferred design work.
 
 ## Persistence, Deploy, And Recovery
 
@@ -235,6 +238,9 @@ Runtime checks:
   verifies `/persist` and related persistence behavior.
 - [`tests/vm/sandbox-behavioral.nix`](tests/vm/sandbox-behavioral.nix)
   is the reproducible VM smoke test.
+- [`tests/vm/credential-proxy.nix`](tests/vm/credential-proxy.nix)
+  proves a brokered fake-provider request keeps the raw provider key out of the
+  child environment while the upstream receives the injected header.
 
 ## Accepted Risks
 
@@ -243,5 +249,5 @@ Runtime checks:
 - The public repo deliberately avoids a separate unattended-agent supervisor.
 - The host-level egress allowlist is coarse by design. It is scoped by UID, not
   by individual wrapper or destination hostname.
-- Credential proxy behavior is structurally checked but still needs an
-  end-to-end runtime test with a fake upstream provider.
+- Private overlays can weaken the network model by enabling
+  `services.nonoSandbox.allowDirectNetwork` or adding broad direct egress.

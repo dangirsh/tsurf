@@ -59,10 +59,9 @@ Important behavior from the shipped implementation:
 - Launches must start inside `tsurf.agent.projectRoot`, and the first path
   component below that root becomes the sandbox read scope.
 - The wrapper refuses to grant blanket read access to the entire project root.
-- Supported API-backed wrappers are intended to keep raw provider keys on the
-  root-owned side of the launch path. The child gets loopback base URLs plus
-  per-session tokens; end-to-end credential proxy proof remains tracked in the
-  validation roadmap.
+- Supported API-backed wrappers keep raw provider keys on the root-owned side
+  of the launch path. The child gets loopback base URLs plus per-session tokens;
+  a fake-provider VM test covers the brokered request path.
 - Public core installs wrapper binaries, not raw interactive agent binaries, as
   the intended entrypoints.
 
@@ -83,9 +82,10 @@ user is kept out of `docker`, and raw provider secrets remain root-owned by defa
   `services.nginx.enable = true`.
 - The public network model keeps `trustedInterfaces = [ ]`. Overlay interfaces
   and any additional exposure policy belong in a private overlay.
-- Agent egress is controlled at the host firewall by UID. Default policy allows
-  loopback, DNS, and TCP `22/80/443`, then blocks private and link-local ranges.
-  This is a coarse policy, not strong destination-level containment.
+- The base nono profile blocks direct network access by default. Credentialed
+  wrappers use nono reverse-proxy routes for configured providers, while the
+  host firewall remains a UID-scoped backstop for any direct agent traffic.
+  This is still coarse policy, not full destination-level mediation.
 - The root filesystem is rolled back on boot from BTRFS subvolumes. Persistent
   state is declared explicitly under `/persist`.
 

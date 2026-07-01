@@ -43,22 +43,47 @@ let
       roleEvalModule
     ];
   }).config;
+  harmoniaServerCfg = (lib.nixosSystem {
+    system = pkgs.stdenv.hostPlatform.system;
+    modules = [
+      self.nixosModules.core
+      self.nixosModules.harmonia-cache
+      roleEvalModule
+      {
+        tsurf.harmoniaCache = {
+          enable = true;
+          enableServer = true;
+          host = "cache.example.invalid";
+          publicKey = "cache.example.invalid-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          signingKeySopsFile = ../../README.md;
+          allowedClientIPv4s = [ "203.0.113.10" ];
+        };
+      }
+    ];
+  }).config;
+  harmoniaLocalServerCfg = (lib.nixosSystem {
+    system = pkgs.stdenv.hostPlatform.system;
+    modules = [
+      self.nixosModules.core
+      self.nixosModules.harmonia-cache
+      roleEvalModule
+      {
+        tsurf.harmoniaCache = {
+          enableServer = true;
+          signingKeySopsFile = ../../README.md;
+        };
+      }
+    ];
+  }).config;
   mkCheck =
     name: passMessage: failMessage: condition:
-    pkgs.runCommand name { } ''
-      ${
-        if condition then
-          ''
-            echo "PASS: ${passMessage}"
-            touch "$out"
-          ''
-        else
-          ''
-            echo "FAIL: ${failMessage}"
-            exit 1
-          ''
-      }
-    '';
+    if condition then
+      pkgs.runCommand name { } ''
+        echo "PASS: ${passMessage}"
+        touch "$out"
+      ''
+    else
+      builtins.throw "${name}: ${failMessage}";
 in
 {
   eval-services = pkgs.runCommand "eval-services" { } ''
@@ -360,6 +385,34 @@ in
         && !(lib.attrByPath [ "tsurf" "harmoniaCache" "enableServer" ] false servicesCfg)
       );
 
+  harmonia-cache-server-wiring =
+    mkCheck "harmonia-cache-server-wiring"
+      "harmonia server mode wires readable signing key and firewall exposure"
+      "harmonia server mode must let the harmonia service read its signing key and must open the cache port coherently"
+      (
+        harmoniaServerCfg.services.harmonia.cache.enable
+        && harmoniaServerCfg.services.harmonia.cache.signKeyPaths == [
+          harmoniaServerCfg.sops.secrets."harmonia-signing-key".path
+        ]
+        && harmoniaServerCfg.sops.secrets."harmonia-signing-key".owner == "harmonia"
+        && harmoniaServerCfg.sops.secrets."harmonia-signing-key".group == "harmonia"
+        && harmoniaServerCfg.sops.secrets."harmonia-signing-key".mode == "0400"
+        && harmoniaServerCfg.services.harmonia.cache.settings.bind == "0.0.0.0:5000"
+        && builtins.elem harmoniaServerCfg.tsurf.harmoniaCache.port harmoniaServerCfg.networking.firewall.allowedTCPPorts
+        && builtins.hasAttr "harmonia-cache-ingress" harmoniaServerCfg.networking.nftables.tables
+        && lib.hasInfix "203.0.113.10" harmoniaServerCfg.networking.nftables.tables.harmonia-cache-ingress.content
+      );
+
+  harmonia-cache-loopback-default =
+    mkCheck "harmonia-cache-loopback-default"
+      "harmonia server without explicit clients stays loopback-only"
+      "harmonia server should not bind publicly or open the firewall without allowedClientIPv4s"
+      (
+        harmoniaLocalServerCfg.services.harmonia.cache.settings.bind == "127.0.0.1:5000"
+        && !(builtins.elem 5000 harmoniaLocalServerCfg.networking.firewall.allowedTCPPorts)
+        && !(builtins.hasAttr "harmonia-cache-ingress" harmoniaLocalServerCfg.networking.nftables.tables)
+      );
+
   headscale-port-internal =
     let
       source = builtins.readFile ../../modules/networking.nix;
@@ -483,6 +536,20 @@ in
         && !(builtins.hasAttr "credentials" (profile.network or { }))
       );
 
+  nono-profile-blocks-direct-network =
+    let
+      baseProfile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
+      claudeProfile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
+    in
+    mkCheck "nono-profile-blocks-direct-network"
+      "base and generated nono profiles block direct network access by default"
+      "nono profile network.block must default true"
+      (
+        (baseProfile.network.block or false)
+        && (claudeProfile.network.block or false)
+        && !devCfg.services.nonoSandbox.allowDirectNetwork
+      );
+
   claude-profile-credential-proxy =
     let
       profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
@@ -519,10 +586,11 @@ in
       profile =
         builtins.fromJSON
           openRouterCfg.environment.etc."nono/profiles/tsurf-codex-openrouter.json".text;
+      agent = openRouterCfg.services.agentLauncher.agents."codex-openrouter";
       creds = profile.network.credentials or [ ];
       customCreds = profile.network.custom_credentials or { };
       openrouter = customCreds.openrouter or { };
-      source = builtins.readFile ../../extras/codex-openrouter.nix;
+      codexHome = "${openRouterCfg.tsurf.agent.home}/.codex-openrouter";
     in
     mkCheck "codex-openrouter-extra"
       "OpenRouter Codex extra exposes codex-openrouter with GLM 5.2 through the credential proxy"
@@ -531,6 +599,11 @@ in
         openRouterCfg.services.codexOpenRouterAgent.enable
         && openRouterCfg.services.codexOpenRouterAgent.wrapperName == "codex-openrouter"
         && openRouterCfg.services.codexOpenRouterAgent.model == "z-ai/glm-5.2"
+        && agent.command == "codex-openrouter-child"
+        && agent.credentialServices == [ "openrouter" ]
+        && agent.credentialOverrides.openrouter.upstream == "https://openrouter.ai/api/v1"
+        && agent.credentialOverrides.openrouter.secretName == "openrouter-api-key"
+        && agent.childEnvironment.CODEX_HOME == codexHome
         && builtins.elem "codex-openrouter" (
           map (pkg: pkg.meta.mainProgram or pkg.pname or pkg.name) openRouterCfg.environment.systemPackages
         )
@@ -540,15 +613,9 @@ in
         && openrouter.credential_key == "env://OPENROUTER_API_KEY"
         && openrouter.env_var == "OPENROUTER_API_KEY"
         && openRouterCfg.sops.secrets."openrouter-api-key".owner == "root"
-        && builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex-openrouter" (
-          profile.filesystem.allow or [ ]
-        )
+        && builtins.elem codexHome (profile.filesystem.allow or [ ])
         && !(builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex" (profile.filesystem.allow or [ ]))
-        && builtins.elem "d ${openRouterCfg.tsurf.agent.home}/.codex-openrouter 0700 ${openRouterCfg.tsurf.agent.user} ${openRouterCfg.tsurf.agent.user} -" openRouterCfg.systemd.tmpfiles.rules
-        && lib.hasInfix "NONO_PROXY_TOKEN" source
-        && lib.hasInfix "CODEX_HOME" source
-        && lib.hasInfix "wire_api=\\\"responses\\\"" source
-        && lib.hasInfix "--credential openrouter" source
+        && builtins.elem "d ${codexHome} 0700 ${openRouterCfg.tsurf.agent.user} ${openRouterCfg.tsurf.agent.user} -" openRouterCfg.systemd.tmpfiles.rules
       );
 
   nono-profile-denies-run-secrets =
@@ -648,14 +715,16 @@ in
   deploy-remote-detached-mode =
     let
       deploySrc = builtins.readFile ../../scripts/deploy.sh;
+      detachedSrc = builtins.readFile ../../scripts/deploy-detached.sh;
     in
-    mkCheck "deploy-remote-detached-mode" "deploy.sh has a detached remote activation mode"
-      "deploy.sh is missing remote-detached mode for hosts with unreliable long SSH sessions"
+    mkCheck "deploy-remote-detached-mode" "deploy.sh delegates detached remote activation mode"
+      "deploy.sh or deploy-detached.sh is missing remote-detached mode for hosts with unreliable long SSH sessions"
       (
         lib.hasInfix "remote-detached" deploySrc
-        && lib.hasInfix "systemd-run --unit=" deploySrc
-        && lib.hasInfix "deploy-rs-activate" deploySrc
-        && lib.hasInfix "rollback_old_system" deploySrc
+        && lib.hasInfix "deploy-detached.sh" deploySrc
+        && lib.hasInfix "systemd-run --unit=" detachedSrc
+        && lib.hasInfix "deploy-rs-activate" detachedSrc
+        && lib.hasInfix "rollback_old_system" detachedSrc
       );
 
   # --- Phase 115/152: agent user split ---
@@ -823,16 +892,6 @@ in
       "services host nix.settings.trusted-users includes non-root entries"
       (servicesCfg.nix.settings.trusted-users == [ "root" ]);
 
-  # --- Phase 124: Clone-repos credential safety ---
-
-  clone-repos-no-cli-credentials =
-    let
-      source = builtins.readFile ../../extras/scripts/clone-repos.sh;
-    in
-    mkCheck "clone-repos-no-cli-credentials" "clone-repos.sh uses GIT_ASKPASS (no credentials on CLI)"
-      "clone-repos.sh passes credentials via git -c extraheader - use GIT_ASKPASS pattern instead"
-      (lib.hasInfix "GIT_ASKPASS" source && !(lib.hasInfix "extraheader" source));
-
   home-profile-current-options =
     let
       source = builtins.readFile ../../extras/home/default.nix;
@@ -851,15 +910,18 @@ in
 
   agent-scripts-avoid-global-tmp =
     let
-      cloneSource = builtins.readFile ../../extras/scripts/clone-repos.sh;
       deploySource = builtins.readFile ../../scripts/deploy.sh;
+      detachedSource = builtins.readFile ../../scripts/deploy-detached.sh;
     in
-    mkCheck "agent-scripts-avoid-global-tmp" "agent helper scripts avoid /tmp for transient state"
-      "agent helper scripts still write transient files under /tmp"
+    mkCheck "agent-scripts-avoid-global-tmp" "deploy helper avoids /tmp for transient state"
+      "deploy helper still writes transient files under /tmp"
       (
-        !(lib.hasInfix "mktemp /tmp" cloneSource)
-        && !(lib.hasInfix " /tmp/" deploySource)
+        !(lib.hasInfix " /tmp/" deploySource)
         && !(lib.hasInfix "=/tmp/" deploySource)
+        && !(lib.hasInfix "\"/tmp/" deploySource)
+        && !(lib.hasInfix " /tmp/" detachedSource)
+        && !(lib.hasInfix "=/tmp/" detachedSource)
+        && !(lib.hasInfix "\"/tmp/" detachedSource)
       );
 
   tsurf-status-persistent-services =
@@ -1056,12 +1118,14 @@ in
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
     mkCheck "wrapper-credential-proxy-flow"
-      "agent-wrapper.sh loads secrets into env vars for nono's built-in credential proxy"
-      "agent-wrapper.sh missing credential loading flow (AGENT_CREDENTIAL_SECRETS, /run/secrets)"
+      "agent-wrapper.sh loads secrets for nono but forwards only phantom proxy env to children"
+      "agent-wrapper.sh credential flow must not re-export raw credential env vars to the child"
       (
         lib.hasInfix "AGENT_CREDENTIAL_SECRETS" source
         && lib.hasInfix "/run/secrets/" source
         && lib.hasInfix "env://" source
+        && lib.hasInfix "env_var%_API_KEY" source
+        && !(lib.hasInfix ''credential_env_names+=("$env_var")'' source)
       );
 
   wrapper-supply-chain-hardening =

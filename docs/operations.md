@@ -49,6 +49,7 @@ After cloning the repo:
 | `nix run .#persistence-audit` | Print the merged `/persist` manifest for the eval fixtures |
 | `nix run .#nixos-anywhere -- ...` | Use the pinned `nixos-anywhere` input |
 | `nix build .#vm-test-sandbox` | Run the VM sandbox smoke test (requires KVM) |
+| `nix build .#vm-test-credential-proxy` | Run the VM credential proxy proof (requires KVM) |
 
 ## Testing
 
@@ -57,13 +58,16 @@ The main validation paths in the public repo are:
 - `nix flake check`
   Runs eval checks, shellcheck coverage, and unit tests.
 - `./scripts/run-tests.sh`
-  Wrapper around `nix flake check`; writes `.test-status` for the git hooks.
+  Wrapper around current-system `nix flake check` plus
+  `nix flake check --all-systems --no-build`; writes `.test-status`.
 - `./scripts/run-tests.sh --live --host <host>`
   Runs eval checks plus live BATS tests.
 - `nix run .#test-live -- --host <host> tests/live/sandbox-behavioral.bats`
   Runs the sandbox-specific live suite only.
 - `nix build .#vm-test-sandbox`
   Reproducible VM-level smoke test for user and secret separation.
+- `nix build .#vm-test-credential-proxy`
+  VM-level proof for brokered credentials and strict nono proxy behavior.
 
 The hooks expect a fresh `.test-status` file in the repo root. The normal way to
 produce it is `./scripts/run-tests.sh`.

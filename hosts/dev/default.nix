@@ -1,7 +1,6 @@
 # hosts/dev/default.nix — example agent/dev host
 # Role: agent development and sandboxed execution via agent-sandbox.nix + nono.nix.
-# Clone-repos helper script is available at extras/scripts/clone-repos.sh for private overlays.
-# Private overlay replaces this with real host config, repo lists, and agent fleet wiring.
+# Private overlays provide real host config, repo lists, and agent fleet wiring.
 {
   config,
   inputs,

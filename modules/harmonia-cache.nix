@@ -7,6 +7,7 @@ let
   cfg = config.tsurf.harmoniaCache;
   cacheUrl = lib.optionalString (cfg.host != null) "http://${cfg.host}:${toString cfg.port}";
   allowedClientIPv4s = lib.concatStringsSep ", " cfg.allowedClientIPv4s;
+  exposeServer = cfg.allowedClientIPv4s != [ ];
 in
 {
   options.tsurf.harmoniaCache = {
@@ -41,7 +42,7 @@ in
     allowedClientIPv4s = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "Public IPv4 addresses allowed to fetch from the Harmonia cache port.";
+      description = "Explicit public IPv4 addresses allowed to fetch from the Harmonia cache port.";
     };
   };
 
@@ -72,34 +73,36 @@ in
 
       sops.secrets."harmonia-signing-key" = lib.mkIf (cfg.signingKeySopsFile != null) {
         sopsFile = cfg.signingKeySopsFile;
+        owner = "harmonia";
+        group = "harmonia";
+        mode = "0400";
       };
 
       services.harmonia = {
-        enable = true;
-        signKeyPaths = lib.optional (
+        cache.enable = true;
+        cache.signKeyPaths = lib.optional (
           cfg.signingKeySopsFile != null
         ) config.sops.secrets."harmonia-signing-key".path;
-        settings = {
-          bind = "0.0.0.0:${toString cfg.port}";
+        cache.settings = {
+          bind = "${if exposeServer then "0.0.0.0" else "127.0.0.1"}:${toString cfg.port}";
           workers = 4;
           max_connection_rate = 256;
           priority = 35;
         };
       };
 
-      networking.nftables.tables.harmonia-cache-ingress = {
+      networking.nftables.tables.harmonia-cache-ingress = lib.mkIf exposeServer {
         family = "inet";
         content = ''
           chain input {
             type filter hook input priority -5; policy accept;
             iifname "lo" tcp dport ${toString cfg.port} accept
-            ${lib.optionalString (cfg.allowedClientIPv4s != [ ]) ''
-              ip saddr { ${allowedClientIPv4s} } tcp dport ${toString cfg.port} accept
-            ''}
+            ip saddr { ${allowedClientIPv4s} } tcp dport ${toString cfg.port} accept
             tcp dport ${toString cfg.port} drop
           }
         '';
       };
+      networking.firewall.allowedTCPPorts = lib.mkIf exposeServer [ cfg.port ];
     })
   ];
 }

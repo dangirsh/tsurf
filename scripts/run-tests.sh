@@ -54,11 +54,20 @@ if $RUN_LIVE && [[ -z "$HOST" ]]; then
 fi
 
 if $RUN_EVAL; then
-  echo "=== Running eval checks (nix flake check) ==="
+  echo "=== Running current-system checks (nix flake check) ==="
   if nix flake check; then
-    echo "PASS: all eval checks passed"
+    echo "PASS: current-system checks passed"
   else
-    echo "FAIL: eval checks failed"
+    echo "FAIL: current-system checks failed"
+    FAILURES=$((FAILURES + 1))
+  fi
+  echo
+
+  echo "=== Running all-system eval checks (nix flake check --all-systems --no-build) ==="
+  if nix flake check --all-systems --no-build; then
+    echo "PASS: all-system eval checks passed"
+  else
+    echo "FAIL: all-system eval checks failed"
     FAILURES=$((FAILURES + 1))
   fi
   echo

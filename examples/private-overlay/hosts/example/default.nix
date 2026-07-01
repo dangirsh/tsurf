@@ -34,11 +34,6 @@
   # services.cassIndexer.enable = true;
   # Home Manager profile for the agent user (opt-in):
   # home-manager.users.agent = import "${inputs.tsurf}/extras/home";
-  # tsurf.headscale.enable = true;       # Self-hosted Tailscale control plane (services host)
-  # tsurf.headscale.domain = "hs.example.com";
-  # tsurf.headscale.baseDomain = "ts.net";  # MagicDNS suffix for machine names
-  # tsurf.headscale.publicIPv4 = "YOUR_PUBLIC_IP";
-  # tsurf.headscale.acmeEmail = "admin@example.com";
 
   # When you import secrets.nix, set:
   # sops.defaultSopsFile = ../../secrets/example.yaml;

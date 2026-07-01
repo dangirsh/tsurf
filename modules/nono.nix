@@ -84,7 +84,7 @@ let
       ];
     };
     network = {
-      block = false;
+      block = !cfg.allowDirectNetwork;
     };
     workdir.access = "readwrite";
     interactive = true;
@@ -118,6 +118,16 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = "Additional filesystem.read_file paths merged into the tsurf nono profile.";
+    };
+
+    allowDirectNetwork = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Allow direct sandbox network access. Leave this disabled for
+        credential-backed wrappers so nono's reverse proxy is the only route to
+        brokered providers.
+      '';
     };
   };
 

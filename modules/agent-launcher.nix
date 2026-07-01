@@ -48,7 +48,19 @@ let
       envVar = "OPENROUTER_API_KEY";
       secretName = "openrouter-api-key";
     };
+    xai = {
+      upstream = "https://api.x.ai";
+      injectHeader = "authorization";
+      credentialFormat = "Bearer {}";
+      envVar = "XAI_API_KEY";
+      secretName = "xai-api-key";
+    };
   };
+
+  credentialDefaultsFor =
+    agentDef: svc:
+    credentialServiceDefaults.${svc}
+    // lib.filterAttrs (_: value: value != null) (agentDef.credentialOverrides.${svc} or { });
 
   # Build launcher + wrapper for a single agent definition
   mkAgentPair =
@@ -62,7 +74,7 @@ let
         map (
           svc:
           let
-            defaults = credentialServiceDefaults.${svc};
+            defaults = credentialDefaultsFor agentDef svc;
           in
           lib.nameValuePair svc {
             upstream = defaults.upstream;
@@ -80,7 +92,7 @@ let
         map (
           svc:
           let
-            defaults = credentialServiceDefaults.${svc};
+            defaults = credentialDefaultsFor agentDef svc;
           in
           "${defaults.envVar}:${defaults.secretName}"
         ) agentDef.credentialServices
@@ -292,6 +304,42 @@ in
               '';
             };
 
+            credentialOverrides = lib.mkOption {
+              type = lib.types.attrsOf (
+                lib.types.submodule {
+                  options = {
+                    upstream = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Override the upstream base URL for this credential service.";
+                    };
+                    injectHeader = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Override the HTTP header used for credential injection.";
+                    };
+                    credentialFormat = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Override the nono credential_format template.";
+                    };
+                    envVar = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Override the root-side environment variable used by env://.";
+                    };
+                    secretName = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Override the /run/secrets file name loaded for this credential service.";
+                    };
+                  };
+                }
+              );
+              default = { };
+              description = "Small per-agent overrides for well-known credential service defaults.";
+            };
+
             defaultArgs = lib.mkOption {
               type = lib.types.listOf lib.types.str;
               default = [ ];
@@ -383,7 +431,16 @@ in
         assertion = config.tsurf.agentEgress.enable or false;
         message = "services.agentLauncher requires modules/networking.nix so the dedicated agent UID has host-level egress filtering.";
       }
-    ];
+    ]
+    ++ lib.concatLists (
+      lib.mapAttrsToList (
+        name: agentDef:
+        map (svc: {
+          assertion = builtins.hasAttr svc credentialServiceDefaults;
+          message = "services.agentLauncher.agents.${name}.credentialServices contains unsupported credential service '${svc}'.";
+        }) agentDef.credentialServices
+      ) cfg.agents
+    );
 
     environment.systemPackages = lib.mapAttrsToList (_: pair: pair.wrapper) agentPairs;
 

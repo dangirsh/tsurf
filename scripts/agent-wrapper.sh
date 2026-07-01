@@ -212,7 +212,6 @@ for pair in "${cred_pairs[@]}"; do
   [[ -n "$pair" ]] || continue
   IFS=: read -r env_var _secret_name <<< "$pair"
   [[ -n "$env_var" ]] || continue
-  credential_env_names+=("$env_var")
   if [[ "$env_var" == *_API_KEY ]]; then
     credential_env_names+=("${env_var%_API_KEY}_BASE_URL")
   fi
@@ -241,7 +240,7 @@ child_script='
   fi
 
   proxy_env=()
-  for name in NONO_PROXY_TOKEN HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY; do
+  for name in NONO_PROXY_TOKEN; do
     if [[ -n "${!name:-}" ]]; then
       proxy_env+=("$name=${!name}")
     fi
