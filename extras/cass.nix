@@ -12,10 +12,10 @@ let
   agentCfg = config.tsurf.agent;
   cass = pkgs.stdenv.mkDerivation rec {
     pname = "cass";
-    version = "0.1.64";
+    version = "0.6.19";
     src = pkgs.fetchurl {
       url = "https://github.com/Dicklesworthstone/coding_agent_session_search/releases/download/v${version}/cass-linux-amd64.tar.gz";
-      hash = "sha256-bqMZQO9wKGtZjtNeZlqyDTt0JKOuNvqSs+oBC8pQkWU=";
+      hash = "sha256-yLq3j7I27nVm02JSX5JkhCcSWtdxN4RePf4o5r+ZshE=";
     };
     nativeBuildInputs = [ pkgs.autoPatchelfHook ];
     buildInputs = [

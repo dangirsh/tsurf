@@ -4,17 +4,17 @@
 #   launch path reproducible from pinned source.
 { pkgs }:
 let
-  upstreamVersion = "0.22.0";
+  upstreamVersion = "0.66.0";
 in
 pkgs.rustPlatform.buildRustPackage rec {
   pname = "nono";
   version = "${upstreamVersion}-tsurf.1";
 
   src = pkgs.fetchFromGitHub {
-    owner = "always-further";
+    owner = "nolabs-ai";
     repo = "nono";
     rev = "v${upstreamVersion}";
-    hash = "sha256-O+zUbJja5SLeikYfIHp17zkAoyCSMnV4tm0U3oi0NfI=";
+    hash = "sha256-8Bol6B3c0pb25FG7214e6rXSKcACeOOQAd+c+1lblV4=";
   };
 
   patches = [
@@ -22,7 +22,7 @@ pkgs.rustPlatform.buildRustPackage rec {
     ./nono-no-run.patch
   ];
 
-  cargoHash = "sha256-QnopMhmWHn5aFqlk3xWr79jVPjz1keI5B7t1rxfdXpE=";
+  cargoHash = "sha256-WqOiB+TylLsy44ZOwdGMwdKAmhqi8OXDqsKse67GOgs=";
   cargoBuildFlags = [
     "-p"
     "nono-cli"
