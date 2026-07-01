@@ -25,7 +25,9 @@ QEMU `/dev/sda` examples fit the machine.
    Tailscale/headscale dependency, or public SSH bootstrap.
 5. Choose modules:
    use exported `inputs.tsurf.nixosModules.*` modules when possible; use the
-   public `agent-host` role only when the host should run brokered agents.
+   public `agent-host` role only when the host should run brokered agents. Use
+   `agent-host-with-secrets` only after the host has real sops and persisted
+   SSH host-key wiring.
 6. Hand off to `tsurf-overlay-authoring` with the discovered facts and any
    uncertainty that needs an explicit operator decision.
 

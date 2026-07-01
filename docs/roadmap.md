@@ -33,10 +33,12 @@ backed by behavioral evidence where practical.
 
 Next steps:
 
-- add a Linux builder or CI path that actually builds `x86_64-linux` checks
-  from common workstation environments
+- keep the existing Linux CI path healthy, and document how non-Linux
+  workstations should use `--all-systems --no-build` for local evaluation
 - keep source-text guards, but label them as structural checks
 - add focused runtime tests for credential proxying, egress denial, and wrapper
   execution paths
+- add a fake-provider credential proxy test that proves the child receives only
+  phantom credentials while the upstream sees the real injected header
 - add a bounded `nono` patched-behavior test instead of relying only on
   `nono --help`

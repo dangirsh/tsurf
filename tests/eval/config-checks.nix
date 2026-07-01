@@ -14,6 +14,35 @@ let
   devAgentUser = devCfg.tsurf.agent.user;
   altAgentUser = altAgentCfg.tsurf.agent.user;
   altAgentHome = altAgentCfg.tsurf.agent.home;
+  roleEvalModule = { tsurf.template.allowUnsafePlaceholders = true; };
+  agentHostRoleCfg = (lib.nixosSystem {
+    system = pkgs.stdenv.hostPlatform.system;
+    modules = [
+      self.nixosModules.agent-host
+      roleEvalModule
+    ];
+  }).config;
+  agentHostWithSecretsRoleCfg = (lib.nixosSystem {
+    system = pkgs.stdenv.hostPlatform.system;
+    modules = [
+      self.nixosModules.agent-host-with-secrets
+      roleEvalModule
+    ];
+  }).config;
+  serviceHostRoleCfg = (lib.nixosSystem {
+    system = pkgs.stdenv.hostPlatform.system;
+    modules = [
+      self.nixosModules.service-host
+      roleEvalModule
+    ];
+  }).config;
+  serviceHostWithSecretsRoleCfg = (lib.nixosSystem {
+    system = pkgs.stdenv.hostPlatform.system;
+    modules = [
+      self.nixosModules.service-host-with-secrets
+      roleEvalModule
+    ];
+  }).config;
   mkCheck =
     name: passMessage: failMessage: condition:
     pkgs.runCommand name { } ''
@@ -270,6 +299,7 @@ in
       names = builtins.attrNames (self.nixosModules or { });
       expected = [
         "agent-host"
+        "agent-host-with-secrets"
         "agent-compute"
         "agent-launcher"
         "agent-sandbox"
@@ -278,17 +308,30 @@ in
         "common"
         "core"
         "headscale"
+        "harmonia-cache"
         "impermanence"
         "networking"
         "nono"
         "secrets"
         "service-host"
+        "service-host-with-secrets"
         "users"
       ];
     in
     mkCheck "public-nixos-modules-exported" "public flake exports stable NixOS module and role names"
       "public flake missing expected nixosModules exports for private overlays"
       (builtins.all (name: builtins.elem name names) expected);
+
+  public-role-secrets-explicit =
+    mkCheck "public-role-secrets-explicit"
+      "role modules keep secrets explicit through with-secrets variants"
+      "agent-host/service-host should not import public secrets unless the with-secrets variant is used"
+      (
+        !(builtins.hasAttr "anthropic-api-key" agentHostRoleCfg.sops.secrets)
+        && !(builtins.hasAttr "anthropic-api-key" serviceHostRoleCfg.sops.secrets)
+        && builtins.hasAttr "anthropic-api-key" agentHostWithSecretsRoleCfg.sops.secrets
+        && builtins.hasAttr "anthropic-api-key" serviceHostWithSecretsRoleCfg.sops.secrets
+      );
 
   cass-default-disabled =
     let
@@ -307,6 +350,15 @@ in
     mkCheck "headscale-opt-in" "headscale not active in public services config (opt-in works)"
       "headscale active in public template — tsurf.headscale.enable should be false"
       (!(lib.attrByPath [ "tsurf" "headscale" "enable" ] false servicesCfg));
+
+  harmonia-cache-opt-in =
+    mkCheck "harmonia-cache-opt-in" "harmonia cache is exported and disabled by default"
+      "harmonia cache should be available as a public module but inactive in public fixtures"
+      (
+        builtins.hasAttr "harmonia-cache" (self.nixosModules or { })
+        && !(lib.attrByPath [ "tsurf" "harmoniaCache" "enable" ] false servicesCfg)
+        && !(lib.attrByPath [ "tsurf" "harmoniaCache" "enableServer" ] false servicesCfg)
+      );
 
   headscale-port-internal =
     let

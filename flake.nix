@@ -98,6 +98,7 @@
         agent-sandbox = ./modules/agent-sandbox.nix;
         nono = ./modules/nono.nix;
         headscale = ./modules/headscale.nix;
+        harmonia-cache = ./modules/harmonia-cache.nix;
 
         common =
           { ... }:
@@ -123,7 +124,6 @@
           {
             imports = [
               core
-              secrets
               agent-compute
               nono
               agent-launcher
@@ -135,14 +135,31 @@
             services.agentSandbox.enable = lib.mkDefault true;
           };
 
+        agent-host-with-secrets =
+          { ... }:
+          {
+            imports = [
+              agent-host
+              secrets
+            ];
+          };
+
         service-host =
           { ... }:
           {
             imports = [
               core
-              secrets
               headscale
               ./extras/restic.nix
+            ];
+          };
+
+        service-host-with-secrets =
+          { ... }:
+          {
+            imports = [
+              service-host
+              secrets
             ];
           };
       };

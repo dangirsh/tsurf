@@ -16,6 +16,8 @@ from deployment; a green eval is not authorization to deploy a real host.
 3. Run direct shell tests on the workstation when changing scripts:
    `for test in tests/unit/*.bash; do bash "$test"; done`.
 4. Explain any skipped Linux/VM/live checks explicitly.
+5. Do not claim credential proxy runtime proof unless an end-to-end fake-provider
+   or live-provider test actually exercised the brokered request path.
 
 ## Private Overlay Validation
 
@@ -25,6 +27,8 @@ from deployment; a green eval is not authorization to deploy a real host.
 3. Verify deploy nodes point at the intended hosts. If using `--target`, confirm
    it overrides both SSH checks and deploy-rs hostname.
 4. Confirm root SSH access and rollback path before any real deploy.
+5. Treat direct public HTTPS egress from the agent UID as an accepted risk unless
+   the overlay has implemented additional egress mediation.
 
 ## Deploy Rules
 

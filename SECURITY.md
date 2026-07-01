@@ -64,6 +64,14 @@ Security properties of that path:
 - Launch events go to journald only (`journalctl -t agent-launch`).
 - The public path has no `--no-sandbox` or `AGENT_ALLOW_NOSANDBOX` escape hatch.
 
+Verification status:
+
+- Eval checks verify the wrapper, profile, and `env://` credential wiring.
+- The repo does not yet include an end-to-end runtime proof that a provider key
+  is absent from the child environment while the broker injects it upstream.
+  Treat that as a required validation gap before extending the claim to new
+  agent types or custom private-overlay launchers.
+
 Resource limits:
 
 - Shared slice: `MemoryMax = 8G`, `CPUQuota = 300%`, `TasksMax = 1024`
@@ -114,14 +122,14 @@ Injection model:
 - nono's per-agent profile defines `custom_credentials` with `env://` URIs.
   nono reads the real keys from the parent env before applying the sandbox,
   starts its built-in reverse proxy with 256-bit phantom tokens, and strips
-  real keys from the child environment.
+  real keys from the child environment for supported wrapper paths.
 
-What the child gets:
+For supported wrapper paths, the child should get:
 
 - a per-session phantom token via `NONO_PROXY_TOKEN`
 - a localhost base URL such as `ANTHROPIC_BASE_URL=http://127.0.0.1:<port>/anthropic`
 
-What the child does not get:
+For supported wrapper paths, the child should not get:
 
 - the raw `/run/secrets/*` file
 - the raw provider key in its environment
@@ -162,6 +170,10 @@ Agent egress:
   - `169.254.0.0/16`
   - `fc00::/7`
   - `fe80::/10`
+
+This is a coarse UID/port allowlist. It blocks private and link-local ranges but
+does not prevent prompt-injected exfiltration to arbitrary public HTTPS
+destinations. Strong egress mediation is tracked as deferred design work.
 
 ## Persistence, Deploy, And Recovery
 
@@ -231,3 +243,5 @@ Runtime checks:
 - The public repo deliberately avoids a separate unattended-agent supervisor.
 - The host-level egress allowlist is coarse by design. It is scoped by UID, not
   by individual wrapper or destination hostname.
+- Credential proxy behavior is structurally checked but still needs an
+  end-to-end runtime test with a fake upstream provider.

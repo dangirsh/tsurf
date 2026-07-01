@@ -32,8 +32,9 @@ After cloning the repo:
    generate a real root SSH key and materialize `modules/root-ssh.nix`.
 4. Replace the placeholder age recipients in `.sops.yaml`, create your encrypted
    secrets file, and set `sops.defaultSopsFile` in the host config.
-5. Import `modules/networking.nix` and `modules/secrets.nix` only after the host
-   has the networking and persisted SSH-host-key setup those modules expect.
+5. Import `modules/networking.nix` first. Import `modules/secrets.nix`, or use
+   an exported `*-with-secrets` role, only after the host has the persisted
+   SSH-host-key and encrypted sops file those modules expect.
 6. Deploy from the private overlay with `./scripts/deploy.sh --node <host>`.
    Magic rollback is enabled by default; use `--first-deploy` for initial
    adoption when rollback cannot be used safely.

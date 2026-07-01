@@ -26,9 +26,10 @@ These lead to the following design goals:
 
 - **Sandboxed agent execution.** Agents run through
   [nono](https://github.com/always-further/nono), using
-  [Landlock](https://landlock.io/)-backed filesystem rules with restricted
-  network access. Real credentials never enter the agent process; a separate
-  broker supplies short-lived, per-session tokens.
+  [Landlock](https://landlock.io/)-backed filesystem rules and coarse
+  host-level egress limits. Supported API-backed wrappers are designed to keep
+  real provider credentials on the broker side and give the child only
+  per-session proxy tokens.
 - **Declarative agent launcher.** Define a new agent type in a few lines of config
   and get a sandboxed wrapper, credential brokering, resource controls, and
   persistent storage automatically.
@@ -39,6 +40,10 @@ These lead to the following design goals:
   strict firewall rules, and an
   [impermanence](https://github.com/nix-community/impermanence)-style root
   filesystem that rolls back to a clean snapshot on every boot.
+- **Self-hosted Nix cache layer.** Private overlays can import the public
+  `harmonia-cache` module to trust or serve a
+  [Harmonia](https://github.com/nix-community/harmonia) binary cache with a
+  SOPS-managed signing key and an nftables client allowlist.
 - **Deploy safety.** Lockout-prevention assertions catch misconfigurations
   (e.g., missing SSH keys, exposed ports) before they reach a live machine.
   [deploy-rs](https://github.com/serokell/deploy-rs)-based deploys are locked,

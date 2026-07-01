@@ -30,9 +30,10 @@ change, not a deploy.
 ## Module Selection
 
 - Use `agent-host` only for hosts that should run brokered prompt-controlled
-  agents.
+  agents. Use `agent-host-with-secrets` only after sops is ready.
 - Use `service-host` for service machines that should inherit public base
-  hardening without the agent sandbox.
+  hardening without the agent sandbox. Use `service-host-with-secrets` only
+  after sops is ready.
 - Use individual `nixosModules` when the private overlay already has a mature
   role split and role modules would hide important provider-specific overrides.
 

@@ -18,8 +18,9 @@ in a private flake.
 - `scripts/deploy.sh` refuses to deploy from the public repo. Real deploys must
   come from a private overlay that has a `tsurf.url` input.
 - The flake exports `nixosModules.*` for private overlays that want stable
-  module names instead of path imports, including `core`, `agent-host`, and
-  `service-host` role modules.
+  module names instead of path imports. `core`, `agent-host`, and
+  `service-host` do not import secrets; use the explicit `*-with-secrets` role
+  variants only after host sops and persisted SSH-key assumptions are true.
 - Repo-local setup skills under `skills/` are the preferred way for agents to
   discover host-specific facts before authoring a private overlay.
 
@@ -35,6 +36,7 @@ in a private flake.
 | `modules/nono.nix` | Base `nono` profile and sandbox profile installation |
 | `modules/agent-launcher.nix` | Generic launcher that emits wrappers, launchers, sudo rules, and persistence |
 | `modules/agent-sandbox.nix` | Public core `claude` wrapper definition on top of the generic launcher |
+| `modules/harmonia-cache.nix` | Optional Harmonia binary cache client/server module for private overlays |
 
 ## Agent Launch Model
 
@@ -57,8 +59,10 @@ Important behavior from the shipped implementation:
 - Launches must start inside `tsurf.agent.projectRoot`, and the first path
   component below that root becomes the sandbox read scope.
 - The wrapper refuses to grant blanket read access to the entire project root.
-- Raw provider keys stay on the root-owned side of the launch path. The child
-  gets only loopback base URLs plus per-session tokens.
+- Supported API-backed wrappers are intended to keep raw provider keys on the
+  root-owned side of the launch path. The child gets loopback base URLs plus
+  per-session tokens; end-to-end credential proxy proof remains tracked in the
+  validation roadmap.
 - Public core installs wrapper binaries, not raw interactive agent binaries, as
   the intended entrypoints.
 
@@ -81,6 +85,7 @@ user is kept out of `docker`, and raw provider secrets remain root-owned by defa
   and any additional exposure policy belong in a private overlay.
 - Agent egress is controlled at the host firewall by UID. Default policy allows
   loopback, DNS, and TCP `22/80/443`, then blocks private and link-local ranges.
+  This is a coarse policy, not strong destination-level containment.
 - The root filesystem is rolled back on boot from BTRFS subvolumes. Persistent
   state is declared explicitly under `/persist`.
 
