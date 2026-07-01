@@ -31,7 +31,7 @@ There is no separate `dev` operator user. Root handles all administrative tasks 
 
 ## Adding Agent Workloads
 
-Public tsurf core provides two first-class agent paths running as the `agent` user under [nono](https://github.com/always-further/nono) sandboxing:
+Public tsurf core provides two first-class agent paths running as the `agent` user under [nono](https://github.com/nolabs-ai/nono) sandboxing:
 
 - **Interactive `claude`** -- sandboxed wrapper for interactive use
 - **Generic launcher** -- `services.agentLauncher.agents.<name>` for custom agents

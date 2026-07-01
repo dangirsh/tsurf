@@ -569,13 +569,14 @@ in
       allow = profile.filesystem.allow or [ ];
       allowFile = profile.filesystem.allow_file or [ ];
       deny = profile.filesystem.deny or [ ];
-      groups = profile.security.groups or [ ];
+      groups = profile.groups.include or [ ];
       home = devCfg.tsurf.agent.home;
     in
     mkCheck "nono-base-profile-generic" "base tsurf nono profile is generic and not Claude-shaped"
       "modules/nono.nix still bakes Claude-specific paths, groups, or extends into the base profile"
       (
         !(builtins.hasAttr "extends" profile)
+        && !(builtins.hasAttr "groups" (profile.security or { }))
         && !(builtins.elem "${home}/.claude" allow)
         && !(builtins.elem "${home}/.config/claude" allow)
         && !(builtins.elem "${home}/.claude.json" allowFile)

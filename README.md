@@ -25,7 +25,7 @@ These lead to the following design goals:
 ## Core Features
 
 - **Sandboxed agent execution.** Agents run through
-  [nono](https://github.com/always-further/nono), using
+  [nono](https://github.com/nolabs-ai/nono), using
   [Landlock](https://landlock.io/)-backed filesystem rules and coarse
   host-level egress limits. Supported API-backed wrappers are designed to keep
   real provider credentials on the broker side and give the child only

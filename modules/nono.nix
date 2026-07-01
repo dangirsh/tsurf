@@ -19,8 +19,8 @@ let
       description = "tsurf agent sandbox base profile";
       author = "tsurf";
     };
-    security = {
-      groups = [
+    groups = {
+      include = [
         "nix_runtime"
         "node_runtime"
         "rust_runtime"
@@ -28,6 +28,8 @@ let
         "user_caches_linux"
         "unlink_protection"
       ];
+    };
+    security = {
       signal_mode = "isolated";
       capability_elevation = false;
     };

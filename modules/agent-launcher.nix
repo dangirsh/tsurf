@@ -86,9 +86,8 @@ let
         ) agentDef.credentialServices
       );
 
-      # Merge the base tsurf profile into each generated profile. nono 0.22
-      # resolves "extends" through its user profile registry, not by sibling file
-      # lookup, so NixOS-installed agent profiles must be self-contained.
+      # Merge the base tsurf profile into each generated profile. NixOS-installed
+      # profiles must be self-contained instead of relying on registry lookup.
       nonoProfileName = "tsurf-${name}";
       hasCredentials = agentDef.credentialServices != [ ];
       baseNonoProfile = builtins.fromJSON config.environment.etc."nono/profiles/tsurf.json".text;

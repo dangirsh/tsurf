@@ -47,7 +47,7 @@ pkgs.rustPlatform.buildRustPackage rec {
 
   meta = with pkgs.lib; {
     description = "Zero-config security sandbox with credential injection";
-    homepage = "https://github.com/always-further/nono";
+    homepage = "https://github.com/nolabs-ai/nono";
     license = licenses.asl20;
     platforms = [ "x86_64-linux" ];
   };
