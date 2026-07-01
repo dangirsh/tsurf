@@ -230,6 +230,10 @@
           inherit pkgs lib;
           impermanenceModule = impermanence.nixosModules.impermanence;
         };
+        vm-test-credential-proxy = import ./tests/vm/credential-proxy.nix {
+          inherit pkgs lib;
+          impermanenceModule = impermanence.nixosModules.impermanence;
+        };
 
         test-live = pkgs.writeShellApplication {
           name = "test-live";

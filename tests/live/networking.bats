@@ -96,3 +96,58 @@ bats_load_library bats-assert
     return 1
   fi
 }
+
+# Validates NET-034: allowed public HTTPS works for the dedicated agent UID
+@test "${HOST}: agent UID can reach allowed public HTTPS" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+
+  run remote_as_agent "curl -fsS --connect-timeout 5 --max-time 10 https://github.com/ >/dev/null"
+  assert_success
+}
+
+# Validates NET-039: terminal drop rejects agent UID traffic to non-allowlisted public TCP ports
+@test "${HOST}: agent UID cannot reach disallowed public TCP ports" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+
+  local probe="timeout 5 bash -lc ':</dev/tcp/1.1.1.1/853'"
+  if ! remote "$probe" >/dev/null 2>&1; then
+    skip "root cannot reach 1.1.1.1:853 from this host"
+  fi
+
+  run remote_as_agent "$probe"
+  assert_failure
+}
+
+# Validates NET-035: private/link-local ranges are blocked for the dedicated agent UID
+@test "${HOST}: agent UID cannot reach cloud metadata endpoint" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+
+  run remote_as_agent "curl -sf --connect-timeout 2 --max-time 3 http://169.254.169.254/ >/dev/null"
+  assert_failure
+}
+
+# Validates NET-035: tailnet/CGNAT ranges are blocked for the dedicated agent UID when reachable by root
+@test "${HOST}: agent UID cannot reach reachable tailnet targets" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+
+  local probe="timeout 5 bash -lc ':</dev/tcp/100.64.0.5/443'"
+  if ! remote "$probe" >/dev/null 2>&1; then
+    skip "root cannot reach 100.64.0.5:443 from this host"
+  fi
+
+  run remote_as_agent "$probe"
+  assert_failure
+}
+
+# Validates NET-041: configured blocked loopback service ports are denied for the agent UID
+@test "${HOST}: agent UID cannot reach blocked loopback service ports" {
+  if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+
+  local probe="timeout 3 bash -lc ':</dev/tcp/127.0.0.1/8384'"
+  if ! remote "$probe" >/dev/null 2>&1; then
+    skip "no root-reachable listener on blocked loopback port 8384"
+  fi
+
+  run remote_as_agent "$probe"
+  assert_failure
+}
