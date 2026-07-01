@@ -1,6 +1,6 @@
 ---
 name: tsurf-overlay-authoring
-description: Create or update a private tsurf overlay from discovered host facts. Use when an agent needs to author NixOS modules, choose public tsurf role modules, preserve private services, or migrate away from copied quickstart/template wiring without breaking existing private-overlay use cases.
+description: Create or update a private tsurf overlay from discovered host facts. Use when an agent needs to author NixOS modules, choose public tsurf role modules, or preserve private services.
 ---
 
 # Tsurf Overlay Authoring

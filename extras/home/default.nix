@@ -11,7 +11,7 @@
   # Default to agent user; the alt-agent fixture overrides these via home-manager config.
   home.username = lib.mkDefault "agent";
   home.homeDirectory = lib.mkDefault "/home/agent";
-  home.stateVersion = "25.11";
+  home.stateVersion = "26.11";
   programs.home-manager.enable = true;
 
   imports = [

@@ -208,26 +208,13 @@ This is a larger design change than the wrapper fix. Expect:
 If implemented carefully, this is still tractable, but it is not a one-file
 change.
 
-## Recommended Rollout Strategy
-
-### Phase 1: Introduce the mediation path
+## Implementation Strategy
 
 - Add the proxy service and per-agent allowlist config.
 - Export proxy env vars from wrappers.
-- Keep a temporary compatibility flag for direct `22/80/443` egress.
-
-### Phase 2: Flip the default
-
-- New agents default to mediated egress only.
-- Existing agents can opt into the compatibility mode temporarily.
-
-### Phase 3: Remove the compatibility mode
-
-- Direct outbound Internet access from the `agent` UID is no longer the normal
-  path.
+- Agent workloads default to mediated egress only.
+- Direct outbound Internet access from the `agent` UID is not the normal path.
 - SSH egress becomes rare and explicit.
-
-This phased rollout reduces breakage while still aiming at a strong default.
 
 ## Alternatives To Consider
 

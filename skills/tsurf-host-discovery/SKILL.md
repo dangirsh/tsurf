@@ -1,6 +1,6 @@
 ---
 name: tsurf-host-discovery
-description: Inspect an existing or prospective NixOS host before applying tsurf. Use when an agent needs to choose a safe tsurf setup path, adapt to unknown disk/network/provider details, determine whether a host can use the public roles directly, or collect facts for a private overlay without relying on the legacy quickstart generator.
+description: Inspect an existing or prospective NixOS host before applying tsurf. Use when an agent needs to choose a safe tsurf setup path, adapt to unknown disk/network/provider details, determine whether a host can use the public roles directly, or collect facts for a private overlay.
 ---
 
 # Tsurf Host Discovery
@@ -33,8 +33,6 @@ QEMU `/dev/sda` examples fit the machine.
 
 - Do not run `nixos-rebuild switch`, `disko`, partitioning, or deploy commands
   from this skill.
-- Do not copy the quickstart overlay blindly. It is a convenience path, not the
-  canonical production model.
 - Keep root SSH recovery in scope. If the host has no confirmed root key path,
   stop before deploy planning.
 - Keep public and private boundaries clear. Real hostnames, secrets, extra

@@ -62,8 +62,7 @@ These are on top of more standard use cases (which can be built/maintained by th
 
 ## Setup
 
-The preferred setup path is agent-guided rather than template-driven. Start with
-the repo-local skills in [`skills/`](skills/):
+Start with the repo-local skills in [`skills/`](skills/):
 
 - `tsurf-host-discovery`: inspect the target host and classify storage,
   networking, and role needs.
@@ -71,11 +70,8 @@ the repo-local skills in [`skills/`](skills/):
   exported public modules and roles.
 - `tsurf-deploy-validation`: validate the public repo or private overlay before
   any deploy.
-
-The older `./tsurf init root@host` compatibility path still exists for short local
-evaluations against an existing NixOS host, but production deployments should
-come from a private overlay. See [`QUICKSTART.md`](QUICKSTART.md) and
-[`examples/private-overlay/`](examples/private-overlay/) for the compatibility
+See [`QUICKSTART.md`](QUICKSTART.md) and
+[`examples/private-overlay/`](examples/private-overlay/) for the private-overlay
 workflow.
 
 ## Documentation

@@ -286,8 +286,7 @@ in
         "users"
       ];
     in
-    mkCheck "public-nixos-modules-exported"
-      "public flake exports stable NixOS module and role names"
+    mkCheck "public-nixos-modules-exported" "public flake exports stable NixOS module and role names"
       "public flake missing expected nixosModules exports for private overlays"
       (builtins.all (name: builtins.elem name names) expected);
 
@@ -329,7 +328,7 @@ in
     let
       source = builtins.readFile ../../modules/headscale.nix;
     in
-    mkCheck "headscale-dns-nameservers" "headscale sets dns.nameservers.global (25.11 compat)"
+    mkCheck "headscale-dns-nameservers" "headscale sets dns.nameservers.global"
       "modules/headscale.nix missing dns.nameservers.global — headscale 0.26+ requires explicit nameservers"
       (lib.hasInfix "dns.nameservers.global" source);
 
@@ -489,7 +488,9 @@ in
         && openrouter.credential_key == "env://OPENROUTER_API_KEY"
         && openrouter.env_var == "OPENROUTER_API_KEY"
         && openRouterCfg.sops.secrets."openrouter-api-key".owner == "root"
-        && builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex-openrouter" (profile.filesystem.allow or [ ])
+        && builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex-openrouter" (
+          profile.filesystem.allow or [ ]
+        )
         && !(builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex" (profile.filesystem.allow or [ ]))
         && builtins.elem "d ${openRouterCfg.tsurf.agent.home}/.codex-openrouter 0700 ${openRouterCfg.tsurf.agent.user} ${openRouterCfg.tsurf.agent.user} -" openRouterCfg.systemd.tmpfiles.rules
         && lib.hasInfix "NONO_PROXY_TOKEN" source
@@ -779,13 +780,13 @@ in
       "clone-repos.sh passes credentials via git -c extraheader - use GIT_ASKPASS pattern instead"
       (lib.hasInfix "GIT_ASKPASS" source && !(lib.hasInfix "extraheader" source));
 
-  home-profile-no-deprecated-options =
+  home-profile-current-options =
     let
       source = builtins.readFile ../../extras/home/default.nix;
     in
-    mkCheck "home-profile-no-deprecated-options"
-      "extras/home/default.nix avoids deprecated Home Manager git/ssh options"
-      "extras/home/default.nix still uses deprecated Home Manager git/ssh options"
+    mkCheck "home-profile-current-options"
+      "extras/home/default.nix uses current Home Manager git/ssh options"
+      "extras/home/default.nix uses unsupported Home Manager git/ssh options"
       (
         !(lib.hasInfix "programs.git.userName" source)
         && !(lib.hasInfix "programs.git.userEmail" source)
@@ -1061,10 +1062,17 @@ in
         && lib.hasInfix "lib.unique" source
       );
 
-  no-systemd-initrd =
-    mkCheck "no-systemd-initrd" "boot.initrd.systemd.enable is false on all hosts"
-      "boot.initrd.systemd.enable is true — non-systemd initrd required for BTRFS rollback"
-      (!servicesCfg.boot.initrd.systemd.enable && !devCfg.boot.initrd.systemd.enable);
+  systemd-initrd-rollback =
+    mkCheck "systemd-initrd-rollback" "BTRFS rollback runs as a systemd initrd service"
+      "missing tsurf-btrfs-rollback systemd initrd service"
+      (
+        servicesCfg.boot.initrd.systemd.enable
+        && devCfg.boot.initrd.systemd.enable
+        && builtins.hasAttr "tsurf-btrfs-rollback" servicesCfg.boot.initrd.systemd.services
+        && builtins.hasAttr "tsurf-btrfs-rollback" devCfg.boot.initrd.systemd.services
+        && builtins.elem "sysroot.mount" servicesCfg.boot.initrd.systemd.services.tsurf-btrfs-rollback.before
+        && builtins.elem "sysroot.mount" devCfg.boot.initrd.systemd.services.tsurf-btrfs-rollback.before
+      );
 
   # --- Phase 152: Generic launcher architecture ---
 

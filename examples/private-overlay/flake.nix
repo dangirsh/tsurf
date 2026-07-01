@@ -18,6 +18,7 @@
     deploy-rs.follows = "tsurf/deploy-rs";
     impermanence.follows = "tsurf/impermanence";
     srvos.follows = "tsurf/srvos";
+    nix-mineral.follows = "tsurf/nix-mineral";
   };
 
   outputs =
@@ -31,6 +32,7 @@
       deploy-rs,
       impermanence,
       srvos,
+      nix-mineral,
       ...
     }@inputs:
     let
@@ -43,6 +45,7 @@
         impermanence.nixosModules.impermanence
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
+        nix-mineral.nixosModules.nix-mineral
         {
           nixpkgs.overlays = [
             llm-agents.overlays.default
@@ -51,26 +54,23 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
         }
-        # New overlays may use inputs.tsurf.nixosModules.* here. These path
-        # imports remain as explicit examples and for compatibility with older
-        # private overlays.
-        "${inputs.tsurf}/modules/base.nix"
-        "${inputs.tsurf}/modules/boot.nix"
-        "${inputs.tsurf}/modules/users.nix"
+        inputs.tsurf.nixosModules.base
+        inputs.tsurf.nixosModules.boot
+        inputs.tsurf.nixosModules.users
         ./modules/root-ssh.nix
-        "${inputs.tsurf}/modules/impermanence.nix"
+        inputs.tsurf.nixosModules.impermanence
         # agent-compute.nix: tsurf-agents.slice cgroup limits and /data/projects persistence
-        "${inputs.tsurf}/modules/agent-compute.nix"
+        inputs.tsurf.nixosModules.agent-compute
         { services.agentCompute.enable = true; }
         # networking.nix: host-level firewall and dedicated-agent egress policy
-        "${inputs.tsurf}/modules/networking.nix"
+        inputs.tsurf.nixosModules.networking
         # nono.nix: nono binary, tsurf base profile, NONO_PROFILE_PATH
-        "${inputs.tsurf}/modules/nono.nix"
+        inputs.tsurf.nixosModules.nono
         { services.nonoSandbox.enable = true; }
         # agent-launcher.nix: generic sandboxed agent launcher infrastructure
-        "${inputs.tsurf}/modules/agent-launcher.nix"
+        inputs.tsurf.nixosModules.agent-launcher
         # agent-sandbox.nix: core claude wrapper
-        "${inputs.tsurf}/modules/agent-sandbox.nix"
+        inputs.tsurf.nixosModules.agent-sandbox
         { services.agentSandbox.enable = true; }
         # Optional extras (import here, then enable in host config as needed):
         # cass.nix: low-priority CASS indexer timer for the dedicated agent user

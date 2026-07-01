@@ -23,8 +23,7 @@ Important current truths:
 - `hosts/services` is the unsandboxed service-host fixture.
 - No public fixture enables CASS, Codex, or a home-manager profile by default.
 - The example private overlay imports `extras/cass.nix`, but still leaves it disabled.
-- Agent-guided setup lives in `skills/`; the generated compatibility path is
-  compatibility tooling, not the preferred production model.
+- Agent-guided setup lives in `skills/`.
 
 ## Editing Rules
 

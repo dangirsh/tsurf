@@ -190,9 +190,6 @@ Agent egress:
 - Firewall, SSH password auth, keyboard-interactive auth, and X11 forwarding
   defaults are set explicitly in `modules/networking.nix`. `srvos` also sets
   them; the explicit declarations are the trust anchor.
-- `nix-mineral` targets nixpkgs-unstable. A compatibility shim stubs
-  `services.resolved.settings` for nixos-25.11. This shim is annotated with
-  `@decision SEC-160-04` in `flake.nix`.
 - `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
 - The repo does not add signature verification for these remaining prebuilt
   binaries.

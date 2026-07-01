@@ -40,5 +40,5 @@
   # Use scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;
 
-  system.stateVersion = "25.11";
+  system.stateVersion = "26.11";
 }

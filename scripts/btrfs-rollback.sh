@@ -9,8 +9,8 @@
 # instead of tmpfs root because server workloads need disk-backed root (see @decision
 # IMP-01 in modules/impermanence.nix).
 #
-# Environment: NixOS traditional (non-systemd) initrd via boot.initrd.postResumeCommands.
-# Requires: bash, mount, btrfs, stat, date, find, mkdir, mv (all available in NixOS initrd).
+# Environment: NixOS systemd initrd before sysroot.mount.
+# Requires: bash, mount, btrfs, stat, date, find, mkdir, mv.
 
 cleanup() {
   if mountpoint -q /btrfs_tmp 2>/dev/null; then

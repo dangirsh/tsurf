@@ -60,15 +60,14 @@
   };
 
   # @decision SEC-145-05: nix-mineral provides kernel/mount/entropy/debug hardening (~80 settings).
-  #   Compatibility preset with agent-workload overrides beyond explicit critical sysctls above.
+  #   Targeted agent-workload overrides sit beside explicit critical sysctls above.
   nix-mineral.enable = true;
-  nix-mineral.preset = "compatibility";
 
-  # Agent-workload overrides beyond compatibility preset defaults:
+  # Agent-workload overrides:
   nix-mineral.settings.kernel.cpu-mitigations = "smt-on"; # VPS: hypervisor controls SMT
   nix-mineral.settings.kernel.slab-debug = false; # Performance: heavy alloc overhead
   nix-mineral.settings.etc.generic-machine-id = false; # Conflicts with impermanence /persist
-  nix-mineral.settings.misc.dnssec = false; # services.resolved.settings absent in nixos-25.11
+  nix-mineral.settings.misc.dnssec = lib.mkForce false; # Pinned NixOS lacks services.resolved.settings.
   nix-mineral.filesystems.enable = false; # Conflicts with impermanence neededForBoot
 
   # srvos installs: gitMinimal, curl, dnsutils, htop, jq, tmux.
@@ -84,6 +83,4 @@
   # --- srvos overrides ---
   srvos.server.docs.enable = false;
   programs.command-not-found.enable = false;
-  # srvos enables systemd initrd by default; we need script-based initrd for BTRFS rollback
-  boot.initrd.systemd.enable = lib.mkForce false;
 }

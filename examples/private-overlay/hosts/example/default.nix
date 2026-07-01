@@ -43,5 +43,5 @@
   # When you import secrets.nix, set:
   # sops.defaultSopsFile = ../../secrets/example.yaml;
 
-  system.stateVersion = "25.11";
+  system.stateVersion = "26.11";
 }

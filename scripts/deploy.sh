@@ -12,7 +12,7 @@
 # Flags:
 #   --node NAME         Flake node to deploy (required)
 #   --target USER@HOST  Override deploy, lock, and status SSH target (default: root@<node>)
-#   --first-deploy      Disable magic rollback for initial migration
+#   --first-deploy      Disable magic rollback for initial adoption
 #   --magic-rollback    Enable deploy-rs magic rollback with 300s confirm timeout (default)
 #   --no-magic-rollback Disable deploy-rs magic rollback for this deploy
 #   --help              Print usage
@@ -45,7 +45,6 @@ MODE="${TSURF_DEPLOY_MODE:-remote}"
 FAST_MODE=false
 FIRST_DEPLOY=false
 MAGIC_ROLLBACK=true
-DEPRECATED_FLAGS=()
 SECONDS=0
 
 # SSH multiplexing: reuse a single connection for locking/health-check calls.
@@ -372,11 +371,10 @@ Options:
                         Build and activate on target under systemd
   --mode local          Build locally, deploy remotely
   --target U@H          Override deploy and SSH target (default: root@<node>)
-  --first-deploy        Disable magic rollback for one-time migration
+  --first-deploy        Disable magic rollback for first adoption
   --fast                Local build, single evaluation (no --remote-build)
   --magic-rollback      Enable deploy-rs magic rollback (default, 300s confirm timeout)
   --no-magic-rollback   Disable deploy-rs magic rollback for this deploy
-  --update-inputs       Deprecated; update flake inputs explicitly before deploy
   --help                Show this help
 
 Examples:
@@ -384,7 +382,7 @@ Examples:
   ./scripts/deploy.sh --node myhost --fast              # Fast: local build
   ./scripts/deploy.sh --node myhost --mode local        # Local build fallback
   ./scripts/deploy.sh --node myhost --mode remote-detached # Survive SSH drops
-  ./scripts/deploy.sh --node myhost --first-deploy      # First migration deploy
+  ./scripts/deploy.sh --node myhost --first-deploy      # First deploy
   ./scripts/deploy.sh --node myhost --magic-rollback    # Magic rollback (300s)
   ./scripts/deploy.sh --target root@1.2.3.4 --node myhost  # Override deploy host
 USAGE
@@ -404,19 +402,10 @@ while [[ $# -gt 0 ]]; do
     --first-deploy) FIRST_DEPLOY=true; shift ;;
     --magic-rollback) MAGIC_ROLLBACK=true; shift ;;
     --no-magic-rollback) MAGIC_ROLLBACK=false; shift ;;
-    --update-inputs) DEPRECATED_FLAGS+=("$1"); shift ;;
-    --skip-update) DEPRECATED_FLAGS+=("$1"); shift ;;
     --help)        usage; exit 0 ;;
     *)             echo "Unknown option: $1"; usage; exit 1 ;;
   esac
 done
-
-if (( ${#DEPRECATED_FLAGS[@]} > 0 )); then
-  printf 'Error: %s no longer does anything in deploy.sh.\n' "$(printf '%s ' "${DEPRECATED_FLAGS[@]}" | sed 's/ $//')"
-  echo "Update flake inputs explicitly before deploy, for example:"
-  echo "  nix flake update"
-  exit 1
-fi
 
 mkdir -p "$FLAKE_DIR/tmp"
 
@@ -498,7 +487,7 @@ if [[ "$MAGIC_ROLLBACK" == true && "$FIRST_DEPLOY" != true ]]; then
 else
   DEPLOY_ARGS+=(--magic-rollback false)
   if [[ "$FIRST_DEPLOY" == true ]]; then
-    echo "==> First deploy mode: magic rollback disabled for migration."
+    echo "==> First deploy mode: magic rollback disabled."
   fi
 fi
 

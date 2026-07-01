@@ -3,9 +3,9 @@
 # Defines inputs, eval fixtures, test infrastructure, and the tsurf overlay.
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     sops-nix = {
@@ -72,16 +72,6 @@
         sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
         nix-mineral.nixosModules.nix-mineral
-        # @decision SEC-160-04: Compat shim — nix-mineral targets nixpkgs-unstable which
-        #   has services.resolved.settings (INI-based); nixos-25.11 still uses per-option
-        #   services.resolved.{dnssec,llmnr,...}. Stub the option so nix-mineral's dnssec
-        #   module definition has somewhere to land. Re-evaluate when upgrading nixpkgs.
-        {
-          options.services.resolved.settings = lib.mkOption {
-            type = lib.types.anything;
-            default = { };
-          };
-        }
         {
           nixpkgs.overlays = [
             llm-agents.overlays.default
@@ -216,23 +206,6 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
-        tsurf = pkgs.writeShellApplication {
-          name = "tsurf";
-          runtimeInputs = with pkgs; [
-            coreutils
-            gnused
-            openssh
-            nix
-            systemd
-          ];
-          text = ''
-            export TSURF_BUNDLED_FLAKE_TEMPLATE=${./examples/quickstart-overlay/flake.nix.template}
-            export TSURF_BUNDLED_HOST_TEMPLATE=${./examples/quickstart-overlay/host.nix.template}
-            export TSURF_BUNDLED_OVERLAY_README=${./examples/quickstart-overlay/README.md}
-            export TSURF_BUNDLED_SCRIPT_DIR=${./scripts}
-            ${builtins.readFile ./scripts/tsurf.sh}
-          '';
-        };
 
         # NixOS VM test for sandbox user privilege separation (requires KVM).
         # Run: nix build .#vm-test-sandbox
@@ -405,12 +378,6 @@
             meta.description = "Check systemd service status on tsurf hosts";
           };
 
-        tsurf = {
-          type = "app";
-          program = "${self.packages.${system}.tsurf}/bin/tsurf";
-          meta.description = "Compatibility wrapper for tsurf init/deploy/status";
-        };
-
         # @decision BOOT-06: Pinned nixos-anywhere via flake.lock (supply-chain safety).
         nixos-anywhere = {
           type = "app";
@@ -450,7 +417,7 @@
                 src = ./.;
               }
               ''
-                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh "$src"/scripts/tsurf.sh "$src"/tsurf
+                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/extras/scripts/clone-repos.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh
                 # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
                 # SC2317: BATS @test blocks appear unreachable to shellcheck
                 shellcheck --exclude=SC2317 "$src"/tests/live/*.bats
