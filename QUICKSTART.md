@@ -1,16 +1,28 @@
 # QUICKSTART
 
-Start here if you are new to tsurf. There are two paths:
+Start here if you are new to tsurf. There are three paths:
 
-1. Fast quickstart onto an existing NixOS server
-2. Full private-overlay setup for production deployments
+1. Agent-guided host discovery and private-overlay authoring
+2. Fast compatibility setup onto an existing NixOS server
+3. Full private-overlay setup for production deployments
 
 ## Prerequisites
 
 - Nix installed with flakes enabled.
 - A separate private Git repository for your real hosts/secrets.
 
-## 1) Fastest Path: Existing NixOS Server
+## 1) Agent-Guided Setup
+
+Use the repo-local skills in [`skills/`](skills/) when an agent is doing the
+setup work:
+
+1. `tsurf-host-discovery`: inspect the host and classify storage/networking.
+2. `tsurf-overlay-authoring`: write or update the private overlay.
+3. `tsurf-deploy-validation`: validate and prepare the deploy.
+
+This is the preferred path when the host may differ from the public examples.
+
+## 2) Compatibility Path: Existing NixOS Server
 
 ```bash
 git clone <your-fork-or-upstream-url> tsurf
@@ -36,14 +48,14 @@ Useful variations:
 ./tsurf ssh journalctl -u sshd -n 50
 ```
 
-## 2) Validate The Public Template
+## 3) Validate The Public Template
 
 ```bash
 git config core.hooksPath .githooks
 nix flake check
 ```
 
-## 3) Full Private Overlay
+## 4) Full Private Overlay
 
 1. Copy [`examples/private-overlay/`](examples/private-overlay/) into a new private repository.
 2. Replace placeholders in `flake.nix` (`tsurf.url`, hostname, `REPLACE` values).
@@ -57,19 +69,19 @@ If you run initialization on the target host, add `--age` to derive a sops age i
 
 Full template walkthrough: [`examples/private-overlay/README.md`](examples/private-overlay/README.md)
 
-## 4) Configure secrets (sops-nix)
+## 5) Configure secrets (sops-nix)
 
 1. Replace placeholder age recipients in `.sops.yaml`.
 2. Create a host secrets file (for example `secrets/example.yaml`) and encrypt it with `sops`.
 3. Import host networking/secrets modules in your private overlay after SSH host key persistence is configured.
 
-## 5) First deploy (from private overlay)
+## 6) First deploy (from private overlay)
 
 ```bash
 ./scripts/deploy.sh --node example --first-deploy
 ```
 
-## 6) Enable extras (opt-in)
+## 7) Enable extras (opt-in)
 
 Extras are opt-in in private overlays: import the module you want and set its enable option explicitly.
 Reference: [`docs/extras.md`](docs/extras.md)

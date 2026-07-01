@@ -16,7 +16,7 @@ There is no separate `dev` operator user. Root handles all administrative tasks 
 ## Quick Start
 
 If you just want to try tsurf on an existing NixOS server first, use the
-repo-root quickstart path instead:
+repo-root compatibility path instead:
 
 ```bash
 ./tsurf init root@your-server
@@ -65,6 +65,11 @@ Optional extras:
 - Home Manager profile -- `home-manager.users.agent = import "${inputs.tsurf}/extras/home";`
 
 The private overlay template `flake.nix` already imports the required modules above and includes `extras/cass.nix` as an optional example import. Enable `services.agentCompute.enable = true` for any host that runs agent workloads.
+
+New overlays can use exported module names instead of string paths, for example
+`inputs.tsurf.nixosModules.agent-host` or
+`inputs.tsurf.nixosModules.agent-launcher`. Mature overlays can keep explicit
+path imports when that makes private overrides easier to audit.
 
 ### Defining custom agents with the generic launcher
 

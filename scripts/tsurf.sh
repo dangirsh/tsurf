@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tsurf.sh — Opinionated wrapper for quickstart init/deploy/status workflows.
+# tsurf.sh — Opinionated wrapper for compatibility init/deploy/status workflows.
 # @decision ONBOARD-201-02: The top-level CLI owns a generated local overlay under .tsurf/ so users do not have to assemble a private overlay before the first test deploy.
 set -euo pipefail
 
@@ -115,11 +115,11 @@ Usage:
   tsurf config
 
 Commands:
-  init       Generate a local quickstart overlay in .tsurf/ and a root SSH key
+  init       Generate a local compatibility overlay in .tsurf/ and a root SSH key
   deploy     Deploy the generated overlay using the saved defaults
   status     Check persistent unit status for the saved node (or explicit targets)
   ssh        Open an SSH session to the saved target or run a remote command
-  config     Print the saved quickstart configuration
+  config     Print the saved compatibility overlay configuration
 
 Init options:
   --name NAME                 Deploy node name (default: quickstart)
@@ -138,7 +138,7 @@ Deploy options:
   --first-deploy              Disable magic rollback for initial adoption
   --magic-rollback            Enable deploy-rs magic rollback (default)
   --no-magic-rollback         Disable deploy-rs magic rollback
-  --target USER@HOST          Override SSH target for checks/locking
+  --target USER@HOST          Override deploy and SSH target for checks/locking
   --node NAME                 Override saved deploy node
 USAGE
 }
@@ -164,7 +164,7 @@ render_template() {
 
 sanitize_name() {
   local raw="$1"
-  raw="${raw,,}"
+  raw="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
   raw="${raw//[^a-z0-9-]/-}"
   raw="${raw#-}"
   raw="${raw%-}"
@@ -388,7 +388,7 @@ init_command() {
   write_config
 
   cat <<EOF
-Quickstart overlay created.
+Compatibility overlay created.
 
   Config:  ${CONFIG_PATH}
   Overlay: ${OVERLAY_DIR}

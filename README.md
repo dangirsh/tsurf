@@ -60,34 +60,30 @@ These are on top of more standard use cases (which can be built/maintained by th
 - [Home Assistant](https://www.home-assistant.io/): agents manage the config directly, no UI needed.
 - Cost visibility: private overlays can add lightweight token/API spend reporting when useful.
 
-## Quick Start
+## Setup
 
-1. Clone the repo and enter it:
-   `git clone <your-fork-or-upstream-url> tsurf && cd tsurf`
-2. Point tsurf at an existing NixOS host with root SSH access:
-   `./tsurf init root@your-server`
-3. Deploy the generated quickstart overlay:
-   `./tsurf deploy`
-4. Check the host:
-   `./tsurf status`
-5. Jump back onto the box when you need it:
-   `./tsurf ssh`
+The preferred setup path is agent-guided rather than template-driven. Start with
+the repo-local skills in [`skills/`](skills/):
 
-`tsurf init` creates an ignored local overlay under `.tsurf/overlay/`, saves the
-defaults in `.tsurf/config`, generates a root key under `.tsurf/keys/`, and
-probes the target host to pick up its hostname and NixOS release automatically.
-That gives you a short path for trying tsurf against a vanilla NixOS server
-without assembling a private overlay first.
+- `tsurf-host-discovery`: inspect the target host and classify storage,
+  networking, and role needs.
+- `tsurf-overlay-authoring`: turn discovered facts into a private overlay using
+  exported public modules and roles.
+- `tsurf-deploy-validation`: validate the public repo or private overlay before
+  any deploy.
 
-When you move past evaluation and want the full production/private-overlay
-workflow, start from [`QUICKSTART.md`](QUICKSTART.md) and
-[`examples/private-overlay/`](examples/private-overlay/).
+The older `./tsurf init root@host` compatibility path still exists for short local
+evaluations against an existing NixOS host, but production deployments should
+come from a private overlay. See [`QUICKSTART.md`](QUICKSTART.md) and
+[`examples/private-overlay/`](examples/private-overlay/) for the compatibility
+workflow.
 
 ## Documentation
 
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Operations and commands: [`docs/operations.md`](docs/operations.md)
 - Optional modules and home profile: [`docs/extras.md`](docs/extras.md)
+- Roadmap and deferred security work: [`docs/roadmap.md`](docs/roadmap.md)
 - Security model: [`SECURITY.md`](SECURITY.md)
 - Private overlay template:
   [`examples/private-overlay/README.md`](examples/private-overlay/README.md)

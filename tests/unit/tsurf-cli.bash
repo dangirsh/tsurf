@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tests/unit/tsurf-cli.bash — unit tests for the top-level tsurf quickstart wrapper.
+# tests/unit/tsurf-cli.bash — unit tests for the top-level tsurf compatibility wrapper.
 
 set -euo pipefail
 

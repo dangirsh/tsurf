@@ -10,6 +10,7 @@ flake.nix                    # Public outputs: eval fixtures, apps, checks
 hosts/{dev,services}/        # Public example hosts
 modules/                     # Core NixOS modules
 extras/                      # Optional overlay modules
+skills/                      # Repo-local setup/deploy skills for agents
 scripts/                     # Bootstrap, deploy, test, and status helpers
 tests/                       # Eval, VM, live, and unit coverage
 examples/private-overlay/    # Forkable starting point for a real deployment
@@ -22,6 +23,8 @@ Important current truths:
 - `hosts/services` is the unsandboxed service-host fixture.
 - No public fixture enables CASS, Codex, or a home-manager profile by default.
 - The example private overlay imports `extras/cass.nix`, but still leaves it disabled.
+- Agent-guided setup lives in `skills/`; the generated compatibility path is
+  compatibility tooling, not the preferred production model.
 
 ## Editing Rules
 
@@ -31,7 +34,7 @@ Important current truths:
   committed plaintext.
 - Preserve `@decision` annotations on security-relevant modules.
 - Use `tmp/` in the repo root for temporary files.
-- Do not rewrite the README introduction above `## Quick Start`. Only make small
+- Do not rewrite the README introduction above `## Setup`. Only make small
   correctness fixes there when necessary.
 
 ## Security Rules
@@ -83,5 +86,6 @@ Keep these files in sync with the implementation:
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/operations.md`](docs/operations.md)
 - [`docs/extras.md`](docs/extras.md)
+- [`docs/roadmap.md`](docs/roadmap.md)
 - [`SECURITY.md`](SECURITY.md)
 - [`examples/private-overlay/README.md`](examples/private-overlay/README.md)

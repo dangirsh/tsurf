@@ -51,6 +51,9 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
         }
+        # New overlays may use inputs.tsurf.nixosModules.* here. These path
+        # imports remain as explicit examples and for compatibility with older
+        # private overlays.
         "${inputs.tsurf}/modules/base.nix"
         "${inputs.tsurf}/modules/boot.nix"
         "${inputs.tsurf}/modules/users.nix"

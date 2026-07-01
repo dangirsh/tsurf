@@ -96,6 +96,67 @@
         }
       ];
 
+      tsurfNixosModules = rec {
+        base = ./modules/base.nix;
+        boot = ./modules/boot.nix;
+        users = ./modules/users.nix;
+        networking = ./modules/networking.nix;
+        secrets = ./modules/secrets.nix;
+        impermanence = ./modules/impermanence.nix;
+        agent-compute = ./modules/agent-compute.nix;
+        agent-launcher = ./modules/agent-launcher.nix;
+        agent-sandbox = ./modules/agent-sandbox.nix;
+        nono = ./modules/nono.nix;
+        headscale = ./modules/headscale.nix;
+
+        common =
+          { ... }:
+          {
+            imports = commonModules;
+          };
+
+        core =
+          { ... }:
+          {
+            imports = [
+              common
+              base
+              boot
+              users
+              networking
+              impermanence
+            ];
+          };
+
+        agent-host =
+          { lib, ... }:
+          {
+            imports = [
+              core
+              secrets
+              agent-compute
+              nono
+              agent-launcher
+              agent-sandbox
+            ];
+
+            services.agentCompute.enable = lib.mkDefault true;
+            services.nonoSandbox.enable = lib.mkDefault true;
+            services.agentSandbox.enable = lib.mkDefault true;
+          };
+
+        service-host =
+          { ... }:
+          {
+            imports = [
+              core
+              secrets
+              headscale
+              ./extras/restic.nix
+            ];
+          };
+      };
+
       mkHost =
         hostDir:
         nixpkgs.lib.nixosSystem {
@@ -126,6 +187,7 @@
     in
     {
       overlays.default = tsurfOverlay;
+      nixosModules = tsurfNixosModules;
 
       nixosConfigurations."eval-services" = mkEvalFixture ./hosts/services [ ];
       nixosConfigurations."eval-dev" = mkEvalFixture ./hosts/dev [ ];
@@ -244,7 +306,7 @@
                           esac
                           export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
 
-                          tests_dir="${builtins.toString ./tests/live}"
+                          tests_dir="${./tests/live}"
                           if [[ ! -d "$tests_dir" ]]; then
                             echo "ERROR: tests directory not found: $tests_dir"
                             exit 1
@@ -346,7 +408,7 @@
         tsurf = {
           type = "app";
           program = "${self.packages.${system}.tsurf}/bin/tsurf";
-          meta.description = "Quickstart wrapper for tsurf init/deploy/status";
+          meta.description = "Compatibility wrapper for tsurf init/deploy/status";
         };
 
         # @decision BOOT-06: Pinned nixos-anywhere via flake.lock (supply-chain safety).

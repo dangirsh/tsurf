@@ -219,6 +219,7 @@ for pair in "${cred_pairs[@]}"; do
 done
 credential_env_names_str="${credential_env_names[*]}"
 
+# shellcheck disable=SC2016
 child_script='
   set -euo pipefail
 

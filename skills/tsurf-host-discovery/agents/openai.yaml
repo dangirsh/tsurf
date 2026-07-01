@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tsurf Host Discovery"
+  short_description: "Inspect a target host and choose a tsurf setup path."
+  default_prompt: "Inspect this target host and recommend a tsurf setup plan."

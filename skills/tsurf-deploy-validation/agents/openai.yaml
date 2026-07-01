@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tsurf Deploy Validation"
+  short_description: "Validate and deploy tsurf hosts safely."
+  default_prompt: "Validate this tsurf overlay and prepare a safe deploy."

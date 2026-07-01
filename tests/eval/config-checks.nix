@@ -265,6 +265,32 @@ in
       "public flake still exports deploy.nodes.* — deploy targets must live in a private overlay"
       (!(self ? deploy) || (self.deploy.nodes or { }) == { });
 
+  public-nixos-modules-exported =
+    let
+      names = builtins.attrNames (self.nixosModules or { });
+      expected = [
+        "agent-host"
+        "agent-compute"
+        "agent-launcher"
+        "agent-sandbox"
+        "base"
+        "boot"
+        "common"
+        "core"
+        "headscale"
+        "impermanence"
+        "networking"
+        "nono"
+        "secrets"
+        "service-host"
+        "users"
+      ];
+    in
+    mkCheck "public-nixos-modules-exported"
+      "public flake exports stable NixOS module and role names"
+      "public flake missing expected nixosModules exports for private overlays"
+      (builtins.all (name: builtins.elem name names) expected);
+
   cass-default-disabled =
     let
       source = builtins.readFile ../../extras/cass.nix;

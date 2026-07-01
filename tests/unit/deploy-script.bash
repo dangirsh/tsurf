@@ -38,6 +38,23 @@ assert_eq \
   "$WORKDIR" \
   "resolve_flake_dir finds overlay root from copied scripts path"
 
+assert_eq \
+  "$(parse_ssh_target root@example.com)" \
+  $'root\texample.com' \
+  "parse_ssh_target parses explicit user"
+
+assert_eq \
+  "$(parse_ssh_target example.com)" \
+  $'root\texample.com' \
+  "parse_ssh_target defaults to root user"
+
+if bash "$ROOT_DIR/scripts/deploy.sh" --help | grep -q "Override deploy and SSH target"; then
+  :
+else
+  echo "FAIL: deploy.sh help does not describe --target as a deploy target override"
+  exit 1
+fi
+
 deprecated_output=""
 deprecated_status=0
 if deprecated_output="$(bash "$ROOT_DIR/scripts/deploy.sh" --update-inputs 2>&1)"; then

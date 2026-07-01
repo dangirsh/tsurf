@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tsurf Overlay Authoring"
+  short_description: "Author private overlays from public tsurf modules."
+  default_prompt: "Create or update a tsurf private overlay for this host."

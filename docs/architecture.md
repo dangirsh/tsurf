@@ -17,6 +17,11 @@ in a private flake.
   for the `extras/restic.nix` example on `hosts/services`.
 - `scripts/deploy.sh` refuses to deploy from the public repo. Real deploys must
   come from a private overlay that has a `tsurf.url` input.
+- The flake exports `nixosModules.*` for private overlays that want stable
+  module names instead of path imports, including `core`, `agent-host`, and
+  `service-host` role modules.
+- Repo-local setup skills under `skills/` are the preferred way for agents to
+  discover host-specific facts before authoring a private overlay.
 
 ## Core Components
 

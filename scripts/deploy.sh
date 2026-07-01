@@ -11,7 +11,7 @@
 #
 # Flags:
 #   --node NAME         Flake node to deploy (required)
-#   --target USER@HOST  Override SSH target for lock/status checks (default: root@<node>)
+#   --target USER@HOST  Override deploy, lock, and status SSH target (default: root@<node>)
 #   --first-deploy      Disable magic rollback for initial migration
 #   --magic-rollback    Enable deploy-rs magic rollback with 300s confirm timeout (default)
 #   --no-magic-rollback Disable deploy-rs magic rollback for this deploy
@@ -80,6 +80,26 @@ ssh_retry() {
 
 shell_quote() {
   printf '%q' "$1"
+}
+
+parse_ssh_target() {
+  local raw="$1"
+  local user host
+
+  if [[ "$raw" == *@* ]]; then
+    user="${raw%@*}"
+    host="${raw#*@}"
+  else
+    user="root"
+    host="$raw"
+  fi
+
+  if [[ -z "$user" || -z "$host" ]]; then
+    echo "ERROR: invalid SSH target '$raw'" >&2
+    return 1
+  fi
+
+  printf '%s\t%s\n' "$user" "$host"
 }
 
 copy_derivation_to_remote() {
@@ -351,7 +371,7 @@ Options:
   --mode remote-detached
                         Build and activate on target under systemd
   --mode local          Build locally, deploy remotely
-  --target U@H          Override SSH target (default: root@<node>)
+  --target U@H          Override deploy and SSH target (default: root@<node>)
   --first-deploy        Disable magic rollback for one-time migration
   --fast                Local build, single evaluation (no --remote-build)
   --magic-rollback      Enable deploy-rs magic rollback (default, 300s confirm timeout)
@@ -366,7 +386,7 @@ Examples:
   ./scripts/deploy.sh --node myhost --mode remote-detached # Survive SSH drops
   ./scripts/deploy.sh --node myhost --first-deploy      # First migration deploy
   ./scripts/deploy.sh --node myhost --magic-rollback    # Magic rollback (300s)
-  ./scripts/deploy.sh --target root@1.2.3.4 --node myhost  # Explicit SSH target
+  ./scripts/deploy.sh --target root@1.2.3.4 --node myhost  # Override deploy host
 USAGE
 }
 
@@ -431,9 +451,10 @@ fi
 if [[ "$TARGET_SET" == false ]]; then
   TARGET="root@${NODE}"
 fi
+IFS=$'\t' read -r TARGET_SSH_USER TARGET_HOSTNAME < <(parse_ssh_target "$TARGET")
 
 # --- Remote lock ---
-LOCK_KEY="${TARGET#*@}"
+LOCK_KEY="${TARGET_HOSTNAME}"
 LOCK_KEY="${LOCK_KEY//[^A-Za-z0-9._-]/-}"
 REMOTE_LOCK_DIR="/var/lock/deploy-${LOCK_KEY}.lock"
 GIT_SHA=$(git -C "$FLAKE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -457,8 +478,7 @@ printf '%s\n' "$LOCK_INFO" | ssh "${SSH_OPTS[@]}" "$TARGET" "cat > '$REMOTE_LOCK
 
 # --- Build + deploy ---
 if [[ "$TARGET_SET" == true ]]; then
-  echo "WARNING: --target affects SSH locking/health checks only."
-  echo "         deploy-rs deploy target is flake node '$NODE'."
+  echo "==> Overriding deploy-rs hostname to ${TARGET_HOSTNAME} and SSH user to ${TARGET_SSH_USER}."
 fi
 
 DEPLOY_ARGS=(
@@ -466,6 +486,9 @@ DEPLOY_ARGS=(
   --skip-checks
   --fast-connection true
 )
+if [[ "$TARGET_SET" == true ]]; then
+  DEPLOY_ARGS+=(--hostname "${TARGET_HOSTNAME}" --ssh-user "${TARGET_SSH_USER}")
+fi
 if (( ${#SSH_EXTRA_OPTS[@]} > 0 )); then
   DEPLOY_ARGS+=(--ssh-opts "${TSURF_DEPLOY_SSH_OPTS}")
 fi
