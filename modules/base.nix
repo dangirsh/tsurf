@@ -63,6 +63,11 @@
   #   Targeted agent-workload overrides sit beside explicit critical sysctls above.
   nix-mineral.enable = true;
 
+  # systemd's example 50-default.conf sets kernel.yama.ptrace_scope=1 before
+  # NixOS writes our hardened value of 3. Live activations fail once the kernel
+  # has already been raised to 3 because ptrace_scope cannot be lowered.
+  environment.etc."sysctl.d/50-default.conf".enable = lib.mkForce false;
+
   # Agent-workload overrides:
   nix-mineral.settings.kernel.cpu-mitigations = "smt-on"; # VPS: hypervisor controls SMT
   nix-mineral.settings.kernel.slab-debug = false; # Performance: heavy alloc overhead

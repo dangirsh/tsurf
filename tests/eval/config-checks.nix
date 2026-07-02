@@ -163,6 +163,17 @@ in
       "boot.kernel.sysctl.kernel.io_uring_disabled is not \"2\" — must be set in modules/base.nix"
       (toString devCfg.boot.kernel.sysctl."kernel.io_uring_disabled" == "2");
 
+  systemd-default-sysctl-disabled =
+    mkCheck "systemd-default-sysctl-disabled"
+      "systemd 50-default sysctl file is disabled before hardened sysctls are applied"
+      "systemd 50-default.conf can still lower kernel.yama.ptrace_scope before 60-nixos.conf"
+      (
+        servicesCfg.environment.etc."sysctl.d/50-default.conf".enable == false
+        && devCfg.environment.etc."sysctl.d/50-default.conf".enable == false
+        && toString servicesCfg.boot.kernel.sysctl."kernel.yama.ptrace_scope" == "3"
+        && toString devCfg.boot.kernel.sysctl."kernel.yama.ptrace_scope" == "3"
+      );
+
   # Ports are conditional: 80/443 on nginx.enable.
   # Public template has no nginx by default.
   firewall-ports-services =
