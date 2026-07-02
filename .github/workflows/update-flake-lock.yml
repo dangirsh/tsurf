@@ -1,0 +1,31 @@
+name: Update Flake Lock
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  update-flake-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@629b284231c2a82554b724e357e47fc6020833c8 # v3
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Update flake.lock
+        uses: DeterminateSystems/update-flake-lock@834c491b2ece4de0bbd00d85214bb5e83b4da5c6 # v28
+        with:
+          pr-title: "chore: update Nix flake inputs"
+          pr-labels: |
+            dependencies
+            automated

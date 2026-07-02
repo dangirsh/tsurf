@@ -56,6 +56,8 @@ in
             "Edit(.env)"
             "Edit(.mcp.json)"
             "Edit(.devcontainer/**)"
+            "Edit(.github/workflows/**)"
+            "Edit(.claude/**)"
           ];
         };
         enableAllProjectMcpServers = false;

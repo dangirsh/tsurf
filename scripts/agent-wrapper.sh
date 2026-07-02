@@ -16,9 +16,10 @@
 #                              secret-file-name = filename under /run/secrets/
 #   AGENT_CREDENTIAL_SERVICES — space-separated nono credential names to enable
 #   AGENT_SCOPE_ACCESS       — "read" (default) or "allow" access to the current top-level workspace
-#   AGENT_EXTRA_READ_PATHS   — optional space-separated paths passed to nono with --read
-#   AGENT_EXTRA_ALLOW_PATHS  — optional space-separated paths passed to nono with --allow
+#   AGENT_EXTRA_READ_PATHS_FILE — optional /nix/store newline-delimited paths passed to nono with --read
+#   AGENT_EXTRA_ALLOW_PATHS_FILE — optional /nix/store newline-delimited paths passed to nono with --allow
 #   AGENT_CHILD_ENVIRONMENT_FILE — optional /nix/store file of non-secret NAME=value env entries
+#   AGENT_NONO_PROXY_PORT_START / END — loopback port range reserved for nono's credential proxy
 #
 # Launch logging:
 #   Single sink: journald via logger -t agent-launch (root-owned, append-only).
@@ -31,7 +32,8 @@
 
 set -euo pipefail
 
-NPM_MIN_RELEASE_AGE_DAYS=1440 # ~4 years; supply chain hardening (Trail of Bits)
+NPM_MIN_RELEASE_AGE_DAYS=1
+PNPM_MIN_RELEASE_AGE_MINUTES=1440
 
 : "${AGENT_NAME:?must be set}"
 : "${AGENT_REAL_BINARY:?must be set}"
@@ -57,9 +59,63 @@ esac
 
 journal_log() {
   local mode="$1"
+  local reason="${2:-none}"
   logger -t "agent-launch" --id=$$ \
-    "mode=$mode agent=$AGENT_NAME user=$(whoami) uid=$(id -u) repo_scope=${repo_scope:-unknown}" \
+    "mode=$mode agent=$AGENT_NAME user=$(whoami) uid=$(id -u) repo_scope=${repo_scope:-unknown} workspace=${workspace_name:-unknown} reason=$reason" \
     2>/dev/null || true
+}
+
+fail_launch() {
+  local reason="$1"
+  local message="$2"
+  journal_log "refused" "$reason"
+  echo "ERROR: $message" >&2
+  exit 1
+}
+
+append_path_file_args() {
+  local kind="$1"
+  local path_file="$2"
+  local flag="$3"
+  local path
+
+  [[ -n "$path_file" ]] || return 0
+  case "$path_file" in
+    /nix/store/*) ;;
+    *) fail_launch "invalid_${kind}_path_file" "AGENT_${kind}_PATHS_FILE must be in /nix/store" ;;
+  esac
+  [[ -f "$path_file" ]] || return 0
+
+  while IFS= read -r path || [[ -n "$path" ]]; do
+    [[ -n "$path" ]] || continue
+    nono_args+=("$flag" "$path")
+  done < "$path_file"
+}
+
+allocate_nono_proxy_port() {
+  local start="${AGENT_NONO_PROXY_PORT_START:-20000}"
+  local end="${AGENT_NONO_PROXY_PORT_END:-20199}"
+  local lock_dir="/run/tsurf-agent-proxy-ports"
+  local port lock_fd
+
+  [[ "$start" =~ ^[0-9]+$ && "$end" =~ ^[0-9]+$ && "$start" -le "$end" ]] \
+    || fail_launch "invalid_proxy_port_range" "invalid nono proxy port range"
+
+  install -d -m 0700 "$lock_dir"
+  for ((port = start; port <= end; port++)); do
+    exec {lock_fd}>"$lock_dir/$port.lock"
+    if flock -n "$lock_fd"; then
+      if ! (: >"/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1; then
+        NONO_PROXY_PORT="$port"
+        NONO_PROXY_LOCK_FD="$lock_fd"
+        export NONO_PROXY_PORT NONO_PROXY_LOCK_FD
+        return 0
+      fi
+    fi
+    eval "exec ${lock_fd}>&-"
+  done
+
+  fail_launch "proxy_port_exhausted" "no free nono proxy port in reserved range ${start}-${end}"
 }
 
 # Enforce PWD inside project root
@@ -68,8 +124,7 @@ cwd="$(readlink -f "$PWD")"
 case "$cwd" in
   "$project_root"/*|"$project_root") ;;
   *)
-    echo "ERROR: $AGENT_NAME must run inside $project_root (current: $cwd)" >&2
-    exit 1
+    fail_launch "outside_project_root" "$AGENT_NAME must run inside $project_root (current: $cwd)"
     ;;
 esac
 
@@ -77,18 +132,16 @@ esac
 # A workspace is the first path component beneath AGENT_PROJECT_ROOT, for
 # example /data/projects/my-repo from /data/projects/my-repo/subdir.
 if [[ "$cwd" == "$project_root" ]]; then
-  echo "ERROR: refusing to grant read access to the entire project root ($project_root)" >&2
-  exit 1
+  fail_launch "project_root_scope" "refusing to grant read access to the entire project root ($project_root)"
 fi
 
 workspace_rel="${cwd#"$project_root"/}"
 workspace_name="${workspace_rel%%/*}"
 workspace_root="${project_root}/${workspace_name}"
 if [[ ! -d "$workspace_root" ]]; then
-  echo "ERROR: could not resolve top-level workspace beneath $project_root (current: $cwd)" >&2
-  exit 1
+  fail_launch "workspace_resolution" "could not resolve top-level workspace beneath $project_root (current: $cwd)"
 fi
-repo_scope="top-level-workspace"
+repo_scope="top-level-workspace:${workspace_name}"
 
 # Load real API keys from sops-managed /run/secrets/ into env vars.
 # nono's credential proxy reads these via env:// URIs in the profile's
@@ -127,22 +180,12 @@ case "${AGENT_SCOPE_ACCESS:-read}" in
     nono_args+=(--allow "$workspace_root")
     ;;
   *)
-    echo "ERROR: AGENT_SCOPE_ACCESS must be 'read' or 'allow'" >&2
-    exit 1
+    fail_launch "invalid_scope_access" "AGENT_SCOPE_ACCESS must be 'read' or 'allow'"
     ;;
 esac
 
-IFS=' ' read -ra extra_read_paths <<< "${AGENT_EXTRA_READ_PATHS:-}"
-for path in "${extra_read_paths[@]}"; do
-  [[ -n "$path" ]] || continue
-  nono_args+=(--read "$path")
-done
-
-IFS=' ' read -ra extra_allow_paths <<< "${AGENT_EXTRA_ALLOW_PATHS:-}"
-for path in "${extra_allow_paths[@]}"; do
-  [[ -n "$path" ]] || continue
-  nono_args+=(--allow "$path")
-done
+append_path_file_args "EXTRA_READ" "${AGENT_EXTRA_READ_PATHS_FILE:-}" "--read"
+append_path_file_args "EXTRA_ALLOW" "${AGENT_EXTRA_ALLOW_PATHS_FILE:-}" "--allow"
 
 setpriv_bin="$(command -v setpriv)"
 env_bin="$(command -v env)"
@@ -158,8 +201,7 @@ if [[ -n "${AGENT_CHILD_ENVIRONMENT_FILE:-}" ]]; then
   case "$AGENT_CHILD_ENVIRONMENT_FILE" in
     /nix/store/*) ;;
     *)
-      echo "ERROR: AGENT_CHILD_ENVIRONMENT_FILE must be in /nix/store" >&2
-      exit 1
+      fail_launch "invalid_child_environment_file" "AGENT_CHILD_ENVIRONMENT_FILE must be in /nix/store"
       ;;
   esac
   if [[ -f "$AGENT_CHILD_ENVIRONMENT_FILE" ]]; then
@@ -167,8 +209,7 @@ if [[ -n "${AGENT_CHILD_ENVIRONMENT_FILE:-}" ]]; then
       [[ -n "$assignment" ]] || continue
       name="${assignment%%=*}"
       if [[ ! "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || "$assignment" != *=* ]]; then
-        echo "ERROR: invalid child environment entry for $AGENT_NAME" >&2
-        exit 1
+        fail_launch "invalid_child_environment" "invalid child environment entry for $AGENT_NAME"
       fi
       agent_env+=("$assignment")
     done < "$AGENT_CHILD_ENVIRONMENT_FILE"
@@ -188,7 +229,9 @@ fi
 agent_env+=("NPM_CONFIG_IGNORE_SCRIPTS=true")
 agent_env+=("NPM_CONFIG_AUDIT=true")
 agent_env+=("NPM_CONFIG_SAVE_EXACT=true")
-agent_env+=("NPM_CONFIG_MINIMUM_RELEASE_AGE=${NPM_MIN_RELEASE_AGE_DAYS}")
+agent_env+=("NPM_CONFIG_MIN_RELEASE_AGE=${NPM_MIN_RELEASE_AGE_DAYS}")
+agent_env+=("NPM_CONFIG_MINIMUM_RELEASE_AGE=${PNPM_MIN_RELEASE_AGE_MINUTES}")
+agent_env+=("PNPM_CONFIG_MINIMUM_RELEASE_AGE=${PNPM_MIN_RELEASE_AGE_MINUTES}")
 agent_env+=("PYTHONDONTWRITEBYTECODE=1")
 # Telemetry suppression (ecosystem review: Trail of Bits config pattern)
 agent_env+=("DISABLE_TELEMETRY=1")
@@ -217,6 +260,8 @@ for pair in "${cred_pairs[@]}"; do
   fi
 done
 credential_env_names_str="${credential_env_names[*]}"
+allocate_nono_proxy_port
+nono_args+=(--proxy-port "$NONO_PROXY_PORT")
 
 # shellcheck disable=SC2016
 child_script='

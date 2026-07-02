@@ -83,9 +83,11 @@ user is kept out of `docker`, and raw provider secrets remain root-owned by defa
 - The public network model keeps `trustedInterfaces = [ ]`. Overlay interfaces
   and any additional exposure policy belong in a private overlay.
 - The base nono profile blocks direct network access by default. Credentialed
-  wrappers use nono reverse-proxy routes for configured providers, while the
-  host firewall remains a UID-scoped backstop for any direct agent traffic.
-  This is still coarse policy, not full destination-level mediation.
+  wrappers use nono reverse-proxy routes on reserved loopback ports
+  `20000-20199`, while the host firewall remains a UID-scoped backstop for any
+  direct agent traffic. Other loopback TCP access is denied unless explicitly
+  allowed in the private overlay. This is still coarse policy, not full
+  destination-level mediation.
 - The root filesystem is rolled back on boot from BTRFS subvolumes. Persistent
   state is declared explicitly under `/persist`.
 

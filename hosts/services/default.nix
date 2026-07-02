@@ -35,7 +35,7 @@
 
   # --- Host-specific shared module settings ---
   boot.loader.grub.device = "/dev/sda"; # REPLACE
-  sops.defaultSopsFile = ../../secrets/example.yaml; # REPLACE with per-host secrets
+  sops.defaultSopsFile = ../../tests/fixtures/sops-placeholder.yaml; # REPLACE with per-host encrypted secrets
 
   # Use scripted networking for static IP, not systemd-networkd
   networking.useNetworkd = lib.mkForce false;

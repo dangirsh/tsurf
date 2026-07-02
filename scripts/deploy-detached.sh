@@ -39,6 +39,14 @@ shell_quote() {
   printf '%q' "$1"
 }
 
+shell_join() {
+  local out="" arg
+  for arg in "$@"; do
+    printf -v out '%s%q ' "$out" "$arg"
+  done
+  printf '%s\n' "${out% }"
+}
+
 parse_ssh_target() {
   local raw="$1"
   local user host
@@ -107,8 +115,21 @@ fi
 SSH_CTL="${TSURF_DEPLOY_SSH_CTL:-$FLAKE_DIR/tmp/ssh-%C}"
 SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$SSH_CTL" -o "ControlPersist=60s")
 SSH_EXTRA_OPTS=()
-if [[ -n "${TSURF_DEPLOY_SSH_OPTS:-}" ]]; then
-  read -r -a SSH_EXTRA_OPTS <<<"${TSURF_DEPLOY_SSH_OPTS}"
+
+load_ssh_extra_opts() {
+  SSH_EXTRA_OPTS=()
+  if [[ -n "${TSURF_DEPLOY_SSH_OPTS_FILE:-}" ]]; then
+    while IFS= read -r opt || [[ -n "$opt" ]]; do
+      [[ -n "$opt" ]] || continue
+      SSH_EXTRA_OPTS+=("$opt")
+    done < "$TSURF_DEPLOY_SSH_OPTS_FILE"
+  elif [[ -n "${TSURF_DEPLOY_SSH_OPTS:-}" ]]; then
+    read -r -a SSH_EXTRA_OPTS <<<"${TSURF_DEPLOY_SSH_OPTS}"
+  fi
+}
+
+load_ssh_extra_opts
+if (( ${#SSH_EXTRA_OPTS[@]} > 0 )); then
   SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
 fi
 
@@ -141,7 +162,7 @@ copy_derivation_to_remote() {
   local i
 
   if (( ${#SSH_EXTRA_OPTS[@]} > 0 )); then
-    nix_sshopts+=" ${SSH_EXTRA_OPTS[*]}"
+    nix_sshopts+=" $(shell_join "${SSH_EXTRA_OPTS[@]}")"
   fi
 
   echo "==> Copying activation derivation closure to $TARGET..."
@@ -472,12 +493,8 @@ for s in "${SYSTEMD_SERVICES[@]}"; do
 done
 
 echo "==> Verifying remote access..."
-REMOTE_ACCESS_SSH_OPTS=(-o BatchMode=yes -o ControlPath=none)
-if (( ${#SSH_EXTRA_OPTS[@]} == 0 )); then
-  REMOTE_ACCESS_SSH_OPTS+=(-o ConnectTimeout=15)
-else
-  REMOTE_ACCESS_SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
-fi
+REMOTE_ACCESS_SSH_OPTS=(-o BatchMode=yes -o ControlPath=none -o ConnectTimeout=15)
+REMOTE_ACCESS_SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
 if ssh "${REMOTE_ACCESS_SSH_OPTS[@]}" "$TARGET" \
     "systemctl is-active --quiet sshd.service" 2>/dev/null; then
   echo "  Deploy target ($TARGET): SSH OK"

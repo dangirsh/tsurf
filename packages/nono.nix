@@ -27,9 +27,23 @@ pkgs.rustPlatform.buildRustPackage rec {
     "-p"
     "nono-cli"
   ];
-  # Upstream cargo tests are not a practical gate here: on the target x86_64 host
-  # they exceeded an hour. Keep a bounded installed-binary smoke check instead.
-  doCheck = false;
+  # The full upstream test suite is too slow for the regular gate. Run bounded
+  # tests for tsurf-carried patches plus a source guard for the removed /run grants.
+  doCheck = true;
+  checkPhase = ''
+    runHook preCheck
+    cargo test -p nono-cli test_validate_env_var_with_env_uri_requires_env_var
+    cargo test -p nono-cli test_validate_env_var_with_env_uri_and_env_var_ok
+    if grep -R '"/run"' crates/nono-cli/data/policy.json; then
+      echo "upstream default policy must not regain broad /run read access" >&2
+      exit 1
+    fi
+    if grep -R '"/var/run"' crates/nono-cli/data/policy.json; then
+      echo "upstream default policy must not regain broad /var/run read access" >&2
+      exit 1
+    fi
+    runHook postCheck
+  '';
   doInstallCheck = true;
   installCheckPhase = ''
     runHook preInstallCheck

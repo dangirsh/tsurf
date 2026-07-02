@@ -20,7 +20,7 @@
       owner = config.tsurf.agent.user;
     };
     secrets."xai-api-key" = {
-      owner = config.tsurf.agent.user;
+      owner = "root";
     };
     secrets."openrouter-api-key" = {
       owner = "root";

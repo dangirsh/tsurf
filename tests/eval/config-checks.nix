@@ -14,67 +14,75 @@ let
   devAgentUser = devCfg.tsurf.agent.user;
   altAgentUser = altAgentCfg.tsurf.agent.user;
   altAgentHome = altAgentCfg.tsurf.agent.home;
-  roleEvalModule = { tsurf.template.allowUnsafePlaceholders = true; };
-  agentHostRoleCfg = (lib.nixosSystem {
-    system = pkgs.stdenv.hostPlatform.system;
-    modules = [
-      self.nixosModules.agent-host
-      roleEvalModule
-    ];
-  }).config;
-  agentHostWithSecretsRoleCfg = (lib.nixosSystem {
-    system = pkgs.stdenv.hostPlatform.system;
-    modules = [
-      self.nixosModules.agent-host-with-secrets
-      roleEvalModule
-    ];
-  }).config;
-  serviceHostRoleCfg = (lib.nixosSystem {
-    system = pkgs.stdenv.hostPlatform.system;
-    modules = [
-      self.nixosModules.service-host
-      roleEvalModule
-    ];
-  }).config;
-  serviceHostWithSecretsRoleCfg = (lib.nixosSystem {
-    system = pkgs.stdenv.hostPlatform.system;
-    modules = [
-      self.nixosModules.service-host-with-secrets
-      roleEvalModule
-    ];
-  }).config;
-  harmoniaServerCfg = (lib.nixosSystem {
-    system = pkgs.stdenv.hostPlatform.system;
-    modules = [
-      self.nixosModules.core
-      self.nixosModules.harmonia-cache
-      roleEvalModule
-      {
-        tsurf.harmoniaCache = {
-          enable = true;
-          enableServer = true;
-          host = "cache.example.invalid";
-          publicKey = "cache.example.invalid-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          signingKeySopsFile = ../../README.md;
-          allowedClientIPv4s = [ "203.0.113.10" ];
-        };
-      }
-    ];
-  }).config;
-  harmoniaLocalServerCfg = (lib.nixosSystem {
-    system = pkgs.stdenv.hostPlatform.system;
-    modules = [
-      self.nixosModules.core
-      self.nixosModules.harmonia-cache
-      roleEvalModule
-      {
-        tsurf.harmoniaCache = {
-          enableServer = true;
-          signingKeySopsFile = ../../README.md;
-        };
-      }
-    ];
-  }).config;
+  roleEvalModule = {
+    tsurf.template.allowUnsafePlaceholders = true;
+  };
+  agentHostRoleCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.agent-host
+        roleEvalModule
+      ];
+    }).config;
+  agentHostWithSecretsRoleCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.agent-host-with-secrets
+        roleEvalModule
+      ];
+    }).config;
+  serviceHostRoleCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.service-host
+        roleEvalModule
+      ];
+    }).config;
+  serviceHostWithSecretsRoleCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.service-host-with-secrets
+        roleEvalModule
+      ];
+    }).config;
+  harmoniaServerCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.core
+        self.nixosModules.harmonia-cache
+        roleEvalModule
+        {
+          tsurf.harmoniaCache = {
+            enable = true;
+            enableServer = true;
+            host = "cache.example.invalid";
+            publicKey = "cache.example.invalid-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+            signingKeySopsFile = ../../README.md;
+            allowedClientIPv4s = [ "203.0.113.10" ];
+          };
+        }
+      ];
+    }).config;
+  harmoniaLocalServerCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.core
+        self.nixosModules.harmonia-cache
+        roleEvalModule
+        {
+          tsurf.harmoniaCache = {
+            enableServer = true;
+            signingKeySopsFile = ../../README.md;
+          };
+        }
+      ];
+    }).config;
   mkCheck =
     name: passMessage: failMessage: condition:
     if condition then
@@ -113,6 +121,36 @@ in
     }"
     touch "$out"
   '';
+
+  ci-workflows-hardened =
+    let
+      testWorkflow = builtins.readFile ../../.github/workflows/test.yml;
+      updateWorkflow = builtins.readFile ../../.github/workflows/update-flake-lock.yml;
+    in
+    mkCheck "ci-workflows-hardened"
+      "CI avoids accept-flake-config, builds the credential proxy VM proof, and schedules lock updates"
+      "GitHub workflows must not accept flake config on PRs and must keep credential-proxy VM plus lock-update coverage"
+      (
+        !(lib.hasInfix "accept-flake-config" testWorkflow)
+        && lib.hasInfix ".#vm-test-credential-proxy" testWorkflow
+        && lib.hasInfix "DeterminateSystems/update-flake-lock@834c491b2ece4de0bbd00d85214bb5e83b4da5c6" updateWorkflow
+        && lib.hasInfix "schedule:" updateWorkflow
+      );
+
+  public-hosts-use-test-sops-fixture =
+    let
+      devHost = builtins.readFile ../../hosts/dev/default.nix;
+      servicesHost = builtins.readFile ../../hosts/services/default.nix;
+      fixture = builtins.readFile ../../tests/fixtures/sops-placeholder.yaml;
+    in
+    mkCheck "public-hosts-use-test-sops-fixture"
+      "public host fixtures use a neutral test-only SOPS placeholder"
+      "public host fixtures must not point at tracked secrets/*.yaml placeholders"
+      (
+        lib.hasInfix "tests/fixtures/sops-placeholder.yaml" devHost
+        && lib.hasInfix "tests/fixtures/sops-placeholder.yaml" servicesHost
+        && !(lib.hasInfix "tailscale-authkey" fixture)
+      );
 
   # Phase 145: nix-mineral hardening must be enabled on all hosts. [SEC-145-05]
   nix-mineral-services =
@@ -227,7 +265,10 @@ in
   metadata-block =
     mkCheck "metadata-block" "agent-metadata-block nftables table is defined"
       "agent-metadata-block nftables table not found"
-      (builtins.hasAttr "agent-metadata-block" servicesCfg.networking.nftables.tables);
+      (
+        builtins.hasAttr "agent-metadata-block" servicesCfg.networking.nftables.tables
+        && servicesCfg.networking.nftables.tables.agent-metadata-block.family == "inet"
+      );
 
   agent-egress-table =
     mkCheck "agent-egress-table" "agent-egress nftables table is defined"
@@ -239,12 +280,16 @@ in
       content = servicesCfg.networking.nftables.tables.agent-egress.content;
       agentUid = toString servicesCfg.tsurf.agent.uid;
     in
-    mkCheck "agent-egress-policy" "agent-egress policy scopes by agent UID and blocks private ranges"
-      "agent-egress policy missing UID scoping, private-range drops, or HTTPS allowlist"
+    mkCheck "agent-egress-policy"
+      "agent-egress policy scopes by agent UID and default-denies loopback except nono proxy range"
+      "agent-egress policy missing UID scoping, private-range drops, HTTPS allowlist, nono proxy range, or loopback drop"
       (
         lib.hasInfix "meta skuid ${agentUid}" content
         && lib.hasInfix "100.64.0.0/10" content
         && lib.hasInfix "443" content
+        && lib.hasInfix "20000-20199" content
+        && lib.hasInfix ''oifname "lo" counter drop'' content
+        && !(lib.hasInfix ''oifname "lo" accept'' content)
         && lib.hasInfix "drop" content
       );
 
@@ -402,9 +447,10 @@ in
       "harmonia server mode must let the harmonia service read its signing key and must open the cache port coherently"
       (
         harmoniaServerCfg.services.harmonia.cache.enable
-        && harmoniaServerCfg.services.harmonia.cache.signKeyPaths == [
-          harmoniaServerCfg.sops.secrets."harmonia-signing-key".path
-        ]
+        &&
+          harmoniaServerCfg.services.harmonia.cache.signKeyPaths == [
+            harmoniaServerCfg.sops.secrets."harmonia-signing-key".path
+          ]
         && harmoniaServerCfg.sops.secrets."harmonia-signing-key".owner == "harmonia"
         && harmoniaServerCfg.sops.secrets."harmonia-signing-key".group == "harmonia"
         && harmoniaServerCfg.sops.secrets."harmonia-signing-key".mode == "0400"
@@ -513,11 +559,13 @@ in
     let
       source = builtins.readFile ../../packages/nono.nix;
     in
-    mkCheck "nono-package-has-checks" "nono source build has a bounded install smoke check"
-      "packages/nono.nix must keep a post-install CLI smoke check when upstream cargo tests are disabled"
+    mkCheck "nono-package-has-checks"
+      "nono source build has bounded patch-behavior checks and an install smoke check"
+      "packages/nono.nix must keep targeted env:// tests and a post-install CLI smoke check"
       (
-        lib.hasInfix "Upstream cargo tests are not a practical gate" source
-        && lib.hasInfix "doCheck = false" source
+        lib.hasInfix "test_validate_env_var_with_env_uri_requires_env_var" source
+        && lib.hasInfix "test_validate_env_var_with_env_uri_and_env_var_ok" source
+        && lib.hasInfix "grep -R" source
         && lib.hasInfix "doInstallCheck = true" source
         && lib.hasInfix "--help" source
       );
@@ -880,12 +928,12 @@ in
   # --- Phase 120: agent API key ownership (SEC-04) ---
 
   agent-api-key-ownership-dev =
-    mkCheck "agent-api-key-ownership-dev"
-      "anthropic-api-key, openai-api-key, and openrouter-api-key owned by root on dev host"
-      "SECURITY: anthropic-api-key, openai-api-key, or openrouter-api-key not owned by root — agent principal can read raw provider keys"
+    mkCheck "agent-api-key-ownership-dev" "brokered provider API keys are owned by root on dev host"
+      "SECURITY: a brokered provider API key is not owned by root — agent principal can read raw provider keys"
       (
         devCfg.sops.secrets."anthropic-api-key".owner == "root"
         && devCfg.sops.secrets."openai-api-key".owner == "root"
+        && devCfg.sops.secrets."xai-api-key".owner == "root"
         && devCfg.sops.secrets."openrouter-api-key".owner == "root"
       );
 
@@ -1148,11 +1196,29 @@ in
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
     mkCheck "wrapper-supply-chain-hardening" "agent-wrapper.sh sets supply chain hardening env vars"
-      "agent-wrapper.sh missing NPM_CONFIG_IGNORE_SCRIPTS or NPM_CONFIG_AUDIT"
+      "agent-wrapper.sh missing npm/pnpm supply-chain hardening env vars"
       (
         lib.hasInfix "NPM_CONFIG_IGNORE_SCRIPTS=true" source
         && lib.hasInfix "NPM_CONFIG_AUDIT=true" source
         && lib.hasInfix "NPM_CONFIG_SAVE_EXACT=true" source
+        && lib.hasInfix "NPM_CONFIG_MIN_RELEASE_AGE" source
+        && lib.hasInfix "PNPM_CONFIG_MINIMUM_RELEASE_AGE" source
+      );
+
+  deploy-skip-checks-explicit =
+    let
+      source = builtins.readFile ../../scripts/deploy.sh;
+    in
+    mkCheck "deploy-skip-checks-explicit"
+      "deploy.sh only passes --skip-checks when explicitly requested"
+      "deploy.sh must default to deploy-rs checks and require the explicit --skip-checks flag for the unsafe path"
+      (
+        lib.hasInfix "SKIP_CHECKS=false" source
+        && lib.hasInfix "--skip-checks)" source
+        && lib.hasInfix ''if [[ "$SKIP_CHECKS" == true ]]'' source
+        && !(lib.hasInfix ''
+          "$FLAKE_DIR#$NODE"
+            --skip-checks'' source)
       );
 
   wrapper-telemetry-suppression =
@@ -1167,9 +1233,15 @@ in
     let
       source = builtins.readFile ../../modules/agent-sandbox.nix;
     in
-    mkCheck "claude-settings-mcp-disabled" "Claude managed settings disable MCP auto-loading"
-      "agent-sandbox.nix missing enableAllProjectMcpServers = false"
-      (lib.hasInfix "enableAllProjectMcpServers" source && lib.hasInfix "false" source);
+    mkCheck "claude-settings-mcp-disabled"
+      "Claude managed settings disable MCP auto-loading and deny CI/settings edits"
+      "agent-sandbox.nix missing enableAllProjectMcpServers = false or CI/settings deny rules"
+      (
+        lib.hasInfix "enableAllProjectMcpServers" source
+        && lib.hasInfix "false" source
+        && lib.hasInfix "Edit(.github/workflows/**)" source
+        && lib.hasInfix "Edit(.claude/**)" source
+      );
 
   launcher-seccomp-filter =
     let
@@ -1232,7 +1304,8 @@ in
         && lib.hasInfix "scopeAccess" source
         && lib.hasInfix "extraReadPaths" source
         && lib.hasInfix "AGENT_SCOPE_ACCESS" wrapperSource
-        && lib.hasInfix "AGENT_EXTRA_READ_PATHS" wrapperSource
+        && lib.hasInfix "AGENT_EXTRA_READ_PATHS_FILE" wrapperSource
+        && lib.hasInfix "AGENT_NONO_PROXY_PORT_START" wrapperSource
       );
 
   launcher-can-drop-agent-uid =

@@ -12,6 +12,11 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -19,6 +24,8 @@
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.treefmt-nix.follows = "treefmt-nix";
     };
     deploy-rs = {
       url = "github:serokell/deploy-rs";
@@ -26,6 +33,8 @@
     };
     impermanence = {
       url = "github:nix-community/impermanence";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
     };
     srvos = {
       url = "github:nix-community/srvos";
@@ -34,10 +43,13 @@
     nixos-anywhere = {
       url = "github:nix-community/nixos-anywhere";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.disko.follows = "disko";
+      inputs.treefmt-nix.follows = "treefmt-nix";
     };
     nix-mineral = {
       url = "github:cynicsketch/nix-mineral";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
     };
   };
 

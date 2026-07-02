@@ -1,8 +1,11 @@
 # Git Policy
 
-- Always finish work with a commit on `main` and push `main` to `origin`.
-- Codex should do this automatically after finishing work unless the user
-  explicitly asks not to commit or not to push.
+- Normal agent-authored changes should be made on `codex/...` branches and
+  landed through pull requests.
+- Do not push directly to `main` unless the user explicitly requests it for the
+  current task.
+- Codex should still commit completed work unless the user explicitly asks not
+  to commit.
 - `tsurf` is intentionally public.
 - Every related repo outside `tsurf` should stay backed by a private GitHub repo.
 

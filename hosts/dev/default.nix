@@ -34,7 +34,7 @@
 
   # --- Host-specific shared module settings ---
   boot.loader.grub.device = "/dev/sda"; # REPLACE
-  sops.defaultSopsFile = ../../secrets/example.yaml; # REPLACE with per-host secrets
+  sops.defaultSopsFile = ../../tests/fixtures/sops-placeholder.yaml; # REPLACE with per-host encrypted secrets
   sops.age.sshKeyPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
 
   # @decision DEV-01: Port 22 open on public interface for bootstrap and deploy access.

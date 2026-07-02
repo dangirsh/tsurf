@@ -3,6 +3,13 @@
 This document describes the security properties the public repo implements today.
 Private overlays can strengthen or weaken them.
 
+## Reporting Vulnerabilities
+
+Please use GitHub Security Advisories for private vulnerability reports when
+available. If that is unavailable, open a minimal public issue asking for a
+private reporting channel and do not include exploit details, secrets, or host
+identifiers in the issue.
+
 ## Scope
 
 - The public flake exports only `eval-*` fixtures plus apps, checks, and test
@@ -107,9 +114,10 @@ Storage:
 
 - `sops-nix` derives its age identity from the host SSH ed25519 key.
 - Secrets are decrypted to `/run/secrets`.
-- Public defaults keep `anthropic-api-key`, `openai-api-key`, and
-  `openrouter-api-key` root-owned.
-- `github-pat`, `google-api-key`, and `xai-api-key` default to the agent user.
+- Public defaults keep brokered provider keys root-owned:
+  `anthropic-api-key`, `openai-api-key`, `xai-api-key`, and
+  `openrouter-api-key`.
+- `github-pat` and `google-api-key` default to the agent user.
 
 Injection model:
 
@@ -137,7 +145,8 @@ For supported wrapper paths, the child should not get:
 - nftables is enabled.
 - Public ingress is limited to `22`, plus `80` and `443` only when
   `services.nginx.enable = true`.
-- Cloud metadata access to `169.254.169.254` is dropped in nftables.
+- Cloud metadata access to `169.254.169.254` and `fd00:ec2::254` is dropped in
+  nftables.
 - The effective trusted interface set in the public eval fixtures is loopback only.
 
 SSH defaults:
@@ -162,10 +171,13 @@ Agent egress:
 - Host egress for direct agent-UID traffic is enforced in nftables by
   `meta skuid`.
 - Default allowed traffic for the agent UID is:
-  - loopback
+  - loopback TCP ports `20000-20199`, reserved for per-launch nono credential
+    proxies
   - DNS on TCP/UDP `53`
   - TCP `22`, `80`, and `443`
 - Default denied traffic for the agent UID includes:
+  - other loopback TCP ports unless explicitly added to
+    `tsurf.agentEgress.allowedLoopbackTCPPorts`
   - RFC1918 IPv4 ranges
   - `100.64.0.0/10`
   - `169.254.0.0/16`
@@ -191,11 +203,22 @@ an explicit risk. Strong egress mediation is tracked as deferred design work.
   `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay`.
 - If SSH is lost, recover through console or rescue mode, repair access, and
   redeploy from the private overlay.
+- Deploys run deploy-rs checks by default. The `--skip-checks` flag is an
+  explicit unsafe fast path for emergencies or known-good out-of-band checks.
 
 ## Supply Chain
 
 - Nix inputs are pinned by `flake.lock`.
+- A scheduled GitHub Actions workflow opens lock-update pull requests so input
+  bumps are reviewed explicitly instead of accumulating silently.
+- The public base trusts `https://cache.numtide.com` via the configured
+  `niks3.numtide.com-1` public key. Treat that cache as part of the build trust
+  root for binaries it serves.
 - `nono` is built from pinned source (`rustPlatform.buildRustPackage`).
+  The build runs bounded tests for tsurf's carried `env://` credential patch
+  and the removed broad `/run` default-policy grants, plus an install-time CLI
+  smoke check. Patch files live under `packages/` and should be reviewed when
+  upstream nono is updated.
   Remaining prebuilt binaries are SHA256-pinned. `cass` is an opt-in extra
   (`extras/cass.nix`), not in the default trust path.
 - Critical kernel and network hardening (kexec, BPF, sysrq, reverse-path
@@ -208,6 +231,10 @@ an explicit risk. Strong egress mediation is tracked as deferred design work.
 - `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
 - The repo does not add signature verification for these remaining prebuilt
   binaries.
+- The optional Harmonia cache module serves plain HTTP. Integrity still relies
+  on Nix nar signatures, but HTTP metadata and availability can be observed or
+  interfered with by the network path. Use explicit client IP allowlists and
+  transport protection in private overlays when exposing it beyond localhost.
 
 ## Verification
 
@@ -251,3 +278,11 @@ Runtime checks:
   by individual wrapper or destination hostname.
 - Private overlays can weaken the network model by enabling
   `services.nonoSandbox.allowDirectNetwork` or adding broad direct egress.
+- The persisted SSH host key at `/persist/etc/ssh/ssh_host_ed25519_key` is
+  plaintext on disk unless the private overlay adds disk encryption. That key is
+  also the default sops age identity, so compromise affects both SSH host
+  identity and secret decryption.
+- The public disk layout does not enable full-disk encryption by default.
+- Harmonia cache clients trust the configured signing key; incorrect or
+  over-broad cache trust can freeze, roll back, or leak build provenance through
+  served paths even when Nix signature checks hold.

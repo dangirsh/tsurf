@@ -15,6 +15,7 @@
 let
   cfg = config.services.agentLauncher;
   agentCfg = config.tsurf.agent;
+  egressCfg = config.tsurf.agentEgress;
 
   agentRuntimePath = lib.makeBinPath [
     pkgs.bash
@@ -131,10 +132,16 @@ let
       nonoProfilePath = "/etc/nono/profiles/${nonoProfileName}.json";
 
       defaultArgStr = lib.concatMapStringsSep " " lib.escapeShellArg agentDef.defaultArgs;
-      extraReadPathsStr = lib.concatMapStringsSep " " lib.escapeShellArg cfg.extraReadPaths;
-      extraAllowPathsStr = lib.concatMapStringsSep " " lib.escapeShellArg cfg.extraAllowPaths;
+      extraReadPathsFile = pkgs.writeText "${name}-agent-extra-read-paths" (
+        lib.concatStringsSep "\n" cfg.extraReadPaths
+      );
+      extraAllowPathsFile = pkgs.writeText "${name}-agent-extra-allow-paths" (
+        lib.concatStringsSep "\n" cfg.extraAllowPaths
+      );
       childEnvironmentFile = pkgs.writeText "${name}-agent-child-environment" (
-        lib.concatStringsSep "\n" (lib.mapAttrsToList (envName: value: "${envName}=${value}") agentDef.childEnvironment)
+        lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (envName: value: "${envName}=${value}") agentDef.childEnvironment
+        )
       );
 
       launcher = pkgs.writeShellApplication {
@@ -151,9 +158,11 @@ let
           export AGENT_CREDENTIAL_SERVICES="${credentialServicesStr}"
           export AGENT_CREDENTIAL_SECRETS="${credentialSecrets}"
           export AGENT_SCOPE_ACCESS="${cfg.scopeAccess}"
-          export AGENT_EXTRA_READ_PATHS="${extraReadPathsStr}"
-          export AGENT_EXTRA_ALLOW_PATHS="${extraAllowPathsStr}"
+          export AGENT_EXTRA_READ_PATHS_FILE="${extraReadPathsFile}"
+          export AGENT_EXTRA_ALLOW_PATHS_FILE="${extraAllowPathsFile}"
           export AGENT_CHILD_ENVIRONMENT_FILE="${childEnvironmentFile}"
+          export AGENT_NONO_PROXY_PORT_START="${toString egressCfg.nonoProxyTCPPortRange.from}"
+          export AGENT_NONO_PROXY_PORT_END="${toString egressCfg.nonoProxyTCPPortRange.to}"
 
           if [[ -t 0 && -t 1 ]]; then
             stdio_flag="--pty"
@@ -190,9 +199,11 @@ let
             --setenv=AGENT_CREDENTIAL_SERVICES="$AGENT_CREDENTIAL_SERVICES" \
             --setenv=AGENT_CREDENTIAL_SECRETS="$AGENT_CREDENTIAL_SECRETS" \
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
-            --setenv=AGENT_EXTRA_READ_PATHS="$AGENT_EXTRA_READ_PATHS" \
-            --setenv=AGENT_EXTRA_ALLOW_PATHS="$AGENT_EXTRA_ALLOW_PATHS" \
+            --setenv=AGENT_EXTRA_READ_PATHS_FILE="$AGENT_EXTRA_READ_PATHS_FILE" \
+            --setenv=AGENT_EXTRA_ALLOW_PATHS_FILE="$AGENT_EXTRA_ALLOW_PATHS_FILE" \
             --setenv=AGENT_CHILD_ENVIRONMENT_FILE="$AGENT_CHILD_ENVIRONMENT_FILE" \
+            --setenv=AGENT_NONO_PROXY_PORT_START="$AGENT_NONO_PROXY_PORT_START" \
+            --setenv=AGENT_NONO_PROXY_PORT_END="$AGENT_NONO_PROXY_PORT_END" \
             --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
             --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
             --setenv=AGENT_RUN_AS_GID="${toString agentCfg.gid}" \

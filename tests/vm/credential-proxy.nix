@@ -42,8 +42,18 @@ let
       esac
       proxy_authority="''${OPENROUTER_BASE_URL#http://}"
       proxy_authority="''${proxy_authority%%/*}"
+      proxy_port="''${proxy_authority##*:}"
+      if [ -z "$proxy_port" ] || printf '%s' "$proxy_port" | grep -q '[^0-9]'; then
+        fail "proxy port is not numeric: $OPENROUTER_BASE_URL"
+      fi
+      [ "$proxy_port" -ge 20000 ] && [ "$proxy_port" -le 20199 ] \
+        || fail "proxy port outside reserved range: $OPENROUTER_BASE_URL"
       if [ -r /run/secrets/openrouter-api-key ]; then
         fail "raw secret file is readable from child"
+      fi
+
+      if curl -fsS http://127.0.0.1:18080/health >/tmp/direct-loopback-response 2>&1; then
+        fail "child reached direct loopback fake provider"
       fi
 
       if curl -fsS -x "http://$proxy_authority" http://127.0.0.1:18080/health >/tmp/generic-proxy-response 2>&1; then
@@ -74,7 +84,12 @@ pkgs.testers.nixosTest {
   name = "credential-proxy";
 
   nodes.machine =
-    { config, pkgs, lib, ... }:
+    {
+      config,
+      pkgs,
+      lib,
+      ...
+    }:
     {
       imports = [
         impermanenceModule

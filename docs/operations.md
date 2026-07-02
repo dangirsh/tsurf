@@ -37,7 +37,8 @@ After cloning the repo:
    SSH-host-key and encrypted sops file those modules expect.
 6. Deploy from the private overlay with `./scripts/deploy.sh --node <host>`.
    Magic rollback is enabled by default; use `--first-deploy` for initial
-   adoption when rollback cannot be used safely.
+   adoption when rollback cannot be used safely. Deploy-rs checks run by
+   default; `--skip-checks` is an explicit unsafe fast path.
 
 ## Public Commands
 
@@ -78,6 +79,8 @@ produce it is `./scripts/run-tests.sh`.
   private-overlay `tsurf.url` input.
 - `--target user@host` overrides both the deploy-rs hostname/user and the
   SSH target used for locking and health checks.
+- `TSURF_DEPLOY_SSH_OPTS_FILE` may point at a newline-delimited option file for
+  SSH options that contain spaces, such as `ProxyCommand`.
 - The script adds a remote lock, runs `deploy-rs`, and performs post-deploy SSH
   and service checks.
 - For flaky public SSH paths, use `--mode remote-detached`. It copies the

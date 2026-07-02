@@ -14,6 +14,7 @@
 #   --first-deploy      Disable magic rollback for initial adoption
 #   --magic-rollback    Enable deploy-rs magic rollback with 300s confirm timeout (default)
 #   --no-magic-rollback Disable deploy-rs magic rollback for this deploy
+#   --skip-checks       Explicitly pass deploy-rs --skip-checks (unsafe/fast path)
 #   --help              Print usage
 #
 # @decision DEPLOY-114-01: Keep deploy.sh intentionally small: no repo-controlled hooks or alternate reachability probes.
@@ -45,14 +46,36 @@ MODE="${TSURF_DEPLOY_MODE:-remote}"
 FAST_MODE=false
 FIRST_DEPLOY=false
 MAGIC_ROLLBACK=true
+SKIP_CHECKS=false
 SECONDS=0
 
 # SSH multiplexing: reuse a single connection for locking/health-check calls.
 SSH_CTL="${TSURF_DEPLOY_SSH_CTL:-$FLAKE_DIR/tmp/ssh-%C}"
 SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$SSH_CTL" -o "ControlPersist=60s")
 SSH_EXTRA_OPTS=()
-if [[ -n "${TSURF_DEPLOY_SSH_OPTS:-}" ]]; then
-  read -r -a SSH_EXTRA_OPTS <<<"${TSURF_DEPLOY_SSH_OPTS}"
+
+shell_join() {
+  local out="" arg
+  for arg in "$@"; do
+    printf -v out '%s%q ' "$out" "$arg"
+  done
+  printf '%s\n' "${out% }"
+}
+
+load_ssh_extra_opts() {
+  SSH_EXTRA_OPTS=()
+  if [[ -n "${TSURF_DEPLOY_SSH_OPTS_FILE:-}" ]]; then
+    while IFS= read -r opt || [[ -n "$opt" ]]; do
+      [[ -n "$opt" ]] || continue
+      SSH_EXTRA_OPTS+=("$opt")
+    done < "$TSURF_DEPLOY_SSH_OPTS_FILE"
+  elif [[ -n "${TSURF_DEPLOY_SSH_OPTS:-}" ]]; then
+    read -r -a SSH_EXTRA_OPTS <<<"${TSURF_DEPLOY_SSH_OPTS}"
+  fi
+}
+
+load_ssh_extra_opts
+if (( ${#SSH_EXTRA_OPTS[@]} > 0 )); then
   SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
 fi
 
@@ -127,6 +150,7 @@ Options:
   --fast                Local build, single evaluation (no --remote-build)
   --magic-rollback      Enable deploy-rs magic rollback (default, 300s confirm timeout)
   --no-magic-rollback   Disable deploy-rs magic rollback for this deploy
+  --skip-checks         Explicit unsafe/fast path: pass deploy-rs --skip-checks
   --help                Show this help
 
 Examples:
@@ -154,6 +178,7 @@ while [[ $# -gt 0 ]]; do
     --first-deploy) FIRST_DEPLOY=true; shift ;;
     --magic-rollback) MAGIC_ROLLBACK=true; shift ;;
     --no-magic-rollback) MAGIC_ROLLBACK=false; shift ;;
+    --skip-checks)   SKIP_CHECKS=true; shift ;;
     --help)        usage; exit 0 ;;
     *)             echo "Unknown option: $1"; usage; exit 1 ;;
   esac
@@ -249,14 +274,16 @@ fi
 
 DEPLOY_ARGS=(
   "$FLAKE_DIR#$NODE"
-  --skip-checks
   --fast-connection true
 )
+if [[ "$SKIP_CHECKS" == true ]]; then
+  DEPLOY_ARGS+=(--skip-checks)
+fi
 if [[ "$TARGET_SET" == true ]]; then
   DEPLOY_ARGS+=(--hostname "${TARGET_HOSTNAME}" --ssh-user "${TARGET_SSH_USER}")
 fi
 if (( ${#SSH_EXTRA_OPTS[@]} > 0 )); then
-  DEPLOY_ARGS+=(--ssh-opts "${TSURF_DEPLOY_SSH_OPTS}")
+  DEPLOY_ARGS+=(--ssh-opts "$(shell_join "${SSH_EXTRA_OPTS[@]}")")
 fi
 if [[ "$MAGIC_ROLLBACK" == true && "$FIRST_DEPLOY" != true ]]; then
   DEPLOY_ARGS+=(--confirm-timeout 300)
@@ -300,12 +327,8 @@ done
 # --- SSH connectivity check ---
 # @decision DEPLOY-04: Use non-multiplexed connections to test real SSH paths.
 echo "==> Verifying remote access..."
-REMOTE_ACCESS_SSH_OPTS=(-o BatchMode=yes -o ControlPath=none)
-if (( ${#SSH_EXTRA_OPTS[@]} == 0 )); then
-  REMOTE_ACCESS_SSH_OPTS+=(-o ConnectTimeout=15)
-else
-  REMOTE_ACCESS_SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
-fi
+REMOTE_ACCESS_SSH_OPTS=(-o BatchMode=yes -o ControlPath=none -o ConnectTimeout=15)
+REMOTE_ACCESS_SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
 if ssh "${REMOTE_ACCESS_SSH_OPTS[@]}" "$TARGET" \
     "systemctl is-active --quiet sshd.service" 2>/dev/null; then
   echo "  Deploy target ($TARGET): SSH OK"

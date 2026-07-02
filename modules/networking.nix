@@ -16,7 +16,10 @@ let
   ) config.networking.firewall.allowedTCPPorts;
   exposedNames = map (p: "${toString p} (${internalOnlyPorts.${toString p}})") exposed;
   allowedAgentTcpPorts = lib.concatStringsSep ", " (map toString egressCfg.allowedTCPPorts);
-  blockedAgentLoopbackTcpPorts = lib.concatStringsSep ", " (map toString egressCfg.blockedLoopbackTCPPorts);
+  allowedAgentLoopbackTcpPorts = lib.concatStringsSep ", " (
+    map toString egressCfg.allowedLoopbackTCPPorts
+  );
+  nonoProxyTcpPortRange = "${toString egressCfg.nonoProxyTCPPortRange.from}-${toString egressCfg.nonoProxyTCPPortRange.to}";
   blockedAgentIpv4Cidrs = lib.concatStringsSep ", " egressCfg.blockedIPv4Cidrs;
   blockedAgentIpv6Cidrs = lib.concatStringsSep ", " egressCfg.blockedIPv6Cidrs;
 in
@@ -42,10 +45,30 @@ in
       description = "Allow outbound DNS (TCP/UDP 53) for the agent user.";
     };
 
+    allowedLoopbackTCPPorts = lib.mkOption {
+      type = lib.types.listOf lib.types.port;
+      default = [ ];
+      description = "Additional loopback TCP destination ports agents may reach. The nono proxy range is allowed separately.";
+    };
+
     blockedLoopbackTCPPorts = lib.mkOption {
       type = lib.types.listOf lib.types.port;
-      default = [ 8384 ];
-      description = "Loopback TCP destination ports agents may not reach. Defaults to Syncthing's GUI/API port.";
+      default = [ ];
+      description = "Deprecated compatibility option. Agent loopback now defaults to deny except explicit allows.";
+    };
+
+    nonoProxyTCPPortRange = {
+      from = lib.mkOption {
+        type = lib.types.port;
+        default = 20000;
+        description = "First loopback TCP port reserved for nono credential proxies.";
+      };
+
+      to = lib.mkOption {
+        type = lib.types.port;
+        default = 20199;
+        description = "Last loopback TCP port reserved for nono credential proxies.";
+      };
     };
 
     blockPrivateRanges = lib.mkOption {
@@ -57,11 +80,11 @@ in
     blockedIPv4Cidrs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
-        "10.0.0.0/8"       # RFC1918 private
-        "172.16.0.0/12"    # RFC1918 private
-        "192.168.0.0/16"   # RFC1918 private
-        "100.64.0.0/10"    # RFC6598 CGNAT (includes Tailscale/headscale mesh)
-        "169.254.0.0/16"   # RFC3927 link-local (includes cloud metadata)
+        "10.0.0.0/8" # RFC1918 private
+        "172.16.0.0/12" # RFC1918 private
+        "192.168.0.0/16" # RFC1918 private
+        "100.64.0.0/10" # RFC6598 CGNAT (includes Tailscale/headscale mesh)
+        "169.254.0.0/16" # RFC3927 link-local (includes cloud metadata)
       ];
       description = "IPv4 CIDRs blocked for the agent user when blockPrivateRanges is enabled.";
     };
@@ -69,8 +92,8 @@ in
     blockedIPv6Cidrs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
-        "fc00::/7"   # RFC4193 unique local address (ULA)
-        "fe80::/10"  # RFC4291 link-local
+        "fc00::/7" # RFC4193 unique local address (ULA)
+        "fe80::/10" # RFC4291 link-local
       ];
       description = "IPv6 CIDRs blocked for the agent user when blockPrivateRanges is enabled.";
     };
@@ -78,6 +101,10 @@ in
 
   config = {
     assertions = [
+      {
+        assertion = egressCfg.nonoProxyTCPPortRange.from <= egressCfg.nonoProxyTCPPortRange.to;
+        message = "tsurf.agentEgress.nonoProxyTCPPortRange.from must be <= .to.";
+      }
       {
         assertion = exposed == [ ];
         message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain localhost-only.";
@@ -97,11 +124,12 @@ in
     networking.nftables.enable = true;
     networking.nftables.tables = {
       agent-metadata-block = {
-        family = "ip";
+        family = "inet";
         content = ''
           chain output {
             type filter hook output priority 0; policy accept;
-            ip daddr 169.254.169.254 drop
+            ip daddr 169.254.169.254 counter drop
+            ip6 daddr fd00:ec2::254 counter drop
           }
         '';
       };
@@ -110,34 +138,40 @@ in
       agent-egress = {
         family = "inet";
         content = ''
-          set tsurf_agent_egress_tcp_ports {
-            type inet_service;
-            elements = { ${allowedAgentTcpPorts} }
-          }
-        ${lib.optionalString (egressCfg.blockedLoopbackTCPPorts != [ ]) ''
-          set tsurf_agent_blocked_loopback_tcp_ports {
-            type inet_service;
-            elements = { ${blockedAgentLoopbackTcpPorts} }
-          }
-        ''}
+            set tsurf_agent_egress_tcp_ports {
+              type inet_service;
+              elements = { ${allowedAgentTcpPorts} }
+            }
+            set tsurf_agent_nono_proxy_tcp_ports {
+              type inet_service;
+              flags interval;
+              elements = { ${nonoProxyTcpPortRange} }
+            }
+          ${lib.optionalString (egressCfg.allowedLoopbackTCPPorts != [ ]) ''
+            set tsurf_agent_allowed_loopback_tcp_ports {
+              type inet_service;
+              elements = { ${allowedAgentLoopbackTcpPorts} }
+            }
+          ''}
 
-          chain output {
-            type filter hook output priority 0; policy accept;
-          ${lib.optionalString (egressCfg.blockedLoopbackTCPPorts != [ ]) ''
-            meta skuid ${toString agentCfg.uid} oifname "lo" tcp dport @tsurf_agent_blocked_loopback_tcp_ports drop
-          ''}
-            meta skuid ${toString agentCfg.uid} oifname "lo" accept
-          ${lib.optionalString egressCfg.allowDns ''
-            meta skuid ${toString agentCfg.uid} udp dport 53 accept
-            meta skuid ${toString agentCfg.uid} tcp dport 53 accept
-          ''}
-          ${lib.optionalString egressCfg.blockPrivateRanges ''
-            meta skuid ${toString agentCfg.uid} ip daddr { ${blockedAgentIpv4Cidrs} } drop
-            meta skuid ${toString agentCfg.uid} ip6 daddr { ${blockedAgentIpv6Cidrs} } drop
-          ''}
-            meta skuid ${toString agentCfg.uid} tcp dport @tsurf_agent_egress_tcp_ports accept
-            meta skuid ${toString agentCfg.uid} drop
-          }
+            chain output {
+              type filter hook output priority 0; policy accept;
+              meta skuid ${toString agentCfg.uid} oifname "lo" tcp dport @tsurf_agent_nono_proxy_tcp_ports accept
+            ${lib.optionalString (egressCfg.allowedLoopbackTCPPorts != [ ]) ''
+              meta skuid ${toString agentCfg.uid} oifname "lo" tcp dport @tsurf_agent_allowed_loopback_tcp_ports accept
+            ''}
+            ${lib.optionalString egressCfg.allowDns ''
+              meta skuid ${toString agentCfg.uid} udp dport 53 accept
+              meta skuid ${toString agentCfg.uid} tcp dport 53 accept
+            ''}
+              meta skuid ${toString agentCfg.uid} oifname "lo" counter drop
+            ${lib.optionalString egressCfg.blockPrivateRanges ''
+              meta skuid ${toString agentCfg.uid} ip daddr { ${blockedAgentIpv4Cidrs} } counter drop
+              meta skuid ${toString agentCfg.uid} ip6 daddr { ${blockedAgentIpv6Cidrs} } counter drop
+            ''}
+              meta skuid ${toString agentCfg.uid} tcp dport @tsurf_agent_egress_tcp_ports accept
+              meta skuid ${toString agentCfg.uid} counter drop
+            }
         '';
       };
     };
@@ -172,10 +206,10 @@ in
         KbdInteractiveAuthentication = false;
         X11Forwarding = false;
         PermitRootLogin = "prohibit-password";
-        MaxAuthTries = 3;             # Limit brute-force attempts per connection
-        LoginGraceTime = 30;          # Seconds before unauthenticated connection is dropped
-        ClientAliveInterval = 300;    # 5-min keepalive; detect dead sessions
-        ClientAliveCountMax = 3;      # 3 missed keepalives = disconnect (~15 min total)
+        MaxAuthTries = 3; # Limit brute-force attempts per connection
+        LoginGraceTime = 30; # Seconds before unauthenticated connection is dropped
+        ClientAliveInterval = 300; # 5-min keepalive; detect dead sessions
+        ClientAliveCountMax = 3; # 3 missed keepalives = disconnect (~15 min total)
       };
       # @decision NET-14: Check .ssh/authorized_keys BEFORE /etc/ssh/authorized_keys.d/%u.
       # Impermanence fallback: if activation fails, persisted /root/.ssh/ keys still work.

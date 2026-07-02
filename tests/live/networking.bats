@@ -32,16 +32,21 @@ bats_load_library bats-assert
   fi
 }
 
-# Validates NET-010: metadata block rule drops 169.254.169.254
-@test "${HOST}: nftables metadata block rule drops 169.254.169.254" {
+# Validates NET-010: metadata block rule drops IPv4 and IPv6 cloud metadata endpoints
+@test "${HOST}: nftables metadata block rule drops cloud metadata endpoints" {
   local rules
-  rules="$(remote nft list table ip agent-metadata-block 2>&1)" || {
-    echo "FAIL: unable to list nft table ip agent-metadata-block"
+  rules="$(remote nft list table inet agent-metadata-block 2>&1)" || {
+    echo "FAIL: unable to list nft table inet agent-metadata-block"
     return 1
   }
 
   if [[ "$rules" != *"169.254.169.254"* ]]; then
     echo "FAIL: metadata block table missing 169.254.169.254 reference"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" != *"fd00:ec2::254"* ]]; then
+    echo "FAIL: metadata block table missing fd00:ec2::254 reference"
     echo "DEBUG: rules: $rules"
     return 1
   fi
@@ -67,8 +72,8 @@ bats_load_library bats-assert
   fi
 }
 
-# Validates NET-033, NET-034, NET-035, NET-039: egress UID scoping, port allowlist, private range block, terminal drop
-@test "${HOST}: nftables agent-egress policy scopes by uid and drops private ranges" {
+# Validates NET-033, NET-034, NET-035, NET-039, NET-041: egress UID scoping, port allowlist, private range block, terminal drop
+@test "${HOST}: nftables agent-egress policy scopes by uid and default-denies loopback" {
   local rules
   rules="$(remote nft list table inet agent-egress 2>&1)" || {
     echo "FAIL: unable to list nft table inet agent-egress"
@@ -87,6 +92,21 @@ bats_load_library bats-assert
   fi
   if [[ "$rules" != *"443"* ]]; then
     echo "FAIL: agent-egress table missing HTTPS allowlist"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" != *"20000-20199"* ]]; then
+    echo "FAIL: agent-egress table missing reserved nono proxy port range"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" != *'oifname "lo"'* || "$rules" != *"drop"* ]]; then
+    echo "FAIL: agent-egress table missing loopback drop"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" == *'oifname "lo" accept'* ]]; then
+    echo "FAIL: agent-egress table still has blanket loopback accept"
     echo "DEBUG: rules: $rules"
     return 1
   fi
@@ -139,15 +159,17 @@ bats_load_library bats-assert
   assert_failure
 }
 
-# Validates NET-041: configured blocked loopback service ports are denied for the agent UID
-@test "${HOST}: agent UID cannot reach blocked loopback service ports" {
+# Validates NET-041: arbitrary loopback service ports are denied for the agent UID
+@test "${HOST}: agent UID cannot reach arbitrary loopback service ports" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
 
-  local probe="timeout 3 bash -lc ':</dev/tcp/127.0.0.1/8384'"
-  if ! remote "$probe" >/dev/null 2>&1; then
-    skip "no root-reachable listener on blocked loopback port 8384"
-  fi
+  remote "python3 -m http.server 18081 --bind 127.0.0.1 >/tmp/tsurf-loopback-test.log 2>&1 & echo \$! >/tmp/tsurf-loopback-test.pid"
+  remote "for i in \$(seq 1 20); do timeout 1 bash -lc ':</dev/tcp/127.0.0.1/18081' && exit 0; sleep 0.1; done; exit 1" || {
+    remote "if [[ -f /tmp/tsurf-loopback-test.pid ]]; then kill \$(cat /tmp/tsurf-loopback-test.pid) 2>/dev/null || true; fi"
+    skip "could not start root-reachable loopback listener on 18081"
+  }
 
-  run remote_as_agent "$probe"
+  run remote_as_agent "timeout 3 bash -lc ':</dev/tcp/127.0.0.1/18081'"
+  remote "kill \$(cat /tmp/tsurf-loopback-test.pid) 2>/dev/null || true"
   assert_failure
 }
