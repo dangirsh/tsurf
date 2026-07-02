@@ -74,10 +74,7 @@ let
       launcherName = "tsurf-launch-${name}";
       credentialServicesStr = lib.concatStringsSep " " agentDef.credentialServices;
       effectiveCredentialProxy =
-        if agentDef.credentialProxy == null then
-          cfg.defaultCredentialProxy
-        else
-          agentDef.credentialProxy;
+        if agentDef.credentialProxy == null then cfg.defaultCredentialProxy else agentDef.credentialProxy;
 
       # Build nono custom_credentials for env:// URI-based credential proxy
       credentialDefs = lib.listToAttrs (
@@ -554,10 +551,7 @@ in
       name: agentDef:
       let
         effectiveCredentialProxy =
-          if agentDef.credentialProxy == null then
-            cfg.defaultCredentialProxy
-          else
-            agentDef.credentialProxy;
+          if agentDef.credentialProxy == null then cfg.defaultCredentialProxy else agentDef.credentialProxy;
       in
       {
         assertion = effectiveCredentialProxy != "iron" || cfg.egressProxy.url != "";

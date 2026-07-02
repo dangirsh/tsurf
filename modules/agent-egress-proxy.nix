@@ -96,7 +96,9 @@ let
   # Deduplicate by service/env/secret so one shared proxy config can serve
   # several wrappers without duplicating transform entries.
   credentialRecordAttrs = lib.listToAttrs (
-    map (record: lib.nameValuePair "${record.svc}:${record.envVar}:${record.secretName}" record) credentialRecords
+    map (
+      record: lib.nameValuePair "${record.svc}:${record.envVar}:${record.secretName}" record
+    ) credentialRecords
   );
   uniqueCredentialRecords = builtins.attrValues credentialRecordAttrs;
 
@@ -127,22 +129,21 @@ let
     rules = map (host: { inherit host; }) record.hosts;
   }) uniqueCredentialRecords;
 
-  transforms =
-    [
-      {
-        name = "allowlist";
-        config = {
-          domains = allowedHosts;
-          cidrs = allowedCIDRs;
-        };
-      }
-    ]
-    ++ lib.optionals (secretTransformEntries != [ ]) [
-      {
-        name = "secrets";
-        config.secrets = secretTransformEntries;
-      }
-    ];
+  transforms = [
+    {
+      name = "allowlist";
+      config = {
+        domains = allowedHosts;
+        cidrs = allowedCIDRs;
+      };
+    }
+  ]
+  ++ lib.optionals (secretTransformEntries != [ ]) [
+    {
+      name = "secrets";
+      config.secrets = secretTransformEntries;
+    }
+  ];
 
   ironConfig = {
     dns.enabled = false;
@@ -282,17 +283,16 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions =
-      [
-        {
-          assertion = launcherCfg.enable;
-          message = "services.agentEgressProxy requires services.agentLauncher.enable.";
-        }
-      ]
-      ++ map (record: {
-        assertion = builtins.hasAttr record.secretName config.sops.secrets;
-        message = "services.agentEgressProxy needs sops.secrets.${record.secretName} for ${record.svc}.";
-      }) uniqueCredentialRecords;
+    assertions = [
+      {
+        assertion = launcherCfg.enable;
+        message = "services.agentEgressProxy requires services.agentLauncher.enable.";
+      }
+    ]
+    ++ map (record: {
+      assertion = builtins.hasAttr record.secretName config.sops.secrets;
+      message = "services.agentEgressProxy needs sops.secrets.${record.secretName} for ${record.svc}.";
+    }) uniqueCredentialRecords;
 
     users.groups.${cfg.group} = { };
     users.users.${cfg.user} = {
