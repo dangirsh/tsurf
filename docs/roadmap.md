@@ -5,7 +5,8 @@ part of incidental cleanup.
 
 ## Agent Egress Mediation
 
-Status: TODO, do not implement until the design is re-evaluated.
+Status: Initial Iron-backed implementation added; continue hardening with live
+tests and provider-specific rollout validation.
 
 The current default blocks direct sandbox networking in nono and uses a
 UID-scoped nftables policy as a host-level backstop. This prevents configured
@@ -28,6 +29,12 @@ Review status: the 2026-07-02 landscape review in
 [`docs/security-plans/sandbox-secret-proxy-landscape-2026.md`](security-plans/sandbox-secret-proxy-landscape-2026.md)
 recommends keeping `nono` as the default local sandbox and prototyping
 `iron-proxy` as the egress and richer credential-broker layer.
+
+Implementation status: `modules/agent-egress-proxy.nix` packages and runs
+`iron-proxy`, generated agents can use Iron as the default credential proxy,
+and nftables switches to mediated-only agent UID egress when Iron is enabled.
+Remaining work is live-host validation, provider SDK compatibility hardening,
+and richer per-agent policy bundles.
 
 ## Validation Integrity
 

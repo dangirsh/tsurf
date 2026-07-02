@@ -75,6 +75,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
       tsurfOverlay = final: _prev: {
         nono = final.callPackage ./packages/nono.nix { };
+        iron-proxy = final.callPackage ./packages/iron-proxy.nix { };
       };
 
       commonModules = [
@@ -106,6 +107,7 @@
         secrets = ./modules/secrets.nix;
         impermanence = ./modules/impermanence.nix;
         agent-compute = ./modules/agent-compute.nix;
+        agent-egress-proxy = ./modules/agent-egress-proxy.nix;
         agent-launcher = ./modules/agent-launcher.nix;
         agent-sandbox = ./modules/agent-sandbox.nix;
         nono = ./modules/nono.nix;
@@ -137,6 +139,7 @@
             imports = [
               core
               agent-compute
+              agent-egress-proxy
               nono
               agent-launcher
               agent-sandbox
@@ -227,6 +230,8 @@
 
       packages.${system} = {
         deploy-rs = deploy-rs.packages.${system}.default;
+        iron-proxy = pkgs.callPackage ./packages/iron-proxy.nix { };
+        nono = pkgs.callPackage ./packages/nono.nix { };
 
         # NixOS VM test for sandbox user privilege separation (requires KVM).
         # Run: nix build .#vm-test-sandbox

@@ -16,6 +16,7 @@
     ../../modules/networking.nix
     ../../modules/secrets.nix
     ../../modules/agent-compute.nix
+    ../../modules/agent-egress-proxy.nix
     ../../modules/impermanence.nix
     ../../modules/agent-launcher.nix
     ../../modules/agent-sandbox.nix
@@ -39,6 +40,7 @@
   services.openssh.openFirewall = lib.mkForce true;
 
   services.agentCompute.enable = true;
+  services.agentEgressProxy.enable = true;
   services.agentSandbox.enable = true;
   services.nonoSandbox.enable = true;
 

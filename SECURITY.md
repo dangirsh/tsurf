@@ -18,7 +18,8 @@ identifiers in the issue.
   flake has a `tsurf.url` input, so the public repo is intentionally
   non-deployable.
 - [`hosts/dev/default.nix`](hosts/dev/default.nix) is the sandboxed agent host:
-  it enables `agentCompute`, `agentLauncher`, `agentSandbox`, and `nonoSandbox`.
+  it enables `agentCompute`, `agentLauncher`, `agentEgressProxy`,
+  `agentSandbox`, and `nonoSandbox`.
 - [`hosts/services/default.nix`](hosts/services/default.nix) is the service host:
   it omits the sandbox modules and imports only `extras/restic.nix`, which stays
   disabled by default.
@@ -54,12 +55,15 @@ caller
   -> wrapper
     -> sudo tsurf-launch-<agent>
       -> systemd-run transient unit
-        -> scripts/agent-wrapper.sh (loads /run/secrets/* into env vars)
-          -> nono run --credential <service> --profile /etc/nono/profiles/tsurf-<name>.json
-            -> nono's built-in reverse proxy (reads env:// URIs, issues phantom tokens)
+        -> scripts/agent-wrapper.sh
+          -> nono run --profile /etc/nono/profiles/tsurf-<name>.json
             -> setpriv drop to the configured agent user
               -> real agent binary
+                -> iron-proxy on loopback (credential replacement and egress policy)
 ```
+
+The legacy `nono` credential-proxy path remains available per agent via
+`credentialProxy = "nono"` and is still covered by the VM credential-proxy test.
 
 Security properties of that path:
 
@@ -126,14 +130,23 @@ Injection model:
 
 - Each wrapper carries an `AGENT_CREDENTIAL_SECRETS` allowlist of
   `ENV_VAR:secret-file-name` pairs.
-- [`scripts/agent-wrapper.sh`](scripts/agent-wrapper.sh) reads only those named
-  secret files from `/run/secrets` and exports them as environment variables.
-- nono's per-agent profile defines `custom_credentials` with `env://` URIs.
-  nono reads the real keys from the parent env before applying the sandbox,
-  starts its built-in reverse proxy with 256-bit phantom tokens, and strips
-  real keys from the child environment for supported wrapper paths.
+- Iron-backed agents do not read those files in the wrapper. They receive
+  provider-shaped placeholder credentials and explicit proxy/CA environment
+  variables. `iron-proxy` reads real provider keys from a sops-rendered
+  environment file and replaces placeholders at egress.
+- Legacy `nono` credential-proxy agents read only the named secret files from
+  `/run/secrets`. nono's per-agent profile defines `custom_credentials` with
+  `env://` URIs, reads the real keys from the parent env before applying the
+  sandbox, starts its built-in reverse proxy with 256-bit phantom tokens, and
+  strips real keys from the child environment for supported wrapper paths.
 
-For supported wrapper paths, the child should get:
+For Iron-backed wrapper paths, the child should get:
+
+- provider-shaped placeholder variables such as `ANTHROPIC_API_KEY`
+- `HTTP_PROXY` / `HTTPS_PROXY` pointing at the loopback Iron tunnel listener
+- CA trust variables scoped to the child environment
+
+For legacy `nono` credential-proxy wrapper paths, the child should get:
 
 - a per-session phantom token via `NONO_PROXY_TOKEN`
 - a localhost base URL such as `ANTHROPIC_BASE_URL=http://127.0.0.1:<port>/anthropic`
@@ -168,13 +181,20 @@ self-backing.
 
 Agent egress:
 
-- The base `nono` profile sets `network.block = true`. Credential-backed
-  wrappers still get nono reverse-proxy routes for configured providers, but
-  arbitrary CONNECT traffic through nono's root-side proxy is strict-filtered.
+- When `services.agentEgressProxy.enable = true`, direct agent-UID egress is
+  mediated-only: nftables allows loopback proxy ports and drops direct DNS and
+  public `22/80/443` from the agent UID. `iron-proxy` enforces host allowlists,
+  credential replacement, upstream deny CIDRs, and structured per-request logs.
+- The dev fixture enables this Iron-backed mode by default.
+- The base `nono` profile sets `network.block = true`. Iron-backed generated
+  profiles disable nono network blocking so the child can reach only the
+  host-allowed loopback proxy ports. Legacy `nono` credential-proxy wrappers
+  still get nono reverse-proxy routes for configured providers, and arbitrary
+  CONNECT traffic through nono's root-side proxy is strict-filtered.
 - Host egress for direct agent-UID traffic is enforced in nftables by
   `meta skuid`. Drops are logged by default with `tsurf-agent-egress-*`
   prefixes before being dropped.
-- Default allowed traffic for the agent UID is:
+- Default allowed traffic for the agent UID in legacy direct-egress mode is:
   - loopback TCP ports `20000-20199`, reserved for per-launch nono credential
     proxies
   - DNS on TCP/UDP `53`
@@ -188,11 +208,10 @@ Agent egress:
   - `fc00::/7`
   - `fe80::/10`
 
-This is still not full destination-level mediation. It blocks direct private and
-link-local traffic from the agent UID and prevents the credential proxy from
-becoming an allow-all CONNECT proxy by default, but private overlays that enable
-`services.nonoSandbox.allowDirectNetwork` or add direct egress paths must treat that as
-an explicit risk. Strong egress mediation is tracked as deferred design work.
+Iron-backed mode is the preferred destination-level mediation path. Private
+overlays that disable `services.agentEgressProxy`, enable
+`services.nonoSandbox.allowDirectNetwork`, or add direct egress paths must treat
+that as an explicit risk.
 
 ## Persistence, Deploy, And Recovery
 
@@ -226,6 +245,8 @@ an explicit risk. Strong egress mediation is tracked as deferred design work.
   and the removed broad `/run` default-policy grants, plus an install-time CLI
   smoke check. Patch files live under `packages/` and should be reviewed when
   upstream nono is updated.
+- `iron-proxy` is built from pinned source (`buildGoModule`). Its install check
+  verifies the reported version and CA generation command.
   Remaining prebuilt binaries are SHA256-pinned. `cass` is an opt-in extra
   (`extras/cass.nix`), not in the default trust path.
 - Critical kernel and network hardening (kexec, BPF, sysrq, reverse-path

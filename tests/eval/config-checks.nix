@@ -359,6 +359,26 @@ in
         && lib.hasInfix "drop" content
       );
 
+  agent-egress-iron-mediated-dev =
+    let
+      content = devCfg.networking.nftables.tables.agent-egress.content;
+      agentUid = toString devCfg.tsurf.agent.uid;
+    in
+    mkCheck "agent-egress-iron-mediated-dev"
+      "Iron-enabled dev host allows only loopback proxy ports for agent UID egress"
+      "Iron-enabled dev host should not retain direct DNS or public 22/80/443 egress for the agent UID"
+      (
+        devCfg.services.agentEgressProxy.enable
+        && devCfg.tsurf.agentEgress.mediatedOnly
+        && lib.hasInfix "meta skuid ${agentUid}" content
+        && lib.hasInfix "20208" content
+        && lib.hasInfix "20243" content
+        && lib.hasInfix "20280" content
+        && !(lib.hasInfix "udp dport 53 accept" content)
+        && !(lib.hasInfix "tcp dport @tsurf_agent_egress_tcp_ports accept" content)
+        && lib.hasInfix ''counter log prefix "tsurf-agent-egress-default-drop " drop'' content
+      );
+
   agent-sandbox-dev-enabled =
     mkCheck "agent-sandbox-dev-enabled" "dev host agent sandbox wrappers are enabled"
       "dev host services.agentSandbox.enable is false — dev agents run unsandboxed"
@@ -461,6 +481,7 @@ in
         "agent-host"
         "agent-host-with-secrets"
         "agent-compute"
+        "agent-egress-proxy"
         "agent-launcher"
         "agent-sandbox"
         "base"
@@ -741,28 +762,33 @@ in
       claudeProfile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
     in
     mkCheck "nono-profile-blocks-direct-network"
-      "base and generated nono profiles block direct network access by default"
-      "nono profile network.block must default true"
+      "base nono profile blocks network; Iron-backed generated profiles delegate network mediation to nftables/Iron"
+      "nono base profile must block network, and Iron-backed profiles must disable nono network blocking for loopback proxy access"
       (
         (baseProfile.network.block or false)
-        && (claudeProfile.network.block or false)
+        && !(claudeProfile.network.block or true)
         && !devCfg.services.nonoSandbox.allowDirectNetwork
       );
 
-  claude-profile-credential-proxy =
+  claude-profile-iron-proxy =
     let
       profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
       creds = profile.network.credentials or [ ];
       customCreds = profile.network.custom_credentials or { };
     in
-    mkCheck "claude-profile-credential-proxy"
-      "generated Claude nono profile wires credential proxy with env:// URI"
-      "tsurf-claude nono profile missing network.credentials or custom_credentials with env:// credential_key"
+    mkCheck "claude-profile-iron-proxy"
+      "generated Claude profile uses nono for sandboxing and Iron for proxy credentials"
+      "tsurf-claude should not wire nono credentials when Iron is the default credential proxy"
       (
-        builtins.elem "anthropic" creds
-        && builtins.hasAttr "anthropic" customCreds
-        && lib.hasPrefix "env://" customCreds.anthropic.credential_key
-        && customCreds.anthropic.env_var == "ANTHROPIC_API_KEY"
+        devCfg.services.agentEgressProxy.enable
+        && devCfg.services.agentLauncher.defaultCredentialProxy == "iron"
+        && devCfg.services.agentLauncher.egressProxy.url == "http://127.0.0.1:20208"
+        && devCfg.services.agentLauncher.egressProxy.caCert == "/var/lib/tsurf-agent-egress-proxy/ca.crt"
+        && creds == [ ]
+        && customCreds == { }
+        && devCfg.services.agentLauncher.agents.claude.credentialServices == [ "anthropic" ]
+        && builtins.hasAttr "tsurf-agent-egress-proxy" devCfg.systemd.services
+        && builtins.hasAttr "iron-agent-egress-env" devCfg.sops.templates
       );
 
   agent-launcher-child-environment =
@@ -788,11 +814,11 @@ in
       agent = openRouterCfg.services.agentLauncher.agents."codex-openrouter";
       creds = profile.network.credentials or [ ];
       customCreds = profile.network.custom_credentials or { };
-      openrouter = customCreds.openrouter or { };
       codexHome = "${openRouterCfg.tsurf.agent.home}/.codex-openrouter";
+      codexOpenRouterSource = builtins.readFile ../../extras/codex-openrouter.nix;
     in
     mkCheck "codex-openrouter-extra"
-      "OpenRouter Codex extra exposes codex-openrouter with GLM 5.2 through the credential proxy"
+      "OpenRouter Codex extra exposes codex-openrouter with GLM 5.2 through the configured credential proxy"
       "OpenRouter Codex extra missing wrapper, GLM 5.2 default, or credential proxy wiring"
       (
         openRouterCfg.services.codexOpenRouterAgent.enable
@@ -806,11 +832,11 @@ in
         && builtins.elem "codex-openrouter" (
           map (pkg: pkg.meta.mainProgram or pkg.pname or pkg.name) openRouterCfg.environment.systemPackages
         )
-        && builtins.elem "openrouter" creds
-        && builtins.hasAttr "openrouter" customCreds
-        && openrouter.upstream == "https://openrouter.ai/api/v1"
-        && openrouter.credential_key == "env://OPENROUTER_API_KEY"
-        && openrouter.env_var == "OPENROUTER_API_KEY"
+        && creds == [ ]
+        && customCreds == { }
+        && openRouterCfg.services.agentLauncher.defaultCredentialProxy == "iron"
+        && lib.hasInfix "OPENROUTER_API_KEY" codexOpenRouterSource
+        && lib.hasInfix "NONO_PROXY_TOKEN" codexOpenRouterSource
         && openRouterCfg.sops.secrets."openrouter-api-key".owner == "root"
         && builtins.elem codexHome (profile.filesystem.allow or [ ])
         && !(builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex" (profile.filesystem.allow or [ ]))

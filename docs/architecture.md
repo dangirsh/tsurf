@@ -33,6 +33,7 @@ in a private flake.
 | `modules/networking.nix` | nftables, SSH policy, public-port policy, and agent egress rules |
 | `modules/impermanence.nix` | `/persist` manifest and activation ordering for impermanent roots |
 | `modules/agent-compute.nix` | `tsurf-agents.slice`, shared agent tooling, and `/data/projects` persistence |
+| `modules/agent-egress-proxy.nix` | Iron-backed egress proxy, credential replacement, CA state, and mediated-only nftables defaults |
 | `modules/nono.nix` | Base `nono` profile and sandbox profile installation |
 | `modules/agent-launcher.nix` | Generic launcher that emits wrappers, launchers, sudo rules, and persistence |
 | `modules/agent-sandbox.nix` | Public core `claude` wrapper definition on top of the generic launcher |
@@ -48,10 +49,10 @@ caller
     -> sudo immutable launcher
       -> systemd-run transient unit
         -> scripts/agent-wrapper.sh
-          -> nono's built-in credential proxy
           -> nono sandbox
           -> setpriv drop to the configured agent user
           -> real agent binary
+          -> iron-proxy on loopback for HTTP(S) egress and credential replacement
 ```
 
 Important behavior from the shipped implementation:
@@ -59,9 +60,10 @@ Important behavior from the shipped implementation:
 - Launches must start inside `tsurf.agent.projectRoot`, and the first path
   component below that root becomes the sandbox read scope.
 - The wrapper refuses to grant blanket read access to the entire project root.
-- Supported API-backed wrappers keep raw provider keys on the root-owned side
-  of the launch path. The child gets loopback base URLs plus per-session tokens;
-  a fake-provider VM test covers the brokered request path.
+- Supported Iron-backed API wrappers keep raw provider keys in the Iron service
+  environment. The child gets provider-shaped placeholder credentials plus
+  proxy/CA environment variables. Legacy `nono` credential-proxy mode remains
+  available and is covered by the fake-provider VM test.
 - Public core installs wrapper binaries, not raw interactive agent binaries, as
   the intended entrypoints.
 
@@ -82,12 +84,11 @@ user is kept out of `docker`, and raw provider secrets remain root-owned by defa
   `services.nginx.enable = true`.
 - The public network model keeps `trustedInterfaces = [ ]`. Overlay interfaces
   and any additional exposure policy belong in a private overlay.
-- The base nono profile blocks direct network access by default. Credentialed
-  wrappers use nono reverse-proxy routes on reserved loopback ports
-  `20000-20199`, while the host firewall remains a UID-scoped backstop for any
-  direct agent traffic. Other loopback TCP access is denied unless explicitly
-  allowed in the private overlay. This is still coarse policy, not full
-  destination-level mediation.
+- The base nono profile blocks direct network access by default. Iron-backed
+  generated profiles relax nono network blocking only so the child can reach
+  the loopback Iron proxy. nftables then allows the proxy ports and drops direct
+  DNS and public network egress for the agent UID. Legacy `nono` credential
+  proxy mode still uses reserved loopback ports `20000-20199`.
 - The root filesystem is rolled back on boot from BTRFS subvolumes. Persistent
   state is declared explicitly under `/persist`.
 
