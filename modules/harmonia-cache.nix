@@ -78,6 +78,12 @@ in
         mode = "0400";
       };
 
+      users.users.harmonia = {
+        isSystemUser = true;
+        group = "harmonia";
+      };
+      users.groups.harmonia = { };
+
       services.harmonia = {
         cache.enable = true;
         cache.signKeyPaths = lib.optional (

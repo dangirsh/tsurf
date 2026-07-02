@@ -397,6 +397,10 @@ in
         && harmoniaServerCfg.sops.secrets."harmonia-signing-key".owner == "harmonia"
         && harmoniaServerCfg.sops.secrets."harmonia-signing-key".group == "harmonia"
         && harmoniaServerCfg.sops.secrets."harmonia-signing-key".mode == "0400"
+        && builtins.hasAttr "harmonia" harmoniaServerCfg.users.users
+        && harmoniaServerCfg.users.users.harmonia.isSystemUser
+        && harmoniaServerCfg.users.users.harmonia.group == "harmonia"
+        && builtins.hasAttr "harmonia" harmoniaServerCfg.users.groups
         && harmoniaServerCfg.services.harmonia.cache.settings.bind == "0.0.0.0:5000"
         && builtins.elem harmoniaServerCfg.tsurf.harmoniaCache.port harmoniaServerCfg.networking.firewall.allowedTCPPorts
         && builtins.hasAttr "harmonia-cache-ingress" harmoniaServerCfg.networking.nftables.tables
