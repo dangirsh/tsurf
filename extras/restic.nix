@@ -24,13 +24,23 @@ in
       }
     ];
 
+    sops.secrets."b2-account-id" = { };
+    sops.secrets."b2-account-key" = { };
+    sops.secrets."restic-password" = { };
+    sops.templates."restic-b2-env" = {
+      content = ''
+        AWS_ACCESS_KEY_ID=${config.sops.placeholder."b2-account-id"}
+        AWS_SECRET_ACCESS_KEY=${config.sops.placeholder."b2-account-key"}
+      '';
+    };
+
     services.restic.backups.b2 = {
       initialize = true;
 
       # Backblaze B2: create a bucket, then an application key with read/write access.
       # The S3-compatible endpoint region (eu-central-003) must match your bucket's region.
-      # Credentials go in sops secrets (restic-b2-key-id, restic-b2-app-key) rendered
-      # via sops.templates."restic-b2-env" in secrets.nix.
+      # Credentials are declared in this extra and rendered through the
+      # restic-b2-env sops template when services.resticStarter is enabled.
       repository = cfg.repository;
 
       passwordFile = config.sops.secrets."restic-password".path;

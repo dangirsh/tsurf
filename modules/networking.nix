@@ -22,6 +22,12 @@ let
   nonoProxyTcpPortRange = "${toString egressCfg.nonoProxyTCPPortRange.from}-${toString egressCfg.nonoProxyTCPPortRange.to}";
   blockedAgentIpv4Cidrs = lib.concatStringsSep ", " egressCfg.blockedIPv4Cidrs;
   blockedAgentIpv6Cidrs = lib.concatStringsSep ", " egressCfg.blockedIPv6Cidrs;
+  dropAction =
+    reason:
+    if egressCfg.logDroppedPackets then
+      ''counter log prefix "tsurf-agent-egress-${reason} " drop''
+    else
+      "counter drop";
 in
 {
   options.tsurf.agentEgress = {
@@ -75,6 +81,12 @@ in
       type = lib.types.bool;
       default = true;
       description = "Drop agent traffic to RFC1918, CGNAT, link-local, and ULA ranges.";
+    };
+
+    logDroppedPackets = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Log host-level agent egress drops with a tsurf-agent-egress-* nftables prefix.";
     };
 
     blockedIPv4Cidrs = lib.mkOption {
@@ -164,13 +176,13 @@ in
               meta skuid ${toString agentCfg.uid} udp dport 53 accept
               meta skuid ${toString agentCfg.uid} tcp dport 53 accept
             ''}
-              meta skuid ${toString agentCfg.uid} oifname "lo" counter drop
+              meta skuid ${toString agentCfg.uid} oifname "lo" ${dropAction "loopback-drop"}
             ${lib.optionalString egressCfg.blockPrivateRanges ''
-              meta skuid ${toString agentCfg.uid} ip daddr { ${blockedAgentIpv4Cidrs} } counter drop
-              meta skuid ${toString agentCfg.uid} ip6 daddr { ${blockedAgentIpv6Cidrs} } counter drop
+              meta skuid ${toString agentCfg.uid} ip daddr { ${blockedAgentIpv4Cidrs} } ${dropAction "private-ipv4-drop"}
+              meta skuid ${toString agentCfg.uid} ip6 daddr { ${blockedAgentIpv6Cidrs} } ${dropAction "private-ipv6-drop"}
             ''}
               meta skuid ${toString agentCfg.uid} tcp dport @tsurf_agent_egress_tcp_ports accept
-              meta skuid ${toString agentCfg.uid} counter drop
+              meta skuid ${toString agentCfg.uid} ${dropAction "default-drop"}
             }
         '';
       };
@@ -195,10 +207,13 @@ in
     # srvos also sets these; we declare them explicitly so SECURITY.md claims are self-backing.
     services.openssh = {
       openFirewall = false;
+      # @decision DEV-02: Point sshd directly at /persist to avoid first-boot
+      # impermanence mount timing races. nixos-anywhere places the host key
+      # there, and sops-nix uses the same persisted key path as its age identity.
       hostKeys = [
         {
           type = "ed25519";
-          path = "/etc/ssh/ssh_host_ed25519_key";
+          path = "/persist/etc/ssh/ssh_host_ed25519_key";
         }
       ];
       settings = {
@@ -219,10 +234,5 @@ in
       ];
     };
 
-    # --- Persistence: SSH host keys ---
-    environment.persistence."/persist".files = [
-      "/etc/ssh/ssh_host_ed25519_key"
-      "/etc/ssh/ssh_host_ed25519_key.pub"
-    ];
   };
 }

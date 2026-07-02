@@ -35,3 +35,6 @@ jobs:
 
       - name: Build credential proxy VM proof
         run: nix build .#vm-test-credential-proxy --no-link --print-build-logs
+
+      - name: Build sandbox VM proof
+        run: nix build .#vm-test-sandbox --no-link --print-build-logs

@@ -2,9 +2,7 @@
 # Home-manager profile for the dedicated agent user: git, ssh, gh, and direnv defaults.
 # Private overlays replace the placeholder git identity and typically layer an agent-focused base profile here.
 {
-  config,
   lib,
-  pkgs,
   ...
 }:
 {

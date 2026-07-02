@@ -3,9 +3,6 @@
 # Imports restic.nix for backups and omits agent-sandbox.nix by default.
 # Private overlay replaces this with real host config, user settings, and networking.
 {
-  config,
-  pkgs,
-  inputs,
   lib,
   ...
 }:

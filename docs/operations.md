@@ -28,8 +28,10 @@ After cloning the repo:
    private repository.
 2. Update the private `flake.nix` to point `tsurf.url` at the repo you want to
    import and replace all placeholder host values.
-3. Run `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay` to
-   generate a real root SSH key and materialize `modules/root-ssh.nix`.
+3. Run `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay` from a
+   TTY to generate a real passphrase-protected root SSH key and materialize
+   `modules/root-ssh.nix`. Automation should use `--passphrase-file`; an
+   unencrypted key requires the explicit `--no-passphrase` flag.
 4. Replace the placeholder age recipients in `.sops.yaml`, create your encrypted
    secrets file, and set `sops.defaultSopsFile` in the host config.
 5. Import `modules/networking.nix` first. Import `modules/secrets.nix`, or use
@@ -44,7 +46,7 @@ After cloning the repo:
 
 | Command | Purpose |
 |---------|---------|
-| `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay` | Generate the root SSH key for a private overlay and optionally derive an age key with `--age` |
+| `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay` | Generate the root SSH key for a private overlay; prompts for a passphrase unless `--passphrase-file` or `--no-passphrase` is passed |
 | `nix run .#tsurf-status -- <node\|host\|all>` | Check persistent fleet status over SSH |
 | `nix run .#test-live -- --host <host>` | Run live BATS checks against a deployed host |
 | `nix run .#persistence-audit` | Print the merged `/persist` manifest for the eval fixtures |
@@ -57,7 +59,7 @@ After cloning the repo:
 The main validation paths in the public repo are:
 
 - `nix flake check`
-  Runs eval checks, shellcheck coverage, and unit tests.
+  Runs eval checks, nixfmt/deadnix gates, shellcheck coverage, and unit tests.
 - `./scripts/run-tests.sh`
   Wrapper around current-system `nix flake check` plus
   `nix flake check --all-systems --no-build`; writes `.test-status`.
@@ -69,6 +71,10 @@ The main validation paths in the public repo are:
   Reproducible VM-level smoke test for user and secret separation.
 - `nix build .#vm-test-credential-proxy`
   VM-level proof for brokered credentials and strict nono proxy behavior.
+
+The repository also ships `.github/CODEOWNERS`. Keep branch protection or a
+repository ruleset enabled so normal changes land through PRs with `eval-checks`
+passing; turn on CODEOWNERS review when the repo has a separate reviewer.
 
 The hooks expect a fresh `.test-status` file in the repo root. The normal way to
 produce it is `./scripts/run-tests.sh`.

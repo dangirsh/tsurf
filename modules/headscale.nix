@@ -9,18 +9,20 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 let
   cfg = config.tsurf.headscale;
+  domain = if cfg.domain != null then cfg.domain else "invalid.example";
+  publicIPv4 = if cfg.publicIPv4 != null then cfg.publicIPv4 else "0.0.0.0";
+  acmeEmail = if cfg.acmeEmail != null then cfg.acmeEmail else "invalid@example.invalid";
 in
 {
   options.tsurf.headscale = {
     enable = lib.mkEnableOption "self-hosted Tailscale coordination server (headscale)";
     domain = lib.mkOption {
-      type = lib.types.str;
-      default = "hs.example.com"; # REPLACE in private overlay
+      type = lib.types.nullOr lib.types.str;
+      default = null;
       description = "FQDN for the headscale server (nginx vhost + server_url).";
     };
     baseDomain = lib.mkOption {
@@ -29,14 +31,23 @@ in
       description = "MagicDNS suffix for machine names (e.g. machine 'services' becomes 'services.ts.net'). Distinct from the server FQDN in 'domain'.";
     };
     publicIPv4 = lib.mkOption {
-      type = lib.types.str;
-      default = "0.0.0.0"; # REPLACE in private overlay
+      type = lib.types.nullOr lib.types.str;
+      default = null;
       description = "Public IPv4 address for the embedded DERP server.";
     };
     acmeEmail = lib.mkOption {
-      type = lib.types.str;
-      default = "admin@example.com"; # REPLACE in private overlay
+      type = lib.types.nullOr lib.types.str;
+      default = null;
       description = "Email address for ACME certificate registration.";
+    };
+    nameservers = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      example = [
+        "1.1.1.1"
+        "9.9.9.9"
+      ];
+      description = "Recursive DNS resolvers advertised by headscale.";
     };
     aclPolicy = lib.mkOption {
       type = lib.types.attrs;
@@ -49,41 +60,73 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.domain != null;
+        message = "tsurf.headscale.domain must be set when headscale is enabled.";
+      }
+      {
+        assertion = cfg.publicIPv4 != null;
+        message = "tsurf.headscale.publicIPv4 must be set when headscale is enabled.";
+      }
+      {
+        assertion = cfg.acmeEmail != null;
+        message = "tsurf.headscale.acmeEmail must be set when headscale is enabled.";
+      }
+      {
+        assertion = cfg.nameservers != [ ];
+        message = "tsurf.headscale.nameservers must be set when headscale is enabled.";
+      }
+    ];
+
     services.headscale = {
       enable = true;
       address = "127.0.0.1";
       port = 8080;
       settings = {
-        server_url = "https://${cfg.domain}";
-        database.type = "sqlite";
-        database.sqlite.path = "/var/lib/headscale/db.sqlite";
-        database.sqlite.write_ahead_log = true;
-        prefixes.v4 = "100.64.0.0/10";
-        prefixes.v6 = "fd7a:115c:a1e0::/48";
-        prefixes.allocation = "sequential";
-        derp.server = {
-          enabled = true;
-          region_id = 999;
-          region_code = "tsurf";
-          region_name = "tsurf DERP";
-          stun_listen_addr = "0.0.0.0:3478";
-          ipv4 = cfg.publicIPv4;
-          verify_clients = true;
+        server_url = "https://${domain}";
+        database = {
+          type = "sqlite";
+          sqlite = {
+            path = "/var/lib/headscale/db.sqlite";
+            write_ahead_log = true;
+          };
         };
-        derp.urls = [ ];
-        derp.auto_update_enabled = false;
-        dns.magic_dns = true;
-        dns.base_domain = cfg.baseDomain; # MagicDNS suffix -- distinct from server FQDN
-        dns.nameservers.global = [
-          "1.1.1.1"
-          "9.9.9.9"
-        ];
-        dns.override_local_dns = true;
-        policy.mode = "file";
-        policy.path = "/etc/headscale/acl.json";
-        log.level = "info";
-        log.format = "text";
-        logtail.enabled = false;
+        prefixes = {
+          v4 = "100.64.0.0/10";
+          v6 = "fd7a:115c:a1e0::/48";
+          allocation = "sequential";
+        };
+        derp = {
+          server = {
+            enabled = true;
+            region_id = 999;
+            region_code = "tsurf";
+            region_name = "tsurf DERP";
+            stun_listen_addr = "0.0.0.0:3478";
+            ipv4 = publicIPv4;
+            verify_clients = true;
+          };
+          urls = [ ];
+          auto_update_enabled = false;
+        };
+        dns = {
+          magic_dns = true;
+          base_domain = cfg.baseDomain; # MagicDNS suffix -- distinct from server FQDN
+          nameservers.global = cfg.nameservers;
+          override_local_dns = true;
+        };
+        policy = {
+          mode = "file";
+          path = "/etc/headscale/acl.json";
+        };
+        log = {
+          level = "info";
+          format = "text";
+        };
+        logtail = {
+          enabled = false;
+        };
         disable_check_updates = true;
         ephemeral_node_inactivity_timeout = "30m";
       };
@@ -94,7 +137,7 @@ in
       enable = true;
       recommendedProxySettings = true;
       recommendedTlsSettings = true;
-      virtualHosts.${cfg.domain} = {
+      virtualHosts.${domain} = {
         enableACME = true;
         forceSSL = true;
         locations."/" = {
@@ -105,7 +148,7 @@ in
     };
     security.acme = {
       acceptTerms = true;
-      defaults.email = cfg.acmeEmail;
+      defaults.email = acmeEmail;
     };
 
     # STUN port for embedded DERP server

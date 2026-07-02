@@ -9,8 +9,5 @@ tmp/
 .codex-*
 result
 *.png
-Screenshot*
 .test-status
-src/
 secrets/*.yaml
-tsurf_code_review*.md

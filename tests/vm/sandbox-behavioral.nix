@@ -11,7 +11,6 @@
 # Requires: KVM (not available on GitHub Actions ubuntu-latest)
 {
   pkgs,
-  lib,
   impermanenceModule,
   ...
 }:

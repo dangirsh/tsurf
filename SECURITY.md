@@ -118,6 +118,9 @@ Storage:
   `anthropic-api-key`, `openai-api-key`, `xai-api-key`, and
   `openrouter-api-key`.
 - `github-pat` and `google-api-key` default to the agent user.
+- Optional Restic/B2 backup secrets are declared by `extras/restic.nix` only
+  when `services.resticStarter.enable = true`; they are not part of the core
+  secrets module.
 
 Injection model:
 
@@ -169,7 +172,8 @@ Agent egress:
   wrappers still get nono reverse-proxy routes for configured providers, but
   arbitrary CONNECT traffic through nono's root-side proxy is strict-filtered.
 - Host egress for direct agent-UID traffic is enforced in nftables by
-  `meta skuid`.
+  `meta skuid`. Drops are logged by default with `tsurf-agent-egress-*`
+  prefixes before being dropped.
 - Default allowed traffic for the agent UID is:
   - loopback TCP ports `20000-20199`, reserved for per-launch nono credential
     proxies
@@ -195,12 +199,15 @@ an explicit risk. Strong egress mediation is tracked as deferred design work.
 - The root filesystem rolls back on boot from BTRFS subvolumes.
 - Persistent state is declared explicitly under `/persist`.
 - Persisted security-critical state includes `/var/lib/nixos`,
-  `/etc/ssh/ssh_host_ed25519_key`, `/data/projects`, selected root state, and
+  `/persist/etc/ssh/ssh_host_ed25519_key`, `/data/projects`, selected root state, and
   selected agent state.
 - [`modules/impermanence.nix`](modules/impermanence.nix) makes `setupSecrets`
   depend on `persist-files`, so `sops-nix` can read the persisted SSH host key.
 - Real deployments are expected to generate a root SSH key with
   `nix run .#tsurf-init -- --overlay-dir /path/to/private-overlay`.
+  The helper prompts for a passphrase on a TTY; noninteractive generation must
+  use `--passphrase-file` or explicitly accept the unencrypted-key risk with
+  `--no-passphrase`.
 - If SSH is lost, recover through console or rescue mode, repair access, and
   redeploy from the private overlay.
 - Deploys run deploy-rs checks by default. The `--skip-checks` flag is an
@@ -231,10 +238,10 @@ an explicit risk. Strong egress mediation is tracked as deferred design work.
 - `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
 - The repo does not add signature verification for these remaining prebuilt
   binaries.
-- The optional Harmonia cache module serves plain HTTP. Integrity still relies
-  on Nix nar signatures, but HTTP metadata and availability can be observed or
-  interfered with by the network path. Use explicit client IP allowlists and
-  transport protection in private overlays when exposing it beyond localhost.
+- The optional Harmonia cache client defaults to HTTPS URLs. Plain HTTP clients
+  or direct public server exposure require `allowInsecureHttp = true`.
+  Integrity still relies on Nix nar signatures, but HTTP metadata and
+  availability can be observed or interfered with by the network path.
 
 ## Verification
 
@@ -282,6 +289,9 @@ Runtime checks:
   plaintext on disk unless the private overlay adds disk encryption. That key is
   also the default sops age identity, so compromise affects both SSH host
   identity and secret decryption.
+- Operator root SSH keys generated with `tsurf-init --no-passphrase` are
+  intentionally unencrypted. Prefer the interactive prompt or
+  `--passphrase-file`.
 - The public disk layout does not enable full-disk encryption by default.
 - Harmonia cache clients trust the configured signing key; incorrect or
   over-broad cache trust can freeze, roll back, or leak build provenance through
