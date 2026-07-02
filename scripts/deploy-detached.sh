@@ -173,6 +173,8 @@ state_dir="$1"
 drv="$2"
 lock_dir="$3"
 service_list="${4:-}"
+activation_timeout="${5:-3600}"
+rollback_timeout="${6:-600}"
 log_file="${state_dir}/log"
 status_file="${state_dir}/status"
 exit_file="${state_dir}/exit-code"
@@ -195,6 +197,33 @@ set_status() {
   printf '%s\n' "$1" >"${status_file}"
 }
 
+run_with_timeout() {
+  local timeout_seconds="$1"
+  shift
+  local child watcher code
+
+  "$@" &
+  child=$!
+  (
+    sleep "${timeout_seconds}"
+    if kill -0 "${child}" 2>/dev/null; then
+      echo "$(timestamp) command timed out after ${timeout_seconds}s: $*"
+      kill -TERM "${child}" 2>/dev/null || true
+      sleep 10
+      kill -KILL "${child}" 2>/dev/null || true
+    fi
+  ) &
+  watcher=$!
+
+  set +e
+  wait "${child}"
+  code=$?
+  set -e
+  kill "${watcher}" 2>/dev/null || true
+  wait "${watcher}" 2>/dev/null || true
+  return "${code}"
+}
+
 rollback_old_system() {
   if [[ "${rolled_back}" == "1" ]]; then
     return 0
@@ -203,7 +232,7 @@ rollback_old_system() {
 
   if [[ -n "${old_system}" && -x "${old_system}/bin/switch-to-configuration" ]]; then
     echo "$(timestamp) rolling back to ${old_system}"
-    "${old_system}/bin/switch-to-configuration" switch || true
+    run_with_timeout "${rollback_timeout}" "${old_system}/bin/switch-to-configuration" switch || true
   else
     echo "$(timestamp) rollback skipped; previous system path is unavailable"
   fi
@@ -248,7 +277,9 @@ fi
 
 echo "$(timestamp) activating"
 activating=1
-PROFILE="${result}" "${result}/deploy-rs-activate"
+PROFILE="${result}"
+export PROFILE
+run_with_timeout "${activation_timeout}" "${result}/deploy-rs-activate"
 activating=0
 activated=1
 readlink -f /run/current-system >"${current_system_file}"
@@ -340,7 +371,8 @@ wait_remote_deploy() {
 
 run_remote_deploy() {
   local installable="$FLAKE_DIR#deploy.nodes.${NODE}.profiles.system.path"
-  local drv deploy_id unit state_dir run_path services unit_q state_dir_q run_path_q drv_q lock_q services_q
+  local drv deploy_id unit state_dir run_path services activation_timeout rollback_timeout
+  local unit_q state_dir_q run_path_q drv_q lock_q services_q activation_timeout_q rollback_timeout_q
 
   echo "==> Evaluating deploy-rs activation derivation for '$NODE'..."
   drv="$(nix path-info --derivation "${installable}")"
@@ -355,6 +387,8 @@ run_remote_deploy() {
   state_dir="/var/lib/tsurf-deploy/${NODE}-${deploy_id}"
   run_path="${state_dir}/run.sh"
   services="${TSURF_DEPLOY_VERIFY_SERVICES:-}"
+  activation_timeout="${TSURF_DEPLOY_DETACHED_ACTIVATION_TIMEOUT:-3600}"
+  rollback_timeout="${TSURF_DEPLOY_DETACHED_ROLLBACK_TIMEOUT:-600}"
 
   state_dir_q="$(shell_quote "${state_dir}")"
   run_path_q="$(shell_quote "${run_path}")"
@@ -362,13 +396,15 @@ run_remote_deploy() {
   drv_q="$(shell_quote "${drv}")"
   lock_q="$(shell_quote "${REMOTE_LOCK_DIR}")"
   services_q="$(shell_quote "${services}")"
+  activation_timeout_q="$(shell_quote "${activation_timeout}")"
+  rollback_timeout_q="$(shell_quote "${rollback_timeout}")"
 
   echo "==> Installing detached deploy runner on $TARGET..."
   ssh_retry "install -d -m 0700 ${state_dir_q}"
   upload_remote_script "${run_path}"
 
   echo "==> Starting detached deploy unit ${unit}..."
-  ssh_retry "systemd-run --unit=${unit_q} --property=Type=exec /run/current-system/sw/bin/bash ${run_path_q} ${state_dir_q} ${drv_q} ${lock_q} ${services_q}"
+  ssh_retry "systemd-run --unit=${unit_q} --property=Type=exec /run/current-system/sw/bin/bash ${run_path_q} ${state_dir_q} ${drv_q} ${lock_q} ${services_q} ${activation_timeout_q} ${rollback_timeout_q}"
 
   wait_remote_deploy "${unit}" "${state_dir}"
 }
