@@ -1,8 +1,5 @@
 # Test-only placeholder secrets for public eval fixtures.
 # Private overlays should point sops.defaultSopsFile at real encrypted host files.
-b2-account-id: placeholder
-b2-account-key: placeholder
-restic-password: placeholder
 anthropic-api-key: placeholder
 openai-api-key: placeholder
 google-api-key: placeholder

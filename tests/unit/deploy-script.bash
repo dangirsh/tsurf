@@ -29,6 +29,8 @@ assert_eq \
 
 WORKDIR="${TSURF_TEST_TMPDIR:-$PWD}/deploy-script"
 rm -rf "$WORKDIR"
+mkdir -p "$WORKDIR"
+WORKDIR="$(cd "$WORKDIR" && pwd -P)"
 mkdir -p "$WORKDIR/scripts"
 cp "$ROOT_DIR/scripts/deploy.sh" "$WORKDIR/scripts/deploy.sh"
 touch "$WORKDIR/flake.nix"

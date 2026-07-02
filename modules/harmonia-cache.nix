@@ -5,7 +5,7 @@
 }:
 let
   cfg = config.tsurf.harmoniaCache;
-  cacheUrl = lib.optionalString (cfg.host != null) "http://${cfg.host}:${toString cfg.port}";
+  cacheUrl = lib.optionalString (cfg.host != null) "${cfg.scheme}://${cfg.host}:${toString cfg.port}";
   allowedClientIPv4s = lib.concatStringsSep ", " cfg.allowedClientIPv4s;
   exposeServer = cfg.allowedClientIPv4s != [ ];
 in
@@ -25,6 +25,21 @@ in
       type = lib.types.port;
       default = 5000;
       description = "TCP port for the Harmonia binary cache.";
+    };
+
+    scheme = lib.mkOption {
+      type = lib.types.enum [
+        "https"
+        "http"
+      ];
+      default = "https";
+      description = "Scheme used by clients when adding the Harmonia substituter.";
+    };
+
+    allowInsecureHttp = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Explicitly allow plaintext HTTP for Harmonia clients or direct public server exposure.";
     };
 
     publicKey = lib.mkOption {
@@ -57,6 +72,10 @@ in
           assertion = cfg.publicKey != null;
           message = "tsurf.harmoniaCache.publicKey must be set when the Harmonia cache client is enabled.";
         }
+        {
+          assertion = cfg.scheme != "http" || cfg.allowInsecureHttp;
+          message = "tsurf.harmoniaCache.allowInsecureHttp must be true to use an http:// Harmonia substituter.";
+        }
       ];
 
       nix.settings.extra-substituters = lib.optional (cfg.host != null) cacheUrl;
@@ -68,6 +87,10 @@ in
         {
           assertion = cfg.signingKeySopsFile != null;
           message = "tsurf.harmoniaCache.signingKeySopsFile must be set when enableServer is true.";
+        }
+        {
+          assertion = !exposeServer || cfg.allowInsecureHttp;
+          message = "tsurf.harmoniaCache.allowInsecureHttp must be true before exposing the Harmonia HTTP server directly.";
         }
       ];
 

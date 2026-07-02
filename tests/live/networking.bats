@@ -100,8 +100,18 @@ bats_load_library bats-assert
     echo "DEBUG: rules: $rules"
     return 1
   fi
-  if [[ "$rules" != *'oifname "lo"'* || "$rules" != *"drop"* ]]; then
-    echo "FAIL: agent-egress table missing loopback drop"
+  if [[ "$rules" != *'oifname "lo"'* || "$rules" != *"tsurf-agent-egress-loopback-drop"* ]]; then
+    echo "FAIL: agent-egress table missing logged loopback drop"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" != *"tsurf-agent-egress-private-ipv4-drop"* ]]; then
+    echo "FAIL: agent-egress table missing logged private IPv4 drop"
+    echo "DEBUG: rules: $rules"
+    return 1
+  fi
+  if [[ "$rules" != *"tsurf-agent-egress-default-drop"* ]]; then
+    echo "FAIL: agent-egress table missing logged terminal drop"
     echo "DEBUG: rules: $rules"
     return 1
   fi

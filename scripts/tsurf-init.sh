@@ -7,15 +7,46 @@ set -euo pipefail
 KEY_PATH="${HOME}/.ssh/tsurf-root"
 OVERLAY_DIR=""
 GENERATE_AGE=false
+NO_PASSPHRASE=false
+PASSPHRASE_FILE=""
 
 usage() {
   cat <<'USAGE'
-Usage: tsurf-init [--key-path PATH] [--overlay-dir DIR] [--age]
+Usage: tsurf-init [--key-path PATH] [--overlay-dir DIR] [--age] [--passphrase-file PATH|--no-passphrase]
 
   --key-path PATH      Root SSH key path (default: ~/.ssh/tsurf-root)
   --overlay-dir DIR    Write modules/root-ssh.nix into a private overlay
   --age                Derive a sops age key from the target host SSH host key
+  --passphrase-file PATH
+                      Read the new root SSH key passphrase from PATH
+  --no-passphrase      Explicitly generate an unencrypted root SSH key
 USAGE
+}
+
+generate_root_key() {
+  mkdir -p "$(dirname "${KEY_PATH}")"
+
+  if [[ "${NO_PASSPHRASE}" == "true" ]]; then
+    ssh-keygen -t ed25519 -C "tsurf-root@$(hostname -s 2>/dev/null || echo local)" -f "${KEY_PATH}" -N ""
+  elif [[ -n "${PASSPHRASE_FILE}" ]]; then
+    if [[ ! -f "${PASSPHRASE_FILE}" ]]; then
+      echo "[FAIL] Passphrase file not found: ${PASSPHRASE_FILE}" >&2
+      exit 1
+    fi
+    local passphrase
+    IFS= read -r passphrase < "${PASSPHRASE_FILE}" || true
+    if [[ -z "${passphrase}" ]]; then
+      echo "[FAIL] Passphrase file is empty: ${PASSPHRASE_FILE}" >&2
+      exit 1
+    fi
+    ssh-keygen -t ed25519 -C "tsurf-root@$(hostname -s 2>/dev/null || echo local)" -f "${KEY_PATH}" -N "${passphrase}"
+  elif [[ -t 0 ]]; then
+    ssh-keygen -t ed25519 -C "tsurf-root@$(hostname -s 2>/dev/null || echo local)" -f "${KEY_PATH}"
+  else
+    echo "[FAIL] Refusing to generate an unencrypted root SSH key noninteractively." >&2
+    echo "       Re-run from a TTY to enter a passphrase, use --passphrase-file, or pass --no-passphrase explicitly." >&2
+    exit 1
+  fi
 }
 
 write_root_module() {
@@ -46,6 +77,8 @@ while [[ $# -gt 0 ]]; do
     --key-path) KEY_PATH="$2"; shift 2 ;;
     --overlay-dir) OVERLAY_DIR="$2"; shift 2 ;;
     --age) GENERATE_AGE=true; shift ;;
+    --passphrase-file) PASSPHRASE_FILE="$2"; shift 2 ;;
+    --no-passphrase) NO_PASSPHRASE=true; shift ;;
     -h|--help)
       usage
       exit 0
@@ -54,14 +87,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "${NO_PASSPHRASE}" == "true" && -n "${PASSPHRASE_FILE}" ]]; then
+  echo "[FAIL] Choose either --passphrase-file or --no-passphrase, not both." >&2
+  exit 1
+fi
+
 echo "=== tsurf init ==="
 
 if [[ -f "${KEY_PATH}" ]]; then
   echo "[ok] Root SSH key already exists: ${KEY_PATH}"
 else
   echo "[..] Generating root ed25519 key pair: ${KEY_PATH}"
-  mkdir -p "$(dirname "${KEY_PATH}")"
-  ssh-keygen -t ed25519 -C "tsurf-root@$(hostname -s 2>/dev/null || echo local)" -f "${KEY_PATH}" -N ""
+  generate_root_key
   echo "[ok] Key generated."
 fi
 

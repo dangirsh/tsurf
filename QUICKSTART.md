@@ -35,6 +35,10 @@ git config core.hooksPath .githooks
 nix run .#tsurf-init -- --overlay-dir .
 ```
 
+Run this from a TTY to enter a root-key passphrase. For automation, pass
+`--passphrase-file <path>` or make the unencrypted-key risk explicit with
+`--no-passphrase`.
+
 If you run initialization on the target host, add `--age` to derive a sops age identity from the persisted SSH host key.
 
 Full template walkthrough: [`examples/private-overlay/README.md`](examples/private-overlay/README.md)

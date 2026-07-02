@@ -8,7 +8,6 @@
 # receives the real root-owned secret injected by nono.
 {
   pkgs,
-  lib,
   impermanenceModule,
   ...
 }:

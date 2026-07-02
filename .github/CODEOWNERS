@@ -1,0 +1,3 @@
+# Require a repository owner review for all tracked paths once branch protection
+# or repository rulesets require CODEOWNERS review.
+* @dangirsh

@@ -8,7 +8,7 @@ let
 in
 pkgs.rustPlatform.buildRustPackage rec {
   pname = "nono";
-  version = "${upstreamVersion}-tsurf.1";
+  version = "${upstreamVersion}-tsurf.2";
 
   src = pkgs.fetchFromGitHub {
     owner = "nolabs-ai";
@@ -18,7 +18,6 @@ pkgs.rustPlatform.buildRustPackage rec {
   };
 
   patches = [
-    ./nono-env-uri.patch
     ./nono-no-run.patch
   ];
 
@@ -28,18 +27,14 @@ pkgs.rustPlatform.buildRustPackage rec {
     "nono-cli"
   ];
   # The full upstream test suite is too slow for the regular gate. Run bounded
-  # tests for tsurf-carried patches plus a source guard for the removed /run grants.
+  # tests for the upstream env:// credential path plus a source guard for the
+  # removed /run grants.
   doCheck = true;
   checkPhase = ''
     runHook preCheck
-    cargo test -p nono-cli test_validate_env_var_with_env_uri_requires_env_var
-    cargo test -p nono-cli test_validate_env_var_with_env_uri_and_env_var_ok
-    if grep -R '"/run"' crates/nono-cli/data/policy.json; then
+    cargo test -p nono-cli test_validate_custom_credential_env_uri_accepted
+    if sed -n '/"linux_runtime_state"/,/"linux_sysfs_read"/p' crates/nono-cli/data/policy.json | grep -E '"/run"|"/var/run"'; then
       echo "upstream default policy must not regain broad /run read access" >&2
-      exit 1
-    fi
-    if grep -R '"/var/run"' crates/nono-cli/data/policy.json; then
-      echo "upstream default policy must not regain broad /var/run read access" >&2
       exit 1
     fi
     runHook postCheck

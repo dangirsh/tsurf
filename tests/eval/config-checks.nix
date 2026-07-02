@@ -60,6 +60,7 @@ let
           tsurf.harmoniaCache = {
             enable = true;
             enableServer = true;
+            allowInsecureHttp = true;
             host = "cache.example.invalid";
             publicKey = "cache.example.invalid-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
             signingKeySopsFile = ../../README.md;
@@ -79,6 +80,54 @@ let
           tsurf.harmoniaCache = {
             enableServer = true;
             signingKeySopsFile = ../../README.md;
+          };
+        }
+      ];
+    }).config;
+  harmoniaHttpsClientCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.core
+        self.nixosModules.harmonia-cache
+        roleEvalModule
+        {
+          tsurf.harmoniaCache = {
+            enable = true;
+            host = "cache.example.invalid";
+            publicKey = "cache.example.invalid-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          };
+        }
+      ];
+    }).config;
+  headscaleEnabledCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.service-host
+        roleEvalModule
+        {
+          tsurf.headscale = {
+            enable = true;
+            domain = "hs.example.invalid";
+            publicIPv4 = "203.0.113.20";
+            acmeEmail = "admin@example.invalid";
+            nameservers = [ "198.51.100.53" ];
+          };
+        }
+      ];
+    }).config;
+  resticEnabledCfg =
+    (lib.nixosSystem {
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        self.nixosModules.service-host
+        roleEvalModule
+        {
+          sops.defaultSopsFile = ../../tests/fixtures/sops-placeholder.yaml;
+          services.resticStarter = {
+            enable = true;
+            repository = "s3:s3.example.invalid/tsurf-backups";
           };
         }
       ];
@@ -128,11 +177,12 @@ in
       updateWorkflow = builtins.readFile ../../.github/workflows/update-flake-lock.yml;
     in
     mkCheck "ci-workflows-hardened"
-      "CI avoids accept-flake-config, builds the credential proxy VM proof, and schedules lock updates"
-      "GitHub workflows must not accept flake config on PRs and must keep credential-proxy VM plus lock-update coverage"
+      "CI avoids accept-flake-config, builds both VM proofs, and schedules lock updates"
+      "GitHub workflows must not accept flake config on PRs and must keep VM proof plus lock-update coverage"
       (
         !(lib.hasInfix "accept-flake-config" testWorkflow)
         && lib.hasInfix ".#vm-test-credential-proxy" testWorkflow
+        && lib.hasInfix ".#vm-test-sandbox" testWorkflow
         && lib.hasInfix "DeterminateSystems/update-flake-lock@834c491b2ece4de0bbd00d85214bb5e83b4da5c6" updateWorkflow
         && lib.hasInfix "schedule:" updateWorkflow
       );
@@ -262,6 +312,20 @@ in
       "SSH host key types=${builtins.toJSON hostKeyTypes}, expected [\"ed25519\"]"
       (hostKeyTypes == [ "ed25519" ]);
 
+  ssh-host-key-persisted-path =
+    let
+      hostKeyPaths = map (k: k.path) servicesCfg.services.openssh.hostKeys;
+      expected = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
+    in
+    mkCheck "ssh-host-key-persisted-path"
+      "OpenSSH and sops-nix use the direct persisted SSH host key path"
+      "SSH host key paths=${builtins.toJSON hostKeyPaths}; sops age paths must use /persist directly"
+      (
+        hostKeyPaths == expected
+        && devCfg.sops.age.sshKeyPaths == expected
+        && servicesCfg.sops.age.sshKeyPaths == expected
+      );
+
   metadata-block =
     mkCheck "metadata-block" "agent-metadata-block nftables table is defined"
       "agent-metadata-block nftables table not found"
@@ -281,14 +345,16 @@ in
       agentUid = toString servicesCfg.tsurf.agent.uid;
     in
     mkCheck "agent-egress-policy"
-      "agent-egress policy scopes by agent UID and default-denies loopback except nono proxy range"
-      "agent-egress policy missing UID scoping, private-range drops, HTTPS allowlist, nono proxy range, or loopback drop"
+      "agent-egress policy scopes by agent UID, allows only intended paths, and logs drops"
+      "agent-egress policy missing UID scoping, private-range drops, HTTPS allowlist, nono proxy range, or logged drops"
       (
         lib.hasInfix "meta skuid ${agentUid}" content
         && lib.hasInfix "100.64.0.0/10" content
         && lib.hasInfix "443" content
         && lib.hasInfix "20000-20199" content
-        && lib.hasInfix ''oifname "lo" counter drop'' content
+        && lib.hasInfix ''oifname "lo" counter log prefix "tsurf-agent-egress-loopback-drop " drop'' content
+        && lib.hasInfix ''counter log prefix "tsurf-agent-egress-private-ipv4-drop " drop'' content
+        && lib.hasInfix ''counter log prefix "tsurf-agent-egress-default-drop " drop'' content
         && !(lib.hasInfix ''oifname "lo" accept'' content)
         && lib.hasInfix "drop" content
       );
@@ -375,6 +441,19 @@ in
       "public flake still exports deploy.nodes.* — deploy targets must live in a private overlay"
       (!(self ? deploy) || (self.deploy.nodes or { }) == { });
 
+  repo-ownership-guards =
+    let
+      codeowners = builtins.readFile ../../.github/CODEOWNERS;
+      flakeSource = builtins.readFile ../../flake.nix;
+    in
+    mkCheck "repo-ownership-guards" "CODEOWNERS and formatting/static-analysis checks are present"
+      "repository owner review and nixfmt/deadnix gates must stay wired"
+      (
+        lib.hasInfix "* @dangirsh" codeowners
+        && lib.hasInfix "nixfmt-check" flakeSource
+        && lib.hasInfix "deadnix-check" flakeSource
+      );
+
   public-nixos-modules-exported =
     let
       names = builtins.attrNames (self.nixosModules or { });
@@ -423,14 +502,59 @@ in
       (!(lib.hasInfix "default = true" source));
 
   restic-opt-in =
-    mkCheck "restic-opt-in" "restic backup not active in public services config (opt-in works)"
-      "restic backup active in public template — services.resticStarter.enable should be false"
-      (!servicesCfg.services.resticStarter.enable);
+    mkCheck "restic-opt-in" "restic backup and B2 secrets are inactive until the extra is enabled"
+      "restic backup or B2/restic secrets are active in the public template"
+      (
+        !servicesCfg.services.resticStarter.enable
+        && !(builtins.hasAttr "b2-account-id" serviceHostWithSecretsRoleCfg.sops.secrets)
+        && !(builtins.hasAttr "b2-account-key" serviceHostWithSecretsRoleCfg.sops.secrets)
+        && !(builtins.hasAttr "restic-password" serviceHostWithSecretsRoleCfg.sops.secrets)
+      );
+
+  restic-extra-owns-secrets =
+    mkCheck "restic-extra-owns-secrets"
+      "Restic extra declares its own B2/restic secrets and environment template"
+      "Restic secrets/template must live with extras/restic.nix and appear only when resticStarter is enabled"
+      (
+        resticEnabledCfg.services.resticStarter.enable
+        && builtins.hasAttr "b2-account-id" resticEnabledCfg.sops.secrets
+        && builtins.hasAttr "b2-account-key" resticEnabledCfg.sops.secrets
+        && builtins.hasAttr "restic-password" resticEnabledCfg.sops.secrets
+        && builtins.hasAttr "restic-b2-env" resticEnabledCfg.sops.templates
+        &&
+          resticEnabledCfg.services.restic.backups.b2.passwordFile
+          == resticEnabledCfg.sops.secrets."restic-password".path
+        &&
+          resticEnabledCfg.services.restic.backups.b2.environmentFile
+          == resticEnabledCfg.sops.templates."restic-b2-env".path
+      );
 
   headscale-opt-in =
     mkCheck "headscale-opt-in" "headscale not active in public services config (opt-in works)"
       "headscale active in public template — tsurf.headscale.enable should be false"
       (!(lib.attrByPath [ "tsurf" "headscale" "enable" ] false servicesCfg));
+
+  headscale-required-settings =
+    let
+      source = builtins.readFile ../../modules/headscale.nix;
+    in
+    mkCheck "headscale-required-settings"
+      "Headscale requires private-overlay domain, IP, ACME email, and nameserver settings"
+      "Headscale must fail closed instead of shipping placeholder public defaults"
+      (
+        headscaleEnabledCfg.services.headscale.settings.server_url == "https://hs.example.invalid"
+        && headscaleEnabledCfg.services.headscale.settings.derp.server.ipv4 == "203.0.113.20"
+        && headscaleEnabledCfg.security.acme.defaults.email == "admin@example.invalid"
+        && headscaleEnabledCfg.services.headscale.settings.dns.nameservers.global == [ "198.51.100.53" ]
+        && builtins.hasAttr "hs.example.invalid" headscaleEnabledCfg.services.nginx.virtualHosts
+        && lib.hasInfix "tsurf.headscale.domain must be set" source
+        && lib.hasInfix "tsurf.headscale.publicIPv4 must be set" source
+        && lib.hasInfix "tsurf.headscale.acmeEmail must be set" source
+        && lib.hasInfix "tsurf.headscale.nameservers must be set" source
+        && !(lib.hasInfix "default = \"hs.example.com\"" source)
+        && !(lib.hasInfix "default = \"0.0.0.0\"" source)
+        && !(lib.hasInfix "default = \"admin@example.com\"" source)
+      );
 
   harmonia-cache-opt-in =
     mkCheck "harmonia-cache-opt-in" "harmonia cache is exported and disabled by default"
@@ -439,6 +563,22 @@ in
         builtins.hasAttr "harmonia-cache" (self.nixosModules or { })
         && !(lib.attrByPath [ "tsurf" "harmoniaCache" "enable" ] false servicesCfg)
         && !(lib.attrByPath [ "tsurf" "harmoniaCache" "enableServer" ] false servicesCfg)
+      );
+
+  harmonia-cache-https-default =
+    let
+      source = builtins.readFile ../../modules/harmonia-cache.nix;
+    in
+    mkCheck "harmonia-cache-https-default"
+      "Harmonia clients default to HTTPS and HTTP requires an explicit opt-in"
+      "Harmonia cache must not silently configure plaintext HTTP"
+      (
+        harmoniaHttpsClientCfg.tsurf.harmoniaCache.scheme == "https"
+        && builtins.elem "https://cache.example.invalid:5000" harmoniaHttpsClientCfg.nix.settings.extra-substituters
+        && !(builtins.elem "http://cache.example.invalid:5000" harmoniaHttpsClientCfg.nix.settings.extra-substituters)
+        && lib.hasInfix "allowInsecureHttp" source
+        && lib.hasInfix "must be true to use an http://" source
+        && lib.hasInfix "must be true before exposing the Harmonia HTTP server directly" source
       );
 
   harmonia-cache-server-wiring =
@@ -491,12 +631,9 @@ in
       (lib.hasInfix "address = \"127.0.0.1\"" source);
 
   headscale-dns-nameservers =
-    let
-      source = builtins.readFile ../../modules/headscale.nix;
-    in
     mkCheck "headscale-dns-nameservers" "headscale sets dns.nameservers.global"
       "modules/headscale.nix missing dns.nameservers.global — headscale 0.26+ requires explicit nameservers"
-      (lib.hasInfix "dns.nameservers.global" source);
+      (headscaleEnabledCfg.services.headscale.settings.dns.nameservers.global == [ "198.51.100.53" ]);
 
   headscale-persistence =
     let
@@ -563,9 +700,9 @@ in
       "nono source build has bounded patch-behavior checks and an install smoke check"
       "packages/nono.nix must keep targeted env:// tests and a post-install CLI smoke check"
       (
-        lib.hasInfix "test_validate_env_var_with_env_uri_requires_env_var" source
-        && lib.hasInfix "test_validate_env_var_with_env_uri_and_env_var_ok" source
-        && lib.hasInfix "grep -R" source
+        lib.hasInfix "test_validate_custom_credential_env_uri_accepted" source
+        && lib.hasInfix "linux_runtime_state" source
+        && lib.hasInfix "grep -E" source
         && lib.hasInfix "doInstallCheck = true" source
         && lib.hasInfix "--help" source
       );
@@ -573,18 +710,17 @@ in
   nono-package-has-tsurf-patches =
     let
       source = builtins.readFile ../../packages/nono.nix;
-      envPatch = builtins.readFile ../../packages/nono-env-uri.patch;
       runPatch = builtins.readFile ../../packages/nono-no-run.patch;
     in
     mkCheck "nono-package-has-tsurf-patches"
-      "nono source build carries tsurf credential and /run policy patches"
-      "packages/nono.nix must keep env:// custom_credentials validation and remove upstream /run read grants"
+      "nono source build carries the tsurf /run policy patch and relies on upstream env:// support"
+      "packages/nono.nix must keep upstream env:// test coverage and remove upstream /run read grants"
       (
-        lib.hasInfix "./nono-env-uri.patch" source
+        !(lib.hasInfix "./nono-env-uri.patch" source)
         && lib.hasInfix "./nono-no-run.patch" source
-        && lib.hasInfix "nono::keystore::is_env_uri" envPatch
+        && lib.hasInfix "test_validate_custom_credential_env_uri_accepted" source
         && lib.hasInfix ''-          "/run",'' runPatch
-        && lib.hasInfix ''-          "/var/run",'' runPatch
+        && lib.hasInfix ''-          "/var/run"'' runPatch
       );
 
   proxy-credential-profile =
@@ -810,6 +946,22 @@ in
       "SECURITY: agent user is in docker group — must not have docker access"
       (!(builtins.elem "docker" (builtins.getAttr devAgentUser devCfg.users.users).extraGroups));
 
+  agent-user-no-subids =
+    let
+      agentUser = builtins.getAttr devAgentUser devCfg.users.users;
+    in
+    mkCheck "agent-user-no-subids" "agent user has no subordinate UID/GID ranges"
+      "SECURITY: agent user should not receive user-namespace subuid/subgid ranges by default"
+      ((agentUser.subUidRanges or [ ]) == [ ] && (agentUser.subGidRanges or [ ]) == [ ]);
+
+  root-docker-state-not-persisted =
+    let
+      persistedDirs = map (d: d.directory) devCfg.environment.persistence."/persist".directories;
+    in
+    mkCheck "root-docker-state-not-persisted" "root Docker client state is not persisted by default"
+      "SECURITY: /root/.docker should not be persisted in the public base"
+      (!(builtins.elem "/root/.docker" persistedDirs));
+
   agent-uid-explicit =
     mkCheck "agent-uid-explicit" "agent user has explicit UID defined"
       "agent user uid is not set (required for stable sandbox policy references)"
@@ -985,6 +1137,21 @@ in
         && !(lib.hasInfix " /tmp/" detachedSource)
         && !(lib.hasInfix "=/tmp/" detachedSource)
         && !(lib.hasInfix "\"/tmp/" detachedSource)
+      );
+
+  tsurf-init-passphrase-default =
+    let
+      source = builtins.readFile ../../scripts/tsurf-init.sh;
+    in
+    mkCheck "tsurf-init-passphrase-default"
+      "tsurf-init refuses silent unencrypted key generation unless explicitly requested"
+      "tsurf-init must prompt or require an explicit passphrase mode when generating root keys"
+      (
+        lib.hasInfix "--passphrase-file" source
+        && lib.hasInfix "--no-passphrase" source
+        && lib.hasInfix "Refusing to generate an unencrypted root SSH key noninteractively" source
+        && lib.hasInfix "Passphrase file is empty" source
+        && lib.hasInfix "Choose either --passphrase-file or --no-passphrase" source
       );
 
   tsurf-status-persistent-services =
