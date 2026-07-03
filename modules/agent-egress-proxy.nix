@@ -10,57 +10,17 @@ let
   cfg = config.services.agentEgressProxy;
   launcherCfg = config.services.agentLauncher;
   yaml = pkgs.formats.yaml { };
+  credentialServices = import ./lib/credential-services.nix { inherit lib; };
+  inherit (credentialServices)
+    credentialDefaultsFor
+    urlHost
+    ironProxyTokenFor
+    ;
 
   stateDir = "/var/lib/tsurf-agent-egress-proxy";
   caCertPath = "${stateDir}/ca.crt";
   caKeyPath = "${stateDir}/ca.key";
   proxyUrl = "http://127.0.0.1:${toString cfg.tunnelPort}";
-
-  credentialServiceDefaults = {
-    anthropic = {
-      upstream = "https://api.anthropic.com";
-      hosts = [ "*.anthropic.com" ];
-      envVar = "ANTHROPIC_API_KEY";
-      secretName = "anthropic-api-key";
-      matchHeaders = [ "x-api-key" ];
-    };
-    openai = {
-      upstream = "https://api.openai.com";
-      hosts = [ "api.openai.com" ];
-      envVar = "OPENAI_API_KEY";
-      secretName = "openai-api-key";
-      matchHeaders = [ "authorization" ];
-    };
-    openrouter = {
-      upstream = "https://openrouter.ai/api/v1";
-      hosts = [ "openrouter.ai" ];
-      envVar = "OPENROUTER_API_KEY";
-      secretName = "openrouter-api-key";
-      matchHeaders = [ "authorization" ];
-    };
-    xai = {
-      upstream = "https://api.x.ai";
-      hosts = [ "api.x.ai" ];
-      envVar = "XAI_API_KEY";
-      secretName = "xai-api-key";
-      matchHeaders = [ "authorization" ];
-    };
-  };
-
-  urlHost =
-    url:
-    let
-      match = builtins.match "https?://([^/:]+).*" url;
-    in
-    if match == null then url else builtins.elemAt match 0;
-
-  credentialDefaultsFor =
-    agentDef: svc:
-    credentialServiceDefaults.${svc}
-    // lib.filterAttrs (_: value: value != null) (agentDef.credentialOverrides.${svc} or { });
-
-  ironProxyTokenFor =
-    svc: defaults: "tsurf-iron-${svc}-${defaults.envVar}-${defaults.secretName}-proxy-token";
 
   effectiveCredentialProxy =
     agentDef:

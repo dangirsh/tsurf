@@ -278,60 +278,12 @@
                   };
                 }
               ) { } (builtins.attrValues evalFixtures);
-              hostCases = lib.concatStringsSep "\n" (
-                lib.mapAttrsToList (
-                  hostName: hostCfg:
-                  "              ${hostName}) export TSURF_TEST_AGENT_USER=\"${hostCfg.agentUser}\"; export TSURF_TEST_HAS_SANDBOX=\"${
-                                  if hostCfg.hasSandbox then "1" else "0"
-                                }\" ;;"
-                ) hostCaseAttrs
-              );
             in
             ''
-                          #!/usr/bin/env bash
-                          set -euo pipefail
-
-                          HOST=""
-                          BATS_FILES=()
-
-                          while [[ $# -gt 0 ]]; do
-                            case "$1" in
-                              --host|-h)
-                                HOST="$2"
-                                shift 2
-                                ;;
-                              *)
-                                BATS_FILES+=("$1")
-                                shift
-                                ;;
-                            esac
-                          done
-
-                          if [[ -z "$HOST" ]]; then
-                            echo "Usage: test-live -- --host <hostname> [test-files...]"
-                            exit 1
-                          fi
-
-                          export TSURF_TEST_HOST="$HOST"
-                          case "$HOST" in
-              ${hostCases}
-                            *) echo "WARNING: unknown host '$HOST' — TSURF_TEST_AGENT_USER not set" ;;
-                          esac
-                          export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
-
-                          tests_dir="${./tests/live}"
-                          if [[ ! -d "$tests_dir" ]]; then
-                            echo "ERROR: tests directory not found: $tests_dir"
-                            exit 1
-                          fi
-
-                          if [[ ''${#BATS_FILES[@]} -eq 0 ]]; then
-                            echo "=== Running all live tests against $HOST ==="
-                            bats --tap "$tests_dir"/*.bats
-                          else
-                            echo "=== Running selected live tests against $HOST ==="
-                            bats --tap "''${BATS_FILES[@]}"
-                          fi
+              export TSURF_TEST_HOSTS_JSON=${lib.escapeShellArg (builtins.toJSON hostCaseAttrs)}
+              export TSURF_TESTS_DIR=${lib.escapeShellArg "${./tests/live}"}
+              export BATS_LIB_PATH=${lib.escapeShellArg "${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"}
+              exec ${./scripts/test-live.sh} "$@"
             '';
         };
       };
@@ -481,7 +433,7 @@
                 src = ./.;
               }
               ''
-                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/scripts/deploy-detached.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh
+                shellcheck "$src"/tests/lib/*.bash "$src"/tests/unit/*.bash "$src"/scripts/lib/*.sh "$src"/scripts/run-tests.sh "$src"/scripts/agent-wrapper.sh "$src"/scripts/deploy.sh "$src"/scripts/deploy-detached.sh "$src"/scripts/sandbox-probe.sh "$src"/scripts/test-live.sh "$src"/scripts/tsurf-init.sh "$src"/scripts/tsurf-status.sh
                 # btrfs-rollback.sh runs in initrd (busybox) — skip shellcheck
                 # SC2317: BATS @test blocks appear unreachable to shellcheck
                 shellcheck --exclude=SC2317 "$src"/tests/live/*.bats

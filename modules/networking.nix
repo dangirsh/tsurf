@@ -63,12 +63,6 @@ in
       description = "Additional loopback TCP destination ports agents may reach. The nono proxy range is allowed separately.";
     };
 
-    blockedLoopbackTCPPorts = lib.mkOption {
-      type = lib.types.listOf lib.types.port;
-      default = [ ];
-      description = "Deprecated compatibility option. Agent loopback now defaults to deny except explicit allows.";
-    };
-
     nonoProxyTCPPortRange = {
       from = lib.mkOption {
         type = lib.types.port;

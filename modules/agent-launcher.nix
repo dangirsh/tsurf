@@ -17,6 +17,12 @@ let
   cfg = config.services.agentLauncher;
   agentCfg = config.tsurf.agent;
   egressCfg = config.tsurf.agentEgress;
+  credentialServices = import ./lib/credential-services.nix { inherit lib; };
+  inherit (credentialServices)
+    credentialDefaultsFor
+    credentialServiceDefaults
+    ironProxyTokenFor
+    ;
 
   agentRuntimePath = lib.makeBinPath [
     pkgs.bash
@@ -25,47 +31,6 @@ let
     pkgs.nono
     pkgs.util-linux
   ];
-
-  # Well-known credential service defaults. Maps service name to upstream/header/format
-  # and the conventional env var + sops secret name.
-  credentialServiceDefaults = {
-    anthropic = {
-      upstream = "https://api.anthropic.com";
-      injectHeader = "x-api-key";
-      credentialFormat = "{}";
-      envVar = "ANTHROPIC_API_KEY";
-      secretName = "anthropic-api-key";
-    };
-    openai = {
-      upstream = "https://api.openai.com";
-      injectHeader = "authorization";
-      credentialFormat = "Bearer {}";
-      envVar = "OPENAI_API_KEY";
-      secretName = "openai-api-key";
-    };
-    openrouter = {
-      upstream = "https://openrouter.ai/api/v1";
-      injectHeader = "authorization";
-      credentialFormat = "Bearer {}";
-      envVar = "OPENROUTER_API_KEY";
-      secretName = "openrouter-api-key";
-    };
-    xai = {
-      upstream = "https://api.x.ai";
-      injectHeader = "authorization";
-      credentialFormat = "Bearer {}";
-      envVar = "XAI_API_KEY";
-      secretName = "xai-api-key";
-    };
-  };
-
-  credentialDefaultsFor =
-    agentDef: svc:
-    credentialServiceDefaults.${svc}
-    // lib.filterAttrs (_: value: value != null) (agentDef.credentialOverrides.${svc} or { });
-
-  ironProxyTokenFor =
-    svc: defaults: "tsurf-iron-${svc}-${defaults.envVar}-${defaults.secretName}-proxy-token";
 
   # Build launcher + wrapper for a single agent definition
   mkAgentPair =
