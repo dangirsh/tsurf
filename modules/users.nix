@@ -54,18 +54,6 @@ in
       group = agentCfg.user;
       home = agentCfg.home;
       extraGroups = [ "users" ];
-      subUidRanges = [
-        {
-          startUid = 200000;
-          count = 65536;
-        }
-      ];
-      subGidRanges = [
-        {
-          startGid = 200000;
-          count = 65536;
-        }
-      ];
       shell = pkgs.bashInteractive;
       openssh.authorizedKeys.keys = [ ];
     };
@@ -104,7 +92,6 @@ in
     environment.persistence."/persist".directories = [
       "/root/.ssh"
       "/root/.config/nix"
-      "/root/.docker"
     ];
     environment.persistence."/persist".files = [
       "/root/.gitconfig"

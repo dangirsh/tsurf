@@ -73,7 +73,7 @@
       system = "x86_64-linux";
       lib = nixpkgs.lib;
       pkgs = nixpkgs.legacyPackages.${system};
-      tsurfOverlay = final: prev: {
+      tsurfOverlay = final: _prev: {
         nono = final.callPackage ./packages/nono.nix { };
       };
 
@@ -259,17 +259,27 @@
               evalFixtures = lib.filterAttrs (
                 name: _: lib.hasPrefix "eval-" name && !(lib.hasSuffix "-alt-agent" name)
               ) self.nixosConfigurations;
+              hostCaseAttrs = lib.foldl' (
+                acc: sys:
+                let
+                  hostName = sys.config.networking.hostName;
+                  hasSandbox = lib.attrByPath [ "config" "services" "agentSandbox" "enable" ] false sys;
+                in
+                acc
+                // {
+                  ${hostName} = {
+                    agentUser = sys.config.tsurf.agent.user;
+                    inherit hasSandbox;
+                  };
+                }
+              ) { } (builtins.attrValues evalFixtures);
               hostCases = lib.concatStringsSep "\n" (
                 lib.mapAttrsToList (
-                  _: sys:
-                  let
-                    hostName = sys.config.networking.hostName;
-                    hasSandbox = lib.attrByPath [ "config" "services" "agentSandbox" "enable" ] false sys;
-                  in
-                  "              ${hostName}) export TSURF_TEST_AGENT_USER=\"${sys.config.tsurf.agent.user}\"; export TSURF_TEST_HAS_SANDBOX=\"${
-                                  if hasSandbox then "1" else "0"
+                  hostName: hostCfg:
+                  "              ${hostName}) export TSURF_TEST_AGENT_USER=\"${hostCfg.agentUser}\"; export TSURF_TEST_HAS_SANDBOX=\"${
+                                  if hostCfg.hasSandbox then "1" else "0"
                                 }\" ;;"
-                ) evalFixtures
+                ) hostCaseAttrs
               );
             in
             ''
@@ -416,6 +426,7 @@
           pkgs.sops
           pkgs.age
           pkgs.nixfmt
+          pkgs.deadnix
           pkgs.shellcheck
           pkgs.bats
           pkgs.bats.libraries.bats-support
@@ -435,6 +446,29 @@
         deployChecks
         // evalChecks
         // {
+          nixfmt-check =
+            pkgs.runCommand "nixfmt-check"
+              {
+                nativeBuildInputs = [
+                  pkgs.findutils
+                  pkgs.nixfmt
+                ];
+                src = ./.;
+              }
+              ''
+                find "$src" -type f -name '*.nix' -print0 | xargs -0 nixfmt --check
+                touch "$out"
+              '';
+          deadnix-check =
+            pkgs.runCommand "deadnix-check"
+              {
+                nativeBuildInputs = [ pkgs.deadnix ];
+                src = ./.;
+              }
+              ''
+                deadnix --fail "$src"
+                touch "$out"
+              '';
           shellcheck-tests =
             pkgs.runCommand "shellcheck-tests"
               {

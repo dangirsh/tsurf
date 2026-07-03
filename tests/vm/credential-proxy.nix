@@ -8,7 +8,6 @@
 # receives the real root-owned secret injected by nono.
 {
   pkgs,
-  lib,
   impermanenceModule,
   ...
 }:
@@ -142,6 +141,7 @@ pkgs.testers.nixosTest {
 
           install -d -m 0755 -o ${config.tsurf.agent.user} -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}
           install -d -m 0700 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono
+          install -d -m 0700 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono/sessions
           install -d -m 0700 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono/rollbacks
 
           install -d -m 0755 /run/secrets
@@ -161,9 +161,24 @@ pkgs.testers.nixosTest {
     machine.wait_for_unit("multi-user.target")
 
     machine.succeed(
-        "cat > /tmp/fake-provider.py <<'PY'\n"
-        + textwrap.dedent(
-            r'''
+        textwrap.dedent(
+            """
+            install -d -m 0755 /data /data/projects
+            install -d -m 0755 -o agent -g agent /data/projects/credential-probe
+            printf 'credential proxy workspace\\n' > /data/projects/credential-probe/README.md
+            chown agent:agent /data/projects/credential-probe/README.md
+            install -d -m 0755 -o agent -g agent /home/agent
+            install -d -m 0700 -o root -g agent /home/agent/.nono
+            install -d -m 0700 -o root -g agent /home/agent/.nono/sessions
+            install -d -m 0700 -o root -g agent /home/agent/.nono/rollbacks
+            """
+        )
+    )
+
+    machine.succeed(
+        textwrap.dedent(
+            r"""
+            cat > /tmp/fake-provider.py <<'PY'
             import json
             from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -192,13 +207,13 @@ pkgs.testers.nixosTest {
                     self.end_headers()
                     self.wfile.write(b'{"ok":true}')
 
-                def log_message(self, fmt, *args):
+                def log_message(self, format, *args):
                     return
 
             HTTPServer(("127.0.0.1", 18080), Handler).serve_forever()
-            '''
+            PY
+            """
         )
-        + "\nPY"
     )
     machine.succeed(
         "python3 /tmp/fake-provider.py >/tmp/fake-provider.log 2>&1 & echo $! >/tmp/fake-provider.pid"

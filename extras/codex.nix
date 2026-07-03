@@ -1,7 +1,12 @@
 # extras/codex.nix
 # Optional: Codex CLI sandboxed through the generic agent launcher.
 # Requires: services.agentLauncher.enable = true and services.nonoSandbox.enable = true.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.codexAgent;
   agentCfg = config.tsurf.agent;

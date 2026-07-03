@@ -24,6 +24,11 @@ shape to compare is:
 Keep provider credential brokering and general egress mediation aligned. Avoid
 creating two unrelated policy systems unless there is a clear reason.
 
+Review status: the 2026-07-02 landscape review in
+[`docs/security-plans/sandbox-secret-proxy-landscape-2026.md`](security-plans/sandbox-secret-proxy-landscape-2026.md)
+recommends keeping `nono` as the default local sandbox and prototyping
+`iron-proxy` as the egress and richer credential-broker layer.
+
 ## Validation Integrity
 
 Status: TODO.
