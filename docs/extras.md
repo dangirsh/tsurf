@@ -9,16 +9,18 @@ are opt-in: import the module in your host config and set the enable option.
 |------|-----------------|--------------|-------|
 | `extras/cass.nix` | Import + `services.cassIndexer.enable = true` | Low-priority system timer that refreshes the CASS session index | Runs as the dedicated agent user with CPU/memory throttling |
 | `extras/codex.nix` | `services.codexAgent.enable = true` | Optional sandboxed `codex` wrapper | Requires `agentLauncher` and `nonoSandbox`; defaults to the `openai-api-key` secret and isolated `/home/agent/.codex-openai` state |
-| `extras/codex-openrouter.nix` | `services.codexOpenRouterAgent.enable = true` | Optional OpenRouter-backed `codex-openrouter` wrapper | Defaults to `z-ai/glm-5.2` through the `openrouter-api-key` secret |
+| `extras/codex-openrouter.nix` | `services.codexOpenRouterAgent.enable = true` | Optional OpenRouter-backed `codex-openrouter` wrapper | Defaults to `z-ai/glm-5.2` through the configured credential proxy and `openrouter-api-key` secret |
 | `extras/restic.nix` | `services.resticStarter.enable = true` | Restic backups to a Backblaze B2 S3 endpoint | Requires `services.resticStarter.repository`; declares its own B2/restic SOPS secrets and environment template when enabled |
 | `extras/home/` | `home-manager.users.<name> = import ../../extras/home;` | Home-manager profile for the agent user | Installs git, gh, ssh, and direnv defaults |
 
 ## OpenRouter Codex
 
 Import `extras/codex-openrouter.nix` on an agent host to expose a sandboxed
-`codex-openrouter` wrapper. The wrapper uses nono's credential proxy, so Codex
-receives only `NONO_PROXY_TOKEN` and a local `OPENROUTER_BASE_URL`, while the
-raw OpenRouter key remains in the root-owned `openrouter-api-key` secret.
+`codex-openrouter` wrapper. On Iron-backed hosts, Codex receives a placeholder
+`OPENROUTER_API_KEY` plus proxy/CA environment variables; Iron replaces the
+placeholder with the raw OpenRouter key at egress. In legacy `nono`
+credential-proxy mode, Codex receives `NONO_PROXY_TOKEN` and a local
+`OPENROUTER_BASE_URL`.
 Current Codex releases use the Responses API provider wire format here, so the
 wrapper explicitly targets OpenRouter's `/api/v1/responses` endpoint.
 The wrapper also runs Codex with `CODEX_HOME` set to
@@ -76,6 +78,7 @@ Each definition can specify:
 - the wrapper name to expose in `PATH`
 - the credential tuples the root-owned launcher may read
 - extra `nono` allow or deny entries
+- per-agent Iron egress host/CIDR allowlists
 - default CLI arguments
 - additional persisted files or directories under the agent home
 

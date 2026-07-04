@@ -20,24 +20,10 @@
 # @decision DEPLOY-114-01: Keep deploy.sh intentionally small: no repo-controlled hooks or alternate reachability probes.
 set -euo pipefail
 
-resolve_flake_dir() {
-  local script_path="$1"
-  local candidate
-  candidate="$(cd "$(dirname "$script_path")" && pwd -P)"
-
-  while [[ "$candidate" != "/" ]]; do
-    if [[ -f "$candidate/flake.nix" ]]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-    candidate="$(dirname "$candidate")"
-  done
-
-  echo "ERROR: could not find flake.nix above $script_path" >&2
-  return 1
-}
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/deploy-common.sh"
+
 FLAKE_DIR="${TSURF_DEPLOY_FLAKE_DIR:-$(resolve_flake_dir "${BASH_SOURCE[0]}")}"
 NODE=""
 TARGET=""
@@ -54,82 +40,19 @@ SSH_CTL="${TSURF_DEPLOY_SSH_CTL:-$FLAKE_DIR/tmp/ssh-%C}"
 SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$SSH_CTL" -o "ControlPersist=60s")
 SSH_EXTRA_OPTS=()
 
-shell_join() {
-  local out="" arg
-  for arg in "$@"; do
-    printf -v out '%s%q ' "$out" "$arg"
-  done
-  printf '%s\n' "${out% }"
-}
-
-load_ssh_extra_opts() {
-  SSH_EXTRA_OPTS=()
-  if [[ -n "${TSURF_DEPLOY_SSH_OPTS_FILE:-}" ]]; then
-    while IFS= read -r opt || [[ -n "$opt" ]]; do
-      [[ -n "$opt" ]] || continue
-      SSH_EXTRA_OPTS+=("$opt")
-    done < "$TSURF_DEPLOY_SSH_OPTS_FILE"
-  elif [[ -n "${TSURF_DEPLOY_SSH_OPTS:-}" ]]; then
-    read -r -a SSH_EXTRA_OPTS <<<"${TSURF_DEPLOY_SSH_OPTS}"
-  fi
-}
-
 load_ssh_extra_opts
 if (( ${#SSH_EXTRA_OPTS[@]} > 0 )); then
   SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
 fi
 
-ssh_retry() {
-  local attempts="${TSURF_DEPLOY_SSH_RETRIES:-5}"
-  local delay="${TSURF_DEPLOY_SSH_RETRY_DELAY:-5}"
-  local status=0
-  local i
-
-  for ((i = 1; i <= attempts; i++)); do
-    if ssh "${SSH_OPTS[@]}" "$TARGET" "$@"; then
-      return 0
-    fi
-    status=$?
-    if ((i < attempts)); then
-      echo "SSH attempt ${i}/${attempts} failed; retrying in ${delay}s..." >&2
-      sleep "${delay}"
-    fi
-  done
-
-  return "${status}"
-}
-
-parse_ssh_target() {
-  local raw="$1"
-  local user host
-
-  if [[ "$raw" == *@* ]]; then
-    user="${raw%@*}"
-    host="${raw#*@}"
-  else
-    user="root"
-    host="$raw"
-  fi
-
-  if [[ -z "$user" || -z "$host" ]]; then
-    echo "ERROR: invalid SSH target '$raw'" >&2
-    return 1
-  fi
-
-  printf '%s\t%s\n' "$user" "$host"
-}
-
 # Remote deploy lock (prevents concurrent deploys from any machine).
+# shellcheck disable=SC2034
 REMOTE_LOCK_DIR=""
+# shellcheck disable=SC2034
 REMOTE_LOCK_HELD=false
 
 cleanup() {
-  if [[ "$REMOTE_LOCK_HELD" == true ]]; then
-    ssh "${SSH_OPTS[@]}" "$TARGET" "rm -rf '$REMOTE_LOCK_DIR'" 2>/dev/null || true
-  fi
-  if [[ -n "${TARGET:-}" ]]; then
-    ssh "${SSH_OPTS[@]}" -O exit "$TARGET" 2>/dev/null || true
-  fi
+  deploy_cleanup_remote_lock
 }
 trap cleanup EXIT
 
@@ -244,28 +167,9 @@ if [[ "$MODE" == "remote-detached" ]]; then
   exec "$DETACHED_SCRIPT" "${DETACHED_ARGS[@]}"
 fi
 
-# --- Remote lock ---
-LOCK_KEY="${TARGET_HOSTNAME}"
-LOCK_KEY="${LOCK_KEY//[^A-Za-z0-9._-]/-}"
-REMOTE_LOCK_DIR="/var/lock/deploy-${LOCK_KEY}.lock"
-GIT_SHA=$(git -C "$FLAKE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
-LOCK_INFO="holder=$(whoami)@$(hostname)
-pid=$$
-timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-sha=$GIT_SHA"
-
-if ! ssh_retry "mkdir '$REMOTE_LOCK_DIR' 2>/dev/null"; then
-  echo "ERROR: Deploy already in progress on the remote server."
-  echo ""
-  echo "Lock info:"
-  ssh "${SSH_OPTS[@]}" "$TARGET" "cat '$REMOTE_LOCK_DIR/info.txt' 2>/dev/null" || echo "  (could not read lock metadata)"
-  echo ""
-  echo "If the previous deploy crashed, remove the lock manually:"
-  echo "  ssh $TARGET rm -rf $REMOTE_LOCK_DIR"
+if ! deploy_acquire_remote_lock; then
   exit 1
 fi
-REMOTE_LOCK_HELD=true
-printf '%s\n' "$LOCK_INFO" | ssh "${SSH_OPTS[@]}" "$TARGET" "cat > '$REMOTE_LOCK_DIR/info.txt'" 2>/dev/null || true
 
 # --- Build + deploy ---
 if [[ "$TARGET_SET" == true ]]; then
@@ -309,44 +213,7 @@ if [[ "$DEPLOY_RS_EXIT" -ne 0 ]]; then
   exit 1
 fi
 
-# --- Service verification ---
-SYSTEMD_SERVICES=("sshd" "nftables")
-if [[ -n "${TSURF_DEPLOY_VERIFY_SERVICES:-}" ]]; then
-  read -r -a SYSTEMD_SERVICES <<<"${TSURF_DEPLOY_VERIFY_SERVICES}"
-fi
-echo "==> Verifying services..."
-FAILED=0
-for s in "${SYSTEMD_SERVICES[@]}"; do
-  STATUS=$(ssh_retry "systemctl is-active ${s}.service" 2>/dev/null || echo "unknown")
-  echo "  ${s}: ${STATUS}"
-  if [[ "$STATUS" != "active" ]]; then
-    FAILED=1
-  fi
-done
-
-# --- SSH connectivity check ---
-# @decision DEPLOY-04: Use non-multiplexed connections to test real SSH paths.
-echo "==> Verifying remote access..."
-REMOTE_ACCESS_SSH_OPTS=(-o BatchMode=yes -o ControlPath=none -o ConnectTimeout=15)
-REMOTE_ACCESS_SSH_OPTS+=("${SSH_EXTRA_OPTS[@]}")
-if ssh "${REMOTE_ACCESS_SSH_OPTS[@]}" "$TARGET" \
-    "systemctl is-active --quiet sshd.service" 2>/dev/null; then
-  echo "  Deploy target ($TARGET): SSH OK"
-else
-  echo "  Deploy target ($TARGET): UNREACHABLE"
-  FAILED=1
-fi
-
 # --- Result ---
-DURATION=$SECONDS
-echo ""
-
-if [[ "$FAILED" -eq 0 ]]; then
-  echo "=== Deploy SUCCESS ($((DURATION / 60))m $((DURATION % 60))s) ==="
-else
-  echo "=== Deploy COMPLETED with WARNINGS ==="
-  echo ""
-  echo "Some services or connectivity checks failed. Manual rollback if needed:"
-  echo "  ssh $TARGET nixos-rebuild switch --rollback"
-  exit 1
-fi
+FAILED=0
+deploy_verify_remote || FAILED=$?
+deploy_finish_result "$FAILED"

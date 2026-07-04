@@ -51,16 +51,16 @@ in
       description = "Allow outbound DNS (TCP/UDP 53) for the agent user.";
     };
 
+    mediatedOnly = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Deny direct non-loopback agent egress; intended when a local egress proxy mediates outbound traffic.";
+    };
+
     allowedLoopbackTCPPorts = lib.mkOption {
       type = lib.types.listOf lib.types.port;
       default = [ ];
       description = "Additional loopback TCP destination ports agents may reach. The nono proxy range is allowed separately.";
-    };
-
-    blockedLoopbackTCPPorts = lib.mkOption {
-      type = lib.types.listOf lib.types.port;
-      default = [ ];
-      description = "Deprecated compatibility option. Agent loopback now defaults to deny except explicit allows.";
     };
 
     nonoProxyTCPPortRange = {
@@ -172,7 +172,7 @@ in
             ${lib.optionalString (egressCfg.allowedLoopbackTCPPorts != [ ]) ''
               meta skuid ${toString agentCfg.uid} oifname "lo" tcp dport @tsurf_agent_allowed_loopback_tcp_ports accept
             ''}
-            ${lib.optionalString egressCfg.allowDns ''
+            ${lib.optionalString (egressCfg.allowDns && !egressCfg.mediatedOnly) ''
               meta skuid ${toString agentCfg.uid} udp dport 53 accept
               meta skuid ${toString agentCfg.uid} tcp dport 53 accept
             ''}
@@ -181,7 +181,9 @@ in
               meta skuid ${toString agentCfg.uid} ip daddr { ${blockedAgentIpv4Cidrs} } ${dropAction "private-ipv4-drop"}
               meta skuid ${toString agentCfg.uid} ip6 daddr { ${blockedAgentIpv6Cidrs} } ${dropAction "private-ipv6-drop"}
             ''}
+            ${lib.optionalString (!egressCfg.mediatedOnly) ''
               meta skuid ${toString agentCfg.uid} tcp dport @tsurf_agent_egress_tcp_ports accept
+            ''}
               meta skuid ${toString agentCfg.uid} ${dropAction "default-drop"}
             }
         '';

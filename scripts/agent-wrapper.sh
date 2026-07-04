@@ -15,6 +15,11 @@
 #                              ENV_VAR = env var exported for nono's env:// credential proxy
 #                              secret-file-name = filename under /run/secrets/
 #   AGENT_CREDENTIAL_SERVICES — space-separated nono credential names to enable
+#   AGENT_CREDENTIAL_PROXY     — "nono" (legacy provider proxy) or "iron"
+#   AGENT_IRON_CREDENTIAL_TOKENS — space-separated "ENV_VAR:TOKEN_NAME" pairs
+#                              resolved from AGENT_IRON_CREDENTIAL_TOKEN_FILE
+#                              and exported to the child for Iron proxying
+#   AGENT_EGRESS_PROXY_URL / CA_CERT / NO_PROXY — explicit Iron proxy settings
 #   AGENT_SCOPE_ACCESS       — "read" (default) or "allow" access to the current top-level workspace
 #   AGENT_EXTRA_READ_PATHS_FILE — optional /nix/store newline-delimited paths passed to nono with --read
 #   AGENT_EXTRA_ALLOW_PATHS_FILE — optional /nix/store newline-delimited paths passed to nono with --allow
@@ -26,9 +31,12 @@
 #   Only structured metadata is logged — no raw arguments, prompts, or file paths.
 #
 # @decision AUDIT-117-01: Single-sink journald launch logging. File-based audit log removed.
-# @decision SEC-159-01: Raw provider keys brokered through nono's built-in credential proxy.
-#   The wrapper exports real keys as env vars (env:// URIs); nono reads them before sandboxing
-#   and starts its reverse proxy with phantom tokens. The child never sees real keys.
+# @decision SEC-159-01: Legacy nono credential mode brokers raw provider keys through
+#   nono's built-in credential proxy. The wrapper exports real keys as env vars
+#   (env:// URIs); nono reads them before sandboxing and starts its reverse proxy
+#   with phantom tokens. The child never sees real keys.
+# @decision SEC-IRON-01: Iron credential mode never loads raw secrets in this wrapper.
+#   The child gets provider-shaped placeholder tokens plus explicit proxy/CA env vars.
 
 set -euo pipefail
 
@@ -44,6 +52,7 @@ PNPM_MIN_RELEASE_AGE_MINUTES=1440
 : "${AGENT_RUN_AS_GID:?must be set}"
 : "${AGENT_RUN_AS_HOME:?must be set}"
 : "${AGENT_CHILD_PATH:?must be set}"
+AGENT_CREDENTIAL_PROXY="${AGENT_CREDENTIAL_PROXY:-nono}"
 
 export HOME="$AGENT_RUN_AS_HOME"
 export USER="$AGENT_RUN_AS_USER"
@@ -143,34 +152,44 @@ if [[ ! -d "$workspace_root" ]]; then
 fi
 repo_scope="top-level-workspace:${workspace_name}"
 
-# Load real API keys from sops-managed /run/secrets/ into env vars.
-# nono's credential proxy reads these via env:// URIs in the profile's
-# custom_credentials, then exposes only phantom tokens to the child.
 IFS=' ' read -ra cred_pairs <<< "${AGENT_CREDENTIAL_SECRETS:-}"
-for pair in "${cred_pairs[@]}"; do
-  [[ -n "$pair" ]] || continue
-  IFS=: read -r env_var secret_name <<< "$pair"
-  secret_file="/run/secrets/$secret_name"
-  if [[ ! -f "$secret_file" ]]; then
-    echo "WARNING: $env_var not loaded — $secret_file not found" >&2
-    continue
-  fi
-  secret_value="$(cat "$secret_file")"
-  if [[ -z "$secret_value" || "$secret_value" == PLACEHOLDER* ]]; then
-    continue
-  fi
-  export "${env_var}=${secret_value}"
-done
+use_nono_credentials=0
+if [[ "$AGENT_CREDENTIAL_PROXY" == "nono" && ${#cred_pairs[@]} -gt 0 ]]; then
+  use_nono_credentials=1
+  # Load real API keys from sops-managed /run/secrets/ into env vars.
+  # nono's credential proxy reads these via env:// URIs in the profile's
+  # custom_credentials, then exposes only phantom tokens to the child.
+  for pair in "${cred_pairs[@]}"; do
+    [[ -n "$pair" ]] || continue
+    IFS=: read -r env_var secret_name <<< "$pair"
+    secret_file="/run/secrets/$secret_name"
+    if [[ ! -f "$secret_file" ]]; then
+      echo "WARNING: $env_var not loaded — $secret_file not found" >&2
+      continue
+    fi
+    secret_value="$(cat "$secret_file")"
+    if [[ -z "$secret_value" || "$secret_value" == PLACEHOLDER* ]]; then
+      continue
+    fi
+    export "${env_var}=${secret_value}"
+  done
+elif [[ "$AGENT_CREDENTIAL_PROXY" != "iron" && "$AGENT_CREDENTIAL_PROXY" != "nono" ]]; then
+  fail_launch "invalid_credential_proxy" "AGENT_CREDENTIAL_PROXY must be 'nono' or 'iron'"
+elif [[ "$AGENT_CREDENTIAL_PROXY" == "iron" && ${#cred_pairs[@]} -gt 0 && -z "${AGENT_EGRESS_PROXY_URL:-}" ]]; then
+  fail_launch "iron_proxy_unconfigured" "credentialProxy=iron requires AGENT_EGRESS_PROXY_URL"
+fi
 
 # Build nono arguments. Credential proxy is configured in the nono profile
 # (custom_credentials with env:// URIs); nono starts the reverse proxy and
 # injects phantom tokens into the child environment automatically.
 nono_args=(run --profile "$AGENT_NONO_PROFILE" --no-rollback)
 IFS=' ' read -ra credential_services <<< "${AGENT_CREDENTIAL_SERVICES:-}"
-for service in "${credential_services[@]}"; do
-  [[ -n "$service" ]] || continue
-  nono_args+=(--credential "$service")
-done
+if ((use_nono_credentials)); then
+  for service in "${credential_services[@]}"; do
+    [[ -n "$service" ]] || continue
+    nono_args+=(--credential "$service")
+  done
+fi
 
 case "${AGENT_SCOPE_ACCESS:-read}" in
   read)
@@ -197,6 +216,53 @@ agent_env=(
   "LOGNAME=$AGENT_RUN_AS_USER"
   "PATH=$AGENT_CHILD_PATH"
 )
+if [[ -n "${AGENT_EGRESS_PROXY_URL:-}" ]]; then
+  agent_env+=("HTTP_PROXY=$AGENT_EGRESS_PROXY_URL")
+  agent_env+=("HTTPS_PROXY=$AGENT_EGRESS_PROXY_URL")
+  agent_env+=("http_proxy=$AGENT_EGRESS_PROXY_URL")
+  agent_env+=("https_proxy=$AGENT_EGRESS_PROXY_URL")
+  agent_env+=("ALL_PROXY=$AGENT_EGRESS_PROXY_URL")
+  agent_env+=("all_proxy=$AGENT_EGRESS_PROXY_URL")
+  agent_env+=("NO_PROXY=${AGENT_EGRESS_PROXY_NO_PROXY:-127.0.0.1,localhost}")
+  agent_env+=("no_proxy=${AGENT_EGRESS_PROXY_NO_PROXY:-127.0.0.1,localhost}")
+fi
+if [[ -n "${AGENT_EGRESS_PROXY_CA_CERT:-}" ]]; then
+  agent_env+=("SSL_CERT_FILE=$AGENT_EGRESS_PROXY_CA_CERT")
+  agent_env+=("REQUESTS_CA_BUNDLE=$AGENT_EGRESS_PROXY_CA_CERT")
+  agent_env+=("CURL_CA_BUNDLE=$AGENT_EGRESS_PROXY_CA_CERT")
+  agent_env+=("NODE_EXTRA_CA_CERTS=$AGENT_EGRESS_PROXY_CA_CERT")
+  agent_env+=("GIT_SSL_CAINFO=$AGENT_EGRESS_PROXY_CA_CERT")
+fi
+if [[ "$AGENT_CREDENTIAL_PROXY" == "iron" ]]; then
+  IFS=' ' read -ra iron_pairs <<< "${AGENT_IRON_CREDENTIAL_TOKENS:-}"
+  if ((${#iron_pairs[@]} > 0)); then
+    declare -A iron_token_values=()
+    token_file="${AGENT_IRON_CREDENTIAL_TOKEN_FILE:-}"
+    if [[ -z "$token_file" || ! -r "$token_file" ]]; then
+      fail_launch "missing_iron_credential_token_file" "Iron credential token file is not readable for $AGENT_NAME"
+    fi
+    while IFS='=' read -r token_name token_value || [[ -n "$token_name" ]]; do
+      [[ -n "$token_name" ]] || continue
+      if [[ ! "$token_name" =~ ^TSURF_IRON_TOKEN_[A-Z0-9_]+$ || -z "$token_value" ]]; then
+        fail_launch "invalid_iron_credential_token_file" "invalid Iron credential token file entry for $AGENT_NAME"
+      fi
+      iron_token_values["$token_name"]="$token_value"
+    done < "$token_file"
+  fi
+
+  for pair in "${iron_pairs[@]}"; do
+    [[ -n "$pair" ]] || continue
+    IFS=: read -r env_var token_name <<< "$pair"
+    if [[ ! "$env_var" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || ! "$token_name" =~ ^TSURF_IRON_TOKEN_[A-Z0-9_]+$ ]]; then
+      fail_launch "invalid_iron_credential_token" "invalid Iron credential token entry for $AGENT_NAME"
+    fi
+    if [[ -z "${iron_token_values[$token_name]+set}" ]]; then
+      fail_launch "missing_iron_credential_token" "missing Iron credential token $token_name for $AGENT_NAME"
+    fi
+    proxy_token="${iron_token_values[$token_name]}"
+    agent_env+=("$env_var=$proxy_token")
+  done
+fi
 if [[ -n "${AGENT_CHILD_ENVIRONMENT_FILE:-}" ]]; then
   case "$AGENT_CHILD_ENVIRONMENT_FILE" in
     /nix/store/*) ;;
@@ -238,7 +304,7 @@ agent_env+=("DISABLE_TELEMETRY=1")
 agent_env+=("DISABLE_ERROR_REPORTING=1")
 agent_env+=("CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1")
 
-if ((${#cred_pairs[@]} == 0)); then
+if ((use_nono_credentials == 0)); then
   nono_args+=(-- "$AGENT_REAL_BINARY" "$@")
   journal_log "sandboxed"
   exec "$setpriv_bin" \

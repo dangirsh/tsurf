@@ -70,6 +70,19 @@ assert_eq "${#SSH_EXTRA_OPTS[@]}" "4" "SSH opts file loads one option per line"
 assert_eq "${SSH_EXTRA_OPTS[1]}" "ProxyCommand=ssh jump host -W %h:%p" "SSH opts file preserves spaces"
 unset TSURF_DEPLOY_SSH_OPTS_FILE TSURF_DEPLOY_SSH_OPTS
 
+set +e
+warning_output="$( (TARGET=root@example.invalid SECONDS=0 deploy_finish_result 1) 2>&1 )"
+warning_rc=$?
+set -e
+assert_eq "$warning_rc" "2" "deploy warnings use the activation-succeeded warning exit code"
+case "$warning_output" in
+  *"=== Deploy COMPLETED with WARNINGS ==="*) ;;
+  *)
+    echo "FAIL: deploy warning output missing warning footer"
+    exit 1
+    ;;
+esac
+
 if bash "$ROOT_DIR/scripts/deploy.sh" --help | grep -q "Override deploy and SSH target"; then
   :
 else

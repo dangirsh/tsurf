@@ -90,8 +90,8 @@ bats_load_library bats-assert
     echo "DEBUG: rules: $rules"
     return 1
   fi
-  if [[ "$rules" != *"443"* ]]; then
-    echo "FAIL: agent-egress table missing HTTPS allowlist"
+  if [[ "$rules" != *"443"* && "$rules" != *"20208"* ]]; then
+    echo "FAIL: agent-egress table missing either HTTPS allowlist or Iron proxy loopback allow"
     echo "DEBUG: rules: $rules"
     return 1
   fi
@@ -130,6 +130,14 @@ bats_load_library bats-assert
 # Validates NET-034: allowed public HTTPS works for the dedicated agent UID
 @test "${HOST}: agent UID can reach allowed public HTTPS" {
   if ! has_agent_sandbox; then skip "agent sandbox not enabled on this host"; fi
+  local rules
+  rules="$(remote nft list table inet agent-egress 2>&1)" || {
+    echo "FAIL: unable to list nft table inet agent-egress"
+    return 1
+  }
+  if [[ "$rules" != *"tcp dport @tsurf_agent_egress_tcp_ports accept"* ]]; then
+    skip "agent egress is mediated-only; direct public HTTPS is intentionally denied"
+  fi
 
   run remote_as_agent "curl -fsS --connect-timeout 5 --max-time 10 https://github.com/ >/dev/null"
   assert_success

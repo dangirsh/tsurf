@@ -1,11 +1,12 @@
 # modules/agent-launcher.nix
 # Generic sandboxed agent launcher infrastructure.
-# @decision LAUNCHER-152-01: Generic agent launcher — each agent produces a wrapper,
-#   systemd-run launcher, nono profile, and sudo rule. Raw keys never reach the agent.
+# @decision LAUNCHER-152-01: Generic agent launcher - each agent produces a wrapper,
+#   systemd-run launcher, nono profile, and sudo rule.
 # @decision LAUNCHER-152-02: Agents must not deploy changes to their own security boundaries.
-# @decision SEC-159-01: Credentials brokered through nono's built-in reverse proxy
-#   (--credential + custom_credentials with env:// URIs). The custom Python credential
-#   proxy is eliminated; nono manages phantom tokens natively.
+# @decision SEC-159-01: Legacy nono credential mode brokers raw keys through nono's
+#   built-in reverse proxy (--credential + custom_credentials with env:// URIs).
+# @decision SEC-IRON-01: Iron credential mode gives children provider-shaped proxy
+#   tokens while raw provider keys stay in the Iron proxy service environment.
 {
   config,
   lib,
@@ -16,6 +17,12 @@ let
   cfg = config.services.agentLauncher;
   agentCfg = config.tsurf.agent;
   egressCfg = config.tsurf.agentEgress;
+  credentialServices = import ./lib/credential-services.nix { inherit lib; };
+  inherit (credentialServices)
+    credentialDefaultsFor
+    credentialServiceDefaults
+    ironProxyTokenNameFor
+    ;
 
   agentRuntimePath = lib.makeBinPath [
     pkgs.bash
@@ -25,50 +32,14 @@ let
     pkgs.util-linux
   ];
 
-  # Well-known credential service defaults. Maps service name to upstream/header/format
-  # and the conventional env var + sops secret name.
-  credentialServiceDefaults = {
-    anthropic = {
-      upstream = "https://api.anthropic.com";
-      injectHeader = "x-api-key";
-      credentialFormat = "{}";
-      envVar = "ANTHROPIC_API_KEY";
-      secretName = "anthropic-api-key";
-    };
-    openai = {
-      upstream = "https://api.openai.com";
-      injectHeader = "authorization";
-      credentialFormat = "Bearer {}";
-      envVar = "OPENAI_API_KEY";
-      secretName = "openai-api-key";
-    };
-    openrouter = {
-      upstream = "https://openrouter.ai/api/v1";
-      injectHeader = "authorization";
-      credentialFormat = "Bearer {}";
-      envVar = "OPENROUTER_API_KEY";
-      secretName = "openrouter-api-key";
-    };
-    xai = {
-      upstream = "https://api.x.ai";
-      injectHeader = "authorization";
-      credentialFormat = "Bearer {}";
-      envVar = "XAI_API_KEY";
-      secretName = "xai-api-key";
-    };
-  };
-
-  credentialDefaultsFor =
-    agentDef: svc:
-    credentialServiceDefaults.${svc}
-    // lib.filterAttrs (_: value: value != null) (agentDef.credentialOverrides.${svc} or { });
-
   # Build launcher + wrapper for a single agent definition
   mkAgentPair =
     name: agentDef:
     let
       launcherName = "tsurf-launch-${name}";
       credentialServicesStr = lib.concatStringsSep " " agentDef.credentialServices;
+      effectiveCredentialProxy =
+        if agentDef.credentialProxy == null then cfg.defaultCredentialProxy else agentDef.credentialProxy;
 
       # Build nono custom_credentials for env:// URI-based credential proxy
       credentialDefs = lib.listToAttrs (
@@ -98,11 +69,22 @@ let
           "${defaults.envVar}:${defaults.secretName}"
         ) agentDef.credentialServices
       );
+      ironCredentialTokens = lib.concatStringsSep " " (
+        map (
+          svc:
+          let
+            defaults = credentialDefaultsFor agentDef svc;
+          in
+          "${defaults.envVar}:${ironProxyTokenNameFor svc defaults}"
+        ) agentDef.credentialServices
+      );
 
       # Merge the base tsurf profile into each generated profile. NixOS-installed
       # profiles must be self-contained instead of relying on registry lookup.
       nonoProfileName = "tsurf-${name}";
       hasCredentials = agentDef.credentialServices != [ ];
+      useNonoCredentials = hasCredentials && effectiveCredentialProxy == "nono";
+      useIronEgress = cfg.egressProxy.url != "";
       baseNonoProfile = builtins.fromJSON config.environment.etc."nono/profiles/tsurf.json".text;
       baseFilesystem = baseNonoProfile.filesystem or { };
       baseNetwork = baseNonoProfile.network or { };
@@ -122,9 +104,15 @@ let
           };
           network =
             baseNetwork
-            // lib.optionalAttrs hasCredentials {
+            // lib.optionalAttrs useNonoCredentials {
               credentials = agentDef.credentialServices;
               custom_credentials = credentialDefs;
+            }
+            // lib.optionalAttrs useIronEgress {
+              # Iron mediates the only allowed egress path at host level. nono
+              # still provides filesystem/process isolation, but must not block
+              # loopback proxy connections from the child.
+              block = false;
             };
         }
       );
@@ -157,6 +145,12 @@ let
           export AGENT_NONO_PROFILE="${nonoProfilePath}"
           export AGENT_CREDENTIAL_SERVICES="${credentialServicesStr}"
           export AGENT_CREDENTIAL_SECRETS="${credentialSecrets}"
+          export AGENT_CREDENTIAL_PROXY="${effectiveCredentialProxy}"
+          export AGENT_IRON_CREDENTIAL_TOKENS="${ironCredentialTokens}"
+          export AGENT_EGRESS_PROXY_URL="${cfg.egressProxy.url}"
+          export AGENT_EGRESS_PROXY_CA_CERT="${cfg.egressProxy.caCert}"
+          export AGENT_EGRESS_PROXY_NO_PROXY="${cfg.egressProxy.noProxy}"
+          export AGENT_IRON_CREDENTIAL_TOKEN_FILE="${cfg.egressProxy.credentialTokenFile}"
           export AGENT_SCOPE_ACCESS="${cfg.scopeAccess}"
           export AGENT_EXTRA_READ_PATHS_FILE="${extraReadPathsFile}"
           export AGENT_EXTRA_ALLOW_PATHS_FILE="${extraAllowPathsFile}"
@@ -198,6 +192,12 @@ let
             --setenv=AGENT_NONO_PROFILE="$AGENT_NONO_PROFILE" \
             --setenv=AGENT_CREDENTIAL_SERVICES="$AGENT_CREDENTIAL_SERVICES" \
             --setenv=AGENT_CREDENTIAL_SECRETS="$AGENT_CREDENTIAL_SECRETS" \
+            --setenv=AGENT_CREDENTIAL_PROXY="$AGENT_CREDENTIAL_PROXY" \
+            --setenv=AGENT_IRON_CREDENTIAL_TOKENS="$AGENT_IRON_CREDENTIAL_TOKENS" \
+            --setenv=AGENT_EGRESS_PROXY_URL="$AGENT_EGRESS_PROXY_URL" \
+            --setenv=AGENT_EGRESS_PROXY_CA_CERT="$AGENT_EGRESS_PROXY_CA_CERT" \
+            --setenv=AGENT_EGRESS_PROXY_NO_PROXY="$AGENT_EGRESS_PROXY_NO_PROXY" \
+            --setenv=AGENT_IRON_CREDENTIAL_TOKEN_FILE="$AGENT_IRON_CREDENTIAL_TOKEN_FILE" \
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
             --setenv=AGENT_EXTRA_READ_PATHS_FILE="$AGENT_EXTRA_READ_PATHS_FILE" \
             --setenv=AGENT_EXTRA_ALLOW_PATHS_FILE="$AGENT_EXTRA_ALLOW_PATHS_FILE" \
@@ -315,6 +315,20 @@ in
               '';
             };
 
+            credentialProxy = lib.mkOption {
+              type = lib.types.nullOr (
+                lib.types.enum [
+                  "nono"
+                  "iron"
+                ]
+              );
+              default = null;
+              description = ''
+                Credential proxy implementation for this agent. null uses
+                services.agentLauncher.defaultCredentialProxy.
+              '';
+            };
+
             credentialOverrides = lib.mkOption {
               type = lib.types.attrsOf (
                 lib.types.submodule {
@@ -391,11 +405,65 @@ in
               default = { };
               description = "Agent-specific persistence paths under the agent home directory.";
             };
+
+            egress = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  allowedHosts = lib.mkOption {
+                    type = lib.types.listOf lib.types.str;
+                    default = [ ];
+                    description = "Additional host globs allowed through the agent egress proxy.";
+                  };
+                  allowedCIDRs = lib.mkOption {
+                    type = lib.types.listOf lib.types.str;
+                    default = [ ];
+                    description = "Additional CIDRs allowed through the agent egress proxy.";
+                  };
+                };
+              };
+              default = { };
+              description = "Per-agent egress policy consumed by the Iron egress proxy.";
+            };
           };
         }
       );
       default = { };
       description = "Per-agent sandbox definitions. Each produces a wrapper, launcher, nono profile, and sudo rule.";
+    };
+
+    defaultCredentialProxy = lib.mkOption {
+      type = lib.types.enum [
+        "nono"
+        "iron"
+      ];
+      default = "nono";
+      description = "Default credential proxy used by generated agents unless overridden per agent.";
+    };
+
+    egressProxy = {
+      url = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Loopback URL for the agent egress proxy. Empty disables proxy env injection.";
+      };
+
+      caCert = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "CA certificate path trusted by agent child processes for MITM proxying.";
+      };
+
+      credentialTokenFile = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Root-readable env file containing generated Iron proxy credential tokens.";
+      };
+
+      noProxy = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1,localhost";
+        description = "NO_PROXY value injected into agent child processes when egressProxy.url is set.";
+      };
     };
 
     scopeAccess = lib.mkOption {
@@ -451,7 +519,18 @@ in
           message = "services.agentLauncher.agents.${name}.credentialServices contains unsupported credential service '${svc}'.";
         }) agentDef.credentialServices
       ) cfg.agents
-    );
+    )
+    ++ lib.mapAttrsToList (
+      name: agentDef:
+      let
+        effectiveCredentialProxy =
+          if agentDef.credentialProxy == null then cfg.defaultCredentialProxy else agentDef.credentialProxy;
+      in
+      {
+        assertion = effectiveCredentialProxy != "iron" || cfg.egressProxy.url != "";
+        message = "services.agentLauncher.agents.${name} uses credentialProxy=iron but services.agentLauncher.egressProxy.url is empty.";
+      }
+    ) cfg.agents;
 
     environment.systemPackages = lib.mapAttrsToList (_: pair: pair.wrapper) agentPairs;
 
