@@ -14,12 +14,14 @@ let
   inherit (credentialServices)
     credentialDefaultsFor
     urlHost
-    ironProxyTokenFor
+    ironProxyTokenNameFor
     ;
 
   stateDir = "/var/lib/tsurf-agent-egress-proxy";
   caCertPath = "${stateDir}/ca.crt";
   caKeyPath = "${stateDir}/ca.key";
+  tokenFile = "${stateDir}/credential-tokens.env";
+  runtimeConfigFile = "${stateDir}/iron-proxy.yaml";
   proxyUrl = "http://127.0.0.1:${toString cfg.tunnelPort}";
 
   effectiveCredentialProxy =
@@ -47,7 +49,7 @@ let
           secretName = defaults.secretName;
           hosts = defaults.hosts or [ (urlHost defaults.upstream) ];
           matchHeaders = defaults.matchHeaders;
-          proxyToken = ironProxyTokenFor svc defaults;
+          proxyTokenName = ironProxyTokenNameFor svc defaults;
         }
       ) agentDef.credentialServices
     ) ironAgents
@@ -65,6 +67,7 @@ let
   credentialEnvLines = map (
     record: "${record.envVar}=${config.sops.placeholder."${record.secretName}"}"
   ) uniqueCredentialRecords;
+  credentialTokenNames = map (record: record.proxyTokenName) uniqueCredentialRecords;
 
   credentialHosts = lib.concatMap (record: record.hosts) uniqueCredentialRecords;
   agentAllowedHosts = lib.concatLists (
@@ -82,7 +85,7 @@ let
       var = record.envVar;
     };
     replace = {
-      proxy_value = record.proxyToken;
+      proxy_value = "@${record.proxyTokenName}@";
       match_headers = record.matchHeaders;
       require = false;
     };
@@ -130,6 +133,20 @@ let
   };
 
   configFile = yaml.generate "tsurf-iron-proxy.yaml" ironConfig;
+  credentialTokenSetup = lib.concatMapStringsSep "\n" (tokenName: ''
+    if ! grep -Eq '^${tokenName}=' "$token_file"; then
+      printf '%s=%s\n' '${tokenName}' "$(${pkgs.openssl}/bin/openssl rand -hex 32)" >> "$token_file"
+    fi
+  '') credentialTokenNames;
+  credentialTokenSubstitutions = lib.concatMapStringsSep "\n" (tokenName: ''
+    token_value="$(grep -E '^${tokenName}=' "$token_file" | tail -n 1 | cut -d= -f2-)"
+    if [ -z "$token_value" ]; then
+      echo "missing generated Iron proxy credential token ${tokenName}" >&2
+      exit 1
+    fi
+    escaped_token_value="$(printf '%s' "$token_value" | ${pkgs.gnused}/bin/sed 's/[\/&]/\\&/g')"
+    ${pkgs.gnused}/bin/sed -i "s/@${tokenName}@/$escaped_token_value/g" "$runtime_config"
+  '') credentialTokenNames;
 in
 {
   options.services.agentEgressProxy = {
@@ -266,6 +283,7 @@ in
       url = lib.mkDefault proxyUrl;
       caCert = lib.mkDefault caCertPath;
       noProxy = lib.mkDefault "127.0.0.1,localhost";
+      credentialTokenFile = lib.mkDefault tokenFile;
     };
 
     tsurf.agentEgress = {
@@ -297,9 +315,17 @@ in
         "network-online.target"
         "sops-nix.service"
       ];
-      path = [ cfg.package ];
+      path = [
+        cfg.package
+        pkgs.coreutils
+        pkgs.gnugrep
+        pkgs.gnused
+        pkgs.openssl
+      ];
       preStart = ''
         set -euo pipefail
+        token_file=${lib.escapeShellArg tokenFile}
+        runtime_config=${lib.escapeShellArg runtimeConfigFile}
         if [ ! -s ${lib.escapeShellArg caCertPath} ] || [ ! -s ${lib.escapeShellArg caKeyPath} ]; then
           rm -f ${lib.escapeShellArg caCertPath} ${lib.escapeShellArg caKeyPath}
           iron-proxy generate-ca \
@@ -310,6 +336,14 @@ in
         fi
         chmod 0444 ${lib.escapeShellArg caCertPath}
         chmod 0400 ${lib.escapeShellArg caKeyPath}
+        touch "$token_file"
+        chmod 0600 "$token_file"
+        ${credentialTokenSetup}
+        chmod 0400 "$token_file"
+        cp ${configFile} "$runtime_config"
+        chmod 0600 "$runtime_config"
+        ${credentialTokenSubstitutions}
+        chmod 0400 "$runtime_config"
       '';
       serviceConfig = {
         Type = "simple";
@@ -320,7 +354,7 @@ in
         EnvironmentFile = lib.optionals (credentialEnvLines != [ ]) [
           config.sops.templates."iron-agent-egress-env".path
         ];
-        ExecStart = "${cfg.package}/bin/iron-proxy -config ${configFile}";
+        ExecStart = "${cfg.package}/bin/iron-proxy -config ${runtimeConfigFile}";
         Restart = "on-failure";
         RestartSec = "5s";
         NoNewPrivileges = true;

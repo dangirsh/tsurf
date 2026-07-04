@@ -12,7 +12,7 @@ pkgs.buildGoModule rec {
     hash = "sha256-f3fbf5C9Ima3qJkVakrydtra5gxNEyTSKk2oVv+Zjg4=";
   };
 
-  vendorHash = "sha256-BRSrMNahEWWOUpLJA6BYXnaMojn5ccUy4BF3H4LKuNU=";
+  vendorHash = "sha256-6KUQeShcgeOJwlP/aE8RlgfmtmGNC9MJjJtJ1BMREe4=";
 
   subPackages = [ "cmd/iron-proxy" ];
 

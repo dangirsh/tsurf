@@ -21,7 +21,7 @@ let
   inherit (credentialServices)
     credentialDefaultsFor
     credentialServiceDefaults
-    ironProxyTokenFor
+    ironProxyTokenNameFor
     ;
 
   agentRuntimePath = lib.makeBinPath [
@@ -75,7 +75,7 @@ let
           let
             defaults = credentialDefaultsFor agentDef svc;
           in
-          "${defaults.envVar}:${ironProxyTokenFor svc defaults}"
+          "${defaults.envVar}:${ironProxyTokenNameFor svc defaults}"
         ) agentDef.credentialServices
       );
 
@@ -150,6 +150,7 @@ let
           export AGENT_EGRESS_PROXY_URL="${cfg.egressProxy.url}"
           export AGENT_EGRESS_PROXY_CA_CERT="${cfg.egressProxy.caCert}"
           export AGENT_EGRESS_PROXY_NO_PROXY="${cfg.egressProxy.noProxy}"
+          export AGENT_IRON_CREDENTIAL_TOKEN_FILE="${cfg.egressProxy.credentialTokenFile}"
           export AGENT_SCOPE_ACCESS="${cfg.scopeAccess}"
           export AGENT_EXTRA_READ_PATHS_FILE="${extraReadPathsFile}"
           export AGENT_EXTRA_ALLOW_PATHS_FILE="${extraAllowPathsFile}"
@@ -196,6 +197,7 @@ let
             --setenv=AGENT_EGRESS_PROXY_URL="$AGENT_EGRESS_PROXY_URL" \
             --setenv=AGENT_EGRESS_PROXY_CA_CERT="$AGENT_EGRESS_PROXY_CA_CERT" \
             --setenv=AGENT_EGRESS_PROXY_NO_PROXY="$AGENT_EGRESS_PROXY_NO_PROXY" \
+            --setenv=AGENT_IRON_CREDENTIAL_TOKEN_FILE="$AGENT_IRON_CREDENTIAL_TOKEN_FILE" \
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
             --setenv=AGENT_EXTRA_READ_PATHS_FILE="$AGENT_EXTRA_READ_PATHS_FILE" \
             --setenv=AGENT_EXTRA_ALLOW_PATHS_FILE="$AGENT_EXTRA_ALLOW_PATHS_FILE" \
@@ -449,6 +451,12 @@ in
         type = lib.types.str;
         default = "";
         description = "CA certificate path trusted by agent child processes for MITM proxying.";
+      };
+
+      credentialTokenFile = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Root-readable env file containing generated Iron proxy credential tokens.";
       };
 
       noProxy = lib.mkOption {

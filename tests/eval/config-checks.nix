@@ -775,6 +775,10 @@ in
       profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf-claude.json".text;
       creds = profile.network.credentials or [ ];
       customCreds = profile.network.custom_credentials or { };
+      credentialServicesSource = builtins.readFile ../../modules/lib/credential-services.nix;
+      egressProxySource = builtins.readFile ../../modules/agent-egress-proxy.nix;
+      launcherSource = builtins.readFile ../../modules/agent-launcher.nix;
+      wrapperSource = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
     mkCheck "claude-profile-iron-proxy"
       "generated Claude profile uses nono for sandboxing and Iron for proxy credentials"
@@ -789,6 +793,15 @@ in
         && devCfg.services.agentLauncher.agents.claude.credentialServices == [ "anthropic" ]
         && builtins.hasAttr "tsurf-agent-egress-proxy" devCfg.systemd.services
         && builtins.hasAttr "iron-agent-egress-env" devCfg.sops.templates
+        &&
+          devCfg.services.agentLauncher.egressProxy.credentialTokenFile
+          == "/var/lib/tsurf-agent-egress-proxy/credential-tokens.env"
+        && !(lib.hasInfix "-proxy-token" credentialServicesSource)
+        && lib.hasInfix "credential-tokens.env" egressProxySource
+        && lib.hasInfix "runtimeConfigFile" egressProxySource
+        && lib.hasInfix "openssl rand -hex 32" egressProxySource
+        && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" launcherSource
+        && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" wrapperSource
       );
 
   agent-launcher-child-environment =

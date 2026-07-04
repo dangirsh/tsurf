@@ -16,8 +16,9 @@
 #                              secret-file-name = filename under /run/secrets/
 #   AGENT_CREDENTIAL_SERVICES — space-separated nono credential names to enable
 #   AGENT_CREDENTIAL_PROXY     — "nono" (legacy provider proxy) or "iron"
-#   AGENT_IRON_CREDENTIAL_TOKENS — space-separated "ENV_VAR:proxy-token" pairs
-#                              exported to the child when AGENT_CREDENTIAL_PROXY=iron
+#   AGENT_IRON_CREDENTIAL_TOKENS — space-separated "ENV_VAR:TOKEN_NAME" pairs
+#                              resolved from AGENT_IRON_CREDENTIAL_TOKEN_FILE
+#                              and exported to the child for Iron proxying
 #   AGENT_EGRESS_PROXY_URL / CA_CERT / NO_PROXY — explicit Iron proxy settings
 #   AGENT_SCOPE_ACCESS       — "read" (default) or "allow" access to the current top-level workspace
 #   AGENT_EXTRA_READ_PATHS_FILE — optional /nix/store newline-delimited paths passed to nono with --read
@@ -234,12 +235,31 @@ if [[ -n "${AGENT_EGRESS_PROXY_CA_CERT:-}" ]]; then
 fi
 if [[ "$AGENT_CREDENTIAL_PROXY" == "iron" ]]; then
   IFS=' ' read -ra iron_pairs <<< "${AGENT_IRON_CREDENTIAL_TOKENS:-}"
+  if ((${#iron_pairs[@]} > 0)); then
+    declare -A iron_token_values=()
+    token_file="${AGENT_IRON_CREDENTIAL_TOKEN_FILE:-}"
+    if [[ -z "$token_file" || ! -r "$token_file" ]]; then
+      fail_launch "missing_iron_credential_token_file" "Iron credential token file is not readable for $AGENT_NAME"
+    fi
+    while IFS='=' read -r token_name token_value || [[ -n "$token_name" ]]; do
+      [[ -n "$token_name" ]] || continue
+      if [[ ! "$token_name" =~ ^TSURF_IRON_TOKEN_[A-Z0-9_]+$ || -z "$token_value" ]]; then
+        fail_launch "invalid_iron_credential_token_file" "invalid Iron credential token file entry for $AGENT_NAME"
+      fi
+      iron_token_values["$token_name"]="$token_value"
+    done < "$token_file"
+  fi
+
   for pair in "${iron_pairs[@]}"; do
     [[ -n "$pair" ]] || continue
-    IFS=: read -r env_var proxy_token <<< "$pair"
-    if [[ ! "$env_var" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || -z "$proxy_token" ]]; then
+    IFS=: read -r env_var token_name <<< "$pair"
+    if [[ ! "$env_var" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || ! "$token_name" =~ ^TSURF_IRON_TOKEN_[A-Z0-9_]+$ ]]; then
       fail_launch "invalid_iron_credential_token" "invalid Iron credential token entry for $AGENT_NAME"
     fi
+    if [[ -z "${iron_token_values[$token_name]+set}" ]]; then
+      fail_launch "missing_iron_credential_token" "missing Iron credential token $token_name for $AGENT_NAME"
+    fi
+    proxy_token="${iron_token_values[$token_name]}"
     agent_env+=("$env_var=$proxy_token")
   done
 fi

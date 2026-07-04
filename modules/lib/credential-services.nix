@@ -47,8 +47,9 @@ let
     credentialServiceDefaults.${svc}
     // lib.filterAttrs (_: value: value != null) (agentDef.credentialOverrides.${svc} or { });
 
-  ironProxyTokenFor =
-    svc: defaults: "tsurf-iron-${svc}-${defaults.envVar}-${defaults.secretName}-proxy-token";
+  ironProxyTokenNameFor =
+    svc: defaults:
+    "TSURF_IRON_TOKEN_${lib.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] svc)}_${defaults.envVar}";
 
   urlHost =
     url:
@@ -61,7 +62,7 @@ in
   inherit
     credentialDefaultsFor
     credentialServiceDefaults
-    ironProxyTokenFor
+    ironProxyTokenNameFor
     urlHost
     ;
 }
