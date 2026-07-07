@@ -332,6 +332,9 @@ in
         chmod 0640 "$token_file"
         ${credentialTokenSetup}
         chmod 0440 "$token_file"
+        if [ -e "$runtime_config" ]; then
+          chmod 0600 "$runtime_config"
+        fi
         cp ${configFile} "$runtime_config"
         chmod 0600 "$runtime_config"
         ${credentialTokenSubstitutions}

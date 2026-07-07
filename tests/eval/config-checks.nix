@@ -801,6 +801,7 @@ in
         && lib.hasInfix "credential-tokens.env" egressProxySource
         && lib.hasInfix ''chmod 0440 "$token_file"'' egressProxySource
         && lib.hasInfix "runtimeConfigFile" egressProxySource
+        && lib.hasInfix ''chmod 0600 "$runtime_config"'' egressProxySource
         && lib.hasInfix "openssl rand -hex 32" egressProxySource
         && lib.hasInfix "SupplementaryGroups" launcherSource
         && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" launcherSource
