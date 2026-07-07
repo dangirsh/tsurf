@@ -1,6 +1,7 @@
 # @decision SEC-04: Core provider API keys stay root-owned. The brokered launcher
-#   reads them before entering the sandbox and exposes only per-session loopback
-#   tokens to the agent child. Operator-side credentials are owned by the agent user.
+#   allowlists them, and the default Iron-backed proxy reads them from a
+#   root-mediated service environment and replaces child placeholders at egress.
+#   Operator-side credentials are owned by the agent user.
 #   Private overlay may override via lib.mkForce in its own secrets.nix.
 { config, ... }:
 {

@@ -31,7 +31,9 @@ There is no separate `dev` operator user. Root handles all administrative tasks 
 
 ## Adding Agent Workloads
 
-Public tsurf core provides two first-class agent paths running as the `agent` user under [nono](https://github.com/nolabs-ai/nono) sandboxing:
+Public tsurf core provides two first-class agent paths running as the `agent`
+user under [nono](https://github.com/nolabs-ai/nono) sandboxing, with
+Iron-backed egress and credential brokering on agent hosts:
 
 - **Interactive `claude`** -- sandboxed wrapper for interactive use
 - **Generic launcher** -- `services.agentLauncher.agents.<name>` for custom agents
@@ -43,6 +45,7 @@ Additional wrappers such as `codex` are opt-in public extras. Workflow-specific 
 Hosts running agent workloads should import these agent infrastructure modules:
 
 - `modules/agent-compute.nix` -- provides `tsurf-agents.slice` cgroup limits and `/data/projects` persistence
+- `modules/agent-egress-proxy.nix` -- runs `iron-proxy` for mediated agent egress and provider credential replacement
 - `modules/agent-launcher.nix` -- generic sandboxed agent launcher infrastructure
 - `modules/agent-sandbox.nix` -- core `claude` wrapper declaration on top of the generic launcher
 - `modules/nono.nix` -- nono binary and tsurf Landlock profile
@@ -71,7 +74,7 @@ The generic launcher (`services.agentLauncher.agents.<name>`) lets you define ag
 | Agent-specific non-secret state dirs | Read + write | Per-agent `nonoProfile.extraAllow` / `extraAllowFile`; raw auth/session caches such as `~/.claude` and `~/.codex` stay denied |
 | Nix store, SSL certs, `/etc` basics | Read only | Base `tsurf` nono profile |
 | Paths in `filesystem.allow` | Read + write | Your nono profile |
-| Outbound network (API calls, git) | Allowlisted | Host nftables policy for the dedicated agent UID |
+| Outbound network (API calls, git) | Mediated by default | Iron loopback proxy plus host nftables policy for the dedicated agent UID |
 
 | Resource | Denied | Controlled by |
 |----------|--------|---------------|
@@ -119,7 +122,12 @@ Then import it in your host config and optionally add a systemd timer.
 
 ### Secret ownership for agent execution
 
-For the public brokered launcher model, keep provider keys root-owned. The launcher reads them before the privilege drop and exposes only per-session loopback tokens to the child:
+For the public brokered launcher model, keep provider keys root-owned. In the
+default Iron-backed path, `iron-proxy` reads real provider keys from a
+sops-rendered service environment and replaces provider-shaped placeholder
+credentials at egress. The child gets proxy/CA environment variables, not the
+raw provider key. Legacy `nono` credential-proxy agents still use the named
+secret allowlist and per-session phantom proxy tokens.
 
 ```nix
 sops.secrets."anthropic-api-key".owner = "root";
@@ -135,7 +143,9 @@ cd /data/projects/my-repo
 claude   # wrapper broker-launches as agent user and runs in nono sandbox
 ```
 
-The wrapper handles credential injection from `/run/secrets/`, scopes reads to the current top-level workspace beneath `/data/projects`, and logs launches to journald (`journalctl -t agent-launch`).
+The wrapper brokers supported provider credentials through the configured
+credential proxy, scopes reads to the current top-level workspace beneath
+`/data/projects`, and logs launches to journald (`journalctl -t agent-launch`).
 
 See `SECURITY.md` in the tsurf repo for the full access control model and credential flow architecture.
 

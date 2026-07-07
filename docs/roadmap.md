@@ -8,14 +8,14 @@ part of incidental cleanup.
 Status: Initial Iron-backed implementation added; continue hardening with live
 tests and provider-specific rollout validation.
 
-The current default blocks direct sandbox networking in nono and uses a
-UID-scoped nftables policy as a host-level backstop. This prevents configured
-credential proxy routes from becoming an allow-all CONNECT proxy, but it is
-still not a general destination-aware egress mediation layer for every workflow.
+The current agent-host path keeps `nono` as the local filesystem/process
+sandbox and uses [Iron](https://iron.sh/) / `iron-proxy` as the preferred
+egress and credential-broker layer when the Iron egress proxy is enabled.
+Iron-backed generated profiles allow loopback proxy access, while nftables
+switches the agent UID to mediated-only egress and drops direct DNS and public
+network traffic.
 
-Before building a local egress proxy in tsurf, evaluate whether tsurf should use
-or integrate with [Iron](https://iron.sh/) / `iron-proxy` instead. The relevant
-shape to compare is:
+The remaining target shape is:
 
 - default-deny egress for untrusted workloads
 - boundary-side credential injection
@@ -27,7 +27,7 @@ creating two unrelated policy systems unless there is a clear reason.
 
 Review status: the 2026-07-02 landscape review in
 [`docs/security-plans/sandbox-secret-proxy-landscape-2026.md`](security-plans/sandbox-secret-proxy-landscape-2026.md)
-recommends keeping `nono` as the default local sandbox and prototyping
+recommended keeping `nono` as the default local sandbox and prototyping
 `iron-proxy` as the egress and richer credential-broker layer.
 
 Implementation status: `modules/agent-egress-proxy.nix` packages and runs
