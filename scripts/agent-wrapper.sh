@@ -17,7 +17,6 @@
 #   AGENT_EGRESS_PROXY_URL / CA_CERT / NO_PROXY — explicit Iron proxy settings
 #   AGENT_SCOPE_ACCESS       — "read" (default) or "allow" access to the current top-level workspace
 #   AGENT_EXTRA_READ_PATHS_FILE — optional /nix/store newline-delimited paths passed to nono with --read
-#   AGENT_EXTRA_ALLOW_PATHS_FILE — optional /nix/store newline-delimited paths passed to nono with --allow
 #   AGENT_CHILD_ENVIRONMENT_FILE — optional /nix/store file of non-secret NAME=value env entries
 #
 # Launch logging:
@@ -132,7 +131,6 @@ case "${AGENT_SCOPE_ACCESS:-read}" in
 esac
 
 append_path_file_args "EXTRA_READ" "${AGENT_EXTRA_READ_PATHS_FILE:-}" "--read"
-append_path_file_args "EXTRA_ALLOW" "${AGENT_EXTRA_ALLOW_PATHS_FILE:-}" "--allow"
 
 setpriv_bin="$(command -v setpriv)"
 env_bin="$(command -v env)"

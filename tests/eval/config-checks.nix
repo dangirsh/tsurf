@@ -1510,16 +1510,14 @@ in
       wrapperSource = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
     mkCheck "launcher-private-hooks"
-      "agent launcher exposes explicit private-overlay hooks without changing public defaults"
-      "agent launcher missing scope/sudo/extra path hooks needed to avoid private forks"
+      "agent launcher exposes narrow private-overlay hooks without changing public defaults"
+      "agent launcher missing scope/sudo/read hooks needed to avoid private forks"
       (
         lib.hasInfix "sudoGroups" source
         && lib.hasInfix "scopeAccess" source
         && lib.hasInfix "extraReadPaths" source
-        && lib.hasInfix "extraAllowPaths" source
         && lib.hasInfix "AGENT_SCOPE_ACCESS" wrapperSource
         && lib.hasInfix "AGENT_EXTRA_READ_PATHS_FILE" wrapperSource
-        && lib.hasInfix "AGENT_EXTRA_ALLOW_PATHS_FILE" wrapperSource
       );
 
   launcher-can-drop-agent-uid =

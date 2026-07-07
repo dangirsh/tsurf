@@ -43,5 +43,7 @@ change, not a deploy.
   SSH host-key assumptions are true for the host.
 - Do not put raw agent CLIs in global `environment.systemPackages`; expose them
   through generated wrappers.
-- Do not widen `services.agentLauncher.scopeAccess` or `extraAllowPaths` without
-  documenting why the workflow needs that access.
+- Keep writable exceptions on individual agents with
+  `services.agentLauncher.agents.<name>.nonoProfile.extraAllow`; do not widen
+  `services.agentLauncher.scopeAccess` without documenting why the workflow
+  needs that access.

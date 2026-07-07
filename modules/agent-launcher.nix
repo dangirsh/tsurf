@@ -82,9 +82,6 @@ let
       extraReadPathsFile = pkgs.writeText "${name}-agent-extra-read-paths" (
         lib.concatStringsSep "\n" cfg.extraReadPaths
       );
-      extraAllowPathsFile = pkgs.writeText "${name}-agent-extra-allow-paths" (
-        lib.concatStringsSep "\n" cfg.extraAllowPaths
-      );
       childEnvironmentFile = pkgs.writeText "${name}-agent-child-environment" (
         lib.concatStringsSep "\n" (
           lib.mapAttrsToList (envName: value: "${envName}=${value}") agentDef.childEnvironment
@@ -109,7 +106,6 @@ let
           export AGENT_IRON_CREDENTIAL_TOKEN_FILE="${cfg.egressProxy.credentialTokenFile}"
           export AGENT_SCOPE_ACCESS="${cfg.scopeAccess}"
           export AGENT_EXTRA_READ_PATHS_FILE="${extraReadPathsFile}"
-          export AGENT_EXTRA_ALLOW_PATHS_FILE="${extraAllowPathsFile}"
           export AGENT_CHILD_ENVIRONMENT_FILE="${childEnvironmentFile}"
 
           if [[ -t 0 && -t 1 ]]; then
@@ -159,7 +155,6 @@ let
             --setenv=AGENT_IRON_CREDENTIAL_TOKEN_FILE="$AGENT_IRON_CREDENTIAL_TOKEN_FILE" \
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
             --setenv=AGENT_EXTRA_READ_PATHS_FILE="$AGENT_EXTRA_READ_PATHS_FILE" \
-            --setenv=AGENT_EXTRA_ALLOW_PATHS_FILE="$AGENT_EXTRA_ALLOW_PATHS_FILE" \
             --setenv=AGENT_CHILD_ENVIRONMENT_FILE="$AGENT_CHILD_ENVIRONMENT_FILE" \
             --setenv=AGENT_RUN_AS_USER="${agentCfg.user}" \
             --setenv=AGENT_RUN_AS_UID="${toString agentCfg.uid}" \
@@ -418,12 +413,6 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = "Additional paths passed to nono with --read for every generated launcher.";
-    };
-
-    extraAllowPaths = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Additional paths passed to nono with --allow for every generated launcher.";
     };
 
     sudoUsers = lib.mkOption {
