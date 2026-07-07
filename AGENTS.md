@@ -1,11 +1,10 @@
 # Git Policy
 
-- Normal agent-authored changes should be made on `codex/...` branches and
-  landed through pull requests.
-- Do not push directly to `main` unless the user explicitly requests it for the
-  current task.
-- Codex should still commit completed work unless the user explicitly asks not
-  to commit.
+- Agent-authored changes should be committed on `main` and pushed directly to
+  `origin/main`, unless the user explicitly asks for a branch or pull request.
+- Do not open pull requests unless the user explicitly requests one.
+- Codex should still commit and push completed work unless the user explicitly
+  asks not to.
 - `tsurf` is intentionally public.
 - Every related repo outside `tsurf` should stay backed by a private GitHub repo.
 

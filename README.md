@@ -4,7 +4,7 @@ A security-first, minimal [NixOS](https://nixos.org/) base for agent-centric per
 
 I use tsurf to manage coding/assistant agents across several remote servers. It enables me to rapidly experiment with new tools and approaches in agentic computing, without feeling like [this](https://youtu.be/GFiWEjCedzY?si=BhtI8varawf4qMh-&t=30).
 
-> This public repo is the base configuration. Real deployments come from a [private overlay](#private-overlay).
+> This public repo is the base configuration. It exports eval fixtures and reusable modules, not deploy targets. Real deployments come from a private overlay; start with [`QUICKSTART.md`](QUICKSTART.md) and [`examples/private-overlay/`](examples/private-overlay/).
 
 > **Warning:** This project is not yet stable. Use it as a reference only.
 
@@ -26,10 +26,14 @@ These lead to the following design goals:
 
 - **Sandboxed agent execution.** Agents run through
   [nono](https://github.com/nolabs-ai/nono), using
-  [Landlock](https://landlock.io/)-backed filesystem rules and coarse
-  host-level egress limits. Supported API-backed wrappers are designed to keep
-  real provider credentials on the broker side and give the child only
-  per-session proxy tokens.
+  [Landlock](https://landlock.io/)-backed filesystem rules, per-workspace
+  launch scoping, and systemd resource limits.
+- **Iron-backed egress and credential brokering.** Supported API-backed
+  wrappers use [iron-proxy](https://github.com/ironsh/iron-proxy) on loopback
+  for destination allowlists, credential replacement, proxy CA state, and
+  per-request logs. Raw provider keys stay in the Iron service environment; the
+  child gets provider-shaped placeholders plus proxy/CA environment variables.
+  The legacy `nono` credential-proxy mode remains available per agent.
 - **Declarative agent launcher.** Define a new agent type in a few lines of config
   and get a sandboxed wrapper, credential brokering, resource controls, and
   persistent storage automatically.
@@ -44,6 +48,10 @@ These lead to the following design goals:
   `harmonia-cache` module to trust or serve a
   [Harmonia](https://github.com/nix-community/harmonia) binary cache with a
   SOPS-managed signing key and an nftables client allowlist.
+- **Optional service modules and extras.** Reusable opt-ins include Headscale
+  for a self-hosted Tailscale control plane, Restic/B2 backups, OpenAI Codex,
+  OpenRouter Codex, CASS session indexing, and a home-manager profile for the
+  dedicated agent user.
 - **Deploy safety.** Lockout-prevention assertions catch misconfigurations
   (e.g., missing SSH keys, exposed ports) before they reach a live machine.
   [deploy-rs](https://github.com/serokell/deploy-rs)-based deploys are locked,
@@ -51,6 +59,18 @@ These lead to the following design goals:
 - **Public base / private overlay model.** This repo is the reusable
   foundation. Real credentials, host-specific services, and personal config
   live in a separate private repo that imports what it needs.
+
+## Shipped Agent Paths
+
+- Core exports a sandboxed interactive `claude` wrapper through the
+  `agent-host` / `agent-sandbox` role.
+- Custom wrappers use `services.agentLauncher.agents.<name>`, which produces a
+  wrapper, immutable launcher, `nono` profile, sudo rule, resource limits, and
+  persistence wiring.
+- Opt-in public extras provide `codex`, `codex-openrouter`, CASS indexing,
+  Restic backups, and the agent home profile.
+- Optional public modules include `headscale` and `harmonia-cache` for private
+  overlays that need mesh coordination or a self-hosted Nix cache.
 
 ## Example Use Cases
 
@@ -63,7 +83,6 @@ These are on top of more standard use cases (which can be built/maintained by th
 - Web services / static sites: agents field change requests, implement, and redeploy.
 - Personal Knowledge Management (PKM): agents help with querying, maintaining, and syncing your knowledge graph(s).
 - [Home Assistant](https://www.home-assistant.io/): agents manage the config directly, no UI needed.
-- Cost visibility: private overlays can add lightweight token/API spend reporting when useful.
 
 ## Setup
 
@@ -79,6 +98,13 @@ See [`QUICKSTART.md`](QUICKSTART.md) and
 [`examples/private-overlay/`](examples/private-overlay/) for the private-overlay
 workflow.
 
+To validate the public template or a docs-adjacent contribution:
+
+```bash
+git config core.hooksPath .githooks
+./scripts/run-tests.sh
+```
+
 ## Documentation
 
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
@@ -88,7 +114,8 @@ workflow.
 - Security model: [`SECURITY.md`](SECURITY.md)
 - Private overlay template:
   [`examples/private-overlay/README.md`](examples/private-overlay/README.md)
-- Repo-specific agent guidance: [`CLAUDE.md`](CLAUDE.md)
+- Repo-specific agent guidance: [`CLAUDE.md`](CLAUDE.md) and
+  [`AGENTS.md`](AGENTS.md)
 
 ## License
 
