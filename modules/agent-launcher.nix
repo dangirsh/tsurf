@@ -118,6 +118,13 @@ let
             stdio_flag="--pipe"
           fi
 
+          credential_tokens=${lib.escapeShellArg ironCredentialTokens}
+          credential_token_group=${lib.escapeShellArg cfg.egressProxy.credentialTokenGroup}
+          credential_token_group_args=()
+          if [[ -n "$credential_tokens" && -n "$credential_token_group" ]]; then
+            credential_token_group_args+=("--property=SupplementaryGroups=$credential_token_group")
+          fi
+
           # Per-invocation resource limits. These are tighter than the parent
           # tsurf-agents.slice (MemoryMax=8G, CPUQuota=300%, TasksMax=1024 in
           # agent-compute.nix) so each agent session is individually bounded while
@@ -131,6 +138,7 @@ let
             --property=TasksMax=256 \
             --property=NoNewPrivileges=true \
             "--property=CapabilityBoundingSet=CAP_SETUID CAP_SETGID" \
+            "''${credential_token_group_args[@]}" \
             --property=OOMScoreAdjust=500 \
             --property=LimitNOFILE=512 \
             --property=LimitFSIZE=2G \
@@ -378,6 +386,12 @@ in
         type = lib.types.str;
         default = "";
         description = "Root-readable env file containing generated Iron proxy credential tokens.";
+      };
+
+      credentialTokenGroup = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Optional supplementary group that lets launcher units read generated Iron proxy credential tokens.";
       };
 
       noProxy = lib.mkOption {

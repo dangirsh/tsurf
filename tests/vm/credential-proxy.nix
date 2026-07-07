@@ -54,13 +54,16 @@ let
       if [ -r /run/secrets-rendered/iron-agent-egress-env ]; then
         fail "Iron service environment file is readable from child"
       fi
+      if [ -r /var/lib/tsurf-agent-egress-proxy/credential-tokens.env ]; then
+        fail "Iron credential token file is readable from child"
+      fi
 
-      if curl -fsS http://127.0.0.1:18080/health >/tmp/direct-loopback-response 2>&1; then
+      if curl --connect-timeout 2 --max-time 5 -fsS http://127.0.0.1:18080/health >/tmp/direct-loopback-response 2>&1; then
         fail "child reached direct loopback fake provider"
       fi
 
       http_code="$(
-        curl -sS -o "$PWD/upstream-response.json" -w '%{http_code}' \
+        curl --connect-timeout 2 --max-time 15 -sS -o "$PWD/upstream-response.json" -w '%{http_code}' \
           --noproxy "" \
           -x "$HTTP_PROXY" \
           -X POST \

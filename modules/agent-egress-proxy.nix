@@ -274,6 +274,7 @@ in
       caCert = lib.mkDefault caCertPath;
       noProxy = lib.mkDefault "127.0.0.1,localhost";
       credentialTokenFile = lib.mkDefault tokenFile;
+      credentialTokenGroup = lib.mkDefault cfg.group;
     };
 
     tsurf.agentEgress = {
@@ -327,9 +328,10 @@ in
         chmod 0444 ${lib.escapeShellArg caCertPath}
         chmod 0400 ${lib.escapeShellArg caKeyPath}
         touch "$token_file"
-        chmod 0600 "$token_file"
+        chgrp ${lib.escapeShellArg cfg.group} "$token_file"
+        chmod 0640 "$token_file"
         ${credentialTokenSetup}
-        chmod 0400 "$token_file"
+        chmod 0440 "$token_file"
         cp ${configFile} "$runtime_config"
         chmod 0600 "$runtime_config"
         ${credentialTokenSubstitutions}
