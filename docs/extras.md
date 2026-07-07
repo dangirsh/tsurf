@@ -1,7 +1,8 @@
 # Extras
 
-`extras/` holds reusable modules built on top of the public core. All extras
-are opt-in: import the module in your host config and set the enable option.
+`extras/` holds secondary recipes built on top of the public core. Extras are
+not part of the base contract: import the module in your private overlay and set
+the enable option only when you actually need it.
 
 ## Shipped Extras
 
@@ -18,9 +19,7 @@ are opt-in: import the module in your host config and set the enable option.
 Import `extras/codex-openrouter.nix` on an agent host to expose a sandboxed
 `codex-openrouter` wrapper. On Iron-backed hosts, Codex receives a placeholder
 `OPENROUTER_API_KEY` plus proxy/CA environment variables; Iron replaces the
-placeholder with the raw OpenRouter key at egress. In legacy `nono`
-credential-proxy mode, Codex receives `NONO_PROXY_TOKEN` and a local
-`OPENROUTER_BASE_URL`.
+placeholder with the raw OpenRouter key at egress.
 Current Codex releases use the Responses API provider wire format here, so the
 wrapper explicitly targets OpenRouter's `/api/v1/responses` endpoint.
 The wrapper also runs Codex with `CODEX_HOME` set to
@@ -67,10 +66,10 @@ private overlays to import. It provides:
 
 ## Extending tsurf: Custom Agents
 
-Public extras are not the only extension point. The advanced extension API is
-`services.agentLauncher.agents.<name>`, which powers custom wrappers on top of
-the generic launcher path. `extras/codex.nix` is a real-world example built on
-this same API.
+Public extras are not the only extension point. The private-overlay extension
+API is `services.agentLauncher.agents.<name>`, which powers custom wrappers on
+top of the generic launcher path. `extras/codex.nix` is a real-world example
+built on this same API.
 
 Each definition can specify:
 

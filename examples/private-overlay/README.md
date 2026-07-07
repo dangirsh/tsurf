@@ -1,6 +1,6 @@
 # Private Overlay Example
 
-Minimal forkable template for a private tsurf overlay.
+Minimal forkable template for a one-owner private tsurf overlay.
 
 **This is a TEMPLATE. It will not evaluate until you customize placeholder values, add host-specific modules, and configure real hardware.**
 
@@ -38,7 +38,8 @@ Iron-backed egress and credential brokering on agent hosts:
 - **Interactive `claude`** -- sandboxed wrapper for interactive use
 - **Generic launcher** -- `services.agentLauncher.agents.<name>` for custom agents
 
-Additional wrappers such as `codex` are opt-in public extras. Workflow-specific agents and orchestration belong in your private overlay.
+Additional wrappers such as `codex` are opt-in public extras. Workflow-specific
+agents and orchestration belong in your private overlay.
 
 ### Required modules for agent hosts
 
@@ -126,8 +127,7 @@ For the public brokered launcher model, keep provider keys root-owned. In the
 default Iron-backed path, `iron-proxy` reads real provider keys from a
 sops-rendered service environment and replaces provider-shaped placeholder
 credentials at egress. The child gets proxy/CA environment variables, not the
-raw provider key. Legacy `nono` credential-proxy agents still use the named
-secret allowlist and per-session phantom proxy tokens.
+raw provider key.
 
 ```nix
 sops.secrets."anthropic-api-key".owner = "root";

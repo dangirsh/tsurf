@@ -1,6 +1,8 @@
 # QUICKSTART
 
-Start here if you are new to tsurf.
+Start here if you are new to tsurf. The intended shape is one-owner,
+self-sovereign agent infrastructure; read
+[`docs/base-contract.md`](docs/base-contract.md) before adding services.
 
 ## Prerequisites
 
@@ -60,7 +62,11 @@ Full template walkthrough: [`examples/private-overlay/README.md`](examples/priva
 Extras are opt-in in private overlays: import the module you want and set its enable option explicitly.
 Reference: [`docs/extras.md`](docs/extras.md)
 
+Headscale and Harmonia cache are core base modules, but they still need private
+overlay settings for domains, keys, ACLs, and allowlists before deployment.
+
 ## Next Steps
 
 - Security model: [`SECURITY.md`](SECURITY.md)
 - System design: [`docs/architecture.md`](docs/architecture.md)
+- Public/private base contract: [`docs/base-contract.md`](docs/base-contract.md)

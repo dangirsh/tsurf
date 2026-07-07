@@ -1,7 +1,9 @@
 # Security Model
 
-This document describes the security properties the public repo implements today.
-Private overlays can strengthen or weaken them.
+This document describes the security properties the public repo implements
+today. The public target is one-owner, self-sovereign agent infrastructure;
+private overlays can strengthen or weaken these properties. See
+[`docs/base-contract.md`](docs/base-contract.md) for scope boundaries.
 
 ## Reporting Vulnerabilities
 
@@ -62,8 +64,10 @@ caller
                 -> iron-proxy on loopback (credential replacement and egress policy)
 ```
 
-The legacy `nono` credential-proxy path remains available per agent via
-`credentialProxy = "nono"` and is still covered by the VM credential-proxy test.
+Iron-backed mediation is the intended public credential path. The legacy `nono`
+credential-proxy path remains temporarily available per agent via
+`credentialProxy = "nono"` and is still covered by the VM credential-proxy test,
+but it is compatibility debt and should not be used for new public examples.
 
 Security properties of that path:
 
@@ -208,7 +212,7 @@ Agent egress:
   - `fc00::/7`
   - `fe80::/10`
 
-Iron-backed mode is the preferred destination-level mediation path. Private
+Iron-backed mode is the public destination-level mediation path. Private
 overlays that disable `services.agentEgressProxy`, enable
 `services.nonoSandbox.allowDirectNetwork`, or add direct egress paths must treat
 that as an explicit risk.
@@ -237,6 +241,9 @@ that as an explicit risk.
 - Nix inputs are pinned by `flake.lock`.
 - A scheduled GitHub Actions workflow opens lock-update pull requests so input
   bumps are reviewed explicitly instead of accumulating silently.
+- The public base includes a self-hosted Harmonia cache module as the intended
+  real-deployment cache path. Public fixtures leave it disabled until a private
+  overlay supplies the host, trust key, signing key, and client allowlist.
 - The public base trusts `https://cache.numtide.com` via the configured
   `niks3.numtide.com-1` public key. Treat that cache as part of the build trust
   root for binaries it serves.
@@ -259,7 +266,7 @@ that as an explicit risk.
 - `claude-code` and `codex` come from the pinned `llm-agents.nix` input.
 - The repo does not add signature verification for these remaining prebuilt
   binaries.
-- The optional Harmonia cache client defaults to HTTPS URLs. Plain HTTP clients
+- The Harmonia cache client defaults to HTTPS URLs. Plain HTTP clients
   or direct public server exposure require `allowInsecureHttp = true`.
   Integrity still relies on Nix nar signatures, but HTTP metadata and
   availability can be observed or interfered with by the network path.

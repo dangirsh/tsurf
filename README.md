@@ -1,6 +1,9 @@
 # tsurf
 
-A security-first, minimal [NixOS](https://nixos.org/) base for agent-centric personal computing. See [example use cases](#example-use-cases).
+A security-first, minimal [NixOS](https://nixos.org/) base for one-owner,
+self-sovereign agent-centric personal computing. See
+[`docs/base-contract.md`](docs/base-contract.md) for the public/private
+boundary.
 
 I use tsurf to manage coding/assistant agents across several remote servers. It enables me to rapidly experiment with new tools and approaches in agentic computing, without feeling like [this](https://youtu.be/GFiWEjCedzY?si=BhtI8varawf4qMh-&t=30).
 
@@ -19,7 +22,9 @@ The core assumptions behind tsurf are:
 These lead to the following design goals:
 
 1. **Optimize the operating system for use by agents**. Human-use is always expected to be agent-mediated.
-2. Support the effective management of **many agents across several machines**. The bottleneck should be compute/token costs, not management complexity.
+2. Support the effective management of a **small owner-operated fleet** of
+   agent hosts. The bottleneck should be compute/token costs, not management
+   complexity.
 3. Always deploy agents with **[least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege)** and **[defense-in-depth](https://www.cyberark.com/what-is/defense-in-depth/)** to mitigate the risks of compromised/misaligned agents.
 
 ## Core Features
@@ -33,7 +38,8 @@ These lead to the following design goals:
   for destination allowlists, credential replacement, proxy CA state, and
   per-request logs. Raw provider keys stay in the Iron service environment; the
   child gets provider-shaped placeholders plus proxy/CA environment variables.
-  The legacy `nono` credential-proxy mode remains available per agent.
+  The legacy `nono` credential-proxy mode is compatibility debt, not the public
+  happy path.
 - **Declarative agent launcher.** Define a new agent type in a few lines of config
   and get a sandboxed wrapper, credential brokering, resource controls, and
   persistent storage automatically.
@@ -44,12 +50,15 @@ These lead to the following design goals:
   strict firewall rules, and an
   [impermanence](https://github.com/nix-community/impermanence)-style root
   filesystem that rolls back to a clean snapshot on every boot.
-- **Self-hosted Nix cache layer.** Private overlays can import the public
+- **Self-hosted Nix cache layer.** The public base includes the
   `harmonia-cache` module to trust or serve a
   [Harmonia](https://github.com/nix-community/harmonia) binary cache with a
-  SOPS-managed signing key and an nftables client allowlist.
-- **Optional service modules and extras.** Reusable opt-ins include Headscale
-  for a self-hosted Tailscale control plane, Restic/B2 backups, OpenAI Codex,
+  SOPS-managed signing key and an nftables client allowlist. This is the
+  recommended cache path for real overlays.
+- **Self-hosted mesh coordination.** The public base includes Headscale for a
+  self-hosted Tailscale-compatible control plane. Private overlays provide the
+  real domain, ACLs, nameservers, subnet routers, and exposure policy.
+- **Optional extras.** Reusable opt-ins include Restic/B2 backups, OpenAI Codex,
   OpenRouter Codex, CASS session indexing, and a home-manager profile for the
   dedicated agent user.
 - **Deploy safety.** Lockout-prevention assertions catch misconfigurations
@@ -69,14 +78,15 @@ These lead to the following design goals:
   persistence wiring.
 - Opt-in public extras provide `codex`, `codex-openrouter`, CASS indexing,
   Restic backups, and the agent home profile.
-- Optional public modules include `headscale` and `harmonia-cache` for private
-  overlays that need mesh coordination or a self-hosted Nix cache.
+- Core public modules include `headscale` and `harmonia-cache`; private overlays
+  supply the real host settings that make them deployable.
 
 ## Example Use Cases
 
 - Run hardened, supervised coding agents against dedicated workspace repos on remote NixOS hosts.
 - Host personal assistant agents (e.g. [OpenClaw](https://openclaw.org/)).
-- Self-host autonomous agent experiments (e.g. [Conway Automata](https://conway.tech/))
+- Self-host autonomous agent experiments without putting private app code in the
+  public base.
 
 These are on top of more standard use cases (which can be built/maintained by the agents), including:
 
@@ -109,6 +119,7 @@ git config core.hooksPath .githooks
 
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Operations and commands: [`docs/operations.md`](docs/operations.md)
+- Public/private base contract: [`docs/base-contract.md`](docs/base-contract.md)
 - Optional modules and home profile: [`docs/extras.md`](docs/extras.md)
 - Roadmap and deferred security work: [`docs/roadmap.md`](docs/roadmap.md)
 - Security model: [`SECURITY.md`](SECURITY.md)

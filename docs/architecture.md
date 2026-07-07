@@ -1,9 +1,10 @@
 # Architecture
 
-`tsurf` separates a small public core from deployment-specific private overlays.
-The public tree is meant to evaluate cleanly, document the shipped behavior, and
-provide reusable modules. Real hosts, credentials, and exposed services belong
-in a private flake.
+`tsurf` separates a small one-owner public core from deployment-specific private
+overlays. The public tree is meant to evaluate cleanly, document the shipped
+behavior, and provide reusable modules. Real hosts, credentials, exposed
+services, and private apps belong in a private flake. See
+[`base-contract.md`](base-contract.md) for the public/private boundary.
 
 ## Public Repo Scope
 
@@ -15,6 +16,9 @@ in a private flake.
   default and imports `extras/restic.nix` as an example opt-in extra.
 - All extras are opt-in and are not imported by default host fixtures, except
   for the `extras/restic.nix` example on `hosts/services`.
+- Headscale and Harmonia are core public modules, but public fixtures keep them
+  disabled until a private overlay supplies host-specific domains, keys, and
+  allowlists.
 - `scripts/deploy.sh` refuses to deploy from the public repo. Real deploys must
   come from a private overlay that has a `tsurf.url` input.
 - The flake exports `nixosModules.*` for private overlays that want stable
@@ -37,7 +41,8 @@ in a private flake.
 | `modules/nono.nix` | Base `nono` profile and sandbox profile installation |
 | `modules/agent-launcher.nix` | Generic launcher that emits wrappers, launchers, sudo rules, and persistence |
 | `modules/agent-sandbox.nix` | Public core `claude` wrapper definition on top of the generic launcher |
-| `modules/harmonia-cache.nix` | Optional Harmonia binary cache client/server module for private overlays |
+| `modules/harmonia-cache.nix` | Core Harmonia binary cache client/server module for private overlays |
+| `modules/headscale.nix` | Core self-hosted mesh coordination module for private overlays |
 
 ## Agent Launch Model
 
@@ -60,10 +65,10 @@ Important behavior from the shipped implementation:
 - Launches must start inside `tsurf.agent.projectRoot`, and the first path
   component below that root becomes the sandbox read scope.
 - The wrapper refuses to grant blanket read access to the entire project root.
-- Supported Iron-backed API wrappers keep raw provider keys in the Iron service
-  environment. The child gets provider-shaped placeholder credentials plus
-  proxy/CA environment variables. Legacy `nono` credential-proxy mode remains
-  available and is covered by the fake-provider VM test.
+- Supported API wrappers keep raw provider keys in the Iron service environment.
+  The child gets provider-shaped placeholder credentials plus proxy/CA
+  environment variables. Legacy `nono` credential-proxy mode is compatibility
+  debt and should not be used for new public examples.
 - Public core installs wrapper binaries, not raw interactive agent binaries, as
   the intended entrypoints.
 
@@ -87,8 +92,7 @@ user is kept out of `docker`, and raw provider secrets remain root-owned by defa
 - The base nono profile blocks direct network access by default. Iron-backed
   generated profiles relax nono network blocking only so the child can reach
   the loopback Iron proxy. nftables then allows the proxy ports and drops direct
-  DNS and public network egress for the agent UID. Legacy `nono` credential
-  proxy mode still uses reserved loopback ports `20000-20199`.
+  DNS and public network egress for the agent UID.
 - The root filesystem is rolled back on boot from BTRFS subvolumes. Persistent
   state is declared explicitly under `/persist`.
 
@@ -103,5 +107,9 @@ user is kept out of `docker`, and raw provider secrets remain root-owned by defa
 - Additional wrappers and service-specific agent workflows belong in a private
   overlay. See [`examples/private-overlay/modules/code-review.nix`](../examples/private-overlay/modules/code-review.nix)
   for a concrete pattern.
+
+Private application services, including app registries, comms bridges, Matrix
+rooms, and personal assistant products, are intentionally outside the public
+base.
 
 For the full security model, use [`SECURITY.md`](../SECURITY.md).
