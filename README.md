@@ -38,8 +38,6 @@ These lead to the following design goals:
   for destination allowlists, credential replacement, proxy CA state, and
   per-request logs. Raw provider keys stay in the Iron service environment; the
   child gets provider-shaped placeholders plus proxy/CA environment variables.
-  The legacy `nono` credential-proxy mode is compatibility debt, not the public
-  happy path.
 - **Declarative agent launcher.** Define a new agent type in a few lines of config
   and get a sandboxed wrapper, credential brokering, resource controls, and
   persistent storage automatically.

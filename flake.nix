@@ -241,6 +241,7 @@
         };
         vm-test-credential-proxy = import ./tests/vm/credential-proxy.nix {
           inherit pkgs lib;
+          ironProxyPackage = self.packages.${system}.iron-proxy;
           impermanenceModule = impermanence.nixosModules.impermanence;
         };
 

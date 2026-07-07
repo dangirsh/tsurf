@@ -1,15 +1,13 @@
 { lib }:
 
 let
-  # Well-known credential service defaults shared by nono and Iron credential
-  # proxy wiring.
+  # Well-known credential service defaults for Iron credential replacement.
   credentialServiceDefaults = {
     anthropic = {
       upstream = "https://api.anthropic.com";
       hosts = [ "*.anthropic.com" ];
       injectHeader = "x-api-key";
       matchHeaders = [ "x-api-key" ];
-      credentialFormat = "{}";
       envVar = "ANTHROPIC_API_KEY";
       secretName = "anthropic-api-key";
     };
@@ -18,7 +16,6 @@ let
       hosts = [ "api.openai.com" ];
       injectHeader = "authorization";
       matchHeaders = [ "authorization" ];
-      credentialFormat = "Bearer {}";
       envVar = "OPENAI_API_KEY";
       secretName = "openai-api-key";
     };
@@ -27,7 +24,6 @@ let
       hosts = [ "openrouter.ai" ];
       injectHeader = "authorization";
       matchHeaders = [ "authorization" ];
-      credentialFormat = "Bearer {}";
       envVar = "OPENROUTER_API_KEY";
       secretName = "openrouter-api-key";
     };
@@ -36,7 +32,6 @@ let
       hosts = [ "api.x.ai" ];
       injectHeader = "authorization";
       matchHeaders = [ "authorization" ];
-      credentialFormat = "Bearer {}";
       envVar = "XAI_API_KEY";
       secretName = "xai-api-key";
     };

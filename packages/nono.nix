@@ -26,13 +26,12 @@ pkgs.rustPlatform.buildRustPackage rec {
     "-p"
     "nono-cli"
   ];
-  # The full upstream test suite is too slow for the regular gate. Run bounded
-  # tests for the upstream env:// credential path plus a source guard for the
-  # removed /run grants.
+  # The full upstream test suite is too slow for the regular gate. The public
+  # base uses nono as the filesystem/process sandbox only; Iron owns credential
+  # replacement. Keep the source guard for the removed broad /run grants.
   doCheck = true;
   checkPhase = ''
     runHook preCheck
-    cargo test -p nono-cli test_validate_custom_credential_env_uri_accepted
     if sed -n '/"linux_runtime_state"/,/"linux_sysfs_read"/p' crates/nono-cli/data/policy.json | grep -E '"/run"|"/var/run"'; then
       echo "upstream default policy must not regain broad /run read access" >&2
       exit 1
@@ -55,7 +54,7 @@ pkgs.rustPlatform.buildRustPackage rec {
   ];
 
   meta = with pkgs.lib; {
-    description = "Zero-config security sandbox with credential injection";
+    description = "Zero-config security sandbox";
     homepage = "https://github.com/nolabs-ai/nono";
     license = licenses.asl20;
     platforms = [ "x86_64-linux" ];

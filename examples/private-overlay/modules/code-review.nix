@@ -34,7 +34,7 @@
     serviceConfig = {
       Type = "oneshot";
       # Use the generated wrapper so the scheduled run stays on the brokered
-      # launcher path with the nono sandbox and built-in credential proxy.
+      # launcher path with the nono sandbox and Iron credential replacement.
       ExecStart = "/run/current-system/sw/bin/code-review";
       WorkingDirectory = "/data/projects/my-project";
       User = config.tsurf.agent.user;

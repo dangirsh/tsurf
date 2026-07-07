@@ -1,7 +1,6 @@
 # modules/nono.nix
-# @decision NONO-159-01: Credentials brokered through nono's built-in reverse proxy
-#   (custom_credentials with env:// URIs). Raw keys loaded by the root-owned wrapper;
-#   nono manages the phantom token proxy internally.
+# @decision NONO-159-01: nono is the filesystem/process sandbox only.
+#   Iron owns public-base credential replacement and mediated HTTP(S) egress.
 # @decision NONO-145-03: Extended deny list covers registry tokens and cloud credential directories.
 {
   config,

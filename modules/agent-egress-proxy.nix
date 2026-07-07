@@ -24,16 +24,7 @@ let
   runtimeConfigFile = "${stateDir}/iron-proxy.yaml";
   proxyUrl = "http://127.0.0.1:${toString cfg.tunnelPort}";
 
-  effectiveCredentialProxy =
-    agentDef:
-    if agentDef.credentialProxy == null then
-      launcherCfg.defaultCredentialProxy
-    else
-      agentDef.credentialProxy;
-
-  ironAgents = lib.filterAttrs (
-    _: agentDef: effectiveCredentialProxy agentDef == "iron"
-  ) launcherCfg.agents;
+  ironAgents = launcherCfg.agents;
 
   credentialRecords = lib.concatLists (
     lib.mapAttrsToList (
@@ -278,7 +269,6 @@ in
       home = stateDir;
     };
 
-    services.agentLauncher.defaultCredentialProxy = lib.mkDefault "iron";
     services.agentLauncher.egressProxy = {
       url = lib.mkDefault proxyUrl;
       caCert = lib.mkDefault caCertPath;

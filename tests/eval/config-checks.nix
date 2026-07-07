@@ -346,12 +346,11 @@ in
     in
     mkCheck "agent-egress-policy"
       "agent-egress policy scopes by agent UID, allows only intended paths, and logs drops"
-      "agent-egress policy missing UID scoping, private-range drops, HTTPS allowlist, nono proxy range, or logged drops"
+      "agent-egress policy missing UID scoping, private-range drops, HTTPS allowlist, or logged drops"
       (
         lib.hasInfix "meta skuid ${agentUid}" content
         && lib.hasInfix "100.64.0.0/10" content
         && lib.hasInfix "443" content
-        && lib.hasInfix "20000-20199" content
         && lib.hasInfix ''oifname "lo" counter log prefix "tsurf-agent-egress-loopback-drop " drop'' content
         && lib.hasInfix ''counter log prefix "tsurf-agent-egress-private-ipv4-drop " drop'' content
         && lib.hasInfix ''counter log prefix "tsurf-agent-egress-default-drop " drop'' content
@@ -701,16 +700,21 @@ in
       "README.md contains stale phrase (sibling repos readable)"
       (!(lib.hasInfix "sibling repos readable" source));
 
-  # Phase 159: nono built-in credential proxy
-  proxy-credential-wrapper =
-    mkCheck "proxy-credential-wrapper"
-      "agent wrapper loads secrets for nono credential proxy and drops the child with setpriv"
-      "agent-wrapper.sh missing AGENT_CREDENTIAL_SECRETS or setpriv — credential proxy flow broken"
+  iron-credential-wrapper =
+    mkCheck "iron-credential-wrapper"
+      "agent wrapper resolves Iron proxy tokens without reading raw secrets"
+      "agent-wrapper.sh must use Iron credential tokens and must not load /run/secrets credentials"
       (
         let
           src = builtins.readFile ../../scripts/agent-wrapper.sh;
         in
-        lib.hasInfix "AGENT_CREDENTIAL_SECRETS" src && lib.hasInfix "setpriv" src
+        lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKENS" src
+        && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" src
+        && lib.hasInfix "TSURF_IRON_TOKEN_" src
+        && lib.hasInfix "setpriv" src
+        && !(lib.hasInfix "AGENT_CREDENTIAL_SECRETS" src)
+        && !(lib.hasInfix "/run/secrets/" src)
+        && !(lib.hasInfix "NONO_PROXY_TOKEN" src)
       );
 
   nono-package-has-checks =
@@ -719,13 +723,13 @@ in
     in
     mkCheck "nono-package-has-checks"
       "nono source build has bounded patch-behavior checks and an install smoke check"
-      "packages/nono.nix must keep targeted env:// tests and a post-install CLI smoke check"
+      "packages/nono.nix must keep the /run policy guard and a post-install CLI smoke check"
       (
-        lib.hasInfix "test_validate_custom_credential_env_uri_accepted" source
-        && lib.hasInfix "linux_runtime_state" source
+        lib.hasInfix "linux_runtime_state" source
         && lib.hasInfix "grep -E" source
         && lib.hasInfix "doInstallCheck = true" source
         && lib.hasInfix "--help" source
+        && !(lib.hasInfix "test_validate_custom_credential_env_uri_accepted" source)
       );
 
   nono-package-has-tsurf-patches =
@@ -733,13 +737,11 @@ in
       source = builtins.readFile ../../packages/nono.nix;
       runPatch = builtins.readFile ../../packages/nono-no-run.patch;
     in
-    mkCheck "nono-package-has-tsurf-patches"
-      "nono source build carries the tsurf /run policy patch and relies on upstream env:// support"
-      "packages/nono.nix must keep upstream env:// test coverage and remove upstream /run read grants"
+    mkCheck "nono-package-has-tsurf-patches" "nono source build carries the tsurf /run policy patch"
+      "packages/nono.nix must remove upstream /run read grants"
       (
         !(lib.hasInfix "./nono-env-uri.patch" source)
         && lib.hasInfix "./nono-no-run.patch" source
-        && lib.hasInfix "test_validate_custom_credential_env_uri_accepted" source
         && lib.hasInfix ''-          "/run",'' runPatch
         && lib.hasInfix ''-          "/var/run"'' runPatch
       );
@@ -748,9 +750,8 @@ in
     let
       profile = builtins.fromJSON devCfg.environment.etc."nono/profiles/tsurf.json".text;
     in
-    mkCheck "proxy-credential-profile"
-      "base nono profile has no credential wiring (credentials live in per-agent profiles)"
-      "base tsurf.json nono profile should not contain network.custom_credentials — those belong in per-agent profiles"
+    mkCheck "proxy-credential-profile" "base nono profile has no credential wiring"
+      "base tsurf.json nono profile should not contain network credentials"
       (
         !(builtins.hasAttr "custom_credentials" (profile.network or { }))
         && !(builtins.hasAttr "credentials" (profile.network or { }))
@@ -782,10 +783,9 @@ in
     in
     mkCheck "claude-profile-iron-proxy"
       "generated Claude profile uses nono for sandboxing and Iron for proxy credentials"
-      "tsurf-claude should not wire nono credentials when Iron is the default credential proxy"
+      "tsurf-claude should not wire nono credentials when using Iron credential replacement"
       (
         devCfg.services.agentEgressProxy.enable
-        && devCfg.services.agentLauncher.defaultCredentialProxy == "iron"
         && devCfg.services.agentLauncher.egressProxy.url == "http://127.0.0.1:20208"
         && devCfg.services.agentLauncher.egressProxy.caCert == "/var/lib/tsurf-agent-egress-proxy/ca.crt"
         && creds == [ ]
@@ -831,8 +831,8 @@ in
       codexOpenRouterSource = builtins.readFile ../../extras/codex-openrouter.nix;
     in
     mkCheck "codex-openrouter-extra"
-      "OpenRouter Codex extra exposes codex-openrouter with GLM 5.2 through the configured credential proxy"
-      "OpenRouter Codex extra missing wrapper, GLM 5.2 default, or credential proxy wiring"
+      "OpenRouter Codex extra exposes codex-openrouter with GLM 5.2 through Iron"
+      "OpenRouter Codex extra missing wrapper, GLM 5.2 default, or Iron credential wiring"
       (
         openRouterCfg.services.codexOpenRouterAgent.enable
         && openRouterCfg.services.codexOpenRouterAgent.wrapperName == "codex-openrouter"
@@ -847,9 +847,9 @@ in
         )
         && creds == [ ]
         && customCreds == { }
-        && openRouterCfg.services.agentLauncher.defaultCredentialProxy == "iron"
         && lib.hasInfix "OPENROUTER_API_KEY" codexOpenRouterSource
-        && lib.hasInfix "NONO_PROXY_TOKEN" codexOpenRouterSource
+        && !(lib.hasInfix "NONO_PROXY_TOKEN" codexOpenRouterSource)
+        && !(lib.hasInfix "OPENROUTER_BASE_URL" codexOpenRouterSource)
         && openRouterCfg.sops.secrets."openrouter-api-key".owner == "root"
         && builtins.elem codexHome (profile.filesystem.allow or [ ])
         && !(builtins.elem "${openRouterCfg.tsurf.agent.home}/.codex" (profile.filesystem.allow or [ ]))
@@ -1089,19 +1089,21 @@ in
       "agent-launcher.nix still has an agent-user direct exec path that bypasses the root credential broker"
       (lib.hasInfix "id -u" source && lib.hasInfix "\"0\"" source && !lib.hasInfix "id -un" source);
 
-  launcher-credential-proxy =
+  launcher-iron-credential-proxy =
     let
       source = builtins.readFile ../../modules/agent-launcher.nix;
     in
-    mkCheck "launcher-credential-proxy"
-      "agent-launcher.nix generates nono custom_credentials with env:// URIs for credential proxy"
-      "agent-launcher.nix missing custom_credentials, env://, or env_var wiring — credential proxy not configured"
+    mkCheck "launcher-iron-credential-proxy"
+      "agent-launcher.nix wires credentialed agents to Iron tokens only"
+      "agent-launcher.nix must emit Iron credential token env and avoid nono custom_credentials"
       (
-        lib.hasInfix "custom_credentials" source
-        && lib.hasInfix "env://" source
-        && lib.hasInfix "env_var" source
+        lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKENS" source
+        && lib.hasInfix "ironProxyTokenNameFor" source
         && lib.hasInfix "credentialServices" source
         && !lib.hasInfix "credential-proxy.py" source
+        && !lib.hasInfix "custom_credentials" source
+        && !lib.hasInfix "env://" source
+        && !lib.hasInfix "credentialProxy" source
       );
 
   launcher-extra-deny =
@@ -1368,33 +1370,34 @@ in
         && lib.hasInfix ''export LOGNAME="$AGENT_RUN_AS_USER"'' source
       );
 
-  wrapper-no-credential-drop-before-nono =
+  wrapper-drop-before-nono =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
-    mkCheck "wrapper-no-credential-drop-before-nono"
-      "agent-wrapper.sh drops to the agent UID before nono when no root-brokered credentials are needed"
-      "agent-wrapper.sh applies nono before setpriv even for no-credential subscription-auth agents"
+    mkCheck "wrapper-drop-before-nono"
+      "agent-wrapper.sh always drops to the agent UID before invoking nono"
+      "agent-wrapper.sh must apply setpriv before nono"
       (
-        lib.hasInfix "cred_pairs[@]" source
-        && lib.hasInfix "== 0" source
-        && lib.hasInfix "nono_args[@]" source
+        lib.hasInfix "nono_args[@]" source
         && lib.hasInfix ''--reuid "$AGENT_RUN_AS_UID"'' source
+        && lib.hasInfix "nono_bin" source
+        && !(lib.hasInfix "child_script" source)
       );
 
-  wrapper-credential-proxy-flow =
+  wrapper-iron-credential-flow =
     let
       source = builtins.readFile ../../scripts/agent-wrapper.sh;
     in
-    mkCheck "wrapper-credential-proxy-flow"
-      "agent-wrapper.sh loads secrets for nono but forwards only phantom proxy env to children"
-      "agent-wrapper.sh credential flow must not re-export raw credential env vars to the child"
+    mkCheck "wrapper-iron-credential-flow"
+      "agent-wrapper.sh forwards only Iron placeholder tokens to children"
+      "agent-wrapper.sh credential flow must not read raw secret files or nono credential proxy env"
       (
-        lib.hasInfix "AGENT_CREDENTIAL_SECRETS" source
-        && lib.hasInfix "/run/secrets/" source
-        && lib.hasInfix "env://" source
-        && lib.hasInfix "env_var%_API_KEY" source
-        && !(lib.hasInfix ''credential_env_names+=("$env_var")'' source)
+        lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKENS" source
+        && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" source
+        && lib.hasInfix "iron_token_values" source
+        && !(lib.hasInfix "AGENT_CREDENTIAL_SECRETS" source)
+        && !(lib.hasInfix "/run/secrets/" source)
+        && !(lib.hasInfix "NONO_PROXY_TOKEN" source)
       );
 
   wrapper-supply-chain-hardening =
@@ -1509,9 +1512,10 @@ in
         lib.hasInfix "sudoGroups" source
         && lib.hasInfix "scopeAccess" source
         && lib.hasInfix "extraReadPaths" source
+        && lib.hasInfix "extraAllowPaths" source
         && lib.hasInfix "AGENT_SCOPE_ACCESS" wrapperSource
         && lib.hasInfix "AGENT_EXTRA_READ_PATHS_FILE" wrapperSource
-        && lib.hasInfix "AGENT_NONO_PROXY_PORT_START" wrapperSource
+        && lib.hasInfix "AGENT_EXTRA_ALLOW_PATHS_FILE" wrapperSource
       );
 
   launcher-can-drop-agent-uid =

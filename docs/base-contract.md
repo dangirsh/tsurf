@@ -52,9 +52,8 @@ Iron is the public credential and model-key mediation path. The child process
 gets provider-shaped placeholder credentials plus proxy/CA environment variables;
 `iron-proxy` owns the real provider keys and replaces placeholders at egress.
 
-`nono` remains the local filesystem/process sandbox. Its legacy provider
-credential proxy is compatibility debt and should not be used for new public
-examples.
+`nono` remains the local filesystem/process sandbox. Public modules do not carry
+a second nono-backed provider credential path.
 
 ## Cache Contract
 

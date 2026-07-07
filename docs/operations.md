@@ -52,7 +52,7 @@ After cloning the repo:
 | `nix run .#persistence-audit` | Print the merged `/persist` manifest for the eval fixtures |
 | `nix run .#nixos-anywhere -- ...` | Use the pinned `nixos-anywhere` input |
 | `nix build .#vm-test-sandbox` | Run the VM sandbox smoke test (requires KVM) |
-| `nix build .#vm-test-credential-proxy` | Run the VM credential proxy proof (requires KVM) |
+| `nix build .#vm-test-credential-proxy` | Run the VM Iron credential replacement proof (requires KVM) |
 
 ## Testing
 
@@ -70,7 +70,8 @@ The main validation paths in the public repo are:
 - `nix build .#vm-test-sandbox`
   Reproducible VM-level smoke test for user and secret separation.
 - `nix build .#vm-test-credential-proxy`
-  VM-level proof for brokered credentials and strict nono proxy behavior.
+  VM-level proof for Iron credential replacement through the launcher and nono
+  sandbox path.
 
 The repository also ships `.github/CODEOWNERS`. Keep branch protection or a
 repository ruleset enabled so normal changes land through PRs with `eval-checks`

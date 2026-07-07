@@ -65,23 +65,21 @@ caller
 ```
 
 Iron-backed mediation is the intended public credential path. The legacy `nono`
-credential-proxy path remains temporarily available per agent via
-`credentialProxy = "nono"` and is still covered by the VM credential-proxy test,
-but it is compatibility debt and should not be used for new public examples.
+credential path is not part of the public base.
 
 Security properties of that path:
 
 - `security.sudo.extraRules` exposes only immutable launchers. There is no
   generic root helper.
 - The launcher bakes in the real binary path, the nono profile path, and the
-  credential secret pairs.
+  Iron credential token metadata.
 - The launcher rejects any real binary outside `/nix/store`.
 - Launch events go to journald only (`journalctl -t agent-launch`).
 - The public path has no `--no-sandbox` or `AGENT_ALLOW_NOSANDBOX` escape hatch.
 
 Verification status:
 
-- Eval checks verify the wrapper, profile, and `env://` credential wiring.
+- Eval checks verify the wrapper, profile, and Iron credential wiring.
 - The repo includes a VM fake-provider test that exercises the brokered
   request path and proves the child does not receive the real provider key.
 
@@ -132,28 +130,19 @@ Storage:
 
 Injection model:
 
-- Each wrapper carries an `AGENT_CREDENTIAL_SECRETS` allowlist of
-  `ENV_VAR:secret-file-name` pairs.
-- Iron-backed agents do not read those files in the wrapper. They receive
-  provider-shaped placeholder credentials and explicit proxy/CA environment
-  variables. `iron-proxy` reads real provider keys from a sops-rendered
-  environment file and replaces placeholders at egress.
-- Legacy `nono` credential-proxy agents read only the named secret files from
-  `/run/secrets`. nono's per-agent profile defines `custom_credentials` with
-  `env://` URIs, reads the real keys from the parent env before applying the
-  sandbox, starts its built-in reverse proxy with 256-bit phantom tokens, and
-  strips real keys from the child environment for supported wrapper paths.
+- Credentialed wrappers carry `AGENT_IRON_CREDENTIAL_TOKENS`, which maps child
+  provider environment variables to generated Iron placeholder token names.
+- The wrapper reads only the Iron token file, not raw provider secrets. It
+  exports provider-shaped placeholder credentials and explicit proxy/CA
+  environment variables.
+- `iron-proxy` reads real provider keys from a sops-rendered environment file
+  and replaces placeholders at egress.
 
-For Iron-backed wrapper paths, the child should get:
+For credentialed wrapper paths, the child should get:
 
 - provider-shaped placeholder variables such as `ANTHROPIC_API_KEY`
 - `HTTP_PROXY` / `HTTPS_PROXY` pointing at the loopback Iron tunnel listener
 - CA trust variables scoped to the child environment
-
-For legacy `nono` credential-proxy wrapper paths, the child should get:
-
-- a per-session phantom token via `NONO_PROXY_TOKEN`
-- a localhost base URL such as `ANTHROPIC_BASE_URL=http://127.0.0.1:<port>/anthropic`
 
 For supported wrapper paths, the child should not get:
 
@@ -192,17 +181,15 @@ Agent egress:
 - The dev fixture enables this Iron-backed mode by default.
 - The base `nono` profile sets `network.block = true`. Iron-backed generated
   profiles disable nono network blocking so the child can reach only the
-  host-allowed loopback proxy ports. Legacy `nono` credential-proxy wrappers
-  still get nono reverse-proxy routes for configured providers, and arbitrary
-  CONNECT traffic through nono's root-side proxy is strict-filtered.
+  host-allowed Iron loopback proxy ports.
 - Host egress for direct agent-UID traffic is enforced in nftables by
   `meta skuid`. Drops are logged by default with `tsurf-agent-egress-*`
   prefixes before being dropped.
 - Default allowed traffic for the agent UID in legacy direct-egress mode is:
-  - loopback TCP ports `20000-20199`, reserved for per-launch nono credential
-    proxies
   - DNS on TCP/UDP `53`
   - TCP `22`, `80`, and `443`
+- When Iron-backed mediated-only mode is enabled, default direct agent-UID
+  traffic is limited to the fixed Iron loopback listener ports.
 - Default denied traffic for the agent UID includes:
   - other loopback TCP ports unless explicitly added to
     `tsurf.agentEgress.allowedLoopbackTCPPorts`
@@ -248,10 +235,9 @@ that as an explicit risk.
   `niks3.numtide.com-1` public key. Treat that cache as part of the build trust
   root for binaries it serves.
 - `nono` is built from pinned source (`rustPlatform.buildRustPackage`).
-  The build runs bounded tests for tsurf's carried `env://` credential patch
-  and the removed broad `/run` default-policy grants, plus an install-time CLI
-  smoke check. Patch files live under `packages/` and should be reviewed when
-  upstream nono is updated.
+  The build checks that upstream default policy has not regained broad `/run`
+  grants, plus an install-time CLI smoke check. Patch files live under
+  `packages/` and should be reviewed when upstream nono is updated.
 - `iron-proxy` is built from pinned source (`buildGoModule`). Its install check
   verifies the reported version and CA generation command.
   Remaining prebuilt binaries are SHA256-pinned. `cass` is an opt-in extra
@@ -280,7 +266,7 @@ Eval-time checks:
 - [`tests/eval/config-checks.nix`](tests/eval/config-checks.nix)
   covers public-output safety, placeholder isolation, firewall exposure,
   root-key requirements, Nix daemon restrictions, sandbox structure, launcher
-  hardening, and root-side credential broker structure.
+  hardening, and Iron credential broker structure.
 
 Runtime checks:
 
@@ -301,8 +287,8 @@ Runtime checks:
 - [`tests/vm/sandbox-behavioral.nix`](tests/vm/sandbox-behavioral.nix)
   is the reproducible VM smoke test.
 - [`tests/vm/credential-proxy.nix`](tests/vm/credential-proxy.nix)
-  proves a brokered fake-provider request keeps the raw provider key out of the
-  child environment while the upstream receives the injected header.
+  proves an Iron-brokered fake-provider request keeps the raw provider key out
+  of the child environment while the upstream receives the injected header.
 
 ## Accepted Risks
 

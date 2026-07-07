@@ -19,7 +19,6 @@ let
   allowedAgentLoopbackTcpPorts = lib.concatStringsSep ", " (
     map toString egressCfg.allowedLoopbackTCPPorts
   );
-  nonoProxyTcpPortRange = "${toString egressCfg.nonoProxyTCPPortRange.from}-${toString egressCfg.nonoProxyTCPPortRange.to}";
   blockedAgentIpv4Cidrs = lib.concatStringsSep ", " egressCfg.blockedIPv4Cidrs;
   blockedAgentIpv6Cidrs = lib.concatStringsSep ", " egressCfg.blockedIPv6Cidrs;
   dropAction =
@@ -60,21 +59,7 @@ in
     allowedLoopbackTCPPorts = lib.mkOption {
       type = lib.types.listOf lib.types.port;
       default = [ ];
-      description = "Additional loopback TCP destination ports agents may reach. The nono proxy range is allowed separately.";
-    };
-
-    nonoProxyTCPPortRange = {
-      from = lib.mkOption {
-        type = lib.types.port;
-        default = 20000;
-        description = "First loopback TCP port reserved for nono credential proxies.";
-      };
-
-      to = lib.mkOption {
-        type = lib.types.port;
-        default = 20199;
-        description = "Last loopback TCP port reserved for nono credential proxies.";
-      };
+      description = "Loopback TCP destination ports agents may reach, such as the Iron proxy listeners.";
     };
 
     blockPrivateRanges = lib.mkOption {
@@ -114,10 +99,6 @@ in
   config = {
     assertions = [
       {
-        assertion = egressCfg.nonoProxyTCPPortRange.from <= egressCfg.nonoProxyTCPPortRange.to;
-        message = "tsurf.agentEgress.nonoProxyTCPPortRange.from must be <= .to.";
-      }
-      {
         assertion = exposed == [ ];
         message = "SECURITY: Internal service ports leaked into allowedTCPPorts: ${lib.concatStringsSep ", " exposedNames}. These must remain localhost-only.";
       }
@@ -154,11 +135,6 @@ in
               type inet_service;
               elements = { ${allowedAgentTcpPorts} }
             }
-            set tsurf_agent_nono_proxy_tcp_ports {
-              type inet_service;
-              flags interval;
-              elements = { ${nonoProxyTcpPortRange} }
-            }
           ${lib.optionalString (egressCfg.allowedLoopbackTCPPorts != [ ]) ''
             set tsurf_agent_allowed_loopback_tcp_ports {
               type inet_service;
@@ -168,7 +144,6 @@ in
 
             chain output {
               type filter hook output priority 0; policy accept;
-              meta skuid ${toString agentCfg.uid} oifname "lo" tcp dport @tsurf_agent_nono_proxy_tcp_ports accept
             ${lib.optionalString (egressCfg.allowedLoopbackTCPPorts != [ ]) ''
               meta skuid ${toString agentCfg.uid} oifname "lo" tcp dport @tsurf_agent_allowed_loopback_tcp_ports accept
             ''}

@@ -14,23 +14,15 @@ let
   codexChild = pkgs.writeShellApplication {
     name = "${cfg.wrapperName}-child";
     text = ''
-      if [[ -n "''${OPENROUTER_API_KEY:-}" ]]; then
-        openrouter_base_url=${lib.escapeShellArg cfg.baseUrl}
-        openrouter_env_key=OPENROUTER_API_KEY
-      else
-        : "''${NONO_PROXY_TOKEN:?missing nono proxy token}"
-        : "''${OPENROUTER_BASE_URL:?missing OpenRouter proxy base URL}"
-        openrouter_base_url="$OPENROUTER_BASE_URL"
-        openrouter_env_key=NONO_PROXY_TOKEN
-      fi
+      : "''${OPENROUTER_API_KEY:?missing OpenRouter Iron proxy token}"
 
       exec ${cfg.package}/bin/codex \
         -m ${lib.escapeShellArg cfg.model} \
         -c ${lib.escapeShellArg "model_provider=\"${cfg.providerId}\""} \
         -c ${lib.escapeShellArg "model_providers.${cfg.providerId}.name=\"${cfg.providerName}\""} \
-        -c "model_providers.${cfg.providerId}.base_url=\"$openrouter_base_url\"" \
+        -c ${lib.escapeShellArg "model_providers.${cfg.providerId}.base_url=\"${cfg.baseUrl}\""} \
         -c ${lib.escapeShellArg "model_providers.${cfg.providerId}.wire_api=\"responses\""} \
-        -c "model_providers.${cfg.providerId}.env_key=\"$openrouter_env_key\"" \
+        -c ${lib.escapeShellArg "model_providers.${cfg.providerId}.env_key=\"OPENROUTER_API_KEY\""} \
         "$@"
     '';
   };
@@ -72,7 +64,7 @@ in
     baseUrl = lib.mkOption {
       type = lib.types.str;
       default = "https://openrouter.ai/api/v1";
-      description = "OpenRouter OpenAI-compatible upstream base URL used by the nono credential proxy.";
+      description = "OpenRouter OpenAI-compatible upstream base URL used through the Iron proxy.";
     };
 
     secretName = lib.mkOption {

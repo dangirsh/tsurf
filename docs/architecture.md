@@ -67,8 +67,7 @@ Important behavior from the shipped implementation:
 - The wrapper refuses to grant blanket read access to the entire project root.
 - Supported API wrappers keep raw provider keys in the Iron service environment.
   The child gets provider-shaped placeholder credentials plus proxy/CA
-  environment variables. Legacy `nono` credential-proxy mode is compatibility
-  debt and should not be used for new public examples.
+  environment variables.
 - Public core installs wrapper binaries, not raw interactive agent binaries, as
   the intended entrypoints.
 

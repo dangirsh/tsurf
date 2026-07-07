@@ -21,8 +21,6 @@ The remaining target shape is:
 - boundary-side credential injection
 - per-request audit logs
 - policy management that can scale across multiple agent hosts
-- removal of the legacy `nono` provider credential proxy from the public happy
-  path
 
 Keep provider credential brokering and general egress mediation aligned. Avoid
 creating two unrelated policy systems unless there is a clear reason.
@@ -33,11 +31,10 @@ recommended keeping `nono` as the default local sandbox and prototyping
 `iron-proxy` as the egress and richer credential-broker layer.
 
 Implementation status: `modules/agent-egress-proxy.nix` packages and runs
-`iron-proxy`, generated agents can use Iron as the default credential proxy,
-and nftables switches to mediated-only agent UID egress when Iron is enabled.
+`iron-proxy`, generated agents use Iron for credential replacement, and
+nftables switches to mediated-only agent UID egress when Iron is enabled.
 Remaining work is live-host validation, provider SDK compatibility hardening,
-removing the legacy `nono` credential-proxy compatibility path, and richer
-per-agent policy bundles.
+and richer per-agent policy bundles.
 
 ## Validation Integrity
 
@@ -53,8 +50,5 @@ Next steps:
   workstations should use `--all-systems --no-build` for local evaluation
 - reduce source-text guards and keep only structural checks that cannot be
   expressed behaviorally
-- replace the legacy fake-provider `nono` credential-proxy VM proof with an
-  Iron-backed credential replacement proof
 - add more focused runtime tests for egress denial and wrapper execution paths
-- add a bounded `nono` patched-behavior test instead of relying only on
-  `nono --help`
+  beyond the existing Iron-backed credential replacement VM proof
