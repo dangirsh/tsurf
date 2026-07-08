@@ -797,10 +797,12 @@ in
           devCfg.services.agentLauncher.egressProxy.credentialTokenFile
           == "/var/lib/tsurf-agent-egress-proxy/credential-tokens.env"
         && devCfg.services.agentLauncher.egressProxy.credentialTokenGroup == "iron-proxy"
+        && devCfg.services.agentEgressProxy.metricsPort == 9090
         && !(lib.hasInfix "-proxy-token" credentialServicesSource)
         && lib.hasInfix "credential-tokens.env" egressProxySource
         && lib.hasInfix ''chmod 0440 "$token_file"'' egressProxySource
         && lib.hasInfix "runtimeConfigFile" egressProxySource
+        && lib.hasInfix ''metrics.listen = "127.0.0.1:'' egressProxySource
         && lib.hasInfix ''chmod 0600 "$runtime_config"'' egressProxySource
         && lib.hasInfix "openssl rand -hex 32" egressProxySource
         && lib.hasInfix "SupplementaryGroups" launcherSource

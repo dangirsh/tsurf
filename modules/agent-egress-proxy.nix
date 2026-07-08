@@ -119,6 +119,7 @@ let
       cert_cache_size = cfg.certCacheSize;
       leaf_cert_expiry_hours = cfg.leafCertExpiryHours;
     };
+    metrics.listen = "127.0.0.1:${toString cfg.metricsPort}";
     inherit transforms;
     log.level = cfg.logLevel;
   };
@@ -177,6 +178,12 @@ in
       type = lib.types.port;
       default = 20208;
       description = "Loopback CONNECT/SOCKS5 tunnel listener port exposed to agents.";
+    };
+
+    metricsPort = lib.mkOption {
+      type = lib.types.port;
+      default = 9090;
+      description = "Loopback metrics and health listener port for iron-proxy.";
     };
 
     extraAllowedHosts = lib.mkOption {
