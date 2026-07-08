@@ -1,72 +1,73 @@
-# QUICKSTART
+# Quickstart
 
-Start here if you are new to tsurf. The intended shape is one-owner,
-self-sovereign agent infrastructure; read
-[`docs/base-contract.md`](docs/base-contract.md) before adding services.
+Use `tsurf` as a public base plus a private overlay. The public repo does not
+deploy real hosts.
 
 ## Prerequisites
 
-- Nix installed with flakes enabled.
-- A separate private Git repository for your real hosts/secrets.
+- Nix with flakes enabled.
+- A private Git repo for real hosts, secrets, domains, and app config.
 
-## 1) Agent-Guided Setup
+## 1. Create A Private Overlay
 
-Use the repo-local skills in [`skills/`](skills/) when an agent is doing the
-setup work:
+```bash
+cp -R examples/private-overlay /path/to/private-tsurf
+cd /path/to/private-tsurf
+```
 
-1. `tsurf-host-discovery`: inspect the host and classify storage/networking.
-2. `tsurf-overlay-authoring`: write or update the private overlay.
-3. `tsurf-deploy-validation`: validate and prepare the deploy.
+Edit the copied files:
 
-This is the preferred path when the host may differ from the public examples.
+- point `tsurf.url` at the public base you want to use
+- replace `REPLACE` placeholders
+- add real host hardware, disks, IPs, and DNS
 
-## 2) Validate The Public Template
+## 2. Initialize Root SSH
+
+```bash
+nix run /path/to/tsurf#tsurf-init -- --overlay-dir .
+```
+
+Use a TTY so the helper can prompt for a passphrase. For automation, use
+`--passphrase-file <path>`. Use `--no-passphrase` only when you explicitly
+accept an unencrypted root key.
+
+## 3. Configure Secrets
+
+1. Replace placeholder age recipients in `.sops.yaml`.
+2. Create and encrypt the host secrets file with `sops`.
+3. Import secret modules only after the host has persisted SSH host keys and a
+   real encrypted sops file.
+
+## 4. Deploy From The Overlay
+
+```bash
+./scripts/deploy.sh --node <node> --first-deploy
+```
+
+After first adoption, normal deploys are:
+
+```bash
+./scripts/deploy.sh --node <node>
+```
+
+## Agent-Guided Setup
+
+When an agent is doing the setup work, use the repo-local skills:
+
+- `tsurf-host-discovery`
+- `tsurf-overlay-authoring`
+- `tsurf-deploy-validation`
+
+## Public Repo Validation
 
 ```bash
 git config core.hooksPath .githooks
 ./scripts/run-tests.sh
 ```
 
-## 3) Private Overlay
+## Next
 
-1. Copy [`examples/private-overlay/`](examples/private-overlay/) into a new private repository.
-2. Replace placeholders in `flake.nix` (`tsurf.url`, hostname, `REPLACE` values).
-3. Generate a real root SSH key:
-
-```bash
-nix run .#tsurf-init -- --overlay-dir .
-```
-
-Run this from a TTY to enter a root-key passphrase. For automation, pass
-`--passphrase-file <path>` or make the unencrypted-key risk explicit with
-`--no-passphrase`.
-
-If you run initialization on the target host, add `--age` to derive a sops age identity from the persisted SSH host key.
-
-Full template walkthrough: [`examples/private-overlay/README.md`](examples/private-overlay/README.md)
-
-## 4) Configure secrets (sops-nix)
-
-1. Replace placeholder age recipients in `.sops.yaml`.
-2. Create a host secrets file (for example `secrets/example.yaml`) and encrypt it with `sops`.
-3. Import host networking/secrets modules in your private overlay after SSH host key persistence is configured.
-
-## 5) First deploy
-
-```bash
-./scripts/deploy.sh --node example --first-deploy
-```
-
-## 6) Enable extras (opt-in)
-
-Extras are opt-in in private overlays: import the module you want and set its enable option explicitly.
-Reference: [`docs/extras.md`](docs/extras.md)
-
-Headscale and Harmonia cache are core base modules, but they still need private
-overlay settings for domains, keys, ACLs, and allowlists before deployment.
-
-## Next Steps
-
-- Security model: [`SECURITY.md`](SECURITY.md)
-- System design: [`docs/architecture.md`](docs/architecture.md)
-- Public/private base contract: [`docs/base-contract.md`](docs/base-contract.md)
+- Boundary: [`docs/base-contract.md`](docs/base-contract.md)
+- Example overlay: [`examples/private-overlay/`](examples/private-overlay/)
+- Operations: [`docs/operations.md`](docs/operations.md)
+- Security: [`SECURITY.md`](SECURITY.md)

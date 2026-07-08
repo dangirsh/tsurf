@@ -54,10 +54,10 @@ caller
     -> sudo immutable launcher
       -> systemd-run transient unit
         -> scripts/agent-wrapper.sh
-          -> nono sandbox
           -> setpriv drop to the configured agent user
-          -> real agent binary
-          -> iron-proxy on loopback for HTTP(S) egress and credential replacement
+          -> nono sandbox
+            -> real agent binary
+              -> iron-proxy on loopback for HTTP(S) egress and credential replacement
 ```
 
 Important behavior from the shipped implementation:

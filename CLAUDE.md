@@ -33,8 +33,8 @@ Important current truths:
   committed plaintext.
 - Preserve `@decision` annotations on security-relevant modules.
 - Use `tmp/` in the repo root for temporary files.
-- Do not rewrite the README introduction above `## Setup`. Only make small
-  correctness fixes there when necessary.
+- Keep the README concise and high-level. Put operational detail in focused docs
+  instead of the top-level README.
 
 ## Security Rules
 

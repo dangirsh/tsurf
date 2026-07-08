@@ -10,7 +10,7 @@ the enable option only when you actually need it.
 |------|-----------------|--------------|-------|
 | `extras/cass.nix` | Import + `services.cassIndexer.enable = true` | Low-priority system timer that refreshes the CASS session index | Runs as the dedicated agent user with CPU/memory throttling |
 | `extras/codex.nix` | `services.codexAgent.enable = true` | Optional sandboxed `codex` wrapper | Requires `agentLauncher` and `nonoSandbox`; defaults to the `openai-api-key` secret and isolated `/home/agent/.codex-openai` state |
-| `extras/codex-openrouter.nix` | `services.codexOpenRouterAgent.enable = true` | Optional OpenRouter-backed `codex-openrouter` wrapper | Defaults to `z-ai/glm-5.2` through the configured credential proxy and `openrouter-api-key` secret |
+| `extras/codex-openrouter.nix` | `services.codexOpenRouterAgent.enable = true` | Optional OpenRouter-backed `codex-openrouter` wrapper | Defaults to `z-ai/glm-5.2` through Iron and the `openrouter-api-key` secret |
 | `extras/restic.nix` | `services.resticStarter.enable = true` | Restic backups to a Backblaze B2 S3 endpoint | Requires `services.resticStarter.repository`; declares its own B2/restic SOPS secrets and environment template when enabled |
 | `extras/home/` | `home-manager.users.<name> = import ../../extras/home;` | Home-manager profile for the agent user | Installs git, gh, ssh, and direnv defaults |
 

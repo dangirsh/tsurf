@@ -58,8 +58,8 @@ caller
     -> sudo tsurf-launch-<agent>
       -> systemd-run transient unit
         -> scripts/agent-wrapper.sh
-          -> nono run --profile /etc/nono/profiles/tsurf-<name>.json
-            -> setpriv drop to the configured agent user
+          -> setpriv drop to the configured agent user
+            -> nono run --profile /etc/nono/profiles/tsurf-<name>.json
               -> real agent binary
                 -> iron-proxy on loopback (credential replacement and egress policy)
 ```
