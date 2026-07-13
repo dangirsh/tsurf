@@ -137,7 +137,9 @@ let
       exit 1
     fi
     escaped_token_value="$(printf '%s' "$token_value" | ${pkgs.gnused}/bin/sed 's/[\/&]/\\&/g')"
-    ${pkgs.gnused}/bin/sed -i "s/@${tokenName}@/$escaped_token_value/g" "$runtime_config"
+    ${pkgs.gnused}/bin/sed "s/@${tokenName}@/$escaped_token_value/g" "$runtime_config" > "$runtime_config.next"
+    chmod 0600 "$runtime_config.next"
+    mv -f "$runtime_config.next" "$runtime_config"
   '') credentialTokenNames;
 in
 {
@@ -295,6 +297,9 @@ in
 
     environment.systemPackages = [ cfg.package ];
     environment.persistence."/persist".directories = [ stateDir ];
+    systemd.tmpfiles.rules = [
+      "z ${tokenFile} 0440 ${cfg.user} ${cfg.group} -"
+    ];
 
     sops.templates = lib.optionalAttrs (credentialEnvLines != [ ]) {
       "iron-agent-egress-env" = {
@@ -322,6 +327,7 @@ in
       ];
       preStart = ''
         set -euo pipefail
+        umask 077
         token_file=${lib.escapeShellArg tokenFile}
         runtime_config=${lib.escapeShellArg runtimeConfigFile}
         if [ ! -s ${lib.escapeShellArg caCertPath} ] || [ ! -s ${lib.escapeShellArg caKeyPath} ]; then
@@ -335,7 +341,10 @@ in
         chmod 0444 ${lib.escapeShellArg caCertPath}
         chmod 0400 ${lib.escapeShellArg caKeyPath}
         touch "$token_file"
-        chgrp ${lib.escapeShellArg cfg.group} "$token_file"
+        if [ "$(stat -c %G -- "$token_file")" != ${lib.escapeShellArg cfg.group} ]; then
+          echo "Iron credential token file has an unexpected group" >&2
+          exit 1
+        fi
         chmod 0640 "$token_file"
         ${credentialTokenSetup}
         chmod 0440 "$token_file"

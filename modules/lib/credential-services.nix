@@ -39,8 +39,16 @@ let
 
   credentialDefaultsFor =
     agentDef: svc:
-    credentialServiceDefaults.${svc}
-    // lib.filterAttrs (_: value: value != null) (agentDef.credentialOverrides.${svc} or { });
+    let
+      overrides = lib.filterAttrs (_: value: value != null) (agentDef.credentialOverrides.${svc} or { });
+      merged = credentialServiceDefaults.${svc} // overrides;
+    in
+    merged
+    // lib.optionalAttrs (overrides ? upstream) {
+      # Keep the Iron allowlist and secret-replacement rule aligned with a
+      # caller-provided upstream instead of retaining the default host.
+      hosts = [ (urlHost overrides.upstream) ];
+    };
 
   ironProxyTokenNameFor =
     svc: defaults:

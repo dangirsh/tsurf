@@ -710,8 +710,12 @@ in
         in
         lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKENS" src
         && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" src
+        && lib.hasInfix "AGENT_CHILD_ENV_HELPER" src
         && lib.hasInfix "TSURF_IRON_TOKEN_" src
+        && lib.hasInfix ''3<"$token_file"'' src
         && lib.hasInfix "setpriv" src
+        && !(lib.hasInfix "iron_token_values" src)
+        && !(lib.hasInfix ''agent_env+=("$env_var=$proxy_token")'' src)
         && !(lib.hasInfix "AGENT_CREDENTIAL_SECRETS" src)
         && !(lib.hasInfix "/run/secrets/" src)
         && !(lib.hasInfix "NONO_PROXY_TOKEN" src)
@@ -799,13 +803,20 @@ in
         && devCfg.services.agentLauncher.egressProxy.credentialTokenGroup == "iron-proxy"
         && devCfg.services.agentEgressProxy.metricsPort == 9090
         && !(lib.hasInfix "-proxy-token" credentialServicesSource)
+        && lib.hasInfix "hosts = [ (urlHost overrides.upstream) ]" credentialServicesSource
         && lib.hasInfix "credential-tokens.env" egressProxySource
         && lib.hasInfix ''chmod 0440 "$token_file"'' egressProxySource
+        && lib.hasInfix "\"z \${tokenFile} 0440 \${cfg.user} \${cfg.group} -\"" egressProxySource
+        && !(lib.hasInfix "chgrp" egressProxySource)
+        && lib.hasInfix "umask 077" egressProxySource
+        && !(lib.hasInfix "sed -i" egressProxySource)
         && lib.hasInfix "runtimeConfigFile" egressProxySource
         && lib.hasInfix ''metrics.listen = "127.0.0.1:'' egressProxySource
         && lib.hasInfix ''chmod 0600 "$runtime_config"'' egressProxySource
         && lib.hasInfix "openssl rand -hex 32" egressProxySource
         && lib.hasInfix "SupplementaryGroups" launcherSource
+        && lib.hasInfix "PrivatePIDs=yes" launcherSource
+        && lib.hasInfix "AGENT_CHILD_ENV_HELPER" launcherSource
         && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" launcherSource
         && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" wrapperSource
       );
@@ -1400,7 +1411,10 @@ in
       (
         lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKENS" source
         && lib.hasInfix "AGENT_IRON_CREDENTIAL_TOKEN_FILE" source
-        && lib.hasInfix "iron_token_values" source
+        && lib.hasInfix "AGENT_CHILD_ENV_HELPER" source
+        && lib.hasInfix ''3<"$token_file"'' source
+        && !(lib.hasInfix "iron_token_values" source)
+        && !(lib.hasInfix ''agent_env+=("$env_var=$proxy_token")'' source)
         && !(lib.hasInfix "AGENT_CREDENTIAL_SECRETS" source)
         && !(lib.hasInfix "/run/secrets/" source)
         && !(lib.hasInfix "NONO_PROXY_TOKEN" source)

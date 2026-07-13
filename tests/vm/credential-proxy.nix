@@ -62,10 +62,14 @@ let
         fail "child reached direct loopback fake provider"
       fi
 
+      # Production provider traffic is HTTPS and therefore uses Iron's tunnel
+      # listener above. The in-VM fake upstream is plain HTTP, so exercise the
+      # same replacement rules through Iron's HTTP listener.
+      test_http_proxy="http://127.0.0.1:20280"
       http_code="$(
         curl --connect-timeout 2 --max-time 15 -sS -o "$PWD/upstream-response.json" -w '%{http_code}' \
           --noproxy "" \
-          -x "$HTTP_PROXY" \
+          -x "$test_http_proxy" \
           -X POST \
           -H "Authorization: Bearer $OPENROUTER_API_KEY" \
           -H "Content-Type: application/json" \
@@ -160,6 +164,9 @@ pkgs.testers.nixosTest {
         services.agentLauncher.scopeAccess = "allow";
         services.agentEgressProxy.enable = true;
         services.agentEgressProxy.package = ironProxyPackage;
+        # Test-only: the fake upstream is loopback. Production keeps Iron's
+        # default private-address deny policy.
+        services.agentEgressProxy.upstreamDenyCIDRs = [ ];
         services.nonoSandbox.enable = true;
 
         services.agentLauncher.agents.credential-probe = {
@@ -189,9 +196,10 @@ pkgs.testers.nixosTest {
           chown ${config.tsurf.agent.user}:${config.tsurf.agent.user} /data/projects/credential-probe/README.md
 
           install -d -m 0755 -o ${config.tsurf.agent.user} -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}
-          install -d -m 0700 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono
-          install -d -m 0700 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono/sessions
-          install -d -m 0700 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono/rollbacks
+          install -d -m 0750 -o root -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono
+          install -d -m 0700 -o ${config.tsurf.agent.user} -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono/audit
+          install -d -m 0700 -o ${config.tsurf.agent.user} -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono/sessions
+          install -d -m 0700 -o ${config.tsurf.agent.user} -g ${config.tsurf.agent.user} ${config.tsurf.agent.home}/.nono/rollbacks
 
           install -d -m 0755 /run/secrets
           printf 'test-openrouter-secret' > /run/secrets/openrouter-api-key
@@ -224,9 +232,10 @@ pkgs.testers.nixosTest {
             printf 'credential proxy workspace\\n' > /data/projects/credential-probe/README.md
             chown agent:agent /data/projects/credential-probe/README.md
             install -d -m 0755 -o agent -g agent /home/agent
-            install -d -m 0700 -o root -g agent /home/agent/.nono
-            install -d -m 0700 -o root -g agent /home/agent/.nono/sessions
-            install -d -m 0700 -o root -g agent /home/agent/.nono/rollbacks
+            install -d -m 0750 -o root -g agent /home/agent/.nono
+            install -d -m 0700 -o agent -g agent /home/agent/.nono/audit
+            install -d -m 0700 -o agent -g agent /home/agent/.nono/sessions
+            install -d -m 0700 -o agent -g agent /home/agent/.nono/rollbacks
             """
         )
     )
@@ -275,11 +284,53 @@ pkgs.testers.nixosTest {
         "python3 /tmp/fake-provider.py >/tmp/fake-provider.log 2>&1 & echo $! >/tmp/fake-provider.pid"
     )
     machine.wait_until_succeeds("curl -fsS http://127.0.0.1:18080/health")
-    machine.wait_for_unit("tsurf-agent-egress-proxy.service")
+    machine.wait_for_unit("tsurf-agent-egress-proxy.service", timeout=60)
 
     machine.succeed(
+        textwrap.dedent(
+            r"""
+            awk -F= '$1 == "TSURF_IRON_TOKEN_OPENROUTER" { print $2 }' \
+              /var/lib/tsurf-agent-egress-proxy/credential-tokens.env > /tmp/expected-iron-token
+            chmod 0600 /tmp/expected-iron-token
+            cat > /tmp/watch-agent-argv.py <<'PY'
+            import pathlib
+            import time
+
+            token = pathlib.Path("/tmp/expected-iron-token").read_bytes().strip()
+            deadline = time.monotonic() + 20
+            while time.monotonic() < deadline:
+                for path in pathlib.Path("/proc").glob("[0-9]*/cmdline"):
+                    try:
+                        if token and token in path.read_bytes():
+                            pathlib.Path("/tmp/iron-token-seen-in-argv").touch()
+                            raise SystemExit(1)
+                    except (FileNotFoundError, PermissionError, ProcessLookupError):
+                        pass
+                time.sleep(0.005)
+            PY
+            python3 /tmp/watch-agent-argv.py >/tmp/watch-agent-argv.log 2>&1 &
+            echo $! > /tmp/watch-agent-argv.pid
+            """
+        )
+    )
+
+    probe_status, _ = machine.execute(
         "sudo -u agent bash -lc 'cd /data/projects/credential-probe && credential-probe exec probe'"
     )
+    if probe_status != 0:
+        probe_result = machine.succeed(
+            "cat /data/projects/credential-probe/credential-proxy-result.env 2>/dev/null || true"
+        )
+        provider_request = machine.succeed(
+            "cat /tmp/fake-provider-request.json 2>/dev/null || printf no-provider-request"
+        )
+        raise Exception(
+            f"credential probe failed: {probe_result}; provider request: {provider_request}"
+        )
+    machine.wait_until_succeeds(
+        "! kill -0 $(cat /tmp/watch-agent-argv.pid)", timeout=30
+    )
+    machine.fail("test -e /tmp/iron-token-seen-in-argv")
 
     result = machine.succeed("cat /data/projects/credential-probe/credential-proxy-result.env")
     assert "PASS: Iron credential proxy child boundary held" in result, result

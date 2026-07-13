@@ -13,3 +13,9 @@
 - Real host deploys should come from the private overlay, not directly from this public repo.
 - Use the private overlay wrapper `./scripts/deploy.sh --node <node>` as the canonical deploy path.
 - Avoid direct `nixos-rebuild switch` on the target host except for explicit emergency recovery.
+
+# Security-Sensitive Agent Work
+
+- Never pass bearer tokens, OAuth secrets, cookies, or credential placeholders in process arguments. Use a root-only `EnvironmentFile` or an already-open descriptor, and add a regression test that polls `/proc/*/cmdline` with a fake sentinel.
+- Credential launcher changes must preserve the UID drop, nono sandbox, Iron substitution, and per-session PID isolation. Run the credential-proxy VM test before pushing.
+- Never print complete environments or secret-bearing configuration in task output. Query only the specific non-secret field needed for diagnosis.

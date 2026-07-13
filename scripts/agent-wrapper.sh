@@ -12,8 +12,9 @@
 #   AGENT_RUN_AS_HOME       — target HOME for the actual agent binary
 #   AGENT_CHILD_PATH        — PATH injected into the agent child after privilege drop
 #   AGENT_IRON_CREDENTIAL_TOKENS — space-separated "ENV_VAR:TOKEN_NAME" pairs
-#                              resolved from AGENT_IRON_CREDENTIAL_TOKEN_FILE
+#                              resolved after the UID drop from an inherited fd
 #                              and exported to the child for Iron proxying
+#   AGENT_CHILD_ENV_HELPER    — /nix/store helper that consumes token fd 3
 #   AGENT_EGRESS_PROXY_URL / CA_CERT / NO_PROXY — explicit Iron proxy settings
 #   AGENT_SCOPE_ACCESS       — "read" (default) or "allow" access to the current top-level workspace
 #   AGENT_EXTRA_READ_PATHS_FILE — optional /nix/store newline-delimited paths passed to nono with --read
@@ -24,8 +25,8 @@
 #   Only structured metadata is logged — no raw arguments, prompts, or file paths.
 #
 # @decision AUDIT-117-01: Single-sink journald launch logging. File-based audit log removed.
-# @decision SEC-IRON-01: Iron credential mode never loads raw secrets in this wrapper.
-#   The child gets provider-shaped placeholder tokens plus explicit proxy/CA env vars.
+# @decision SEC-IRON-01: Iron bearer values never enter launcher argv. A child
+#   helper consumes an inherited descriptor only after the UID drop.
 
 set -euo pipefail
 
@@ -41,6 +42,7 @@ PNPM_MIN_RELEASE_AGE_MINUTES=1440
 : "${AGENT_RUN_AS_GID:?must be set}"
 : "${AGENT_RUN_AS_HOME:?must be set}"
 : "${AGENT_CHILD_PATH:?must be set}"
+: "${AGENT_CHILD_ENV_HELPER:?must be set}"
 
 export HOME="$AGENT_RUN_AS_HOME"
 export USER="$AGENT_RUN_AS_USER"
@@ -50,6 +52,13 @@ case "$AGENT_REAL_BINARY" in
   /nix/store/*) ;;
   *)
     echo "ERROR: AGENT_REAL_BINARY must be in /nix/store" >&2
+    exit 1
+    ;;
+esac
+case "$AGENT_CHILD_ENV_HELPER" in
+  /nix/store/*) ;;
+  *)
+    echo "ERROR: AGENT_CHILD_ENV_HELPER must be in /nix/store" >&2
     exit 1
     ;;
 esac
@@ -135,6 +144,7 @@ append_path_file_args "EXTRA_READ" "${AGENT_EXTRA_READ_PATHS_FILE:-}" "--read"
 setpriv_bin="$(command -v setpriv)"
 env_bin="$(command -v env)"
 nono_bin="$(command -v nono)"
+bash_bin="$(command -v bash)"
 agent_env=(
   "HOME=$AGENT_RUN_AS_HOME"
   "USER=$AGENT_RUN_AS_USER"
@@ -159,35 +169,29 @@ if [[ -n "${AGENT_EGRESS_PROXY_CA_CERT:-}" ]]; then
   agent_env+=("GIT_SSL_CAINFO=$AGENT_EGRESS_PROXY_CA_CERT")
 fi
 IFS=' ' read -ra iron_pairs <<< "${AGENT_IRON_CREDENTIAL_TOKENS:-}"
+token_file=""
 if ((${#iron_pairs[@]} > 0)); then
   [[ -n "${AGENT_EGRESS_PROXY_URL:-}" ]] \
     || fail_launch "iron_proxy_unconfigured" "credentialed agents require AGENT_EGRESS_PROXY_URL"
 
-  declare -A iron_token_values=()
   token_file="${AGENT_IRON_CREDENTIAL_TOKEN_FILE:-}"
   if [[ -z "$token_file" || ! -r "$token_file" ]]; then
     fail_launch "missing_iron_credential_token_file" "Iron credential token file is not readable for $AGENT_NAME"
   fi
-  while IFS='=' read -r token_name token_value || [[ -n "$token_name" ]]; do
-    [[ -n "$token_name" ]] || continue
-    if [[ ! "$token_name" =~ ^TSURF_IRON_TOKEN_[A-Z0-9_]+$ || -z "$token_value" ]]; then
-      fail_launch "invalid_iron_credential_token_file" "invalid Iron credential token file entry for $AGENT_NAME"
-    fi
-    iron_token_values["$token_name"]="$token_value"
-  done < "$token_file"
 
+  declare -A iron_env_names=()
   for pair in "${iron_pairs[@]}"; do
     [[ -n "$pair" ]] || continue
-    IFS=: read -r env_var token_name <<< "$pair"
-    if [[ ! "$env_var" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || ! "$token_name" =~ ^TSURF_IRON_TOKEN_[A-Z0-9_]+$ ]]; then
+    IFS=: read -r env_var token_name extra <<< "$pair"
+    if [[ -n "${extra:-}" || ! "$env_var" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || ! "$token_name" =~ ^TSURF_IRON_TOKEN_[A-Z0-9_]+$ ]]; then
       fail_launch "invalid_iron_credential_token" "invalid Iron credential token entry for $AGENT_NAME"
     fi
-    if [[ -z "${iron_token_values[$token_name]+set}" ]]; then
-      fail_launch "missing_iron_credential_token" "missing Iron credential token $token_name for $AGENT_NAME"
+    if [[ -n "${iron_env_names[$env_var]+set}" ]]; then
+      fail_launch "duplicate_iron_credential_env" "duplicate Iron credential environment name for $AGENT_NAME"
     fi
-    proxy_token="${iron_token_values[$token_name]}"
-    agent_env+=("$env_var=$proxy_token")
+    iron_env_names["$env_var"]=1
   done
+  agent_env+=("TSURF_IRON_TOKEN_MAP=${AGENT_IRON_CREDENTIAL_TOKENS}")
 fi
 if [[ -n "${AGENT_CHILD_ENVIRONMENT_FILE:-}" ]]; then
   case "$AGENT_CHILD_ENVIRONMENT_FILE" in
@@ -232,6 +236,18 @@ agent_env+=("CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1")
 
 nono_args+=(-- "$AGENT_REAL_BINARY" "$@")
 journal_log "sandboxed"
+if ((${#iron_pairs[@]} > 0)); then
+  exec "$setpriv_bin" \
+    --reuid "$AGENT_RUN_AS_UID" \
+    --regid "$AGENT_RUN_AS_GID" \
+    --init-groups \
+    --reset-env \
+    "$env_bin" "${agent_env[@]}" \
+    "$bash_bin" "$AGENT_CHILD_ENV_HELPER" \
+    "$nono_bin" "${nono_args[@]}" \
+    3<"$token_file"
+fi
+
 exec "$setpriv_bin" \
   --reuid "$AGENT_RUN_AS_UID" \
   --regid "$AGENT_RUN_AS_GID" \

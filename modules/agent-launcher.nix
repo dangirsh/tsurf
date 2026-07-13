@@ -104,6 +104,7 @@ let
           export AGENT_EGRESS_PROXY_CA_CERT="${cfg.egressProxy.caCert}"
           export AGENT_EGRESS_PROXY_NO_PROXY="${cfg.egressProxy.noProxy}"
           export AGENT_IRON_CREDENTIAL_TOKEN_FILE="${cfg.egressProxy.credentialTokenFile}"
+          export AGENT_CHILD_ENV_HELPER="${../scripts/agent-child-env.sh}"
           export AGENT_SCOPE_ACCESS="${cfg.scopeAccess}"
           export AGENT_EXTRA_READ_PATHS_FILE="${extraReadPathsFile}"
           export AGENT_CHILD_ENVIRONMENT_FILE="${childEnvironmentFile}"
@@ -133,6 +134,7 @@ let
             --property=CPUQuota=200% \
             --property=TasksMax=256 \
             --property=NoNewPrivileges=true \
+            --property=PrivatePIDs=yes \
             "--property=CapabilityBoundingSet=CAP_SETUID CAP_SETGID" \
             "''${credential_token_group_args[@]}" \
             --property=OOMScoreAdjust=500 \
@@ -153,6 +155,7 @@ let
             --setenv=AGENT_EGRESS_PROXY_CA_CERT="$AGENT_EGRESS_PROXY_CA_CERT" \
             --setenv=AGENT_EGRESS_PROXY_NO_PROXY="$AGENT_EGRESS_PROXY_NO_PROXY" \
             --setenv=AGENT_IRON_CREDENTIAL_TOKEN_FILE="$AGENT_IRON_CREDENTIAL_TOKEN_FILE" \
+            --setenv=AGENT_CHILD_ENV_HELPER="$AGENT_CHILD_ENV_HELPER" \
             --setenv=AGENT_SCOPE_ACCESS="$AGENT_SCOPE_ACCESS" \
             --setenv=AGENT_EXTRA_READ_PATHS_FILE="$AGENT_EXTRA_READ_PATHS_FILE" \
             --setenv=AGENT_CHILD_ENVIRONMENT_FILE="$AGENT_CHILD_ENVIRONMENT_FILE" \
