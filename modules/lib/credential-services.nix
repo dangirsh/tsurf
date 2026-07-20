@@ -50,9 +50,28 @@ let
       hosts = [ (urlHost overrides.upstream) ];
     };
 
+  credentialAuthorityFor = agentName: svc: defaults: {
+    agent = agentName;
+    service = svc;
+    childEnvVar = defaults.envVar;
+    secretName = defaults.secretName;
+    upstream = defaults.upstream;
+    hosts = lib.sort builtins.lessThan (lib.unique defaults.hosts);
+    injectHeader = defaults.injectHeader;
+    matchHeaders = lib.sort builtins.lessThan (lib.unique defaults.matchHeaders);
+  };
+
+  credentialAuthorityIdFor =
+    agentName: svc: defaults:
+    builtins.hashString "sha256" (builtins.toJSON (credentialAuthorityFor agentName svc defaults));
+
   ironProxyTokenNameFor =
-    svc: defaults:
-    "TSURF_IRON_TOKEN_${lib.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] svc)}_${defaults.envVar}";
+    agentName: svc: defaults:
+    "TSURF_IRON_TOKEN_${lib.toUpper (credentialAuthorityIdFor agentName svc defaults)}";
+
+  ironProxySourceEnvVarFor =
+    agentName: svc: defaults:
+    "TSURF_IRON_SECRET_${lib.toUpper (credentialAuthorityIdFor agentName svc defaults)}";
 
   urlHost =
     url:
@@ -63,8 +82,11 @@ let
 in
 {
   inherit
+    credentialAuthorityFor
+    credentialAuthorityIdFor
     credentialDefaultsFor
     credentialServiceDefaults
+    ironProxySourceEnvVarFor
     ironProxyTokenNameFor
     urlHost
     ;

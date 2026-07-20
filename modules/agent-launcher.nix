@@ -40,7 +40,7 @@ let
           let
             defaults = credentialDefaultsFor agentDef svc;
           in
-          "${defaults.envVar}:${ironProxyTokenNameFor svc defaults}"
+          "${defaults.envVar}:${ironProxyTokenNameFor name svc defaults}"
         ) agentDef.credentialServices
       );
 

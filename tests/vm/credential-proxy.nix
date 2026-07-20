@@ -177,12 +177,32 @@ pkgs.testers.nixosTest {
           credentialOverrides.openrouter.upstream = "http://127.0.0.1:18080/v1";
         };
 
+        # Same service and child env var, but a different agent, secret, and
+        # upstream authority. These records must never share a bearer or an
+        # Iron source variable.
+        services.agentLauncher.agents.credential-builder = {
+          command = "credential-probe";
+          package = fakeProbe;
+          wrapperName = "credential-builder";
+          credentialServices = [ "openrouter" ];
+          credentialOverrides.openrouter = {
+            secretName = "openrouter-api-key-builder";
+            upstream = "http://builder.api.invalid:18081/v1";
+          };
+        };
+
         sops.secrets."openrouter-api-key" = {
           owner = "root";
           group = "root";
           mode = "0400";
         };
         sops.placeholder."openrouter-api-key" = "test-openrouter-secret";
+        sops.secrets."openrouter-api-key-builder" = {
+          owner = "root";
+          group = "root";
+          mode = "0400";
+        };
+        sops.placeholder."openrouter-api-key-builder" = "test-builder-secret";
 
         environment.systemPackages = with pkgs; [
           curl
@@ -205,6 +225,9 @@ pkgs.testers.nixosTest {
           printf 'test-openrouter-secret' > /run/secrets/openrouter-api-key
           chown root:root /run/secrets/openrouter-api-key
           chmod 0400 /run/secrets/openrouter-api-key
+          printf 'test-builder-secret' > /run/secrets/openrouter-api-key-builder
+          chown root:root /run/secrets/openrouter-api-key-builder
+          chmod 0400 /run/secrets/openrouter-api-key-builder
 
           install -d -m 0755 /run/secrets-rendered
           printf '%s' ${lib.escapeShellArg config.sops.templates."iron-agent-egress-env".content} > ${
@@ -285,12 +308,21 @@ pkgs.testers.nixosTest {
     )
     machine.wait_until_succeeds("curl -fsS http://127.0.0.1:18080/health")
     machine.wait_for_unit("tsurf-agent-egress-proxy.service", timeout=60)
+    machine.succeed(
+        "test $(grep -c '^TSURF_IRON_TOKEN_' /var/lib/tsurf-agent-egress-proxy/credential-tokens.env) -eq 2"
+    )
+    machine.succeed(
+        "test $(cut -d= -f2- /var/lib/tsurf-agent-egress-proxy/credential-tokens.env | sort -u | wc -l) -eq 2"
+    )
+    machine.succeed(
+        "test $(grep -c '^TSURF_IRON_SECRET_' /run/secrets-rendered/iron-agent-egress-env) -eq 2"
+    )
 
     machine.succeed(
         textwrap.dedent(
             r"""
-            awk -F= '$1 == "TSURF_IRON_TOKEN_OPENROUTER" { print $2 }' \
-              /var/lib/tsurf-agent-egress-proxy/credential-tokens.env > /tmp/expected-iron-token
+            head -n 1 /var/lib/tsurf-agent-egress-proxy/credential-tokens.env \
+              | cut -d= -f2- > /tmp/expected-iron-token
             chmod 0600 /tmp/expected-iron-token
             cat > /tmp/watch-agent-argv.py <<'PY'
             import pathlib

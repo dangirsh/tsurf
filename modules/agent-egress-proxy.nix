@@ -12,9 +12,12 @@ let
   yaml = pkgs.formats.yaml { };
   credentialServices = import ./lib/credential-services.nix { inherit lib; };
   inherit (credentialServices)
+    credentialAuthorityFor
+    credentialAuthorityIdFor
     credentialDefaultsFor
-    urlHost
+    ironProxySourceEnvVarFor
     ironProxyTokenNameFor
+    urlHost
     ;
 
   stateDir = "/var/lib/tsurf-agent-egress-proxy";
@@ -36,27 +39,29 @@ let
         in
         {
           inherit agentName svc;
+          authority = credentialAuthorityFor agentName svc defaults;
+          authorityId = credentialAuthorityIdFor agentName svc defaults;
           envVar = defaults.envVar;
           secretName = defaults.secretName;
           hosts = defaults.hosts or [ (urlHost defaults.upstream) ];
           matchHeaders = defaults.matchHeaders;
-          proxyTokenName = ironProxyTokenNameFor svc defaults;
+          proxyTokenName = ironProxyTokenNameFor agentName svc defaults;
+          proxySourceEnvVar = ironProxySourceEnvVarFor agentName svc defaults;
         }
       ) agentDef.credentialServices
     ) ironAgents
   );
 
-  # Deduplicate by service/env/secret so one shared proxy config can serve
-  # several wrappers without duplicating transform entries.
+  # One record represents exactly one normalized principal/credential authority.
+  # This prevents convenience labels such as service + child env var from
+  # collapsing distinct agents, secrets, hosts, or header rules onto one bearer.
   credentialRecordAttrs = lib.listToAttrs (
-    map (
-      record: lib.nameValuePair "${record.svc}:${record.envVar}:${record.secretName}" record
-    ) credentialRecords
+    map (record: lib.nameValuePair record.authorityId record) credentialRecords
   );
   uniqueCredentialRecords = builtins.attrValues credentialRecordAttrs;
 
   credentialEnvLines = map (
-    record: "${record.envVar}=${config.sops.placeholder."${record.secretName}"}"
+    record: "${record.proxySourceEnvVar}=${config.sops.placeholder."${record.secretName}"}"
   ) uniqueCredentialRecords;
   credentialTokenNames = map (record: record.proxyTokenName) uniqueCredentialRecords;
 
@@ -73,7 +78,7 @@ let
   secretTransformEntries = map (record: {
     source = {
       type = "env";
-      var = record.envVar;
+      var = record.proxySourceEnvVar;
     };
     replace = {
       proxy_value = "@${record.proxyTokenName}@";
@@ -130,17 +135,50 @@ let
       printf '%s=%s\n' '${tokenName}' "$(${pkgs.openssl}/bin/openssl rand -hex 32)" >> "$token_file"
     fi
   '') credentialTokenNames;
-  credentialTokenSubstitutions = lib.concatMapStringsSep "\n" (tokenName: ''
-    token_value="$(grep -E '^${tokenName}=' "$token_file" | tail -n 1 | cut -d= -f2-)"
-    if [ -z "$token_value" ]; then
-      echo "missing generated Iron proxy credential token ${tokenName}" >&2
-      exit 1
-    fi
-    escaped_token_value="$(printf '%s' "$token_value" | ${pkgs.gnused}/bin/sed 's/[\/&]/\\&/g')"
-    ${pkgs.gnused}/bin/sed "s/@${tokenName}@/$escaped_token_value/g" "$runtime_config" > "$runtime_config.next"
-    chmod 0600 "$runtime_config.next"
-    mv -f "$runtime_config.next" "$runtime_config"
-  '') credentialTokenNames;
+  credentialTokenRender = ''
+    ${pkgs.python3}/bin/python3 - "$token_file" "$runtime_config" <<'PY'
+    import os
+    import pathlib
+    import re
+    import sys
+    import tempfile
+
+    token_path, config_path = map(pathlib.Path, sys.argv[1:])
+    tokens = {}
+    for line in token_path.read_text().splitlines():
+        name, separator, value = line.partition("=")
+        if separator and name.startswith("TSURF_IRON_TOKEN_"):
+            tokens[name] = value
+
+    rendered = config_path.read_text()
+    markers = set(re.findall(r"@TSURF_IRON_TOKEN_[A-Z0-9_]+@", rendered))
+    for marker in markers:
+        name = marker[1:-1]
+        value = tokens.get(name, "")
+        if not value:
+            raise SystemExit(f"missing generated Iron proxy credential token {name}")
+        if rendered.count(marker) != 1:
+            raise SystemExit(f"expected exactly one Iron credential marker for {name}")
+        rendered = rendered.replace(marker, value)
+    if re.search(r"@TSURF_IRON_TOKEN_[A-Z0-9_]+@", rendered):
+        raise SystemExit("unresolved Iron credential marker")
+
+    fd, temporary = tempfile.mkstemp(prefix=".iron-proxy.yaml.", dir=config_path.parent)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w") as stream:
+            stream.write(rendered)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, config_path)
+    except BaseException:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+        raise
+    PY
+  '';
 in
 {
   options.services.agentEgressProxy = {
@@ -265,6 +303,17 @@ in
         assertion = launcherCfg.enable;
         message = "services.agentEgressProxy requires services.agentLauncher.enable.";
       }
+      {
+        assertion =
+          builtins.length credentialTokenNames == builtins.length (lib.unique credentialTokenNames);
+        message = "services.agentEgressProxy requires one Iron bearer per normalized credential authority.";
+      }
+      {
+        assertion =
+          builtins.length uniqueCredentialRecords
+          == builtins.length (lib.unique (map (record: record.proxySourceEnvVar) uniqueCredentialRecords));
+        message = "services.agentEgressProxy requires one proxy source variable per normalized credential authority.";
+      }
     ]
     ++ map (record: {
       assertion = builtins.hasAttr record.secretName config.sops.secrets;
@@ -322,8 +371,8 @@ in
         cfg.package
         pkgs.coreutils
         pkgs.gnugrep
-        pkgs.gnused
         pkgs.openssl
+        pkgs.python3
       ];
       preStart = ''
         set -euo pipefail
@@ -353,7 +402,7 @@ in
         fi
         cp ${configFile} "$runtime_config"
         chmod 0600 "$runtime_config"
-        ${credentialTokenSubstitutions}
+        ${credentialTokenRender}
         chmod 0400 "$runtime_config"
       '';
       serviceConfig = {
@@ -374,6 +423,8 @@ in
         PrivateTmp = true;
         ProtectSystem = "strict";
         ProtectHome = true;
+        ProtectProc = "invisible";
+        ProcSubset = "pid";
         RestrictSUIDSGID = true;
         LockPersonality = true;
         MemoryDenyWriteExecute = true;

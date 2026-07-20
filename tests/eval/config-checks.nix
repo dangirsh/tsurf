@@ -1123,6 +1123,49 @@ in
         && !lib.hasInfix "credentialProxy" source
       );
 
+  iron-credential-authority-isolation =
+    let
+      credentialLib = import ../../modules/lib/credential-services.nix { inherit lib; };
+      base = credentialLib.credentialServiceDefaults.openai;
+      reviewer = base // {
+        upstream = "https://reviewer.api.invalid";
+        hosts = [ "reviewer.api.invalid" ];
+        secretName = "synthetic-reviewer-key";
+      };
+      builder = base // {
+        upstream = "https://builder.api.invalid";
+        hosts = [ "builder.api.invalid" ];
+        secretName = "synthetic-builder-key";
+      };
+      reviewerToken = credentialLib.ironProxyTokenNameFor "reviewer" "openai" reviewer;
+      builderToken = credentialLib.ironProxyTokenNameFor "builder" "openai" builder;
+      reviewerSource = credentialLib.ironProxySourceEnvVarFor "reviewer" "openai" reviewer;
+      builderSource = credentialLib.ironProxySourceEnvVarFor "builder" "openai" builder;
+    in
+    mkCheck "iron-credential-authority-isolation"
+      "Iron bearer and proxy-source identities include the full delegated authority"
+      "distinct agent/secret/upstream authorities still collapse onto one Iron identity"
+      (
+        reviewerToken != builderToken
+        && reviewerSource != builderSource
+        && lib.hasPrefix "TSURF_IRON_TOKEN_" reviewerToken
+        && lib.hasPrefix "TSURF_IRON_SECRET_" reviewerSource
+      );
+
+  agent-egress-secret-renderer-no-argv =
+    let
+      source = builtins.readFile ../../modules/agent-egress-proxy.nix;
+    in
+    mkCheck "agent-egress-secret-renderer-no-argv"
+      "agent egress config rendering reads credential tokens inside one process"
+      "agent egress config rendering still expands a credential into child argv"
+      (
+        lib.hasInfix "tempfile.mkstemp" source
+        && lib.hasInfix "os.replace" source
+        && !(lib.hasInfix "escaped_token_value" source)
+        && !(lib.hasInfix "credentialTokenSubstitutions" source)
+      );
+
   launcher-extra-deny =
     let
       source = builtins.readFile ../../modules/agent-launcher.nix;
